@@ -1,5 +1,7 @@
 {
   "cleanUrls": true,
+  "buildCommand": "node --check app.js && node --check api/leads.js && node --check api/site-content.js",
+  "outputDirectory": ".",
   "headers": [
     {
       "source": "/api/(.*)",

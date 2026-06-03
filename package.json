@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "start": "node server.mjs",
+    "dev": "node server.mjs",
+    "build": "node --check app.js && node --check api/leads.js && node --check api/site-content.js",
     "check": "node --check app.js && node --check api/leads.js && node --check api/site-content.js"
   }
 }
