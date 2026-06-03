@@ -311,16 +311,48 @@ function renderTasks() {
 }
 
 function renderContent() {
-  document.getElementById("contentTable").innerHTML = state.content.map((item) => `
+  renderContentFilters();
+  const pageFilter = document.getElementById("contentPageFilter")?.value || "all";
+  const statusFilter = document.getElementById("contentStatusFilter")?.value || "all";
+  const filtered = state.content.filter((item) => {
+    return (pageFilter === "all" || item.page === pageFilter) && (statusFilter === "all" || item.status === statusFilter);
+  });
+  const groups = filtered.reduce((acc, item) => {
+    const page = item.page || "Senza pagina";
+    const section = item.section || "Senza sezione";
+    const key = `${page}__${section}`;
+    if (!acc[key]) acc[key] = { page, section, items: [] };
+    acc[key].items.push(item);
+    return acc;
+  }, {});
+
+  document.getElementById("contentTable").innerHTML = Object.values(groups).map((group) => `
+    <section class="content-group">
+      <div class="content-group-head">
+        <span>${group.page}</span>
+        <strong>${group.section}</strong>
+      </div>
+      ${group.items.map((item) => `
     <article class="content-row" data-content-id="${item.id}">
-      <span class="badge">${item.page || item.type}</span>
+      <span class="badge">${item.type}</span>
       <div>
         <strong>${item.title}</strong>
-        <span>${item.slug} · Aggiornato ${formatContentDate(item.updatedAt)}</span>
+        <span>${item.slug} · ${item.image_url ? "immagine + " : ""}${item.body ? "testo + " : ""}Aggiornato ${formatContentDate(item.updatedAt)}</span>
       </div>
       <span class="badge ${item.status === "published" ? "cliente" : "preventivo"}">${labelStatus(item.status)}</span>
     </article>
-  `).join("") || emptyState("Nessun contenuto ancora salvato.");
+      `).join("")}
+    </section>
+  `).join("") || emptyState("Nessun contenuto trovato.");
+}
+
+function renderContentFilters() {
+  const select = document.getElementById("contentPageFilter");
+  if (!select) return;
+  const current = select.value || "all";
+  const pages = [...new Set(state.content.map((item) => item.page).filter(Boolean))].sort();
+  select.innerHTML = `<option value="all">Tutte le pagine</option>${pages.map((page) => `<option value="${page}">${page}</option>`).join("")}`;
+  select.value = pages.includes(current) ? current : "all";
 }
 
 function formatContentDate(value) {
@@ -492,6 +524,8 @@ document.getElementById("newLeadButton").addEventListener("click", () => documen
 document.getElementById("exportButton").addEventListener("click", exportData);
 document.getElementById("leadSearch").addEventListener("input", renderLeads);
 document.getElementById("statusFilter").addEventListener("change", renderLeads);
+document.getElementById("contentPageFilter").addEventListener("change", renderContent);
+document.getElementById("contentStatusFilter").addEventListener("change", renderContent);
 
 document.getElementById("leadForm").addEventListener("submit", (event) => {
   if (event.submitter?.value === "cancel") return;

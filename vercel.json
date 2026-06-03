@@ -16,6 +16,10 @@
       "dest": "/api/site-content.js"
     },
     {
+      "src": "/api/public-site-content",
+      "dest": "/api/public-site-content.js"
+    },
+    {
       "src": "/",
       "dest": "/api/app.js"
     },

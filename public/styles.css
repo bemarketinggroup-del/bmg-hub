@@ -306,6 +306,11 @@ button { cursor: pointer; }
   margin-bottom: 14px;
 }
 
+.compact-toolbar {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
 .search {
   flex: 1;
   display: flex;
@@ -338,6 +343,32 @@ button { cursor: pointer; }
   gap: 12px;
   align-items: center;
   cursor: pointer;
+}
+
+.content-group {
+  display: grid;
+  gap: 8px;
+}
+
+.content-group-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0 2px;
+  border-bottom: 1px solid var(--line);
+}
+
+.content-group-head span {
+  color: var(--muted);
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.content-group-head strong {
+  font-size: 16px;
 }
 
 .content-row:hover {

@@ -125,6 +125,17 @@
               <h2>Blocchi sito</h2>
               <button class="text-button" id="addContentButton" type="button">Aggiungi</button>
             </div>
+            <div class="toolbar compact-toolbar">
+              <select id="contentPageFilter" aria-label="Filtra per pagina">
+                <option value="all">Tutte le pagine</option>
+              </select>
+              <select id="contentStatusFilter" aria-label="Filtra per stato">
+                <option value="all">Tutti gli stati</option>
+                <option value="draft">Bozze</option>
+                <option value="published">Pubblicati</option>
+                <option value="archived">Archiviati</option>
+              </select>
+            </div>
             <div class="content-table" id="contentTable"></div>
           </section>
           <section class="panel inspector">
