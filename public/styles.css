@@ -147,7 +147,8 @@ button { cursor: pointer; }
 .primary-button,
 .ghost-button,
 .text-button,
-.icon-button {
+.icon-button,
+.danger-button {
   min-height: 42px;
   border: 1px solid var(--ink);
   background: var(--ink);
@@ -158,6 +159,13 @@ button { cursor: pointer; }
 .ghost-button {
   background: transparent;
   color: var(--ink);
+}
+
+.danger-button {
+  margin-right: auto;
+  border-color: var(--accent);
+  background: transparent;
+  color: var(--accent);
 }
 
 .text-button {
@@ -329,6 +337,12 @@ button { cursor: pointer; }
   grid-template-columns: 120px minmax(0, 1fr) auto;
   gap: 12px;
   align-items: center;
+  cursor: pointer;
+}
+
+.content-row:hover {
+  border-color: var(--ink);
+  background: #fff;
 }
 
 .content-row strong,
@@ -392,6 +406,10 @@ code {
   background: var(--panel);
   padding: 0;
   box-shadow: var(--shadow);
+}
+
+.wide-modal {
+  width: min(980px, calc(100vw - 28px));
 }
 
 .modal::backdrop { background: rgba(16,17,15,.42); }

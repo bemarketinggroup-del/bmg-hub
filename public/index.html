@@ -122,22 +122,26 @@
         <div class="split-panel">
           <section class="panel">
             <div class="panel-head">
-              <h2>Contenuti gestibili</h2>
+              <h2>Blocchi sito</h2>
               <button class="text-button" id="addContentButton" type="button">Aggiungi</button>
             </div>
             <div class="content-table" id="contentTable"></div>
           </section>
           <section class="panel inspector">
-            <p class="eyebrow">Prossimo step</p>
-            <h2>Collegamento al sito pubblico</h2>
-            <p>Questa sezione diventera' la sorgente dati per case study, immagini portfolio, testi principali e CTA del sito.</p>
+            <p class="eyebrow">Backend sito</p>
+            <h2>Testi, immagini e sezioni</h2>
+            <p>Qui gestiamo i blocchi del sito senza entrare nel codice: hero, servizi, portfolio, CTA e immagini. Tutto resta nel gestionale protetto.</p>
             <div class="setup-box">
-              <code>GET /api/site-content</code>
-              <span>Il frontend legge contenuti pubblicati.</span>
+              <code>draft</code>
+              <span>Visibile solo nel gestionale.</span>
             </div>
             <div class="setup-box">
-              <code>POST /api/leads</code>
-              <span>Il form contatti crea lead nel gestionale.</span>
+              <code>published</code>
+              <span>Pronto per essere collegato al sito pubblico.</span>
+            </div>
+            <div class="setup-box">
+              <code>image_url</code>
+              <span>Per ora salviamo URL immagini; poi aggiungiamo upload su storage privato.</span>
             </div>
           </section>
         </div>
@@ -206,6 +210,45 @@
       <div class="modal-actions">
         <button class="ghost-button" value="cancel" type="submit">Annulla</button>
         <button class="primary-button" value="default" type="submit">Salva lead</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="modal wide-modal" id="contentModal">
+    <form method="dialog" id="contentForm">
+      <div class="modal-head">
+        <h2 id="contentModalTitle">Blocco sito</h2>
+        <button class="icon-button" value="cancel" type="submit" title="Chiudi">×</button>
+      </div>
+      <input name="id" type="hidden">
+      <div class="form-grid">
+        <label>Slug<input name="slug" required placeholder="home-hero"></label>
+        <label>Pagina<input name="page" placeholder="Home"></label>
+        <label>Tipo<select name="type">
+          <option value="home">Home</option>
+          <option value="landing">Landing</option>
+          <option value="portfolio">Portfolio</option>
+          <option value="service">Servizio</option>
+          <option value="media">Immagine</option>
+        </select></label>
+        <label>Stato<select name="status">
+          <option value="draft">Bozza</option>
+          <option value="published">Pubblicato</option>
+          <option value="archived">Archiviato</option>
+        </select></label>
+        <label class="full">Titolo<input name="title" required></label>
+        <label class="full">Sottotitolo<input name="subtitle"></label>
+        <label class="full">Testo<textarea name="body" rows="5"></textarea></label>
+        <label>URL immagine<input name="image_url" type="url" placeholder="https://..."></label>
+        <label>Alt immagine<input name="image_alt" placeholder="Descrizione immagine"></label>
+        <label>CTA testo<input name="cta_label" placeholder="Scopri di piu"></label>
+        <label>CTA link<input name="cta_url" placeholder="/contatti"></label>
+        <label class="full">Note interne<textarea name="notes" rows="3"></textarea></label>
+      </div>
+      <div class="modal-actions">
+        <button class="danger-button" id="deleteContentButton" type="button">Elimina</button>
+        <button class="ghost-button" value="cancel" type="submit">Annulla</button>
+        <button class="primary-button" value="default" type="submit">Salva blocco</button>
       </div>
     </form>
   </dialog>

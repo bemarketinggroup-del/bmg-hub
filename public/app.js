@@ -37,10 +37,38 @@ const seed = {
     }
   ],
   content: [
-    { id: "hero", type: "Home", title: "Hero principale", status: "pubblicato", updatedAt: "2026-06-03" },
-    { id: "portfolio", type: "Home", title: "Portfolio e case study", status: "bozza", updatedAt: "2026-06-02" },
-    { id: "services", type: "Home", title: "Servizi BMG", status: "pubblicato", updatedAt: "2026-06-02" },
-    { id: "beviral", type: "Landing", title: "Pagina BeViral", status: "pubblicato", updatedAt: "2026-06-01" }
+    {
+      id: "seed_home_hero",
+      slug: "home-hero",
+      page: "Home",
+      type: "home",
+      title: "Hero principale",
+      subtitle: "Be Marketing Group",
+      body: "Blocco principale della home.",
+      image_url: "",
+      image_alt: "",
+      cta_label: "Parla con noi",
+      cta_url: "#contatti",
+      notes: "",
+      status: "draft",
+      updatedAt: "2026-06-03"
+    },
+    {
+      id: "seed_portfolio",
+      slug: "home-portfolio",
+      page: "Home",
+      type: "portfolio",
+      title: "Portfolio e case study",
+      subtitle: "",
+      body: "Sezione lavori e risultati.",
+      image_url: "",
+      image_alt: "",
+      cta_label: "",
+      cta_url: "",
+      notes: "",
+      status: "draft",
+      updatedAt: "2026-06-02"
+    }
   ],
   clients: [
     { name: "Grand Hotel La Favorita", status: "Attivo", services: "Sito, social, shooting", clickup: "#", drive: "#" },
@@ -57,6 +85,7 @@ const seed = {
 
 let state = loadState();
 let backendOnline = false;
+let contentOnline = false;
 
 function loadState() {
   const saved = localStorage.getItem(STORAGE_KEY);
@@ -111,6 +140,26 @@ function normalizeLead(lead) {
   };
 }
 
+function normalizeContent(item) {
+  const payload = item.payload || {};
+  return {
+    id: item.id,
+    slug: item.slug || "",
+    page: payload.page || "",
+    type: item.type || "site",
+    title: item.title || "",
+    subtitle: payload.subtitle || "",
+    body: payload.body || "",
+    image_url: payload.image_url || "",
+    image_alt: payload.image_alt || "",
+    cta_label: payload.cta_label || "",
+    cta_url: payload.cta_url || "",
+    notes: payload.notes || "",
+    status: item.status || "draft",
+    updatedAt: item.updated_at || item.updatedAt || new Date().toISOString()
+  };
+}
+
 async function loadLeadsFromBackend() {
   try {
     const response = await fetch("/api/leads");
@@ -126,12 +175,28 @@ async function loadLeadsFromBackend() {
   }
 }
 
+async function loadContentFromBackend() {
+  try {
+    const response = await fetch("/api/site-content");
+    if (!response.ok) throw new Error(`Content backend error ${response.status}`);
+    const rows = await response.json();
+    state.content = rows.map(normalizeContent);
+    contentOnline = true;
+    renderBackendStatus();
+    renderAll();
+  } catch (error) {
+    contentOnline = false;
+    renderBackendStatus(error.message);
+    renderContent();
+  }
+}
+
 function renderBackendStatus(message = "") {
   const footer = document.querySelector(".sidebar-footer span:last-child");
   const dot = document.querySelector(".status-dot");
   if (!footer || !dot) return;
-  footer.textContent = backendOnline ? "Supabase collegato" : "Fallback locale";
-  dot.style.background = backendOnline ? "#7cc483" : "#d8a42f";
+  footer.textContent = backendOnline && contentOnline ? "Supabase collegato" : "Connessione parziale";
+  dot.style.background = backendOnline && contentOnline ? "#7cc483" : "#d8a42f";
   if (message) footer.title = message;
 }
 
@@ -176,15 +241,28 @@ function renderTasks() {
 
 function renderContent() {
   document.getElementById("contentTable").innerHTML = state.content.map((item) => `
-    <article class="content-row">
-      <span class="badge">${item.type}</span>
+    <article class="content-row" data-content-id="${item.id}">
+      <span class="badge">${item.page || item.type}</span>
       <div>
         <strong>${item.title}</strong>
-        <span>Aggiornato ${item.updatedAt}</span>
+        <span>${item.slug} · Aggiornato ${formatContentDate(item.updatedAt)}</span>
       </div>
-      <span class="badge ${item.status === "pubblicato" ? "cliente" : "preventivo"}">${item.status}</span>
+      <span class="badge ${item.status === "published" ? "cliente" : "preventivo"}">${labelStatus(item.status)}</span>
     </article>
-  `).join("");
+  `).join("") || emptyState("Nessun contenuto ancora salvato.");
+}
+
+function formatContentDate(value) {
+  if (!value) return "oggi";
+  return new Intl.DateTimeFormat("it-IT", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(value));
+}
+
+function labelStatus(status) {
+  return {
+    draft: "bozza",
+    published: "pubblicato",
+    archived: "archiviato"
+  }[status] || status;
 }
 
 function renderClients() {
@@ -257,16 +335,65 @@ function exportData() {
   URL.revokeObjectURL(url);
 }
 
-function addContent() {
-  state.content.unshift({
-    id: `content_${Date.now()}`,
-    type: "Home",
-    title: "Nuovo blocco contenuto",
-    status: "bozza",
-    updatedAt: new Date().toISOString().slice(0, 10)
-  });
-  saveState();
-  renderAll();
+function openContentModal(id = "") {
+  const form = document.getElementById("contentForm");
+  const item = state.content.find((content) => content.id === id);
+  form.reset();
+  form.elements.id.value = item?.id || "";
+  form.elements.slug.value = item?.slug || "";
+  form.elements.page.value = item?.page || "Home";
+  form.elements.type.value = item?.type || "home";
+  form.elements.status.value = item?.status || "draft";
+  form.elements.title.value = item?.title || "";
+  form.elements.subtitle.value = item?.subtitle || "";
+  form.elements.body.value = item?.body || "";
+  form.elements.image_url.value = item?.image_url || "";
+  form.elements.image_alt.value = item?.image_alt || "";
+  form.elements.cta_label.value = item?.cta_label || "";
+  form.elements.cta_url.value = item?.cta_url || "";
+  form.elements.notes.value = item?.notes || "";
+  document.getElementById("contentModalTitle").textContent = item ? "Modifica blocco sito" : "Nuovo blocco sito";
+  document.getElementById("deleteContentButton").hidden = !item;
+  document.getElementById("contentModal").showModal();
+}
+
+function contentPayloadFromForm(form) {
+  return Object.fromEntries(new FormData(form).entries());
+}
+
+async function saveContent(form) {
+  const payload = contentPayloadFromForm(form);
+  const isUpdate = Boolean(payload.id);
+  try {
+    const response = await fetch("/api/site-content", {
+      method: isUpdate ? "PATCH" : "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    if (!response.ok) throw new Error(`Content backend error ${response.status}`);
+    contentOnline = true;
+    await loadContentFromBackend();
+  } catch (error) {
+    contentOnline = false;
+    renderBackendStatus(error.message);
+    alert("Non riesco a salvare il contenuto. Controlla la connessione backend prima di continuare.");
+  }
+}
+
+async function deleteContent() {
+  const id = document.getElementById("contentForm").elements.id.value;
+  if (!id) return;
+  const confirmed = confirm("Eliminare questo blocco dal backend sito?");
+  if (!confirmed) return;
+  try {
+    const response = await fetch(`/api/site-content?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+    if (!response.ok && response.status !== 204) throw new Error(`Content backend error ${response.status}`);
+    document.getElementById("contentModal").close();
+    await loadContentFromBackend();
+  } catch (error) {
+    renderBackendStatus(error.message);
+    alert("Non riesco a eliminare il contenuto. Riprova dopo aver verificato il backend.");
+  }
 }
 
 function renderAll() {
@@ -291,7 +418,6 @@ document.body.addEventListener("click", (event) => {
 
 document.getElementById("newLeadButton").addEventListener("click", () => document.getElementById("leadModal").showModal());
 document.getElementById("exportButton").addEventListener("click", exportData);
-document.getElementById("addContentButton").addEventListener("click", addContent);
 document.getElementById("leadSearch").addEventListener("input", renderLeads);
 document.getElementById("statusFilter").addEventListener("change", renderLeads);
 
@@ -301,6 +427,22 @@ document.getElementById("leadForm").addEventListener("submit", (event) => {
   submitLead(event.currentTarget);
   document.getElementById("leadModal").close();
 });
+
+document.getElementById("contentTable").addEventListener("click", (event) => {
+  const row = event.target.closest("[data-content-id]");
+  if (row) openContentModal(row.dataset.contentId);
+});
+
+document.getElementById("addContentButton").addEventListener("click", () => openContentModal());
+
+document.getElementById("contentForm").addEventListener("submit", (event) => {
+  if (event.submitter?.value === "cancel") return;
+  event.preventDefault();
+  saveContent(event.currentTarget);
+  document.getElementById("contentModal").close();
+});
+
+document.getElementById("deleteContentButton").addEventListener("click", deleteContent);
 
 document.getElementById("priorityTasks").addEventListener("change", (event) => {
   const input = event.target.closest("[data-task]");
@@ -312,3 +454,4 @@ document.getElementById("priorityTasks").addEventListener("change", (event) => {
 renderAll();
 renderBackendStatus();
 loadLeadsFromBackend();
+loadContentFromBackend();
