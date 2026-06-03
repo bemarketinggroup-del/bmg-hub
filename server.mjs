@@ -3,8 +3,9 @@ import { readFile } from "node:fs/promises";
 import { createReadStream, existsSync } from "node:fs";
 import { extname, join, normalize } from "node:path";
 
-const root = new URL(".", import.meta.url).pathname;
-const env = await loadEnv(join(root, ".env.local"));
+const projectRoot = new URL(".", import.meta.url).pathname;
+const publicRoot = join(projectRoot, "public");
+const env = await loadEnv(join(projectRoot, ".env.local"));
 const port = Number(process.env.PORT || 8020);
 
 const mimeTypes = {
@@ -113,9 +114,9 @@ function sendJson(response, status, payload) {
 
 async function serveStatic(pathname, response) {
   const cleanPath = pathname === "/" ? "/index.html" : pathname;
-  const filePath = normalize(join(root, cleanPath));
+  const filePath = normalize(join(publicRoot, cleanPath));
 
-  if (!filePath.startsWith(root) || !existsSync(filePath)) {
+  if (!filePath.startsWith(publicRoot) || !existsSync(filePath)) {
     response.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
     response.end("Not found");
     return;

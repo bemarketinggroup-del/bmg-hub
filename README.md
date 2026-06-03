@@ -14,10 +14,10 @@ Il prototipo non richiede build:
 
 ```bash
 cd /Users/davidedeluca/Desktop/SITO_BMG/bmg-hub
-python3 -m http.server 8010
+node server.mjs
 ```
 
-Poi apri `http://localhost:8010`.
+Poi apri `http://localhost:8020`.
 
 ## Backend reale
 

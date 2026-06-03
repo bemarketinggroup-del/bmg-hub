@@ -1,7 +1,7 @@
 {
   "cleanUrls": true,
-  "buildCommand": "node --check app.js && node --check api/leads.js && node --check api/site-content.js",
-  "outputDirectory": ".",
+  "buildCommand": "node --check public/app.js && node --check api/leads.js && node --check api/site-content.js",
+  "outputDirectory": "public",
   "headers": [
     {
       "source": "/api/(.*)",
