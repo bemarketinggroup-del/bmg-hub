@@ -184,7 +184,7 @@
     <form method="dialog" id="leadForm">
       <div class="modal-head">
         <h2>Nuovo lead</h2>
-        <button class="icon-button" value="cancel" type="submit" title="Chiudi">×</button>
+        <button class="icon-button" value="cancel" type="submit" formnovalidate title="Chiudi">×</button>
       </div>
       <div class="form-grid">
         <label>Nome<input name="name" required autocomplete="name"></label>
@@ -208,7 +208,7 @@
         <label class="full">Messaggio<textarea name="message" rows="4"></textarea></label>
       </div>
       <div class="modal-actions">
-        <button class="ghost-button" value="cancel" type="submit">Annulla</button>
+        <button class="ghost-button" value="cancel" type="submit" formnovalidate>Annulla</button>
         <button class="primary-button" value="default" type="submit">Salva lead</button>
       </div>
     </form>
@@ -218,7 +218,7 @@
     <form method="dialog" id="contentForm">
       <div class="modal-head">
         <h2 id="contentModalTitle">Blocco sito</h2>
-        <button class="icon-button" value="cancel" type="submit" title="Chiudi">×</button>
+        <button class="icon-button" value="cancel" type="submit" formnovalidate title="Chiudi">×</button>
       </div>
       <input name="id" type="hidden">
       <div class="form-grid">
@@ -248,7 +248,7 @@
       </div>
       <div class="modal-actions">
         <button class="danger-button" id="deleteContentButton" type="button">Elimina</button>
-        <button class="ghost-button" value="cancel" type="submit">Annulla</button>
+        <button class="ghost-button" value="cancel" type="submit" formnovalidate>Annulla</button>
         <button class="primary-button" value="default" type="submit">Salva blocco</button>
       </div>
     </form>
