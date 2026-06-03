@@ -2,6 +2,12 @@
   "cleanUrls": true,
   "buildCommand": "node --check public/app.js && node --check api/leads.js && node --check api/site-content.js",
   "outputDirectory": "public",
+  "rewrites": [
+    {
+      "source": "/",
+      "destination": "/index.html"
+    }
+  ],
   "headers": [
     {
       "source": "/api/(.*)",

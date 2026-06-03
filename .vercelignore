@@ -1,0 +1,7 @@
+.env
+.env.local
+.env.*.local
+scripts/
+supabase/
+site-integration/
+README.md

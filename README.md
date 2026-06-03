@@ -14,7 +14,7 @@ Il prototipo non richiede build:
 
 ```bash
 cd /Users/davidedeluca/Desktop/SITO_BMG/bmg-hub
-node server.mjs
+node scripts/local-server.mjs
 ```
 
 Poi apri `http://localhost:8020`.
