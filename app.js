@@ -1,0 +1,314 @@
+const STORAGE_KEY = "bmg-hub-v1";
+
+const seed = {
+  leads: [
+    {
+      id: "lead_001",
+      name: "Giulia Romano",
+      company: "Vetera Matera",
+      email: "giulia@example.com",
+      phone: "+39 333 000 0001",
+      service: "Sito Web",
+      status: "nuovo",
+      message: "Vorremmo rivedere struttura e contenuti del sito.",
+      createdAt: "2026-06-03T09:25:00.000Z"
+    },
+    {
+      id: "lead_002",
+      name: "Marco De Santis",
+      company: "Zest Restaurant",
+      email: "marco@example.com",
+      phone: "+39 333 000 0002",
+      service: "Social Media",
+      status: "preventivo",
+      message: "Serve una proposta per lancio estivo e shooting.",
+      createdAt: "2026-06-02T15:40:00.000Z"
+    },
+    {
+      id: "lead_003",
+      name: "Laura Ferri",
+      company: "Costiera Gin",
+      email: "laura@example.com",
+      phone: "+39 333 000 0003",
+      service: "Brand Identity",
+      status: "contattato",
+      message: "Richiesta naming, packaging e piano lancio.",
+      createdAt: "2026-06-01T12:00:00.000Z"
+    }
+  ],
+  content: [
+    { id: "hero", type: "Home", title: "Hero principale", status: "pubblicato", updatedAt: "2026-06-03" },
+    { id: "portfolio", type: "Home", title: "Portfolio e case study", status: "bozza", updatedAt: "2026-06-02" },
+    { id: "services", type: "Home", title: "Servizi BMG", status: "pubblicato", updatedAt: "2026-06-02" },
+    { id: "beviral", type: "Landing", title: "Pagina BeViral", status: "pubblicato", updatedAt: "2026-06-01" }
+  ],
+  clients: [
+    { name: "Grand Hotel La Favorita", status: "Attivo", services: "Sito, social, shooting", clickup: "#", drive: "#" },
+    { name: "Vetera Matera", status: "Onboarding", services: "Brand, sito", clickup: "#", drive: "#" },
+    { name: "Zest Restaurant", status: "Attivo", services: "Social, ads", clickup: "#", drive: "#" }
+  ],
+  tasks: [
+    { title: "Collegare form contatti a POST /api/leads", done: false },
+    { title: "Definire campi modificabili della home", done: false },
+    { title: "Creare tabella immagini e bucket storage", done: false },
+    { title: "Preparare login interno BMG", done: false }
+  ]
+};
+
+let state = loadState();
+let backendOnline = false;
+
+function loadState() {
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (!saved) return structuredClone(seed);
+  try {
+    return { ...structuredClone(seed), ...JSON.parse(saved) };
+  } catch {
+    return structuredClone(seed);
+  }
+}
+
+function saveState() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function formatDate(value) {
+  return new Intl.DateTimeFormat("it-IT", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(value));
+}
+
+function setView(view) {
+  document.querySelectorAll(".nav-item").forEach((item) => item.classList.toggle("is-active", item.dataset.view === view));
+  document.querySelectorAll("[data-view-panel]").forEach((panel) => panel.classList.toggle("is-active", panel.dataset.viewPanel === view));
+  const titles = {
+    dashboard: ["Backend sito", "Dashboard operativa"],
+    leads: ["CRM sito", "Lead dal sito"],
+    content: ["CMS leggero", "Backend sito"],
+    clients: ["Gestionale interno", "Clienti"],
+    settings: ["Setup tecnico", "Configurazione"]
+  };
+  document.getElementById("viewKicker").textContent = titles[view][0];
+  document.getElementById("viewTitle").textContent = titles[view][1];
+}
+
+function renderMetrics() {
+  document.getElementById("newLeadsCount").textContent = state.leads.filter((lead) => lead.status === "nuovo").length;
+  document.getElementById("quoteLeadsCount").textContent = state.leads.filter((lead) => lead.status === "preventivo").length;
+  document.getElementById("activeClientsCount").textContent = state.clients.filter((client) => client.status === "Attivo").length;
+  document.getElementById("contentCount").textContent = state.content.length;
+}
+
+function normalizeLead(lead) {
+  return {
+    id: lead.id,
+    name: lead.name,
+    company: lead.company || "",
+    email: lead.email,
+    phone: lead.phone || "",
+    service: lead.service || "Non indicato",
+    status: lead.status || "nuovo",
+    message: lead.message || "",
+    createdAt: lead.created_at || lead.createdAt || new Date().toISOString()
+  };
+}
+
+async function loadLeadsFromBackend() {
+  try {
+    const response = await fetch("/api/leads");
+    if (!response.ok) throw new Error(`Backend error ${response.status}`);
+    const rows = await response.json();
+    state.leads = rows.map(normalizeLead);
+    backendOnline = true;
+    renderBackendStatus();
+    renderAll();
+  } catch (error) {
+    backendOnline = false;
+    renderBackendStatus(error.message);
+  }
+}
+
+function renderBackendStatus(message = "") {
+  const footer = document.querySelector(".sidebar-footer span:last-child");
+  const dot = document.querySelector(".status-dot");
+  if (!footer || !dot) return;
+  footer.textContent = backendOnline ? "Supabase collegato" : "Fallback locale";
+  dot.style.background = backendOnline ? "#7cc483" : "#d8a42f";
+  if (message) footer.title = message;
+}
+
+function leadCard(lead, compact = false) {
+  const message = compact ? "" : `<p>${lead.message || "Nessun messaggio inserito."}</p>`;
+  return `
+    <article class="lead-card">
+      <div>
+        <h3>${lead.name}</h3>
+        <p>${lead.company || "Azienda non indicata"} · ${lead.email}</p>
+        ${message}
+        <div class="lead-meta">
+          <span class="badge ${lead.status}">${lead.status}</span>
+          <span class="badge">${lead.service}</span>
+          <span class="badge">${formatDate(lead.createdAt)}</span>
+        </div>
+      </div>
+      <button class="ghost-button" data-status-next="${lead.id}" type="button">Avanza</button>
+    </article>
+  `;
+}
+
+function renderLeads() {
+  const search = document.getElementById("leadSearch")?.value?.toLowerCase() || "";
+  const status = document.getElementById("statusFilter")?.value || "all";
+  const filtered = state.leads.filter((lead) => {
+    const haystack = `${lead.name} ${lead.company} ${lead.email} ${lead.service} ${lead.message}`.toLowerCase();
+    return haystack.includes(search) && (status === "all" || lead.status === status);
+  });
+  document.getElementById("leadList").innerHTML = filtered.map((lead) => leadCard(lead)).join("") || emptyState("Nessun lead trovato.");
+  document.getElementById("recentLeads").innerHTML = state.leads.slice(0, 3).map((lead) => leadCard(lead, true)).join("");
+}
+
+function renderTasks() {
+  document.getElementById("priorityTasks").innerHTML = state.tasks.map((task, index) => `
+    <label class="task-row">
+      <input type="checkbox" data-task="${index}" ${task.done ? "checked" : ""}>
+      <span>${task.title}</span>
+    </label>
+  `).join("");
+}
+
+function renderContent() {
+  document.getElementById("contentTable").innerHTML = state.content.map((item) => `
+    <article class="content-row">
+      <span class="badge">${item.type}</span>
+      <div>
+        <strong>${item.title}</strong>
+        <span>Aggiornato ${item.updatedAt}</span>
+      </div>
+      <span class="badge ${item.status === "pubblicato" ? "cliente" : "preventivo"}">${item.status}</span>
+    </article>
+  `).join("");
+}
+
+function renderClients() {
+  document.getElementById("clientGrid").innerHTML = state.clients.map((client) => `
+    <article class="client-card">
+      <div>
+        <strong>${client.name}</strong>
+        <span>${client.status} · ${client.services}</span>
+      </div>
+      <div class="links">
+        <a class="badge" href="${client.clickup}">ClickUp</a>
+        <a class="badge" href="${client.drive}">Drive</a>
+      </div>
+    </article>
+  `).join("");
+}
+
+function emptyState(text) {
+  return `<div class="lead-card"><p>${text}</p></div>`;
+}
+
+function advanceStatus(id) {
+  const order = ["nuovo", "contattato", "preventivo", "cliente"];
+  const lead = state.leads.find((item) => item.id === id);
+  if (!lead) return;
+  const index = order.indexOf(lead.status);
+  lead.status = order[Math.min(index + 1, order.length - 1)] || "contattato";
+  saveState();
+  renderAll();
+}
+
+function addLead(form) {
+  const data = Object.fromEntries(new FormData(form).entries());
+  state.leads.unshift({
+    id: `lead_${Date.now()}`,
+    ...data,
+    createdAt: new Date().toISOString()
+  });
+  saveState();
+  form.reset();
+  renderAll();
+}
+
+async function submitLead(form) {
+  const data = Object.fromEntries(new FormData(form).entries());
+  try {
+    const response = await fetch("/api/leads", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data)
+    });
+    if (!response.ok) throw new Error(`Backend error ${response.status}`);
+    backendOnline = true;
+    form.reset();
+    await loadLeadsFromBackend();
+  } catch (error) {
+    backendOnline = false;
+    addLead(form);
+    renderBackendStatus(error.message);
+  }
+}
+
+function exportData() {
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `bmg-hub-export-${new Date().toISOString().slice(0, 10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function addContent() {
+  state.content.unshift({
+    id: `content_${Date.now()}`,
+    type: "Home",
+    title: "Nuovo blocco contenuto",
+    status: "bozza",
+    updatedAt: new Date().toISOString().slice(0, 10)
+  });
+  saveState();
+  renderAll();
+}
+
+function renderAll() {
+  renderMetrics();
+  renderLeads();
+  renderTasks();
+  renderContent();
+  renderClients();
+}
+
+document.getElementById("navList").addEventListener("click", (event) => {
+  const button = event.target.closest("[data-view]");
+  if (button) setView(button.dataset.view);
+});
+
+document.body.addEventListener("click", (event) => {
+  const jump = event.target.closest("[data-jump]");
+  const statusButton = event.target.closest("[data-status-next]");
+  if (jump) setView(jump.dataset.jump);
+  if (statusButton) advanceStatus(statusButton.dataset.statusNext);
+});
+
+document.getElementById("newLeadButton").addEventListener("click", () => document.getElementById("leadModal").showModal());
+document.getElementById("exportButton").addEventListener("click", exportData);
+document.getElementById("addContentButton").addEventListener("click", addContent);
+document.getElementById("leadSearch").addEventListener("input", renderLeads);
+document.getElementById("statusFilter").addEventListener("change", renderLeads);
+
+document.getElementById("leadForm").addEventListener("submit", (event) => {
+  if (event.submitter?.value === "cancel") return;
+  event.preventDefault();
+  submitLead(event.currentTarget);
+  document.getElementById("leadModal").close();
+});
+
+document.getElementById("priorityTasks").addEventListener("change", (event) => {
+  const input = event.target.closest("[data-task]");
+  if (!input) return;
+  state.tasks[Number(input.dataset.task)].done = input.checked;
+  saveState();
+});
+
+renderAll();
+renderBackendStatus();
+loadLeadsFromBackend();

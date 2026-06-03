@@ -1,0 +1,10 @@
+{
+  "name": "bmg-hub",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs",
+    "check": "node --check app.js && node --check api/leads.js && node --check api/site-content.js"
+  }
+}

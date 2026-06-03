@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BMG Hub</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Navigazione BMG Hub">
+      <div class="brand">
+        <div class="brand-mark">bmg</div>
+        <div>
+          <strong>BMG Hub</strong>
+          <span>Internal OS</span>
+        </div>
+      </div>
+
+      <nav class="nav-list" id="navList">
+        <button class="nav-item is-active" data-view="dashboard" type="button">
+          <span class="icon">⌂</span>
+          <span>Dashboard</span>
+        </button>
+        <button class="nav-item" data-view="leads" type="button">
+          <span class="icon">◎</span>
+          <span>Lead sito</span>
+        </button>
+        <button class="nav-item" data-view="content" type="button">
+          <span class="icon">✎</span>
+          <span>Backend sito</span>
+        </button>
+        <button class="nav-item" data-view="clients" type="button">
+          <span class="icon">◫</span>
+          <span>Clienti</span>
+        </button>
+        <button class="nav-item" data-view="settings" type="button">
+          <span class="icon">⚙</span>
+          <span>Setup</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <span class="status-dot"></span>
+        <span>Ambiente locale</span>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow" id="viewKicker">Backend sito</p>
+          <h1 id="viewTitle">Dashboard operativa</h1>
+        </div>
+        <div class="topbar-actions">
+          <button class="icon-button" id="exportButton" type="button" title="Esporta dati">⇩</button>
+          <button class="primary-button" id="newLeadButton" type="button">Nuovo lead</button>
+        </div>
+      </header>
+
+      <section class="view is-active" id="dashboardView" data-view-panel="dashboard">
+        <div class="metric-grid">
+          <article class="metric">
+            <span>Lead nuovi</span>
+            <strong id="newLeadsCount">0</strong>
+          </article>
+          <article class="metric">
+            <span>Preventivi aperti</span>
+            <strong id="quoteLeadsCount">0</strong>
+          </article>
+          <article class="metric">
+            <span>Clienti attivi</span>
+            <strong id="activeClientsCount">0</strong>
+          </article>
+          <article class="metric">
+            <span>Contenuti sito</span>
+            <strong id="contentCount">0</strong>
+          </article>
+        </div>
+
+        <div class="two-col">
+          <section class="panel">
+            <div class="panel-head">
+              <h2>Ultimi lead dal sito</h2>
+              <button class="text-button" data-jump="leads" type="button">Apri</button>
+            </div>
+            <div class="lead-list compact" id="recentLeads"></div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head">
+              <h2>Priorità backend</h2>
+              <button class="text-button" data-jump="content" type="button">Modifica</button>
+            </div>
+            <div class="task-list" id="priorityTasks"></div>
+          </section>
+        </div>
+      </section>
+
+      <section class="view" id="leadsView" data-view-panel="leads">
+        <div class="toolbar">
+          <label class="search">
+            <span>⌕</span>
+            <input id="leadSearch" type="search" placeholder="Cerca lead, azienda, servizio">
+          </label>
+          <select id="statusFilter" aria-label="Filtra per stato">
+            <option value="all">Tutti gli stati</option>
+            <option value="nuovo">Nuovo</option>
+            <option value="contattato">Contattato</option>
+            <option value="preventivo">Preventivo</option>
+            <option value="cliente">Cliente</option>
+            <option value="perso">Perso</option>
+          </select>
+        </div>
+        <div class="lead-list" id="leadList"></div>
+      </section>
+
+      <section class="view" id="contentView" data-view-panel="content">
+        <div class="split-panel">
+          <section class="panel">
+            <div class="panel-head">
+              <h2>Contenuti gestibili</h2>
+              <button class="text-button" id="addContentButton" type="button">Aggiungi</button>
+            </div>
+            <div class="content-table" id="contentTable"></div>
+          </section>
+          <section class="panel inspector">
+            <p class="eyebrow">Prossimo step</p>
+            <h2>Collegamento al sito pubblico</h2>
+            <p>Questa sezione diventera' la sorgente dati per case study, immagini portfolio, testi principali e CTA del sito.</p>
+            <div class="setup-box">
+              <code>GET /api/site-content</code>
+              <span>Il frontend legge contenuti pubblicati.</span>
+            </div>
+            <div class="setup-box">
+              <code>POST /api/leads</code>
+              <span>Il form contatti crea lead nel gestionale.</span>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section class="view" id="clientsView" data-view-panel="clients">
+        <div class="client-grid" id="clientGrid"></div>
+      </section>
+
+      <section class="view" id="settingsView" data-view-panel="settings">
+        <div class="split-panel">
+          <section class="panel">
+            <div class="panel-head">
+              <h2>Setup backend</h2>
+            </div>
+            <ol class="setup-list">
+              <li>Crea progetto Supabase e applica <code>supabase/schema.sql</code>.</li>
+              <li>Copia <code>.env.example</code> in <code>.env.local</code>.</li>
+              <li>Deploya <code>api/leads.js</code> e <code>api/site-content.js</code> su Vercel.</li>
+              <li>Collega il form del sito con <code>site-integration/contact-form.js</code>.</li>
+            </ol>
+          </section>
+          <section class="panel">
+            <div class="panel-head">
+              <h2>Endpoint previsti</h2>
+            </div>
+            <div class="endpoint-list">
+              <div><code>POST /api/leads</code><span>Nuova richiesta contatto</span></div>
+              <div><code>GET /api/leads</code><span>Lista interna lead</span></div>
+              <div><code>GET /api/site-content</code><span>Contenuti pubblicati</span></div>
+              <div><code>PATCH /api/site-content</code><span>Aggiorna contenuto</span></div>
+            </div>
+          </section>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <dialog class="modal" id="leadModal">
+    <form method="dialog" id="leadForm">
+      <div class="modal-head">
+        <h2>Nuovo lead</h2>
+        <button class="icon-button" value="cancel" type="submit" title="Chiudi">×</button>
+      </div>
+      <div class="form-grid">
+        <label>Nome<input name="name" required autocomplete="name"></label>
+        <label>Azienda<input name="company" autocomplete="organization"></label>
+        <label>Email<input name="email" type="email" required autocomplete="email"></label>
+        <label>Telefono<input name="phone" autocomplete="tel"></label>
+        <label>Servizio<select name="service">
+          <option>Brand Identity</option>
+          <option>Social Media</option>
+          <option>Sito Web</option>
+          <option>Performance Advertising</option>
+          <option>BeViral</option>
+        </select></label>
+        <label>Stato<select name="status">
+          <option value="nuovo">Nuovo</option>
+          <option value="contattato">Contattato</option>
+          <option value="preventivo">Preventivo</option>
+          <option value="cliente">Cliente</option>
+          <option value="perso">Perso</option>
+        </select></label>
+        <label class="full">Messaggio<textarea name="message" rows="4"></textarea></label>
+      </div>
+      <div class="modal-actions">
+        <button class="ghost-button" value="cancel" type="submit">Annulla</button>
+        <button class="primary-button" value="default" type="submit">Salva lead</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="app.js"></script>
+</body>
+</html>
