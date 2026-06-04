@@ -383,6 +383,11 @@ button { cursor: pointer; }
   grid-template-columns: minmax(0, 1fr) auto;
 }
 
+.task-card.has-warning {
+  border-color: var(--yellow);
+  background: #fff8df;
+}
+
 .task-card strong,
 .team-row strong {
   display: block;
@@ -407,6 +412,58 @@ button { cursor: pointer; }
   margin-top: 8px;
   color: var(--blue);
   font-size: 12px;
+}
+
+.task-card .sync-warning {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.task-actions {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+}
+
+.task-actions button.badge {
+  cursor: pointer;
+}
+
+.sync-log-panel {
+  margin-top: 14px;
+}
+
+.sync-log-list {
+  display: grid;
+  gap: 8px;
+}
+
+.sync-log-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,.55);
+  padding: 12px;
+}
+
+.sync-log-row strong,
+.sync-log-row span {
+  display: block;
+}
+
+.sync-log-row span,
+.sync-log-row small {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.sync-log-row.error {
+  border-color: var(--accent);
+}
+
+.sync-log-row.warning {
+  border-color: var(--yellow);
 }
 
 .team-row {

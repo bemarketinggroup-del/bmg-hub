@@ -48,6 +48,10 @@
       "dest": "/api/clickup-tasks.js"
     },
     {
+      "src": "/api/clickup/webhook",
+      "dest": "/api/clickup-tasks.js"
+    },
+    {
       "src": "/",
       "dest": "/api/app.js"
     },

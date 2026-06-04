@@ -150,6 +150,7 @@ const seed = {
   agencyUsers: [],
   staffProfiles: [],
   clickupTasks: [],
+  clickupTaskLogs: [],
   tasks: [
     { title: "Collegare form contatti a POST /api/leads", done: false },
     { title: "Definire campi modificabili della home", done: false },
@@ -551,6 +552,18 @@ async function loadClickUpTasks() {
   }
 }
 
+async function loadClickUpTaskLogs() {
+  try {
+    const response = await apiFetch("/api/clickup/tasks?logs=1");
+    if (!response.ok) throw new Error(`ClickUp logs error ${response.status}`);
+    state.clickupTaskLogs = await response.json();
+    renderTaskLogs();
+  } catch (error) {
+    renderBackendStatus(error.message);
+    renderTaskLogs();
+  }
+}
+
 function renderBackendStatus(message = "") {
   const footer = document.querySelector(".sidebar-footer span:last-child");
   const dot = document.querySelector(".status-dot");
@@ -733,6 +746,8 @@ function renderTeam() {
   renderTeamProfile();
   renderClickUpTasks();
   renderTaskAssigneeOptions();
+  renderTaskClientOptions();
+  renderTaskLogs();
 }
 
 async function loadUsersFromBackend() {
@@ -886,16 +901,35 @@ function renderClickUpTasks() {
     return `${task.name} ${task.status} ${assignees} ${task.list} ${task.folder}`.toLowerCase().includes(search);
   });
   target.innerHTML = tasks.map((task) => `
-    <article class="task-card">
+    <article class="task-card ${task.client_tag_status !== "ok" ? "has-warning" : ""}">
       <div>
         <strong>${task.name}</strong>
         <span>${task.status || "Senza stato"} · ${task.list || task.folder || task.space || "ClickUp"}</span>
         ${assigneeLabels(task).length ? `<p>${assigneeLabels(task).join(", ")}</p>` : ""}
+        <p>${task.client_tag ? `Cliente: ${task.client_tag}` : "Tag cliente mancante"}</p>
+        ${task.sync_error ? `<small class="sync-warning">${task.sync_error}</small>` : ""}
         ${task.due_date ? `<small>Scadenza ${formatContentDate(Number(task.due_date))}</small>` : ""}
       </div>
-      <a class="badge" href="${task.url}" target="_blank" rel="noreferrer">Apri</a>
+      <div class="task-actions">
+        <button class="badge" data-edit-task="${task.clickup_task_id || task.id}" type="button">Modifica</button>
+        <a class="badge" href="${task.url}" target="_blank" rel="noreferrer">ClickUp</a>
+      </div>
     </article>
   `).join("") || emptyState("Nessuna task trovata.");
+}
+
+function renderTaskLogs() {
+  const target = document.getElementById("taskSyncLogList");
+  if (!target) return;
+  target.innerHTML = (state.clickupTaskLogs || []).slice(0, 30).map((log) => `
+    <article class="sync-log-row ${log.status}">
+      <div>
+        <strong>${log.message}</strong>
+        <span>${log.source} · ${log.action}${log.clickup_task_id ? ` · ${log.clickup_task_id}` : ""}</span>
+      </div>
+      <small>${formatContentDate(log.created_at)}</small>
+    </article>
+  `).join("") || emptyState("Nessun log sincronizzazione.");
 }
 
 function selectedTeamMember() {
@@ -942,13 +976,38 @@ function renderTaskAssigneeOptions() {
   `).join("");
 }
 
-function openTaskModal(userId = selectedTeamMemberId) {
+function renderTaskClientOptions(selectedClient = "") {
+  const select = document.getElementById("taskClientTag");
+  if (!select) return;
+  const selected = normalizeClientLabel(selectedClient);
+  select.innerHTML = `<option value="">Scegli cliente</option>${state.clients.map((client) => `
+    <option value="${client.name}" ${normalizeClientLabel(client.name) === selected ? "selected" : ""}>${client.name}</option>
+  `).join("")}`;
+}
+
+function normalizeClientLabel(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function openTaskModal(userId = selectedTeamMemberId, taskId = "") {
   const form = document.getElementById("taskForm");
+  const task = taskId ? state.clickupTasks.find((item) => String(item.clickup_task_id || item.id) === String(taskId)) : null;
   form.reset();
+  form.elements.clickup_task_id.value = task?.clickup_task_id || task?.id || "";
+  form.elements.name.value = task?.name || "";
+  form.elements.status.value = task?.status || "";
+  form.elements.priority.value = task?.priority || "";
+  form.elements.description.value = task?.description || "";
+  form.elements.due_date.value = task?.due_date ? new Date(Number(task.due_date)).toISOString().slice(0, 10) : "";
   renderTaskAssigneeOptions();
+  renderTaskClientOptions(task?.client_tag || "");
   [...form.elements.assignees.options].forEach((option) => {
-    option.selected = userId !== ALL_TEAM_TASKS_ID && userId !== UNASSIGNED_TASKS_ID && String(option.value) === String(userId || "");
+    option.selected = task
+      ? (task.assignees || []).some((assignee) => String(assignee.id) === String(option.value))
+      : userId !== ALL_TEAM_TASKS_ID && userId !== UNASSIGNED_TASKS_ID && String(option.value) === String(userId || "");
   });
+  document.getElementById("taskModalTitle").textContent = task ? "Modifica task ClickUp" : "Nuova task ClickUp";
+  document.getElementById("saveTaskButton").textContent = task ? "Salva modifiche" : "Crea task";
   document.getElementById("taskModal").showModal();
 }
 
@@ -1121,7 +1180,7 @@ async function syncTasksFromClickUp() {
   button.disabled = true;
   button.textContent = "Sincronizzo...";
   try {
-    await Promise.all([loadClickUpTeam(), loadClickUpTasks()]);
+    await Promise.all([loadClickUpTeam(), loadClickUpTasks(), loadClickUpTaskLogs()]);
   } finally {
     button.disabled = false;
     button.textContent = "Sincronizza task";
@@ -1132,9 +1191,10 @@ async function submitTask(form) {
   const formData = new FormData(form);
   const data = Object.fromEntries(formData.entries());
   data.assignees = formData.getAll("assignees");
+  const isUpdate = Boolean(data.clickup_task_id);
   try {
     const response = await apiFetch("/api/clickup/tasks", {
-      method: "POST",
+      method: isUpdate ? "PATCH" : "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data)
     });
@@ -1143,10 +1203,11 @@ async function submitTask(form) {
     clickupOnline = true;
     form.reset();
     await loadClickUpTasks();
+    await loadClickUpTaskLogs();
   } catch (error) {
     clickupOnline = false;
     renderBackendStatus(error.message);
-    alert("Non riesco a creare la task su ClickUp. Controlla CLICKUP_DEFAULT_TASK_LIST_ID su Vercel.");
+    alert(error.message || "Non riesco a sincronizzare la task su ClickUp.");
   }
 }
 
@@ -1173,11 +1234,13 @@ document.body.addEventListener("click", (event) => {
   const statusButton = event.target.closest("[data-status-next]");
   const teamMember = event.target.closest("[data-team-member]");
   const newTaskFor = event.target.closest("[data-new-task-for]");
+  const editTask = event.target.closest("[data-edit-task]");
   const saveUser = event.target.closest("[data-save-user]");
   if (jump) setView(jump.dataset.jump);
   if (statusButton) advanceStatus(statusButton.dataset.statusNext);
   if (teamMember) selectTeamMember(teamMember.dataset.teamMember);
   if (newTaskFor) openTaskModal(newTaskFor.dataset.newTaskFor);
+  if (editTask) openTaskModal(selectedTeamMemberId, editTask.dataset.editTask);
   if (saveUser) saveUserProfile(saveUser.closest("[data-user-id]"));
 });
 
@@ -1224,6 +1287,7 @@ document.getElementById("deleteContentButton").addEventListener("click", deleteC
 document.getElementById("newClientButton").addEventListener("click", () => document.getElementById("clientModal").showModal());
 document.getElementById("syncClickUpButton").addEventListener("click", syncClientsFromClickUp);
 document.getElementById("syncTasksButton").addEventListener("click", syncTasksFromClickUp);
+document.getElementById("refreshTaskLogsButton").addEventListener("click", loadClickUpTaskLogs);
 document.getElementById("newTaskButton").addEventListener("click", () => openTaskModal());
 
 document.getElementById("clientForm").addEventListener("submit", (event) => {
@@ -1281,6 +1345,7 @@ async function bootApp() {
       loadClientsFromBackend(),
       loadClickUpTeam(),
       loadClickUpTasks(),
+      loadClickUpTaskLogs(),
       loadUsersFromBackend()
     ]);
   } catch (error) {

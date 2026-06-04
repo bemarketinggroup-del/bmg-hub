@@ -229,6 +229,13 @@
             <div class="task-list" id="clickupTaskList"></div>
           </section>
         </div>
+        <section class="panel sync-log-panel">
+          <div class="panel-head">
+            <h2>Log sincronizzazione</h2>
+            <button class="text-button" id="refreshTaskLogsButton" type="button">Aggiorna</button>
+          </div>
+          <div class="sync-log-list" id="taskSyncLogList"></div>
+        </section>
       </section>
 
       <section class="view" id="settingsView" data-view-panel="settings">
@@ -389,11 +396,14 @@
   <dialog class="modal" id="taskModal">
     <form method="dialog" id="taskForm">
       <div class="modal-head">
-        <h2>Nuova task ClickUp</h2>
+        <h2 id="taskModalTitle">Nuova task ClickUp</h2>
         <button class="icon-button" value="cancel" type="submit" formnovalidate title="Chiudi">×</button>
       </div>
+      <input name="clickup_task_id" type="hidden">
       <div class="form-grid">
         <label class="full">Titolo task<input name="name" required></label>
+        <label class="full">Tag cliente<select name="client_tag" id="taskClientTag" required></select></label>
+        <label>Stato<input name="status" placeholder="to do, in progress, complete"></label>
         <label>Assegnatari<select name="assignees" id="taskAssignees" multiple size="5"></select></label>
         <label>Scadenza<input name="due_date" type="date"></label>
         <label>Priorità<select name="priority">
@@ -407,7 +417,7 @@
       </div>
       <div class="modal-actions">
         <button class="ghost-button" value="cancel" type="submit" formnovalidate>Annulla</button>
-        <button class="primary-button" value="default" type="submit">Crea task</button>
+        <button class="primary-button" id="saveTaskButton" value="default" type="submit">Crea task</button>
       </div>
     </form>
   </dialog>
