@@ -190,15 +190,15 @@
         <div class="split-panel">
           <section class="panel">
             <div class="panel-head">
-              <h2>Task ClickUp</h2>
-            </div>
-            <div class="task-list" id="clickupTaskList"></div>
-          </section>
-          <section class="panel">
-            <div class="panel-head">
-              <h2>Utenti agenzia</h2>
+              <h2>Team agenzia</h2>
             </div>
             <div class="team-list" id="agencyTeamList"></div>
+          </section>
+          <section class="panel">
+            <div class="panel-head team-profile-head" id="teamProfileHead">
+              <h2>Task assegnate</h2>
+            </div>
+            <div class="task-list" id="clickupTaskList"></div>
           </section>
         </div>
       </section>
@@ -343,7 +343,7 @@
       </div>
       <div class="form-grid">
         <label class="full">Titolo task<input name="name" required></label>
-        <label>Assegnatari<input name="assignees" placeholder="ID ClickUp separati da virgola"></label>
+        <label>Assegnatari<select name="assignees" id="taskAssignees" multiple size="5"></select></label>
         <label>Scadenza<input name="due_date" type="date"></label>
         <label>Priorità<select name="priority">
           <option value="">Nessuna</option>

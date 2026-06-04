@@ -45,7 +45,11 @@ function normalizeTask(task) {
     status: task.status?.status || task.status || "",
     url: task.url,
     due_date: task.due_date,
-    assignees: (task.assignees || []).map((user) => user.username || user.email || user.id),
+    assignees: (task.assignees || []).map((user) => ({
+      id: String(user.id || ""),
+      name: user.username || user.name || user.email || String(user.id || ""),
+      email: user.email || ""
+    })),
     list: task.list?.name || "",
     folder: task.folder?.name || "",
     space: task.space?.name || ""
@@ -59,6 +63,11 @@ function priorityValue(priority) {
     normal: 3,
     low: 4
   }[priority] || undefined;
+}
+
+function assigneeIds(value) {
+  const values = Array.isArray(value) ? value : String(value || "").split(",");
+  return values.map((item) => Number(String(item).trim())).filter(Number.isFinite);
 }
 
 export default async function handler(request, response) {
@@ -105,7 +114,7 @@ export default async function handler(request, response) {
     const payload = {
       name: String(body.name).trim(),
       description: String(body.description || "").trim(),
-      assignees: String(body.assignees || "").split(",").map((item) => Number(item.trim())).filter(Number.isFinite),
+      assignees: assigneeIds(body.assignees),
       due_date: body.due_date ? new Date(body.due_date).getTime() : undefined,
       priority: priorityValue(body.priority)
     };

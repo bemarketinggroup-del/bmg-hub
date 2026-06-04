@@ -160,6 +160,7 @@ let backendOnline = false;
 let contentOnline = false;
 let clientsOnline = false;
 let clickupOnline = false;
+let selectedTeamMemberId = "";
 
 function loadState() {
   const saved = localStorage.getItem(STORAGE_KEY);
@@ -300,6 +301,7 @@ async function loadClickUpTeam() {
     const response = await fetch("/api/clickup/team");
     if (!response.ok) throw new Error(`ClickUp team error ${response.status}`);
     state.agencyUsers = await response.json();
+    if (!selectedTeamMemberId && state.agencyUsers.length) selectedTeamMemberId = String(state.agencyUsers[0].id);
     clickupOnline = true;
     renderBackendStatus();
     renderTeam();
@@ -504,38 +506,113 @@ function labelClientStatus(status) {
 
 function renderTeam() {
   renderAgencyUsers();
+  renderTeamProfile();
   renderClickUpTasks();
+  renderTaskAssigneeOptions();
 }
 
 function renderAgencyUsers() {
   const target = document.getElementById("agencyTeamList");
   if (!target) return;
+  if (!selectedTeamMemberId && state.agencyUsers.length) selectedTeamMemberId = String(state.agencyUsers[0].id);
   target.innerHTML = state.agencyUsers.map((user) => `
-    <article class="team-row">
+    <button class="team-row ${String(user.id) === selectedTeamMemberId ? "is-active" : ""}" data-team-member="${user.id}" type="button">
       <div class="avatar">${user.avatar ? `<img src="${user.avatar}" alt="${user.name}">` : initials(user.name)}</div>
       <div>
         <strong>${user.name}</strong>
-        <span>${user.email || "Email non indicata"} · ID ${user.id}</span>
+        <span>${teamMemberTasks(user).length} task assegnate · ID ${user.id}</span>
       </div>
-    </article>
+    </button>
   `).join("") || emptyState("Nessun utente caricato da ClickUp.");
+}
+
+function renderTeamProfile() {
+  const target = document.getElementById("teamProfileHead");
+  if (!target) return;
+  const user = selectedTeamMember();
+  if (!user) {
+    target.innerHTML = "<h2>Task assegnate</h2>";
+    return;
+  }
+  target.innerHTML = `
+    <div class="profile-title">
+      <div class="avatar">${user.avatar ? `<img src="${user.avatar}" alt="${user.name}">` : initials(user.name)}</div>
+      <div>
+        <h2>${user.name}</h2>
+        <span>${user.email || "Email non indicata"} · ${teamMemberTasks(user).length} task</span>
+      </div>
+    </div>
+    <button class="ghost-button" data-new-task-for="${user.id}" type="button">Task per ${firstName(user.name)}</button>
+  `;
 }
 
 function renderClickUpTasks() {
   const target = document.getElementById("clickupTaskList");
   if (!target) return;
   const search = document.getElementById("taskSearch")?.value?.toLowerCase() || "";
-  const tasks = state.clickupTasks.filter((task) => `${task.name} ${task.status} ${task.assignees?.join(" ")} ${task.list} ${task.folder}`.toLowerCase().includes(search));
+  const user = selectedTeamMember();
+  const tasks = (user ? teamMemberTasks(user) : state.clickupTasks).filter((task) => {
+    const assignees = assigneeLabels(task).join(" ");
+    return `${task.name} ${task.status} ${assignees} ${task.list} ${task.folder}`.toLowerCase().includes(search);
+  });
   target.innerHTML = tasks.map((task) => `
     <article class="task-card">
       <div>
         <strong>${task.name}</strong>
         <span>${task.status || "Senza stato"} · ${task.list || task.folder || task.space || "ClickUp"}</span>
-        ${task.assignees?.length ? `<p>${task.assignees.join(", ")}</p>` : ""}
+        ${assigneeLabels(task).length ? `<p>${assigneeLabels(task).join(", ")}</p>` : ""}
+        ${task.due_date ? `<small>Scadenza ${formatContentDate(Number(task.due_date))}</small>` : ""}
       </div>
       <a class="badge" href="${task.url}" target="_blank" rel="noreferrer">Apri</a>
     </article>
   `).join("") || emptyState("Nessuna task trovata.");
+}
+
+function selectedTeamMember() {
+  return state.agencyUsers.find((user) => String(user.id) === selectedTeamMemberId);
+}
+
+function selectTeamMember(id) {
+  selectedTeamMemberId = String(id || "");
+  renderTeam();
+}
+
+function teamMemberTasks(user) {
+  return state.clickupTasks.filter((task) => taskAssignedTo(task, user));
+}
+
+function taskAssignedTo(task, user) {
+  return (task.assignees || []).some((assignee) => {
+    if (typeof assignee === "string") return assignee === user.name || assignee === user.email || assignee === String(user.id);
+    return String(assignee.id) === String(user.id) || assignee.email === user.email || assignee.name === user.name;
+  });
+}
+
+function assigneeLabels(task) {
+  return (task.assignees || []).map((assignee) => typeof assignee === "string" ? assignee : assignee.name).filter(Boolean);
+}
+
+function renderTaskAssigneeOptions() {
+  const select = document.getElementById("taskAssignees");
+  if (!select) return;
+  const selected = new Set([...select.selectedOptions].map((option) => option.value));
+  select.innerHTML = state.agencyUsers.map((user) => `
+    <option value="${user.id}" ${selected.has(String(user.id)) ? "selected" : ""}>${user.name}</option>
+  `).join("");
+}
+
+function openTaskModal(userId = selectedTeamMemberId) {
+  const form = document.getElementById("taskForm");
+  form.reset();
+  renderTaskAssigneeOptions();
+  [...form.elements.assignees.options].forEach((option) => {
+    option.selected = String(option.value) === String(userId || "");
+  });
+  document.getElementById("taskModal").showModal();
+}
+
+function firstName(name) {
+  return String(name || "team").split(/\s+/)[0];
 }
 
 function initials(name) {
@@ -711,7 +788,9 @@ async function syncTasksFromClickUp() {
 }
 
 async function submitTask(form) {
-  const data = Object.fromEntries(new FormData(form).entries());
+  const formData = new FormData(form);
+  const data = Object.fromEntries(formData.entries());
+  data.assignees = formData.getAll("assignees");
   try {
     const response = await fetch("/api/clickup/tasks", {
       method: "POST",
@@ -747,8 +826,12 @@ document.getElementById("navList").addEventListener("click", (event) => {
 document.body.addEventListener("click", (event) => {
   const jump = event.target.closest("[data-jump]");
   const statusButton = event.target.closest("[data-status-next]");
+  const teamMember = event.target.closest("[data-team-member]");
+  const newTaskFor = event.target.closest("[data-new-task-for]");
   if (jump) setView(jump.dataset.jump);
   if (statusButton) advanceStatus(statusButton.dataset.statusNext);
+  if (teamMember) selectTeamMember(teamMember.dataset.teamMember);
+  if (newTaskFor) openTaskModal(newTaskFor.dataset.newTaskFor);
 });
 
 document.getElementById("newLeadButton").addEventListener("click", () => document.getElementById("leadModal").showModal());
@@ -792,7 +875,7 @@ document.getElementById("deleteContentButton").addEventListener("click", deleteC
 document.getElementById("newClientButton").addEventListener("click", () => document.getElementById("clientModal").showModal());
 document.getElementById("syncClickUpButton").addEventListener("click", syncClientsFromClickUp);
 document.getElementById("syncTasksButton").addEventListener("click", syncTasksFromClickUp);
-document.getElementById("newTaskButton").addEventListener("click", () => document.getElementById("taskModal").showModal());
+document.getElementById("newTaskButton").addEventListener("click", () => openTaskModal());
 
 document.getElementById("clientForm").addEventListener("submit", (event) => {
   if (event.submitter?.value === "cancel") return;
