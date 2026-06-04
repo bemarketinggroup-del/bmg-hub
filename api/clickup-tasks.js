@@ -387,46 +387,51 @@ async function processWebhook(request, response) {
 }
 
 export default async function handler(request, response) {
-  if (request.url?.includes("/api/clickup/webhook")) {
-    return processWebhook(request, response);
+  try {
+    if (request.url?.includes("/api/clickup/webhook")) {
+      return processWebhook(request, response);
+    }
+
+    if (request.method === "OPTIONS") {
+      response.writeHead(204, headers());
+      response.end();
+      return;
+    }
+
+    const session = await requireUser(request, response, { headers: headers() });
+    if (!session) return;
+
+    if (!CLICKUP_API_TOKEN || !CLICKUP_WORKSPACE_ID) {
+      return json(response, 500, { error: "Missing ClickUp environment variables" });
+    }
+
+    const url = new URL(request.url, "https://bmg-hub.local");
+    if (request.method === "GET" && url.searchParams.get("logs") === "1") {
+      const result = await logs();
+      return json(response, result.status, result.body);
+    }
+
+    if (request.method === "GET") {
+      const pulled = url.searchParams.get("sync") === "0" ? null : await syncFromClickUp();
+      if (pulled && pulled.status !== 200) return json(response, pulled.status, pulled.body);
+      const result = await savedTasksForSession(session);
+      return json(response, result.status, result.body);
+    }
+
+    const clientRows = await clients();
+    if (request.method === "POST") {
+      const result = await createTask(await readJson(request), session, clientRows);
+      return json(response, result.status, result.body);
+    }
+
+    if (request.method === "PATCH") {
+      const result = await updateTask(await readJson(request), session, clientRows);
+      return json(response, result.status, result.body);
+    }
+
+    return json(response, 405, { error: "Method not allowed" });
+  } catch (error) {
+    await logSync(null, "hub", "runtime", "error", "Errore runtime modulo task", { message: error.message });
+    return json(response, 500, { error: "Task sync runtime error", message: error.message });
   }
-
-  if (request.method === "OPTIONS") {
-    response.writeHead(204, headers());
-    response.end();
-    return;
-  }
-
-  const session = await requireUser(request, response, { headers: headers() });
-  if (!session) return;
-
-  if (!CLICKUP_API_TOKEN || !CLICKUP_WORKSPACE_ID) {
-    return json(response, 500, { error: "Missing ClickUp environment variables" });
-  }
-
-  const url = new URL(request.url, "https://bmg-hub.local");
-  if (request.method === "GET" && url.searchParams.get("logs") === "1") {
-    const result = await logs();
-    return json(response, result.status, result.body);
-  }
-
-  if (request.method === "GET") {
-    const pulled = url.searchParams.get("sync") === "0" ? null : await syncFromClickUp();
-    if (pulled && pulled.status !== 200) return json(response, pulled.status, pulled.body);
-    const result = await savedTasksForSession(session);
-    return json(response, result.status, result.body);
-  }
-
-  const clientRows = await clients();
-  if (request.method === "POST") {
-    const result = await createTask(await readJson(request), session, clientRows);
-    return json(response, result.status, result.body);
-  }
-
-  if (request.method === "PATCH") {
-    const result = await updateTask(await readJson(request), session, clientRows);
-    return json(response, result.status, result.body);
-  }
-
-  return json(response, 405, { error: "Method not allowed" });
 }
