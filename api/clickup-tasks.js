@@ -6,6 +6,16 @@ const CLICKUP_WORKSPACE_ID = process.env.CLICKUP_WORKSPACE_ID || "90152036988";
 const CLICKUP_DEFAULT_TASK_LIST_ID = process.env.CLICKUP_DEFAULT_TASK_LIST_ID;
 const CLICKUP_WEBHOOK_SECRET = process.env.CLICKUP_WEBHOOK_SECRET;
 const CLICKUP_API = "https://api.clickup.com/api/v2";
+const CLICKUP_WEBHOOK_ENDPOINT = "https://bmg-hub.vercel.app/api/clickup/webhook";
+const CLICKUP_WEBHOOK_EVENTS = [
+  "taskCreated",
+  "taskUpdated",
+  "taskStatusUpdated",
+  "taskPriorityUpdated",
+  "taskDueDateUpdated",
+  "taskAssigneeUpdated",
+  "taskTagUpdated"
+];
 
 function headers() {
   return jsonHeaders("GET,POST,PATCH,OPTIONS");
@@ -315,6 +325,74 @@ async function reconcileClientTag(taskId, currentTags, desiredTag, clientRows) {
   }
 }
 
+function sameWebhook(webhook) {
+  const endpoint = webhook.endpoint || webhook.url || "";
+  const events = new Set(webhook.events || []);
+  return endpoint === CLICKUP_WEBHOOK_ENDPOINT && CLICKUP_WEBHOOK_EVENTS.every((event) => events.has(event));
+}
+
+function publicWebhook(webhook, hasSecret = false) {
+  return {
+    id: webhook.id,
+    endpoint: webhook.endpoint || webhook.url || "",
+    events: webhook.events || [],
+    health: webhook.health || null,
+    has_secret: hasSecret
+  };
+}
+
+async function registerWebhook(session) {
+  if (session.profile.role !== "admin") {
+    return { status: 403, body: { error: "Solo admin puo' registrare webhook ClickUp" } };
+  }
+
+  const existingResult = await clickupFetch(`/team/${CLICKUP_WORKSPACE_ID}/webhook`, {}, 0);
+  const existingData = await existingResult.json().catch(() => ({}));
+  if (!existingResult.ok) {
+    return { status: existingResult.status, body: { error: "Impossibile leggere i webhook ClickUp" } };
+  }
+
+  const existingWebhooks = existingData.webhooks || existingData || [];
+  const equivalent = Array.isArray(existingWebhooks) ? existingWebhooks.find(sameWebhook) : null;
+  if (equivalent) {
+    const secret = equivalent.secret || equivalent.signing_secret || "";
+    await logSync(null, "hub", "webhook_register", "success", "Webhook ClickUp equivalente gia' presente");
+    return {
+      status: 200,
+      body: {
+        created: false,
+        webhook: publicWebhook(equivalent, Boolean(secret)),
+        secret
+      }
+    };
+  }
+
+  const createdResult = await clickupFetch(`/team/${CLICKUP_WORKSPACE_ID}/webhook`, {
+    method: "POST",
+    body: JSON.stringify({
+      endpoint: CLICKUP_WEBHOOK_ENDPOINT,
+      events: CLICKUP_WEBHOOK_EVENTS
+    })
+  }, 0);
+  const createdData = await createdResult.json().catch(() => ({}));
+  if (!createdResult.ok) {
+    await logSync(null, "hub", "webhook_register", "error", "Creazione webhook ClickUp fallita", { status: createdResult.status });
+    return { status: createdResult.status, body: { error: "Creazione webhook ClickUp fallita" } };
+  }
+
+  const webhook = createdData.webhook || createdData;
+  const secret = webhook.secret || createdData.secret || webhook.signing_secret || "";
+  await logSync(null, "hub", "webhook_register", "success", "Webhook ClickUp registrato");
+  return {
+    status: 200,
+    body: {
+      created: true,
+      webhook: publicWebhook(webhook, Boolean(secret)),
+      secret
+    }
+  };
+}
+
 async function rawBody(request) {
   const chunks = [];
   for await (const chunk of request) chunks.push(chunk);
@@ -420,7 +498,10 @@ export default async function handler(request, response) {
 
     const clientRows = await clients();
     if (request.method === "POST") {
-      const result = await createTask(await readJson(request), session, clientRows);
+      const body = await readJson(request);
+      const result = body.action === "register_webhook"
+        ? await registerWebhook(session)
+        : await createTask(body, session, clientRows);
       return json(response, result.status, result.body);
     }
 
