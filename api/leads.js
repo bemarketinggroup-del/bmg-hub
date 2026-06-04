@@ -1,16 +1,11 @@
+import { jsonHeaders, requireUser } from "./_auth.js";
+
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || "*";
-const HUB_BASIC_USER = process.env.HUB_BASIC_USER;
-const HUB_BASIC_PASSWORD = process.env.HUB_BASIC_PASSWORD;
 
 function headers() {
-  return {
-    "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
-    "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type,Authorization",
-    "Content-Type": "application/json"
-  };
+  return { ...jsonHeaders("GET,POST,OPTIONS"), "Access-Control-Allow-Origin": ALLOWED_ORIGIN };
 }
 
 function requiredEnv() {
@@ -18,27 +13,6 @@ function requiredEnv() {
     return "Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY";
   }
   return null;
-}
-
-function hasBasicAccess(request) {
-  if (!HUB_BASIC_USER || !HUB_BASIC_PASSWORD) return false;
-  const header = request.headers.authorization || request.headers.Authorization || "";
-  if (!header.startsWith("Basic ")) return false;
-  const decoded = Buffer.from(header.slice(6), "base64").toString("utf8");
-  const separator = decoded.indexOf(":");
-  const username = decoded.slice(0, separator);
-  const password = decoded.slice(separator + 1);
-  return username === HUB_BASIC_USER && password === HUB_BASIC_PASSWORD;
-}
-
-function requireBasicAccess(request, response) {
-  if (hasBasicAccess(request)) return true;
-  response.writeHead(401, {
-    ...headers(),
-    "WWW-Authenticate": 'Basic realm="BMG Hub"'
-  });
-  response.end(JSON.stringify({ error: "Authentication required" }));
-  return false;
 }
 
 function isAllowedPublicPost(request) {
@@ -62,7 +36,7 @@ export default async function handler(request, response) {
   }
 
   if (request.method === "GET") {
-    if (!requireBasicAccess(request, response)) return;
+    if (!await requireUser(request, response, { headers: headers() })) return;
     const result = await fetch(`${SUPABASE_URL}/rest/v1/site_leads?select=*&order=created_at.desc`, {
       headers: {
         apikey: SUPABASE_SERVICE_ROLE_KEY,

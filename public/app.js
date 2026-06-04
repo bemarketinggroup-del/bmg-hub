@@ -148,6 +148,7 @@ const seed = {
     { name: "Zest Restaurant", status: "Attivo", services: "Social, ads", clickup: "#", drive: "#" }
   ],
   agencyUsers: [],
+  staffProfiles: [],
   clickupTasks: [],
   tasks: [
     { title: "Collegare form contatti a POST /api/leads", done: false },
@@ -163,6 +164,9 @@ let contentOnline = false;
 let clientsOnline = false;
 let clickupOnline = false;
 let selectedTeamMemberId = ALL_TEAM_TASKS_ID;
+let authConfig = null;
+let authSession = loadAuthSession();
+let currentProfile = null;
 
 function loadState() {
   const saved = localStorage.getItem(STORAGE_KEY);
@@ -178,6 +182,162 @@ function saveState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
 
+function loadAuthSession() {
+  try {
+    return JSON.parse(localStorage.getItem("bmg-hub-auth") || "null");
+  } catch {
+    return null;
+  }
+}
+
+function saveAuthSession(session) {
+  authSession = session;
+  if (session) {
+    localStorage.setItem("bmg-hub-auth", JSON.stringify(session));
+  } else {
+    localStorage.removeItem("bmg-hub-auth");
+  }
+}
+
+async function loadAuthConfig() {
+  if (authConfig) return authConfig;
+  const response = await fetch("/api/auth-config");
+  if (!response.ok) throw new Error("Configurazione auth non disponibile");
+  authConfig = await response.json();
+  if (!authConfig.supabaseUrl || !authConfig.supabaseAnonKey) {
+    throw new Error("SUPABASE_URL o SUPABASE_ANON_KEY mancanti");
+  }
+  return authConfig;
+}
+
+async function supabaseAuth(path, options = {}) {
+  const config = await loadAuthConfig();
+  return fetch(`${config.supabaseUrl}/auth/v1${path}`, {
+    ...options,
+    headers: {
+      apikey: config.supabaseAnonKey,
+      "Content-Type": "application/json",
+      ...(options.headers || {})
+    }
+  });
+}
+
+function normalizeSession(data) {
+  return {
+    access_token: data.access_token,
+    refresh_token: data.refresh_token,
+    expires_at: Date.now() + Number(data.expires_in || 3600) * 1000,
+    user: data.user || null
+  };
+}
+
+async function loginWithPassword(email, password) {
+  const response = await supabaseAuth("/token?grant_type=password", {
+    method: "POST",
+    body: JSON.stringify({ email, password })
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error_description || data.msg || "Credenziali non valide");
+  saveAuthSession(normalizeSession(data));
+  await loadCurrentUser();
+}
+
+async function refreshAuthSession() {
+  if (!authSession?.refresh_token) return null;
+  const response = await supabaseAuth("/token?grant_type=refresh_token", {
+    method: "POST",
+    body: JSON.stringify({ refresh_token: authSession.refresh_token })
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    saveAuthSession(null);
+    return null;
+  }
+  const nextSession = normalizeSession(data);
+  saveAuthSession(nextSession);
+  return nextSession.access_token;
+}
+
+async function accessToken() {
+  if (!authSession?.access_token) return "";
+  if (Date.now() > Number(authSession.expires_at || 0) - 60000) {
+    return await refreshAuthSession() || "";
+  }
+  return authSession.access_token;
+}
+
+async function apiFetch(url, options = {}) {
+  const token = await accessToken();
+  if (!token) {
+    showLogin();
+    throw new Error("Sessione richiesta");
+  }
+  const response = await fetch(url, {
+    ...options,
+    headers: {
+      ...(options.headers || {}),
+      Authorization: `Bearer ${token}`
+    }
+  });
+  if (response.status === 401 || response.status === 403) {
+    if (response.status === 401) saveAuthSession(null);
+    showLogin();
+  }
+  return response;
+}
+
+async function loadCurrentUser() {
+  const response = await apiFetch("/api/me");
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error || "Profilo staff non disponibile");
+  currentProfile = data.profile;
+  renderSession();
+  applyRoleAccess();
+  return data;
+}
+
+function renderSession() {
+  const badge = document.getElementById("sessionBadge");
+  if (!badge || !currentProfile) return;
+  badge.textContent = `${currentProfile.full_name || currentProfile.email} · ${currentProfile.role}`;
+}
+
+function applyRoleAccess() {
+  const isAdmin = currentProfile?.role === "admin";
+  document.querySelectorAll(".admin-only").forEach((item) => item.classList.toggle("is-hidden", !isAdmin));
+  if (!isAdmin && document.querySelector('[data-view-panel="users"]')?.classList.contains("is-active")) {
+    setView("dashboard");
+  }
+}
+
+function showLogin(message = "") {
+  document.getElementById("appShell").classList.add("is-hidden");
+  document.getElementById("loginScreen").classList.remove("is-hidden");
+  document.getElementById("loginError").textContent = message;
+}
+
+function showApp() {
+  document.getElementById("loginScreen").classList.add("is-hidden");
+  document.getElementById("appShell").classList.remove("is-hidden");
+}
+
+async function logout() {
+  const token = authSession?.access_token;
+  if (token) {
+    try {
+      await supabaseAuth("/logout", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` }
+      });
+    } catch {
+      // Local logout must still work if Supabase is unreachable.
+    }
+  }
+  currentProfile = null;
+  saveAuthSession(null);
+  showLogin();
+}
+
 function formatDate(value) {
   return new Intl.DateTimeFormat("it-IT", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(value));
 }
@@ -191,6 +351,7 @@ function setView(view) {
     content: ["CMS leggero", "Backend sito"],
     clients: ["Gestionale interno", "Clienti"],
     team: ["ClickUp operativo", "Team & Task"],
+    users: ["Accessi interni", "Utenti"],
     settings: ["Setup tecnico", "Configurazione"]
   };
   document.getElementById("viewKicker").textContent = titles[view][0];
@@ -241,7 +402,7 @@ function normalizeContent(item) {
 
 async function loadLeadsFromBackend() {
   try {
-    const response = await fetch("/api/leads");
+    const response = await apiFetch("/api/leads");
     if (!response.ok) throw new Error(`Backend error ${response.status}`);
     const rows = await response.json();
     state.leads = rows.map(normalizeLead);
@@ -256,7 +417,7 @@ async function loadLeadsFromBackend() {
 
 async function loadContentFromBackend() {
   try {
-    const response = await fetch("/api/site-content");
+    const response = await apiFetch("/api/site-content");
     if (!response.ok) throw new Error(`Content backend error ${response.status}`);
     const rows = await response.json();
     state.content = rows.map(normalizeContent);
@@ -272,7 +433,7 @@ async function loadContentFromBackend() {
 
 async function loadClientsFromBackend() {
   try {
-    const response = await fetch("/api/clients");
+    const response = await apiFetch("/api/clients");
     if (!response.ok) throw new Error(`Clients backend error ${response.status}`);
     const rows = await response.json();
     state.clients = rows.map(normalizeClient);
@@ -300,7 +461,7 @@ function normalizeClient(client) {
 
 async function loadClickUpTeam() {
   try {
-    const response = await fetch("/api/clickup/team");
+    const response = await apiFetch("/api/clickup/team");
     if (!response.ok) throw new Error(`ClickUp team error ${response.status}`);
     state.agencyUsers = await response.json();
     if (!selectedTeamMemberId) selectedTeamMemberId = ALL_TEAM_TASKS_ID;
@@ -316,7 +477,7 @@ async function loadClickUpTeam() {
 
 async function loadClickUpTasks() {
   try {
-    const response = await fetch("/api/clickup/tasks");
+    const response = await apiFetch("/api/clickup/tasks");
     if (!response.ok) throw new Error(`ClickUp tasks error ${response.status}`);
     state.clickupTasks = await response.json();
     clickupOnline = true;
@@ -511,6 +672,69 @@ function renderTeam() {
   renderTeamProfile();
   renderClickUpTasks();
   renderTaskAssigneeOptions();
+}
+
+async function loadUsersFromBackend() {
+  if (currentProfile?.role !== "admin") return;
+  try {
+    const response = await apiFetch("/api/users");
+    if (!response.ok) throw new Error(`Users backend error ${response.status}`);
+    state.staffProfiles = await response.json();
+    renderUsers();
+  } catch (error) {
+    renderBackendStatus(error.message);
+    renderUsers();
+  }
+}
+
+function renderUsers() {
+  const target = document.getElementById("userList");
+  if (!target) return;
+  if (currentProfile?.role !== "admin") {
+    target.innerHTML = emptyState("Solo gli admin possono gestire gli utenti.");
+    return;
+  }
+  target.innerHTML = (state.staffProfiles || []).map((profile) => `
+    <article class="user-row" data-user-id="${profile.id}">
+      <div>
+        <strong>${profile.full_name || profile.email}</strong>
+        <span>${profile.email} · Supabase ${profile.user_id}</span>
+      </div>
+      <input data-user-name value="${profile.full_name || ""}" placeholder="Nome staff" aria-label="Nome staff">
+      <select data-user-role aria-label="Ruolo">
+        <option value="admin" ${profile.role === "admin" ? "selected" : ""}>admin</option>
+        <option value="staff" ${profile.role === "staff" ? "selected" : ""}>staff</option>
+      </select>
+      <input data-user-clickup value="${profile.clickup_user_id || ""}" placeholder="ClickUp user ID" aria-label="ClickUp user ID">
+      <button class="ghost-button" data-save-user type="button">Salva</button>
+    </article>
+  `).join("") || emptyState("Nessun profilo staff configurato.");
+}
+
+async function saveUserProfile(row) {
+  const id = row.dataset.userId;
+  const profile = state.staffProfiles.find((item) => item.id === id);
+  if (!profile) return;
+  const payload = {
+    id,
+    full_name: row.querySelector("[data-user-name]").value,
+    role: row.querySelector("[data-user-role]").value,
+    clickup_user_id: row.querySelector("[data-user-clickup]").value,
+    active: profile.active !== false
+  };
+  try {
+    const response = await apiFetch("/api/users", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || `Users backend error ${response.status}`);
+    await loadUsersFromBackend();
+  } catch (error) {
+    renderBackendStatus(error.message);
+    alert("Non riesco a salvare il ruolo utente.");
+  }
 }
 
 function renderAgencyUsers() {
@@ -761,7 +985,7 @@ async function saveContent(form) {
   const payload = contentPayloadFromForm(form);
   const isUpdate = Boolean(payload.id);
   try {
-    const response = await fetch("/api/site-content", {
+    const response = await apiFetch("/api/site-content", {
       method: isUpdate ? "PATCH" : "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)
@@ -782,7 +1006,7 @@ async function deleteContent() {
   const confirmed = confirm("Eliminare questo blocco dal backend sito?");
   if (!confirmed) return;
   try {
-    const response = await fetch(`/api/site-content?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+    const response = await apiFetch(`/api/site-content?id=${encodeURIComponent(id)}`, { method: "DELETE" });
     if (!response.ok && response.status !== 204) throw new Error(`Content backend error ${response.status}`);
     document.getElementById("contentModal").close();
     await loadContentFromBackend();
@@ -796,7 +1020,7 @@ async function submitClient(form) {
   const data = Object.fromEntries(new FormData(form).entries());
   data.create_clickup = data.create_clickup === "on";
   try {
-    const response = await fetch("/api/clients", {
+    const response = await apiFetch("/api/clients", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data)
@@ -817,7 +1041,7 @@ async function syncClientsFromClickUp() {
   button.disabled = true;
   button.textContent = "Sincronizzo...";
   try {
-    const response = await fetch("/api/clients/sync-clickup", { method: "POST" });
+    const response = await apiFetch("/api/clients/sync-clickup", { method: "POST" });
     const result = await response.json();
     if (!response.ok) throw new Error(result.error || `Sync error ${response.status}`);
     await loadClientsFromBackend();
@@ -848,7 +1072,7 @@ async function submitTask(form) {
   const data = Object.fromEntries(formData.entries());
   data.assignees = formData.getAll("assignees");
   try {
-    const response = await fetch("/api/clickup/tasks", {
+    const response = await apiFetch("/api/clickup/tasks", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data)
@@ -872,11 +1096,15 @@ function renderAll() {
   renderContent();
   renderClients();
   renderTeam();
+  renderUsers();
 }
 
 document.getElementById("navList").addEventListener("click", (event) => {
   const button = event.target.closest("[data-view]");
-  if (button) setView(button.dataset.view);
+  if (button) {
+    if (button.dataset.view === "users" && currentProfile?.role !== "admin") return;
+    setView(button.dataset.view);
+  }
 });
 
 document.body.addEventListener("click", (event) => {
@@ -884,13 +1112,16 @@ document.body.addEventListener("click", (event) => {
   const statusButton = event.target.closest("[data-status-next]");
   const teamMember = event.target.closest("[data-team-member]");
   const newTaskFor = event.target.closest("[data-new-task-for]");
+  const saveUser = event.target.closest("[data-save-user]");
   if (jump) setView(jump.dataset.jump);
   if (statusButton) advanceStatus(statusButton.dataset.statusNext);
   if (teamMember) selectTeamMember(teamMember.dataset.teamMember);
   if (newTaskFor) openTaskModal(newTaskFor.dataset.newTaskFor);
+  if (saveUser) saveUserProfile(saveUser.closest("[data-user-id]"));
 });
 
 document.getElementById("newLeadButton").addEventListener("click", () => document.getElementById("leadModal").showModal());
+document.getElementById("logoutButton").addEventListener("click", logout);
 document.getElementById("exportButton").addEventListener("click", exportData);
 document.getElementById("leadSearch").addEventListener("input", renderLeads);
 document.getElementById("statusFilter").addEventListener("change", renderLeads);
@@ -954,10 +1185,39 @@ document.getElementById("priorityTasks").addEventListener("change", (event) => {
   saveState();
 });
 
-renderAll();
-renderBackendStatus();
-loadLeadsFromBackend();
-loadContentFromBackend();
-loadClientsFromBackend();
-loadClickUpTeam();
-loadClickUpTasks();
+document.getElementById("loginForm").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const error = document.getElementById("loginError");
+  const data = Object.fromEntries(new FormData(form).entries());
+  error.textContent = "";
+  try {
+    await loginWithPassword(data.email, data.password);
+    form.reset();
+    await bootApp();
+  } catch (authError) {
+    error.textContent = authError.message;
+  }
+});
+
+async function bootApp() {
+  try {
+    await loadAuthConfig();
+    await loadCurrentUser();
+    showApp();
+    renderAll();
+    renderBackendStatus();
+    await Promise.all([
+      loadLeadsFromBackend(),
+      loadContentFromBackend(),
+      loadClientsFromBackend(),
+      loadClickUpTeam(),
+      loadClickUpTasks(),
+      loadUsersFromBackend()
+    ]);
+  } catch (error) {
+    showLogin(error.message);
+  }
+}
+
+bootApp();

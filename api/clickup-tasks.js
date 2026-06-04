@@ -1,41 +1,11 @@
-const HUB_BASIC_USER = process.env.HUB_BASIC_USER;
-const HUB_BASIC_PASSWORD = process.env.HUB_BASIC_PASSWORD;
+import { jsonHeaders, readJson, requireUser } from "./_auth.js";
+
 const CLICKUP_API_TOKEN = process.env.CLICKUP_API_TOKEN;
 const CLICKUP_WORKSPACE_ID = process.env.CLICKUP_WORKSPACE_ID || "90152036988";
 const CLICKUP_DEFAULT_TASK_LIST_ID = process.env.CLICKUP_DEFAULT_TASK_LIST_ID;
 
 function headers() {
-  return {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type,Authorization",
-    "Content-Type": "application/json"
-  };
-}
-
-function hasBasicAccess(request) {
-  if (!HUB_BASIC_USER || !HUB_BASIC_PASSWORD) return false;
-  const header = request.headers.authorization || request.headers.Authorization || "";
-  if (!header.startsWith("Basic ")) return false;
-  const decoded = Buffer.from(header.slice(6), "base64").toString("utf8");
-  const separator = decoded.indexOf(":");
-  if (separator < 0) return false;
-  return decoded.slice(0, separator) === HUB_BASIC_USER && decoded.slice(separator + 1) === HUB_BASIC_PASSWORD;
-}
-
-function requireBasicAccess(request, response) {
-  if (hasBasicAccess(request)) return true;
-  response.writeHead(401, { ...headers(), "WWW-Authenticate": 'Basic realm="BMG Hub"' });
-  response.end(JSON.stringify({ error: "Authentication required" }));
-  return false;
-}
-
-async function readJson(request) {
-  if (request.body && typeof request.body === "object") return request.body;
-  const chunks = [];
-  for await (const chunk of request) chunks.push(chunk);
-  if (!chunks.length) return {};
-  return JSON.parse(Buffer.concat(chunks).toString("utf8"));
+  return jsonHeaders("GET,POST,OPTIONS");
 }
 
 function normalizeTask(task) {
@@ -70,6 +40,12 @@ function assigneeIds(value) {
   return values.map((item) => Number(String(item).trim())).filter(Number.isFinite);
 }
 
+function taskBelongsToProfile(task, profile) {
+  return (task.assignees || []).some((assignee) => {
+    return String(assignee.id || "") === String(profile.clickup_user_id || "") || assignee.email === profile.email;
+  });
+}
+
 async function fetchTeamTasks() {
   const tasks = [];
   const maxPages = 25;
@@ -100,7 +76,8 @@ export default async function handler(request, response) {
     return;
   }
 
-  if (!requireBasicAccess(request, response)) return;
+  const session = await requireUser(request, response, { headers: headers() });
+  if (!session) return;
 
   if (!CLICKUP_API_TOKEN || !CLICKUP_WORKSPACE_ID) {
     response.writeHead(500, headers());
@@ -110,6 +87,9 @@ export default async function handler(request, response) {
 
   if (request.method === "GET") {
     const result = await fetchTeamTasks();
+    if (result.status === 200 && session.profile.role === "staff") {
+      result.body = result.body.filter((task) => taskBelongsToProfile(task, session.profile));
+    }
     response.writeHead(result.status, headers());
     response.end(JSON.stringify(result.body));
     return;
@@ -129,10 +109,14 @@ export default async function handler(request, response) {
       return;
     }
 
+    const assignees = session.profile.role === "staff"
+      ? assigneeIds(session.profile.clickup_user_id)
+      : assigneeIds(body.assignees);
+
     const payload = {
       name: String(body.name).trim(),
       description: String(body.description || "").trim(),
-      assignees: assigneeIds(body.assignees),
+      assignees,
       due_date: body.due_date ? new Date(body.due_date).getTime() : undefined,
       priority: priorityValue(body.priority)
     };

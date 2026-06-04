@@ -1,38 +1,11 @@
+import { jsonHeaders, readJson, requireUser, supabaseFetch } from "./_auth.js";
+
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || "*";
-const HUB_BASIC_USER = process.env.HUB_BASIC_USER;
-const HUB_BASIC_PASSWORD = process.env.HUB_BASIC_PASSWORD;
 
 function headers() {
-  return {
-    "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
-    "Access-Control-Allow-Methods": "GET,POST,PATCH,DELETE,OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type,Authorization",
-    "Content-Type": "application/json"
-  };
-}
-
-function hasBasicAccess(request) {
-  if (!HUB_BASIC_USER || !HUB_BASIC_PASSWORD) return false;
-  const header = request.headers.authorization || request.headers.Authorization || "";
-  if (!header.startsWith("Basic ")) return false;
-  const decoded = Buffer.from(header.slice(6), "base64").toString("utf8");
-  const separator = decoded.indexOf(":");
-  if (separator < 0) return false;
-  const username = decoded.slice(0, separator);
-  const password = decoded.slice(separator + 1);
-  return username === HUB_BASIC_USER && password === HUB_BASIC_PASSWORD;
-}
-
-function requireBasicAccess(request, response) {
-  if (hasBasicAccess(request)) return true;
-  response.writeHead(401, {
-    ...headers(),
-    "WWW-Authenticate": 'Basic realm="BMG Hub"'
-  });
-  response.end(JSON.stringify({ error: "Authentication required" }));
-  return false;
+  return { ...jsonHeaders("GET,POST,PATCH,DELETE,OPTIONS"), "Access-Control-Allow-Origin": ALLOWED_ORIGIN };
 }
 
 function normalizePayload(body) {
@@ -57,26 +30,6 @@ function normalizePayload(body) {
   };
 }
 
-async function readJson(request) {
-  if (request.body && typeof request.body === "object") return request.body;
-  const chunks = [];
-  for await (const chunk of request) chunks.push(chunk);
-  if (!chunks.length) return {};
-  return JSON.parse(Buffer.concat(chunks).toString("utf8"));
-}
-
-async function supabaseFetch(path, options = {}) {
-  return fetch(`${SUPABASE_URL}/rest/v1${path}`, {
-    ...options,
-    headers: {
-      apikey: SUPABASE_SERVICE_ROLE_KEY,
-      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-      "Content-Type": "application/json",
-      ...(options.headers || {})
-    }
-  });
-}
-
 export default async function handler(request, response) {
   if (request.method === "OPTIONS") {
     response.writeHead(204, headers());
@@ -90,7 +43,7 @@ export default async function handler(request, response) {
     return;
   }
 
-  if (!requireBasicAccess(request, response)) return;
+  if (!await requireUser(request, response, { headers: headers() })) return;
 
   if (request.method === "GET") {
     const result = await supabaseFetch("/site_content?select=*&order=updated_at.desc");

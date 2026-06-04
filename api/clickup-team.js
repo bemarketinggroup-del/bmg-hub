@@ -1,32 +1,10 @@
-const HUB_BASIC_USER = process.env.HUB_BASIC_USER;
-const HUB_BASIC_PASSWORD = process.env.HUB_BASIC_PASSWORD;
+import { jsonHeaders, requireUser } from "./_auth.js";
+
 const CLICKUP_API_TOKEN = process.env.CLICKUP_API_TOKEN;
 const CLICKUP_WORKSPACE_ID = process.env.CLICKUP_WORKSPACE_ID || "90152036988";
 
 function headers() {
-  return {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "GET,OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type,Authorization",
-    "Content-Type": "application/json"
-  };
-}
-
-function hasBasicAccess(request) {
-  if (!HUB_BASIC_USER || !HUB_BASIC_PASSWORD) return false;
-  const header = request.headers.authorization || request.headers.Authorization || "";
-  if (!header.startsWith("Basic ")) return false;
-  const decoded = Buffer.from(header.slice(6), "base64").toString("utf8");
-  const separator = decoded.indexOf(":");
-  if (separator < 0) return false;
-  return decoded.slice(0, separator) === HUB_BASIC_USER && decoded.slice(separator + 1) === HUB_BASIC_PASSWORD;
-}
-
-function requireBasicAccess(request, response) {
-  if (hasBasicAccess(request)) return true;
-  response.writeHead(401, { ...headers(), "WWW-Authenticate": 'Basic realm="BMG Hub"' });
-  response.end(JSON.stringify({ error: "Authentication required" }));
-  return false;
+  return jsonHeaders("GET,OPTIONS");
 }
 
 export default async function handler(request, response) {
@@ -36,7 +14,8 @@ export default async function handler(request, response) {
     return;
   }
 
-  if (!requireBasicAccess(request, response)) return;
+  const session = await requireUser(request, response, { headers: headers() });
+  if (!session) return;
 
   if (!CLICKUP_API_TOKEN || !CLICKUP_WORKSPACE_ID) {
     response.writeHead(500, headers());
@@ -48,7 +27,7 @@ export default async function handler(request, response) {
     headers: { Authorization: CLICKUP_API_TOKEN }
   });
   const data = await result.json();
-  const members = (data.members || []).map((item) => {
+  let members = (data.members || []).map((item) => {
     const user = item.user || item;
     return {
       id: user.id,
@@ -57,6 +36,9 @@ export default async function handler(request, response) {
       avatar: user.profilePicture || user.profile_picture || null
     };
   });
+  if (session.profile.role === "staff") {
+    members = members.filter((member) => String(member.id) === String(session.profile.clickup_user_id || "") || member.email === session.profile.email);
+  }
 
   response.writeHead(result.status, headers());
   response.end(JSON.stringify(members));

@@ -2,6 +2,7 @@
 
 Gestionale interno BMG. La prima versione contiene il modulo **Backend sito**:
 
+- login Supabase Auth con ruoli `admin` e `staff`
 - lead dal form contatti
 - contenuti sito gestibili
 - clienti interni con link operativi
@@ -23,9 +24,12 @@ Poi apri `http://localhost:8020`.
 
 1. Crea un progetto Supabase.
 2. Esegui `supabase/schema.sql` nel SQL editor.
-3. Copia `.env.example` in `.env.local` nel progetto deployato.
-4. Deploya su Vercel.
-5. Collega il sito con `site-integration/contact-form.js`.
+3. Esegui `supabase/20260604_auth_roles.sql` per creare i profili staff.
+4. Copia `.env.example` in `.env.local` nel progetto deployato.
+5. Configura `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` e le variabili ClickUp.
+6. Crea il primo admin seguendo `docs/AUTH-SETUP.md`.
+7. Deploya su Vercel.
+8. Collega il sito con `site-integration/contact-form.js`.
 
 ## Moduli previsti
 

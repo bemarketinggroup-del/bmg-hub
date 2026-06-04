@@ -1,49 +1,12 @@
+import { jsonHeaders, requireUser, supabaseFetch } from "./_auth.js";
+
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const HUB_BASIC_USER = process.env.HUB_BASIC_USER;
-const HUB_BASIC_PASSWORD = process.env.HUB_BASIC_PASSWORD;
 const CLICKUP_API_TOKEN = process.env.CLICKUP_API_TOKEN;
 const CLICKUP_CLIENT_SPACE_ID = process.env.CLICKUP_CLIENT_SPACE_ID || "90158515474";
 
 function headers() {
-  return {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "POST,OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type,Authorization",
-    "Content-Type": "application/json"
-  };
-}
-
-function hasBasicAccess(request) {
-  if (!HUB_BASIC_USER || !HUB_BASIC_PASSWORD) return false;
-  const header = request.headers.authorization || request.headers.Authorization || "";
-  if (!header.startsWith("Basic ")) return false;
-  const decoded = Buffer.from(header.slice(6), "base64").toString("utf8");
-  const separator = decoded.indexOf(":");
-  if (separator < 0) return false;
-  return decoded.slice(0, separator) === HUB_BASIC_USER && decoded.slice(separator + 1) === HUB_BASIC_PASSWORD;
-}
-
-function requireBasicAccess(request, response) {
-  if (hasBasicAccess(request)) return true;
-  response.writeHead(401, {
-    ...headers(),
-    "WWW-Authenticate": 'Basic realm="BMG Hub"'
-  });
-  response.end(JSON.stringify({ error: "Authentication required" }));
-  return false;
-}
-
-async function supabaseFetch(path, options = {}) {
-  return fetch(`${SUPABASE_URL}/rest/v1${path}`, {
-    ...options,
-    headers: {
-      apikey: SUPABASE_SERVICE_ROLE_KEY,
-      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-      "Content-Type": "application/json",
-      ...(options.headers || {})
-    }
-  });
+  return jsonHeaders("POST,OPTIONS");
 }
 
 export default async function handler(request, response) {
@@ -53,7 +16,7 @@ export default async function handler(request, response) {
     return;
   }
 
-  if (!requireBasicAccess(request, response)) return;
+  if (!await requireUser(request, response, { headers: headers() })) return;
 
   if (request.method !== "POST") {
     response.writeHead(405, headers());

@@ -12,6 +12,18 @@
       "dest": "/api/leads.js"
     },
     {
+      "src": "/api/auth-config",
+      "dest": "/api/auth-config.js"
+    },
+    {
+      "src": "/api/me",
+      "dest": "/api/me.js"
+    },
+    {
+      "src": "/api/users",
+      "dest": "/api/users.js"
+    },
+    {
       "src": "/api/site-content",
       "dest": "/api/site-content.js"
     },

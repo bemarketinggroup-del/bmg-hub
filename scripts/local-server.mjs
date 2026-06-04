@@ -24,6 +24,24 @@ createServer(async (request, response) => {
   try {
     const url = new URL(request.url, `http://${request.headers.host}`);
 
+    if (url.pathname === "/api/auth-config") {
+      sendJson(response, 200, {
+        supabaseUrl: env.SUPABASE_URL || "",
+        supabaseAnonKey: env.SUPABASE_ANON_KEY || ""
+      });
+      return;
+    }
+
+    if (url.pathname === "/api/me") {
+      await handleMe(request, response);
+      return;
+    }
+
+    if (url.pathname === "/api/users") {
+      await handleUsers(request, response);
+      return;
+    }
+
     if (url.pathname === "/api/leads") {
       await handleLeads(request, response);
       return;
@@ -58,6 +76,7 @@ async function handleLeads(request, response) {
   }
 
   if (request.method === "GET") {
+    if (!await requireUser(request, response)) return;
     const result = await supabaseFetch("/site_leads?select=*&order=created_at.desc");
     sendJson(response, result.status, await result.json());
     return;
@@ -99,6 +118,8 @@ async function handleSiteContent(request, response, url) {
     return;
   }
 
+  if (!await requireUser(request, response)) return;
+
   if (request.method === "GET") {
     const result = await supabaseFetch("/site_content?select=*&order=updated_at.desc");
     sendJson(response, result.status, await result.json());
@@ -133,6 +154,92 @@ async function handleSiteContent(request, response, url) {
   }
 
   sendJson(response, 405, { error: "Method not allowed" });
+}
+
+async function handleMe(request, response) {
+  if (request.method !== "GET") {
+    sendJson(response, 405, { error: "Method not allowed" });
+    return;
+  }
+  const session = await requireUser(request, response);
+  if (!session) return;
+  sendJson(response, 200, {
+    user: { id: session.user.id, email: session.user.email },
+    profile: session.profile
+  });
+}
+
+async function handleUsers(request, response) {
+  const session = await requireUser(request, response, ["admin"]);
+  if (!session) return;
+
+  if (request.method === "GET") {
+    const result = await supabaseFetch("/staff_profiles?select=*&order=full_name.asc,email.asc");
+    sendJson(response, result.status, await result.json());
+    return;
+  }
+
+  if (request.method === "PATCH") {
+    const body = await readJson(request);
+    const id = String(body.id || "").trim();
+    if (!id) {
+      sendJson(response, 400, { error: "id is required" });
+      return;
+    }
+    const payload = {
+      full_name: String(body.full_name || "").trim() || null,
+      role: body.role === "admin" ? "admin" : "staff",
+      clickup_user_id: String(body.clickup_user_id || "").trim() || null,
+      active: body.active !== false
+    };
+    const result = await supabaseFetch(`/staff_profiles?id=eq.${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify(payload)
+    });
+    sendJson(response, result.status, await result.json());
+    return;
+  }
+
+  sendJson(response, 405, { error: "Method not allowed" });
+}
+
+async function requireUser(request, response, roles = ["admin", "staff"]) {
+  if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY || !env.SUPABASE_SERVICE_ROLE_KEY) {
+    sendJson(response, 500, { error: "Missing Supabase auth configuration" });
+    return null;
+  }
+
+  const header = request.headers.authorization || "";
+  if (!header.startsWith("Bearer ")) {
+    sendJson(response, 401, { error: "Supabase session required" });
+    return null;
+  }
+
+  const userResult = await fetch(`${env.SUPABASE_URL}/auth/v1/user`, {
+    headers: {
+      apikey: env.SUPABASE_ANON_KEY,
+      Authorization: header
+    }
+  });
+  if (!userResult.ok) {
+    sendJson(response, 401, { error: "Invalid or expired session" });
+    return null;
+  }
+
+  const user = await userResult.json();
+  const profileResult = await supabaseFetch(`/staff_profiles?select=*&user_id=eq.${encodeURIComponent(user.id)}&limit=1`);
+  const profiles = profileResult.ok ? await profileResult.json() : [];
+  const profile = profiles[0];
+  if (!profile || profile.active === false) {
+    sendJson(response, 403, { error: "Staff profile not enabled" });
+    return null;
+  }
+  if (!roles.includes(profile.role)) {
+    sendJson(response, 403, { error: "Insufficient permissions" });
+    return null;
+  }
+  return { user, profile };
 }
 
 function normalizeContentPayload(body) {
