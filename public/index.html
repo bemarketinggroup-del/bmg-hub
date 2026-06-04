@@ -122,8 +122,12 @@
         <div class="split-panel">
           <section class="panel">
             <div class="panel-head">
-              <h2>Blocchi sito</h2>
+              <h2>Backend sito</h2>
               <button class="text-button" id="addContentButton" type="button">Aggiungi</button>
+            </div>
+            <div class="mode-tabs" role="tablist" aria-label="Tipo contenuti sito">
+              <button class="mode-tab is-active" data-content-mode="texts" type="button">Testi</button>
+              <button class="mode-tab" data-content-mode="images" type="button">Immagini</button>
             </div>
             <div class="toolbar compact-toolbar">
               <select id="contentPageFilter" aria-label="Filtra per pagina">
@@ -140,19 +144,19 @@
           </section>
           <section class="panel inspector">
             <p class="eyebrow">Backend sito</p>
-            <h2>Testi, immagini e sezioni</h2>
-            <p>Qui gestiamo i blocchi del sito senza entrare nel codice: hero, servizi, portfolio, CTA e immagini. Tutto resta nel gestionale protetto.</p>
+            <h2>Testi separati dalle immagini</h2>
+            <p>Usa Testi per copy, titoli, servizi e CTA. Usa Immagini per vedere e cambiare tutte le foto mappate del sito con anteprima.</p>
             <div class="setup-box">
-              <code>draft</code>
-              <span>Visibile solo nel gestionale.</span>
+              <code>Testi</code>
+              <span>Homepage, BeViral, servizi, portfolio, contatti.</span>
             </div>
             <div class="setup-box">
-              <code>published</code>
-              <span>Pronto per essere collegato al sito pubblico.</span>
+              <code>Immagini</code>
+              <span>Hero, chi siamo, portfolio, gallery progetti e asset BeViral.</span>
             </div>
             <div class="setup-box">
-              <code>image_url</code>
-              <span>Per ora salviamo URL immagini; poi aggiungiamo upload su storage privato.</span>
+              <code>Pubblicato</code>
+              <span>Solo i contenuti pubblicati arrivano al sito pubblico.</span>
             </div>
           </section>
         </div>

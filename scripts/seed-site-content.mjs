@@ -51,6 +51,8 @@ const content = [
     }
   },
   ...projectSlots(),
+  ...projectGallerySlots(),
+  ...beviralImageSlots(),
   {
     slug: "home.contact.copy",
     type: "copy",
@@ -189,6 +191,86 @@ function projectSlots() {
       notes: "Elemento reale di PROJECT_LIST in index.html."
     }
   }));
+}
+
+function projectGallerySlots() {
+  const galleries = {
+    "bellevue-syrene": [
+      "assets/images/portfolio/vetera_matera-1200.webp",
+      "assets/images/portfolio/favorita_hotel-1200.webp",
+      "assets/images/portfolio/vetera_matera-800.webp",
+      "assets/images/portfolio/favorita_hotel-800.webp",
+      "assets/images/portfolio/vetera_matera-1200.webp"
+    ],
+    "grand-hotel-aminta": [
+      "assets/images/portfolio/favorita_hotel-1200.webp",
+      "assets/images/portfolio/vetera_matera-1200.webp",
+      "assets/images/portfolio/favorita_hotel-800.webp",
+      "assets/images/portfolio/vetera_matera-800.webp",
+      "assets/images/portfolio/favorita_hotel-1200.webp"
+    ],
+    "grand-hotel-la-favorita": [
+      "assets/images/portfolio/favorita_hotel-1200.webp",
+      "assets/images/portfolio/favorita_hotel-800.webp",
+      "assets/images/portfolio/favorita_hotel-1200.webp",
+      "assets/images/portfolio/vetera_matera-800.webp",
+      "assets/images/portfolio/favorita_hotel-1200.webp"
+    ],
+    "vetera-matera": [
+      "assets/images/portfolio/vetera_matera-1200.webp",
+      "assets/images/portfolio/vetera_matera-800.webp",
+      "assets/images/portfolio/vetera_matera-1200.webp",
+      "assets/images/portfolio/favorita_hotel-800.webp",
+      "assets/images/portfolio/vetera_matera-1200.webp"
+    ],
+    "zest-restaurant": [
+      "assets/images/portfolio/zest_restaurant-1200.webp",
+      "assets/images/portfolio/zest_restaurant-800.webp",
+      "assets/images/portfolio/zest_restaurant-1200.webp",
+      "assets/images/portfolio/costiera_gin-800.webp",
+      "assets/images/portfolio/zest_restaurant-1200.webp"
+    ],
+    "costiera-gin": [
+      "assets/images/portfolio/costiera_gin-1200.webp",
+      "assets/images/portfolio/costiera_gin-800.webp",
+      "assets/images/portfolio/costiera_gin-1200.webp",
+      "assets/images/portfolio/zest_restaurant-800.webp",
+      "assets/images/portfolio/costiera_gin-1200.webp"
+    ]
+  };
+
+  return Object.entries(galleries).flatMap(([project, images]) => {
+    const title = project.split("-").map((part) => part[0].toUpperCase() + part.slice(1)).join(" ");
+    return images.map((imageUrl, index) => ({
+      slug: `project.${project}.gallery.${index + 1}`,
+      type: "image",
+      title: `${title} - Gallery ${index + 1}`,
+      status: "draft",
+      payload: {
+        page: "Pagine progetto",
+        section: title,
+        subtitle: "",
+        body: "",
+        image_url: imageUrl,
+        image_alt: `${title} gallery ${index + 1}`,
+        cta_label: "",
+        cta_url: `projects/${project}.html`,
+        notes: "Slot gallery reale da BMG_IMAGES.projectGalleries."
+      }
+    }));
+  });
+}
+
+function beviralImageSlots() {
+  return imageSlots("BeViral", "Asset grafici", "beviral.asset", [
+    ["Logo BeViral blu", "assets/images/logos/logo-beviral-blue.png", "Logo BeViral blu"],
+    ["Logo BeViral bianco", "assets/images/logos/logo-beviral-white.png", "Logo BeViral bianco"],
+    ["Sticker blu", "assets/images/beviral/sticker-blue.png", "Sticker blu BeViral"],
+    ["Sticker magenta", "assets/images/beviral/sticker-magenta.png", "Sticker magenta BeViral"],
+    ["Sticker nero", "assets/images/beviral/sticker-black.png", "Sticker nero BeViral"],
+    ["Sticker giallo", "assets/images/beviral/sticker-yellow.png", "Sticker giallo BeViral"],
+    ["Frame iPhone", "assets/images/beviral/iphone-frame.png", "Frame iPhone BeViral"]
+  ]);
 }
 
 async function loadEnv(path) {

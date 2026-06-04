@@ -314,8 +314,12 @@ function renderContent() {
   renderContentFilters();
   const pageFilter = document.getElementById("contentPageFilter")?.value || "all";
   const statusFilter = document.getElementById("contentStatusFilter")?.value || "all";
+  const mode = document.querySelector(".mode-tab.is-active")?.dataset.contentMode || "texts";
   const filtered = state.content.filter((item) => {
-    return (pageFilter === "all" || item.page === pageFilter) && (statusFilter === "all" || item.status === statusFilter);
+    const pageMatches = pageFilter === "all" || item.page === pageFilter;
+    const statusMatches = statusFilter === "all" || item.status === statusFilter;
+    const modeMatches = mode === "images" ? isImageContent(item) : isTextContent(item);
+    return pageMatches && statusMatches && modeMatches;
   });
   const groups = filtered.reduce((acc, item) => {
     const page = item.page || "Senza pagina";
@@ -333,17 +337,55 @@ function renderContent() {
         <strong>${group.section}</strong>
       </div>
       ${group.items.map((item) => `
+        ${mode === "images" ? imageCard(item) : textRow(item)}
+      `).join("")}
+    </section>
+  `).join("") || emptyState("Nessun contenuto trovato.");
+}
+
+function isImageContent(item) {
+  return item.type === "image" || Boolean(item.image_url);
+}
+
+function isTextContent(item) {
+  return item.type !== "image";
+}
+
+function textRow(item) {
+  return `
     <article class="content-row" data-content-id="${item.id}">
       <span class="badge">${item.type}</span>
       <div>
         <strong>${item.title}</strong>
-        <span>${item.slug} · ${item.image_url ? "immagine + " : ""}${item.body ? "testo + " : ""}Aggiornato ${formatContentDate(item.updatedAt)}</span>
+        <span>${item.slug} · ${item.body ? "testo + " : ""}${item.cta_label ? "cta + " : ""}Aggiornato ${formatContentDate(item.updatedAt)}</span>
       </div>
       <span class="badge ${item.status === "published" ? "cliente" : "preventivo"}">${labelStatus(item.status)}</span>
     </article>
-      `).join("")}
-    </section>
-  `).join("") || emptyState("Nessun contenuto trovato.");
+  `;
+}
+
+function imageCard(item) {
+  const preview = item.image_url
+    ? `<img src="${previewImageUrl(item.image_url)}" alt="${item.image_alt || item.title}" loading="lazy">`
+    : `<span>Nessuna immagine</span>`;
+  return `
+    <article class="image-card" data-content-id="${item.id}">
+      <div class="image-preview">${preview}</div>
+      <div class="image-card-body">
+        <span class="badge">${item.page || "Sito"} · ${item.section || "Immagine"}</span>
+        <strong>${item.title}</strong>
+        <small>${item.slug}</small>
+        <small>${item.image_url || "URL immagine mancante"}</small>
+      </div>
+      <span class="badge ${item.status === "published" ? "cliente" : "preventivo"}">${labelStatus(item.status)}</span>
+    </article>
+  `;
+}
+
+function previewImageUrl(url) {
+  if (!url) return "";
+  if (/^https?:\/\//.test(url)) return url;
+  return `https://bemarketinggroup-del.github.io/big_website_official/${url.replace(/^\/+/, "")}`;
 }
 
 function renderContentFilters() {
@@ -537,6 +579,13 @@ document.getElementById("leadForm").addEventListener("submit", (event) => {
 document.getElementById("contentTable").addEventListener("click", (event) => {
   const row = event.target.closest("[data-content-id]");
   if (row) openContentModal(row.dataset.contentId);
+});
+
+document.querySelectorAll("[data-content-mode]").forEach((button) => {
+  button.addEventListener("click", () => {
+    document.querySelectorAll("[data-content-mode]").forEach((item) => item.classList.toggle("is-active", item === button));
+    renderContent();
+  });
 });
 
 document.getElementById("addContentButton").addEventListener("click", () => openContentModal());
