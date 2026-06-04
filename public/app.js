@@ -243,10 +243,11 @@ async function loginWithPassword(email, password) {
 }
 
 async function updateCurrentPassword(currentPassword, newPassword) {
-  const response = await apiFetch("/api/change-password", {
+  const response = await apiFetch("/api/me", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
+      action: "change_password",
       current_password: currentPassword,
       new_password: newPassword
     })
