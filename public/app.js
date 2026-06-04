@@ -156,6 +156,7 @@ const seed = {
 let state = loadState();
 let backendOnline = false;
 let contentOnline = false;
+let clientsOnline = false;
 
 function loadState() {
   const saved = localStorage.getItem(STORAGE_KEY);
@@ -262,12 +263,41 @@ async function loadContentFromBackend() {
   }
 }
 
+async function loadClientsFromBackend() {
+  try {
+    const response = await fetch("/api/clients");
+    if (!response.ok) throw new Error(`Clients backend error ${response.status}`);
+    const rows = await response.json();
+    state.clients = rows.map(normalizeClient);
+    clientsOnline = true;
+    renderBackendStatus();
+    renderAll();
+  } catch (error) {
+    clientsOnline = false;
+    renderBackendStatus(error.message);
+    renderClients();
+  }
+}
+
+function normalizeClient(client) {
+  return {
+    id: client.id,
+    name: client.name,
+    status: client.status || "onboarding",
+    services: Array.isArray(client.services) ? client.services.join(", ") : (client.services || ""),
+    clickup: client.clickup_url || client.clickup || "#",
+    drive: client.drive_url || client.drive || "#",
+    notes: client.notes || ""
+  };
+}
+
 function renderBackendStatus(message = "") {
   const footer = document.querySelector(".sidebar-footer span:last-child");
   const dot = document.querySelector(".status-dot");
   if (!footer || !dot) return;
-  footer.textContent = backendOnline && contentOnline ? "Supabase collegato" : "Connessione parziale";
-  dot.style.background = backendOnline && contentOnline ? "#7cc483" : "#d8a42f";
+  const connected = backendOnline && contentOnline && clientsOnline;
+  footer.textContent = connected ? "Supabase collegato" : "Connessione parziale";
+  dot.style.background = connected ? "#7cc483" : "#d8a42f";
   if (message) footer.title = message;
 }
 
@@ -411,18 +441,31 @@ function labelStatus(status) {
 }
 
 function renderClients() {
-  document.getElementById("clientGrid").innerHTML = state.clients.map((client) => `
+  const search = document.getElementById("clientSearch")?.value?.toLowerCase() || "";
+  const clients = state.clients.filter((client) => `${client.name} ${client.status} ${client.services}`.toLowerCase().includes(search));
+  document.getElementById("clientGrid").innerHTML = clients.map((client) => `
     <article class="client-card">
       <div>
         <strong>${client.name}</strong>
-        <span>${client.status} · ${client.services}</span>
+        <span>${labelClientStatus(client.status)}${client.services ? ` · ${client.services}` : ""}</span>
+        ${client.notes ? `<p>${client.notes}</p>` : ""}
       </div>
       <div class="links">
-        <a class="badge" href="${client.clickup}">ClickUp</a>
-        <a class="badge" href="${client.drive}">Drive</a>
+        <a class="badge" href="${client.clickup}" target="_blank" rel="noreferrer">ClickUp</a>
+        <a class="badge" href="${client.drive}" target="_blank" rel="noreferrer">Drive</a>
       </div>
     </article>
-  `).join("");
+  `).join("") || emptyState("Nessun cliente trovato.");
+}
+
+function labelClientStatus(status) {
+  return {
+    onboarding: "Onboarding",
+    attivo: "Attivo",
+    pausa: "In pausa",
+    archiviato: "Archiviato",
+    Attivo: "Attivo"
+  }[status] || status;
 }
 
 function emptyState(text) {
@@ -542,6 +585,26 @@ async function deleteContent() {
   }
 }
 
+async function submitClient(form) {
+  const data = Object.fromEntries(new FormData(form).entries());
+  data.create_clickup = data.create_clickup === "on";
+  try {
+    const response = await fetch("/api/clients", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data)
+    });
+    if (!response.ok) throw new Error(`Clients backend error ${response.status}`);
+    clientsOnline = true;
+    form.reset();
+    await loadClientsFromBackend();
+  } catch (error) {
+    clientsOnline = false;
+    renderBackendStatus(error.message);
+    alert("Non riesco a salvare il cliente. Controlla la configurazione backend/ClickUp.");
+  }
+}
+
 function renderAll() {
   renderMetrics();
   renderLeads();
@@ -568,6 +631,7 @@ document.getElementById("leadSearch").addEventListener("input", renderLeads);
 document.getElementById("statusFilter").addEventListener("change", renderLeads);
 document.getElementById("contentPageFilter").addEventListener("change", renderContent);
 document.getElementById("contentStatusFilter").addEventListener("change", renderContent);
+document.getElementById("clientSearch").addEventListener("input", renderClients);
 
 document.getElementById("leadForm").addEventListener("submit", (event) => {
   if (event.submitter?.value === "cancel") return;
@@ -598,6 +662,14 @@ document.getElementById("contentForm").addEventListener("submit", (event) => {
 });
 
 document.getElementById("deleteContentButton").addEventListener("click", deleteContent);
+document.getElementById("newClientButton").addEventListener("click", () => document.getElementById("clientModal").showModal());
+
+document.getElementById("clientForm").addEventListener("submit", (event) => {
+  if (event.submitter?.value === "cancel") return;
+  event.preventDefault();
+  submitClient(event.currentTarget);
+  document.getElementById("clientModal").close();
+});
 
 document.getElementById("priorityTasks").addEventListener("change", (event) => {
   const input = event.target.closest("[data-task]");
@@ -610,3 +682,4 @@ renderAll();
 renderBackendStatus();
 loadLeadsFromBackend();
 loadContentFromBackend();
+loadClientsFromBackend();

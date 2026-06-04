@@ -163,6 +163,13 @@
       </section>
 
       <section class="view" id="clientsView" data-view-panel="clients">
+        <div class="toolbar client-toolbar">
+          <label class="search">
+            <span>⌕</span>
+            <input id="clientSearch" type="search" placeholder="Cerca cliente">
+          </label>
+          <button class="primary-button" id="newClientButton" type="button">Nuovo cliente</button>
+        </div>
         <div class="client-grid" id="clientGrid"></div>
       </section>
 
@@ -265,6 +272,35 @@
         <button class="danger-button" id="deleteContentButton" type="button">Elimina</button>
         <button class="ghost-button" value="cancel" type="submit" formnovalidate>Annulla</button>
         <button class="primary-button" value="default" type="submit">Salva blocco</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="modal" id="clientModal">
+    <form method="dialog" id="clientForm">
+      <div class="modal-head">
+        <h2>Nuovo cliente</h2>
+        <button class="icon-button" value="cancel" type="submit" formnovalidate title="Chiudi">×</button>
+      </div>
+      <div class="form-grid">
+        <label class="full">Nome cliente<input name="name" required autocomplete="organization"></label>
+        <label>Stato<select name="status">
+          <option value="onboarding">Onboarding</option>
+          <option value="attivo">Attivo</option>
+          <option value="pausa">In pausa</option>
+          <option value="archiviato">Archiviato</option>
+        </select></label>
+        <label>Servizi<input name="services" placeholder="Sito, social, advertising"></label>
+        <label class="full">Google Drive<input name="drive_url" type="url" placeholder="https://drive.google.com/..."></label>
+        <label class="full">Note<textarea name="notes" rows="3"></textarea></label>
+        <label class="full checkbox-row">
+          <input name="create_clickup" type="checkbox" checked>
+          <span>Crea anche cartella cliente su ClickUp</span>
+        </label>
+      </div>
+      <div class="modal-actions">
+        <button class="ghost-button" value="cancel" type="submit" formnovalidate>Annulla</button>
+        <button class="primary-button" value="default" type="submit">Salva cliente</button>
       </div>
     </form>
   </dialog>

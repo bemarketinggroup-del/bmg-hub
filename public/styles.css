@@ -306,6 +306,10 @@ button { cursor: pointer; }
   margin-bottom: 14px;
 }
 
+.client-toolbar {
+  align-items: stretch;
+}
+
 .compact-toolbar {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -493,10 +497,29 @@ code {
   justify-content: space-between;
 }
 
+.client-card p {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
 .client-card .links {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.checkbox-row {
+  display: flex !important;
+  grid-template-columns: none !important;
+  align-items: center;
+  gap: 10px !important;
+}
+
+.checkbox-row input {
+  width: auto;
+  min-height: 0;
 }
 
 .setup-list {
