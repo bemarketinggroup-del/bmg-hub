@@ -33,7 +33,7 @@ function priorityValue(priority) {
 }
 
 function priorityLabel(priority) {
-  const value = typeof priority === "object" ? priority.priority : priority;
+  const value = priority && typeof priority === "object" ? priority.priority : priority;
   return ({ 1: "urgent", 2: "high", 3: "normal", 4: "low" }[Number(value)] || "");
 }
 
