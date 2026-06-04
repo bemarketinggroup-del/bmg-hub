@@ -86,6 +86,7 @@
         </div>
         <div class="topbar-actions">
           <span class="session-badge" id="sessionBadge">Sessione</span>
+          <button class="ghost-button" id="profileButton" type="button">Profilo</button>
           <button class="ghost-button" id="logoutButton" type="button">Logout</button>
           <button class="icon-button" id="exportButton" type="button" title="Esporta dati">⇩</button>
           <button class="primary-button" id="newLeadButton" type="button">Nuovo lead</button>
@@ -407,6 +408,28 @@
       <div class="modal-actions">
         <button class="ghost-button" value="cancel" type="submit" formnovalidate>Annulla</button>
         <button class="primary-button" value="default" type="submit">Crea task</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="modal" id="profileModal">
+    <form method="dialog" id="passwordForm">
+      <div class="modal-head">
+        <div>
+          <p class="eyebrow">Profilo utente</p>
+          <h2>Cambia password</h2>
+        </div>
+        <button class="icon-button" value="cancel" type="submit" formnovalidate title="Chiudi">×</button>
+      </div>
+      <div class="form-grid password-grid">
+        <label class="full">Password attuale<input name="current_password" type="password" required autocomplete="current-password"></label>
+        <label>Nuova password<input name="new_password" type="password" required minlength="8" autocomplete="new-password"></label>
+        <label>Conferma nuova password<input name="confirm_password" type="password" required minlength="8" autocomplete="new-password"></label>
+      </div>
+      <p class="form-message" id="passwordMessage" role="status"></p>
+      <div class="modal-actions">
+        <button class="ghost-button" value="cancel" type="submit" formnovalidate>Annulla</button>
+        <button class="primary-button" id="savePasswordButton" value="default" type="submit">Aggiorna password</button>
       </div>
     </form>
   </dialog>

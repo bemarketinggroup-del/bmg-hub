@@ -242,6 +242,35 @@ async function loginWithPassword(email, password) {
   await loadCurrentUser();
 }
 
+async function verifyCurrentPassword(password) {
+  const email = currentProfile?.email || authSession?.user?.email;
+  if (!email) throw new Error("Sessione utente non disponibile");
+  const response = await supabaseAuth("/token?grant_type=password", {
+    method: "POST",
+    body: JSON.stringify({ email, password })
+  });
+  if (!response.ok) throw new Error("La password attuale non e' corretta");
+  const data = await response.json().catch(() => ({}));
+  if (data.access_token) {
+    await supabaseAuth("/logout", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${data.access_token}` }
+    }).catch(() => {});
+  }
+}
+
+async function updateCurrentPassword(newPassword) {
+  const token = await accessToken();
+  if (!token) throw new Error("Sessione scaduta. Effettua di nuovo il login.");
+  const response = await supabaseAuth("/user", {
+    method: "PUT",
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ password: newPassword })
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.msg || data.error_description || "Non riesco ad aggiornare la password");
+}
+
 async function refreshAuthSession() {
   if (!authSession?.refresh_token) return null;
   const response = await supabaseAuth("/token?grant_type=refresh_token", {
@@ -336,6 +365,54 @@ async function logout() {
   currentProfile = null;
   saveAuthSession(null);
   showLogin();
+}
+
+function openProfileModal() {
+  const form = document.getElementById("passwordForm");
+  form.reset();
+  setPasswordMessage("");
+  document.getElementById("profileModal").showModal();
+}
+
+function setPasswordMessage(message, type = "") {
+  const target = document.getElementById("passwordMessage");
+  if (!target) return;
+  target.textContent = message;
+  target.classList.toggle("is-success", type === "success");
+  target.classList.toggle("is-error", type === "error");
+}
+
+async function submitPasswordChange(form) {
+  const button = document.getElementById("savePasswordButton");
+  const data = Object.fromEntries(new FormData(form).entries());
+  setPasswordMessage("");
+
+  if (data.new_password !== data.confirm_password) {
+    setPasswordMessage("La nuova password e la conferma non coincidono.", "error");
+    return;
+  }
+  if (String(data.new_password || "").length < 8) {
+    setPasswordMessage("La nuova password deve contenere almeno 8 caratteri.", "error");
+    return;
+  }
+  if (data.current_password === data.new_password) {
+    setPasswordMessage("La nuova password deve essere diversa da quella attuale.", "error");
+    return;
+  }
+
+  button.disabled = true;
+  button.textContent = "Aggiorno...";
+  try {
+    await verifyCurrentPassword(data.current_password);
+    await updateCurrentPassword(data.new_password);
+    form.reset();
+    setPasswordMessage("Password aggiornata correttamente.", "success");
+  } catch (error) {
+    setPasswordMessage(error.message, "error");
+  } finally {
+    button.disabled = false;
+    button.textContent = "Aggiorna password";
+  }
 }
 
 function formatDate(value) {
@@ -1121,6 +1198,7 @@ document.body.addEventListener("click", (event) => {
 });
 
 document.getElementById("newLeadButton").addEventListener("click", () => document.getElementById("leadModal").showModal());
+document.getElementById("profileButton").addEventListener("click", openProfileModal);
 document.getElementById("logoutButton").addEventListener("click", logout);
 document.getElementById("exportButton").addEventListener("click", exportData);
 document.getElementById("leadSearch").addEventListener("input", renderLeads);
@@ -1176,6 +1254,12 @@ document.getElementById("taskForm").addEventListener("submit", (event) => {
   event.preventDefault();
   submitTask(event.currentTarget);
   document.getElementById("taskModal").close();
+});
+
+document.getElementById("passwordForm").addEventListener("submit", (event) => {
+  if (event.submitter?.value === "cancel") return;
+  event.preventDefault();
+  submitPasswordChange(event.currentTarget);
 });
 
 document.getElementById("priorityTasks").addEventListener("change", (event) => {
