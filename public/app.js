@@ -242,33 +242,17 @@ async function loginWithPassword(email, password) {
   await loadCurrentUser();
 }
 
-async function verifyCurrentPassword(password) {
-  const email = currentProfile?.email || authSession?.user?.email;
-  if (!email) throw new Error("Sessione utente non disponibile");
-  const response = await supabaseAuth("/token?grant_type=password", {
+async function updateCurrentPassword(currentPassword, newPassword) {
+  const response = await apiFetch("/api/change-password", {
     method: "POST",
-    body: JSON.stringify({ email, password })
-  });
-  if (!response.ok) throw new Error("La password attuale non e' corretta");
-  const data = await response.json().catch(() => ({}));
-  if (data.access_token) {
-    await supabaseAuth("/logout", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${data.access_token}` }
-    }).catch(() => {});
-  }
-}
-
-async function updateCurrentPassword(newPassword) {
-  const token = await accessToken();
-  if (!token) throw new Error("Sessione scaduta. Effettua di nuovo il login.");
-  const response = await supabaseAuth("/user", {
-    method: "PUT",
-    headers: { Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ password: newPassword })
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      current_password: currentPassword,
+      new_password: newPassword
+    })
   });
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.msg || data.error_description || "Non riesco ad aggiornare la password");
+  if (!response.ok) throw new Error(data.error || "Non riesco ad aggiornare la password");
 }
 
 async function refreshAuthSession() {
@@ -403,8 +387,7 @@ async function submitPasswordChange(form) {
   button.disabled = true;
   button.textContent = "Aggiorno...";
   try {
-    await verifyCurrentPassword(data.current_password);
-    await updateCurrentPassword(data.new_password);
+    await updateCurrentPassword(data.current_password, data.new_password);
     form.reset();
     setPasswordMessage("Password aggiornata correttamente.", "success");
   } catch (error) {
