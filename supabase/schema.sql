@@ -89,6 +89,9 @@ alter table public.site_content enable row level security;
 alter table public.clients enable row level security;
 alter table public.staff_profiles enable row level security;
 
+grant usage on schema public to service_role;
+grant select, insert, update, delete on public.staff_profiles to service_role;
+
 -- Public site can read only published content when using the anon key.
 drop policy if exists "Published content is public" on public.site_content;
 create policy "Published content is public"
