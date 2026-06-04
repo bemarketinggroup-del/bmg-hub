@@ -1,4 +1,6 @@
 const STORAGE_KEY = "bmg-hub-v1";
+const ALL_TEAM_TASKS_ID = "__all";
+const UNASSIGNED_TASKS_ID = "__unassigned";
 
 const seed = {
   leads: [
@@ -160,7 +162,7 @@ let backendOnline = false;
 let contentOnline = false;
 let clientsOnline = false;
 let clickupOnline = false;
-let selectedTeamMemberId = "";
+let selectedTeamMemberId = ALL_TEAM_TASKS_ID;
 
 function loadState() {
   const saved = localStorage.getItem(STORAGE_KEY);
@@ -301,7 +303,7 @@ async function loadClickUpTeam() {
     const response = await fetch("/api/clickup/team");
     if (!response.ok) throw new Error(`ClickUp team error ${response.status}`);
     state.agencyUsers = await response.json();
-    if (!selectedTeamMemberId && state.agencyUsers.length) selectedTeamMemberId = String(state.agencyUsers[0].id);
+    if (!selectedTeamMemberId) selectedTeamMemberId = ALL_TEAM_TASKS_ID;
     clickupOnline = true;
     renderBackendStatus();
     renderTeam();
@@ -514,8 +516,26 @@ function renderTeam() {
 function renderAgencyUsers() {
   const target = document.getElementById("agencyTeamList");
   if (!target) return;
-  if (!selectedTeamMemberId && state.agencyUsers.length) selectedTeamMemberId = String(state.agencyUsers[0].id);
-  target.innerHTML = state.agencyUsers.map((user) => `
+  if (!selectedTeamMemberId) selectedTeamMemberId = ALL_TEAM_TASKS_ID;
+  const unassigned = unassignedTasks();
+  const systemRows = `
+    <button class="team-row ${selectedTeamMemberId === ALL_TEAM_TASKS_ID ? "is-active" : ""}" data-team-member="${ALL_TEAM_TASKS_ID}" type="button">
+      <div class="avatar">ALL</div>
+      <div>
+        <strong>Tutte le task</strong>
+        <span>${state.clickupTasks.length} task importate da ClickUp</span>
+      </div>
+    </button>
+    <button class="team-row ${selectedTeamMemberId === UNASSIGNED_TASKS_ID ? "is-active" : ""}" data-team-member="${UNASSIGNED_TASKS_ID}" type="button">
+      <div class="avatar">?</div>
+      <div>
+        <strong>Senza assegnatario</strong>
+        <span>${unassigned.length} task da smistare</span>
+      </div>
+    </button>
+  `;
+  const users = [...state.agencyUsers].sort((a, b) => teamMemberTasks(b).length - teamMemberTasks(a).length || String(a.name).localeCompare(String(b.name)));
+  target.innerHTML = systemRows + users.map((user) => `
     <button class="team-row ${String(user.id) === selectedTeamMemberId ? "is-active" : ""}" data-team-member="${user.id}" type="button">
       <div class="avatar">${user.avatar ? `<img src="${user.avatar}" alt="${user.name}">` : initials(user.name)}</div>
       <div>
@@ -529,6 +549,32 @@ function renderAgencyUsers() {
 function renderTeamProfile() {
   const target = document.getElementById("teamProfileHead");
   if (!target) return;
+  if (selectedTeamMemberId === ALL_TEAM_TASKS_ID) {
+    target.innerHTML = `
+      <div class="profile-title">
+        <div class="avatar">ALL</div>
+        <div>
+          <h2>Tutte le task</h2>
+          <span>${state.clickupTasks.length} task importate e smistate per assegnatario</span>
+        </div>
+      </div>
+      <button class="ghost-button" data-new-task-for="" type="button">Nuova task</button>
+    `;
+    return;
+  }
+  if (selectedTeamMemberId === UNASSIGNED_TASKS_ID) {
+    target.innerHTML = `
+      <div class="profile-title">
+        <div class="avatar">?</div>
+        <div>
+          <h2>Senza assegnatario</h2>
+          <span>${unassignedTasks().length} task da assegnare al team</span>
+        </div>
+      </div>
+      <button class="ghost-button" data-new-task-for="" type="button">Nuova task</button>
+    `;
+    return;
+  }
   const user = selectedTeamMember();
   if (!user) {
     target.innerHTML = "<h2>Task assegnate</h2>";
@@ -550,8 +596,7 @@ function renderClickUpTasks() {
   const target = document.getElementById("clickupTaskList");
   if (!target) return;
   const search = document.getElementById("taskSearch")?.value?.toLowerCase() || "";
-  const user = selectedTeamMember();
-  const tasks = (user ? teamMemberTasks(user) : state.clickupTasks).filter((task) => {
+  const tasks = selectedTeamTasks().filter((task) => {
     const assignees = assigneeLabels(task).join(" ");
     return `${task.name} ${task.status} ${assignees} ${task.list} ${task.folder}`.toLowerCase().includes(search);
   });
@@ -581,6 +626,17 @@ function teamMemberTasks(user) {
   return state.clickupTasks.filter((task) => taskAssignedTo(task, user));
 }
 
+function selectedTeamTasks() {
+  if (selectedTeamMemberId === ALL_TEAM_TASKS_ID) return state.clickupTasks;
+  if (selectedTeamMemberId === UNASSIGNED_TASKS_ID) return unassignedTasks();
+  const user = selectedTeamMember();
+  return user ? teamMemberTasks(user) : state.clickupTasks;
+}
+
+function unassignedTasks() {
+  return state.clickupTasks.filter((task) => !task.assignees?.length);
+}
+
 function taskAssignedTo(task, user) {
   return (task.assignees || []).some((assignee) => {
     if (typeof assignee === "string") return assignee === user.name || assignee === user.email || assignee === String(user.id);
@@ -606,7 +662,7 @@ function openTaskModal(userId = selectedTeamMemberId) {
   form.reset();
   renderTaskAssigneeOptions();
   [...form.elements.assignees.options].forEach((option) => {
-    option.selected = String(option.value) === String(userId || "");
+    option.selected = userId !== ALL_TEAM_TASKS_ID && userId !== UNASSIGNED_TASKS_ID && String(option.value) === String(userId || "");
   });
   document.getElementById("taskModal").showModal();
 }

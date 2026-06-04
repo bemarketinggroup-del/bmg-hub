@@ -70,6 +70,29 @@ function assigneeIds(value) {
   return values.map((item) => Number(String(item).trim())).filter(Number.isFinite);
 }
 
+async function fetchTeamTasks() {
+  const tasks = [];
+  const maxPages = 25;
+
+  for (let page = 0; page < maxPages; page += 1) {
+    const url = new URL(`https://api.clickup.com/api/v2/team/${CLICKUP_WORKSPACE_ID}/task`);
+    url.searchParams.set("include_closed", "true");
+    url.searchParams.set("subtasks", "true");
+    url.searchParams.set("page", String(page));
+
+    const result = await fetch(url, { headers: { Authorization: CLICKUP_API_TOKEN } });
+    const data = await result.json();
+    if (!result.ok) return { status: result.status, body: data };
+
+    const pageTasks = data.tasks || [];
+    tasks.push(...pageTasks.map(normalizeTask));
+
+    if (data.last_page === true || pageTasks.length === 0) break;
+  }
+
+  return { status: 200, body: tasks };
+}
+
 export default async function handler(request, response) {
   if (request.method === "OPTIONS") {
     response.writeHead(204, headers());
@@ -86,14 +109,9 @@ export default async function handler(request, response) {
   }
 
   if (request.method === "GET") {
-    const url = new URL(`https://api.clickup.com/api/v2/team/${CLICKUP_WORKSPACE_ID}/task`);
-    url.searchParams.set("include_closed", "true");
-    url.searchParams.set("subtasks", "true");
-    url.searchParams.set("page", "0");
-    const result = await fetch(url, { headers: { Authorization: CLICKUP_API_TOKEN } });
-    const data = await result.json();
+    const result = await fetchTeamTasks();
     response.writeHead(result.status, headers());
-    response.end(JSON.stringify((data.tasks || []).slice(0, 80).map(normalizeTask)));
+    response.end(JSON.stringify(result.body));
     return;
   }
 
