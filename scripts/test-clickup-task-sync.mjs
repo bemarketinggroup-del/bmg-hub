@@ -27,5 +27,10 @@ assert.match(envExample, /CLICKUP_WEBHOOK_SECRET=/);
 assert.match(app, /data-edit-task/);
 assert.match(app, /client_tag/);
 assert.match(app, /loadClickUpTaskLogs/);
+assert.match(app, /function clickupUserId/);
+assert.match(app, /function realAssignees/);
+assert.match(app, /function unrecognizedAssignees/);
+assert.match(app, /function operationalTasks/);
+assert.match(app, /taskAssignedTo\(task, user\)/);
 
 console.log("ClickUp task sync checks passed");

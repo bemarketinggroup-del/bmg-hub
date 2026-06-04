@@ -817,13 +817,15 @@ function renderAgencyUsers() {
   const target = document.getElementById("agencyTeamList");
   if (!target) return;
   if (!selectedTeamMemberId) selectedTeamMemberId = ALL_TEAM_TASKS_ID;
+  const tasks = operationalTasks();
   const unassigned = unassignedTasks();
+  const unknown = tasks.filter((task) => unrecognizedAssignees(task).length);
   const systemRows = `
     <button class="team-row ${selectedTeamMemberId === ALL_TEAM_TASKS_ID ? "is-active" : ""}" data-team-member="${ALL_TEAM_TASKS_ID}" type="button">
       <div class="avatar">ALL</div>
       <div>
         <strong>Tutte le task</strong>
-        <span>${state.clickupTasks.length} task importate da ClickUp</span>
+        <span>${tasks.length} task operative${excludedTaskCount() ? ` · ${excludedTaskCount()} escluse` : ""}</span>
       </div>
     </button>
     <button class="team-row ${selectedTeamMemberId === UNASSIGNED_TASKS_ID ? "is-active" : ""}" data-team-member="${UNASSIGNED_TASKS_ID}" type="button">
@@ -834,13 +836,22 @@ function renderAgencyUsers() {
       </div>
     </button>
   `;
-  const users = [...state.agencyUsers].sort((a, b) => teamMemberTasks(b).length - teamMemberTasks(a).length || String(a.name).localeCompare(String(b.name)));
-  target.innerHTML = systemRows + users.map((user) => `
-    <button class="team-row ${String(user.id) === selectedTeamMemberId ? "is-active" : ""}" data-team-member="${user.id}" type="button">
+  const users = teamMembers().sort((a, b) => teamMemberTasks(b).length - teamMemberTasks(a).length || String(a.name).localeCompare(String(b.name)));
+  const warningRow = unknown.length ? `
+    <div class="team-row team-warning">
+      <div class="avatar">!</div>
+      <div>
+        <strong>Assegnatari non riconosciuti</strong>
+        <span>${unknown.length} task da controllare in ClickUp</span>
+      </div>
+    </div>
+  ` : "";
+  target.innerHTML = systemRows + warningRow + users.map((user) => `
+    <button class="team-row ${teamMemberKey(user) === selectedTeamMemberId ? "is-active" : ""}" data-team-member="${teamMemberKey(user)}" type="button">
       <div class="avatar">${user.avatar ? `<img src="${user.avatar}" alt="${user.name}">` : initials(user.name)}</div>
       <div>
         <strong>${user.name}</strong>
-        <span>${teamMemberTasks(user).length} task assegnate · ID ${user.id}</span>
+        <span>${teamMemberTasks(user).length} task assegnate · ID ${clickupUserId(user) || "n/d"}</span>
       </div>
     </button>
   `).join("") || emptyState("Nessun utente caricato da ClickUp.");
@@ -855,7 +866,7 @@ function renderTeamProfile() {
         <div class="avatar">ALL</div>
         <div>
           <h2>Tutte le task</h2>
-          <span>${state.clickupTasks.length} task importate e smistate per assegnatario</span>
+          <span>${operationalTasks().length} task operative smistate per assegnatario</span>
         </div>
       </div>
       <button class="ghost-button" data-new-task-for="" type="button">Nuova task</button>
@@ -888,7 +899,7 @@ function renderTeamProfile() {
         <span>${user.email || "Email non indicata"} · ${teamMemberTasks(user).length} task</span>
       </div>
     </div>
-    <button class="ghost-button" data-new-task-for="${user.id}" type="button">Task per ${firstName(user.name)}</button>
+    <button class="ghost-button" data-new-task-for="${clickupUserId(user)}" type="button">Task per ${firstName(user.name)}</button>
   `;
 }
 
@@ -901,13 +912,13 @@ function renderClickUpTasks() {
     return `${task.name} ${task.status} ${assignees} ${task.list} ${task.folder}`.toLowerCase().includes(search);
   });
   target.innerHTML = tasks.map((task) => `
-    <article class="task-card ${task.client_tag_status !== "ok" ? "has-warning" : ""}">
+    <article class="task-card ${taskWarnings(task).length ? "has-warning" : ""}">
       <div>
         <strong>${task.name}</strong>
         <span>${task.status || "Senza stato"} · ${task.list || task.folder || task.space || "ClickUp"}</span>
         ${assigneeLabels(task).length ? `<p>${assigneeLabels(task).join(", ")}</p>` : ""}
         <p>${task.client_tag ? `Cliente: ${task.client_tag}` : "Tag cliente mancante"}</p>
-        ${task.sync_error ? `<small class="sync-warning">${task.sync_error}</small>` : ""}
+        ${taskWarnings(task).map((warning) => `<small class="sync-warning">${warning}</small>`).join("")}
         ${task.due_date ? `<small>Scadenza ${formatContentDate(Number(task.due_date))}</small>` : ""}
       </div>
       <div class="task-actions">
@@ -933,7 +944,7 @@ function renderTaskLogs() {
 }
 
 function selectedTeamMember() {
-  return state.agencyUsers.find((user) => String(user.id) === selectedTeamMemberId);
+  return teamMembers().find((user) => teamMemberKey(user) === selectedTeamMemberId);
 }
 
 function selectTeamMember(id) {
@@ -942,24 +953,26 @@ function selectTeamMember(id) {
 }
 
 function teamMemberTasks(user) {
-  return state.clickupTasks.filter((task) => taskAssignedTo(task, user));
+  return operationalTasks().filter((task) => taskAssignedTo(task, user));
 }
 
 function selectedTeamTasks() {
-  if (selectedTeamMemberId === ALL_TEAM_TASKS_ID) return state.clickupTasks;
+  if (selectedTeamMemberId === ALL_TEAM_TASKS_ID) return operationalTasks();
   if (selectedTeamMemberId === UNASSIGNED_TASKS_ID) return unassignedTasks();
   const user = selectedTeamMember();
-  return user ? teamMemberTasks(user) : state.clickupTasks;
+  return user ? teamMemberTasks(user) : operationalTasks();
 }
 
 function unassignedTasks() {
-  return state.clickupTasks.filter((task) => !task.assignees?.length);
+  return operationalTasks().filter((task) => !realAssignees(task).length);
 }
 
 function taskAssignedTo(task, user) {
   return (task.assignees || []).some((assignee) => {
-    if (typeof assignee === "string") return assignee === user.name || assignee === user.email || assignee === String(user.id);
-    return String(assignee.id) === String(user.id) || assignee.email === user.email || assignee.name === user.name;
+    const assigneeId = clickupUserId(assignee);
+    const userId = clickupUserId(user);
+    if (assigneeId && userId) return assigneeId === userId;
+    return sameFallbackIdentity(assignee, user);
   });
 }
 
@@ -967,12 +980,93 @@ function assigneeLabels(task) {
   return (task.assignees || []).map((assignee) => typeof assignee === "string" ? assignee : assignee.name).filter(Boolean);
 }
 
+function teamMembers() {
+  const profileByClickUp = new Map((state.staffProfiles || [])
+    .filter((profile) => profile.clickup_user_id)
+    .map((profile) => [String(profile.clickup_user_id), profile]));
+  const profileByEmail = new Map((state.staffProfiles || [])
+    .filter((profile) => profile.email)
+    .map((profile) => [normalizeIdentity(profile.email), profile]));
+  const members = (state.agencyUsers || []).map((user) => {
+    const id = clickupUserId(user);
+    const profile = profileByClickUp.get(id) || profileByEmail.get(normalizeIdentity(user.email)) || null;
+    return {
+      ...user,
+      clickup_user_id: id,
+      profile_id: profile?.id || "",
+      role: profile?.role || "staff",
+      name: user.name || profile?.full_name || profile?.email || "Staff",
+      email: user.email || profile?.email || ""
+    };
+  });
+  return members.filter((member) => member.role !== "inactive");
+}
+
+function teamMemberKey(user) {
+  return clickupUserId(user) || normalizeIdentity(user.email || user.name);
+}
+
+function clickupUserId(value) {
+  if (typeof value === "string") return /^\d+$/.test(value.trim()) ? value.trim() : "";
+  return String(value?.clickup_user_id || value?.id || "").trim();
+}
+
+function normalizeIdentity(value) {
+  return String(value || "").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ");
+}
+
+function sameFallbackIdentity(assignee, user) {
+  const assigneeEmail = normalizeIdentity(typeof assignee === "string" ? "" : assignee.email);
+  const userEmail = normalizeIdentity(user.email);
+  if (assigneeEmail && userEmail && assigneeEmail === userEmail) return true;
+  const assigneeName = normalizeIdentity(typeof assignee === "string" ? assignee : assignee.name);
+  const userName = normalizeIdentity(user.name || user.full_name);
+  return Boolean(assigneeName && userName && assigneeName === userName);
+}
+
+function realAssignees(task) {
+  return (task.assignees || []).filter((assignee) => {
+    if (clickupUserId(assignee)) return true;
+    if (typeof assignee === "string") return Boolean(normalizeIdentity(assignee));
+    return Boolean(normalizeIdentity(assignee.email || assignee.name));
+  });
+}
+
+function unrecognizedAssignees(task) {
+  return realAssignees(task).filter((assignee) => !teamMembers().some((user) => taskAssignedTo({ assignees: [assignee] }, user)));
+}
+
+function taskWarnings(task) {
+  const warnings = [];
+  if (task.sync_error) warnings.push(task.sync_error);
+  if (task.client_tag_status !== "ok" && !task.sync_error) warnings.push("Tag cliente da verificare");
+  const unknown = unrecognizedAssignees(task);
+  if (unknown.length) warnings.push(`Assegnatario ClickUp non riconosciuto: ${assigneeLabels({ assignees: unknown }).join(", ")}`);
+  return warnings;
+}
+
+function operationalTasks() {
+  return (state.clickupTasks || []).filter(isOperationalTask);
+}
+
+function excludedTaskCount() {
+  return (state.clickupTasks || []).length - operationalTasks().length;
+}
+
+function isOperationalTask(task) {
+  const container = normalizeIdentity([task.list, task.folder, task.space].filter(Boolean).join(" "));
+  const tags = normalizeIdentity((task.tags || []).join(" "));
+  if (/\b(template|templates|modelli|modello)\b/.test(container) || /\b(template|templates|modelli|modello)\b/.test(tags)) return false;
+  if (/\b(documenti|documents|documentation|docs)\b/.test(container)) return false;
+  return true;
+}
+
 function renderTaskAssigneeOptions() {
   const select = document.getElementById("taskAssignees");
   if (!select) return;
   const selected = new Set([...select.selectedOptions].map((option) => option.value));
-  select.innerHTML = state.agencyUsers.map((user) => `
-    <option value="${user.id}" ${selected.has(String(user.id)) ? "selected" : ""}>${user.name}</option>
+  select.innerHTML = teamMembers().filter((user) => clickupUserId(user)).map((user) => `
+    <option value="${clickupUserId(user)}" ${selected.has(String(clickupUserId(user))) ? "selected" : ""}>${user.name}</option>
   `).join("");
 }
 
