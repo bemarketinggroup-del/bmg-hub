@@ -212,6 +212,15 @@
             <span>⌕</span>
             <input id="taskSearch" type="search" placeholder="Cerca task, cliente, assegnatario">
           </label>
+          <select id="taskAssigneeFilter" aria-label="Filtra assegnatario">
+            <option value="">Tutti gli assegnatari</option>
+          </select>
+          <select id="taskStatusFilter" aria-label="Filtra stato">
+            <option value="">Tutti gli stati</option>
+          </select>
+          <select id="taskClientFilter" aria-label="Filtra cliente">
+            <option value="">Tutti i clienti</option>
+          </select>
           <button class="ghost-button" id="syncTasksButton" type="button">Sincronizza task</button>
           <button class="primary-button" id="newTaskButton" type="button">Nuova task</button>
         </div>

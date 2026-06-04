@@ -1,6 +1,25 @@
 const STORAGE_KEY = "bmg-hub-v1";
 const ALL_TEAM_TASKS_ID = "__all";
 const UNASSIGNED_TASKS_ID = "__unassigned";
+// Mapping centralizzato: aggiorna questi sinonimi se ClickUp introduce nuovi stati operativi.
+const TASK_STATUS_GROUPS = [
+  {
+    id: "todo",
+    label: "To Do",
+    match: ["todo", "to do", "da fare", "aperto", "aperti", "open", "backlog", "nuovo", "new"]
+  },
+  {
+    id: "progress",
+    label: "In Progress",
+    match: ["in progress", "progress", "in lavorazione", "lavorazione", "doing", "work", "review", "revisione", "attesa", "waiting"]
+  },
+  {
+    id: "done",
+    label: "Completate",
+    match: ["complete", "completed", "completato", "completata", "completate", "chiuso", "chiusa", "closed", "done", "finito", "fatto"]
+  }
+];
+const DEFAULT_TASK_STATUS_GROUP_ID = "todo";
 
 const seed = {
   leads: [
@@ -742,6 +761,7 @@ function labelClientStatus(status) {
 }
 
 function renderTeam() {
+  renderTaskFilters();
   renderAgencyUsers();
   renderTeamProfile();
   renderClickUpTasks();
@@ -836,7 +856,7 @@ function renderAgencyUsers() {
       </div>
     </button>
   `;
-  const users = teamMembers().sort((a, b) => teamMemberTasks(b).length - teamMemberTasks(a).length || String(a.name).localeCompare(String(b.name)));
+  const users = teamMembers().sort((a, b) => String(a.name).localeCompare(String(b.name), "it", { sensitivity: "base" }));
   const warningRow = unknown.length ? `
     <div class="team-row team-warning">
       <div class="avatar">!</div>
@@ -851,7 +871,7 @@ function renderAgencyUsers() {
       <div class="avatar">${user.avatar ? `<img src="${user.avatar}" alt="${user.name}">` : initials(user.name)}</div>
       <div>
         <strong>${user.name}</strong>
-        <span>${teamMemberTasks(user).length} task assegnate · ID ${clickupUserId(user) || "n/d"}</span>
+        ${teamCountersMarkup(teamMemberTasks(user))}
       </div>
     </button>
   `).join("") || emptyState("Nessun utente caricato da ClickUp.");
@@ -866,7 +886,7 @@ function renderTeamProfile() {
         <div class="avatar">ALL</div>
         <div>
           <h2>Tutte le task</h2>
-          <span>${operationalTasks().length} task operative smistate per assegnatario</span>
+          <span>${operationalTasks().length} task operative · filtri assegnatario, stato e cliente attivi qui</span>
         </div>
       </div>
       <button class="ghost-button" data-new-task-for="" type="button">Nuova task</button>
@@ -879,7 +899,7 @@ function renderTeamProfile() {
         <div class="avatar">?</div>
         <div>
           <h2>Senza assegnatario</h2>
-          <span>${unassignedTasks().length} task da assegnare al team</span>
+          <span>${unassignedTasks().length} task da assegnare al team · divise per stato</span>
         </div>
       </div>
       <button class="ghost-button" data-new-task-for="" type="button">Nuova task</button>
@@ -896,7 +916,7 @@ function renderTeamProfile() {
       <div class="avatar">${user.avatar ? `<img src="${user.avatar}" alt="${user.name}">` : initials(user.name)}</div>
       <div>
         <h2>${user.name}</h2>
-        <span>${user.email || "Email non indicata"} · ${teamMemberTasks(user).length} task</span>
+        <span>${user.email || "Email non indicata"} · ${teamMemberTasks(user).length} task · divise per stato</span>
       </div>
     </div>
     <button class="ghost-button" data-new-task-for="${clickupUserId(user)}" type="button">Task per ${firstName(user.name)}</button>
@@ -906,27 +926,43 @@ function renderTeamProfile() {
 function renderClickUpTasks() {
   const target = document.getElementById("clickupTaskList");
   if (!target) return;
-  const search = document.getElementById("taskSearch")?.value?.toLowerCase() || "";
-  const tasks = selectedTeamTasks().filter((task) => {
-    const assignees = assigneeLabels(task).join(" ");
-    return `${task.name} ${task.status} ${assignees} ${task.list} ${task.folder}`.toLowerCase().includes(search);
-  });
-  target.innerHTML = tasks.map((task) => `
+  const tasks = filteredTeamTasks();
+  const groups = TASK_STATUS_GROUPS.map((group) => {
+    const groupTasks = tasks.filter((task) => taskStatusGroup(task).id === group.id).sort(compareTaskDueDate);
+    return `
+      <section class="task-column" data-task-column="${group.id}">
+        <div class="task-column-head">
+          <h3>${group.label}</h3>
+          <span>${groupTasks.length}</span>
+        </div>
+        <div class="task-column-list">
+          ${groupTasks.map(taskCardMarkup).join("") || emptyColumnState("Nessuna task")}
+        </div>
+      </section>
+    `;
+  }).join("");
+  target.innerHTML = `<div class="task-board">${groups}</div>`;
+}
+
+function taskCardMarkup(task) {
+  const due = dueDateValue(task);
+  const dueClass = due && due < startOfToday() ? "is-overdue" : "";
+  return `
     <article class="task-card ${taskWarnings(task).length ? "has-warning" : ""}">
       <div>
         <strong>${task.name}</strong>
-        <span>${task.status || "Senza stato"} · ${task.list || task.folder || task.space || "ClickUp"}</span>
-        ${assigneeLabels(task).length ? `<p>${assigneeLabels(task).join(", ")}</p>` : ""}
-        <p>${task.client_tag ? `Cliente: ${task.client_tag}` : "Tag cliente mancante"}</p>
+        <span>${task.client_tag ? `Cliente: ${task.client_tag}` : "Tag cliente mancante"}</span>
+        <p>${task.status || "Senza stato ClickUp"}</p>
+        <small>${assigneeLabels(task).length ? assigneeLabels(task).join(", ") : "Senza assegnatario"}</small>
+        <small class="${dueClass}">${due ? `Scadenza ${formatContentDate(due)}` : "Senza scadenza"}</small>
         ${taskWarnings(task).map((warning) => `<small class="sync-warning">${warning}</small>`).join("")}
-        ${task.due_date ? `<small>Scadenza ${formatContentDate(Number(task.due_date))}</small>` : ""}
       </div>
       <div class="task-actions">
         <button class="badge" data-edit-task="${task.clickup_task_id || task.id}" type="button">Modifica</button>
         <a class="badge" href="${task.url}" target="_blank" rel="noreferrer">ClickUp</a>
       </div>
     </article>
-  `).join("") || emptyState("Nessuna task trovata.");
+  `;
 }
 
 function renderTaskLogs() {
@@ -963,6 +999,31 @@ function selectedTeamTasks() {
   return user ? teamMemberTasks(user) : operationalTasks();
 }
 
+function filteredTeamTasks() {
+  const search = normalizeIdentity(document.getElementById("taskSearch")?.value || "");
+  const assigneeFilter = document.getElementById("taskAssigneeFilter")?.value || "";
+  const statusFilter = document.getElementById("taskStatusFilter")?.value || "";
+  const clientFilter = normalizeIdentity(document.getElementById("taskClientFilter")?.value || "");
+  return selectedTeamTasks().filter((task) => {
+    const searchable = normalizeIdentity([
+      task.name,
+      task.status,
+      task.client_tag,
+      task.list,
+      task.folder,
+      task.space,
+      assigneeLabels(task).join(" ")
+    ].filter(Boolean).join(" "));
+    const matchesSearch = !search || searchable.includes(search);
+    const matchesAssignee = selectedTeamMemberId !== ALL_TEAM_TASKS_ID || !assigneeFilter || task.assignees?.some((assignee) => {
+      return clickupUserId(assignee) === assigneeFilter || normalizeIdentity(assignee.email || assignee.name || assignee) === assigneeFilter;
+    });
+    const matchesStatus = selectedTeamMemberId !== ALL_TEAM_TASKS_ID || !statusFilter || normalizeIdentity(task.status) === statusFilter;
+    const matchesClient = selectedTeamMemberId !== ALL_TEAM_TASKS_ID || !clientFilter || normalizeIdentity(task.client_tag) === clientFilter;
+    return matchesSearch && matchesAssignee && matchesStatus && matchesClient;
+  });
+}
+
 function unassignedTasks() {
   return operationalTasks().filter((task) => !realAssignees(task).length);
 }
@@ -978,6 +1039,102 @@ function taskAssignedTo(task, user) {
 
 function assigneeLabels(task) {
   return (task.assignees || []).map((assignee) => typeof assignee === "string" ? assignee : assignee.name).filter(Boolean);
+}
+
+function renderTaskFilters() {
+  const onlyAll = selectedTeamMemberId === ALL_TEAM_TASKS_ID;
+  const assigneeFilter = document.getElementById("taskAssigneeFilter");
+  const statusFilter = document.getElementById("taskStatusFilter");
+  const clientFilter = document.getElementById("taskClientFilter");
+  if (!assigneeFilter || !statusFilter || !clientFilter) return;
+  [assigneeFilter, statusFilter, clientFilter].forEach((filter) => {
+    filter.classList.toggle("is-hidden", !onlyAll);
+    filter.disabled = !onlyAll;
+  });
+  renderTaskAssigneeFilter(assigneeFilter);
+  renderTaskStatusFilter(statusFilter);
+  renderTaskClientFilter(clientFilter);
+}
+
+function renderTaskAssigneeFilter(select) {
+  const selected = select.value;
+  const options = teamMembers().filter((user) => clickupUserId(user)).map((user) => `
+    <option value="${clickupUserId(user)}" ${selected === clickupUserId(user) ? "selected" : ""}>${user.name}</option>
+  `).join("");
+  select.innerHTML = `<option value="">Tutti gli assegnatari</option>${options}`;
+}
+
+function renderTaskStatusFilter(select) {
+  const selected = select.value;
+  const statuses = [...new Set(operationalTasks().map((task) => task.status).filter(Boolean))]
+    .sort((a, b) => String(a).localeCompare(String(b), "it", { sensitivity: "base" }));
+  select.innerHTML = `<option value="">Tutti gli stati</option>${statuses.map((status) => {
+    const value = normalizeIdentity(status);
+    return `<option value="${value}" ${selected === value ? "selected" : ""}>${status}</option>`;
+  }).join("")}`;
+}
+
+function renderTaskClientFilter(select) {
+  const selected = select.value;
+  const clients = [...new Set(operationalTasks().map((task) => task.client_tag).filter(Boolean))]
+    .sort((a, b) => String(a).localeCompare(String(b), "it", { sensitivity: "base" }));
+  select.innerHTML = `<option value="">Tutti i clienti</option>${clients.map((client) => {
+    const value = normalizeIdentity(client);
+    return `<option value="${value}" ${selected === value ? "selected" : ""}>${client}</option>`;
+  }).join("")}`;
+}
+
+function taskStatusGroup(task) {
+  const status = normalizeIdentity(task.status);
+  const matched = TASK_STATUS_GROUPS.find((group) => group.match.some((token) => status.includes(normalizeIdentity(token))));
+  return matched || TASK_STATUS_GROUPS.find((group) => group.id === DEFAULT_TASK_STATUS_GROUP_ID);
+}
+
+function teamCountersMarkup(tasks) {
+  const counts = taskGroupCounts(tasks);
+  return `
+    <span>${tasks.length} task assegnate</span>
+    <div class="team-counts">
+      ${TASK_STATUS_GROUPS.map((group) => `<small>${group.label}: ${counts[group.id] || 0}</small>`).join("")}
+    </div>
+  `;
+}
+
+function taskGroupCounts(tasks) {
+  return tasks.reduce((counts, task) => {
+    const group = taskStatusGroup(task).id;
+    counts[group] = (counts[group] || 0) + 1;
+    return counts;
+  }, {});
+}
+
+function dueDateValue(task) {
+  const raw = task.due_date || task.due_date_ms;
+  const date = Number(raw);
+  return Number.isFinite(date) && date > 0 ? date : null;
+}
+
+function startOfToday() {
+  const date = new Date();
+  date.setHours(0, 0, 0, 0);
+  return date.getTime();
+}
+
+function compareTaskDueDate(a, b) {
+  const dueA = dueDateValue(a);
+  const dueB = dueDateValue(b);
+  const today = startOfToday();
+  const overdueA = dueA && dueA < today;
+  const overdueB = dueB && dueB < today;
+  if (overdueA !== overdueB) return overdueA ? -1 : 1;
+  if (dueA && dueB) return dueA - dueB;
+  if (dueA && !dueB) return -1;
+  if (!dueA && dueB) return 1;
+  return String(a.name).localeCompare(String(b.name), "it", { sensitivity: "base" });
+}
+
+function emptyColumnState(text) {
+  return `<div class="task-empty">${text}</div>`;
 }
 
 function teamMembers() {
@@ -1348,6 +1505,9 @@ document.getElementById("contentPageFilter").addEventListener("change", renderCo
 document.getElementById("contentStatusFilter").addEventListener("change", renderContent);
 document.getElementById("clientSearch").addEventListener("input", renderClients);
 document.getElementById("taskSearch").addEventListener("input", renderClickUpTasks);
+document.getElementById("taskAssigneeFilter").addEventListener("change", renderClickUpTasks);
+document.getElementById("taskStatusFilter").addEventListener("change", renderClickUpTasks);
+document.getElementById("taskClientFilter").addEventListener("change", renderClickUpTasks);
 
 document.getElementById("leadForm").addEventListener("submit", (event) => {
   if (event.submitter?.value === "cancel") return;

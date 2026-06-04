@@ -380,7 +380,8 @@ button { cursor: pointer; }
 }
 
 .task-card {
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
 }
 
 .task-card.has-warning {
@@ -414,15 +415,21 @@ button { cursor: pointer; }
   font-size: 12px;
 }
 
+.task-card small.is-overdue {
+  color: var(--accent);
+  font-weight: 800;
+}
+
 .task-card .sync-warning {
   color: var(--accent);
   font-weight: 700;
 }
 
 .task-actions {
-  display: grid;
+  display: flex;
   align-content: start;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .task-actions button.badge {
@@ -468,6 +475,83 @@ button { cursor: pointer; }
 
 .team-row {
   grid-template-columns: 42px minmax(0, 1fr);
+}
+
+.team-warning {
+  border-color: var(--yellow);
+  background: #fff8df;
+}
+
+.team-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.team-counts small {
+  display: inline-flex;
+  min-height: 22px;
+  align-items: center;
+  border: 1px solid var(--line);
+  background: #fff;
+  padding: 0 7px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.task-board {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  align-items: start;
+}
+
+.task-column {
+  min-width: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.task-column-head {
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  padding: 0 10px;
+}
+
+.task-column-head h3 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.task-column-head span {
+  min-width: 24px;
+  min-height: 24px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  background: #fff;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.task-column-list {
+  display: grid;
+  gap: 10px;
+}
+
+.task-empty {
+  min-height: 68px;
+  display: grid;
+  place-items: center;
+  border: 1px dashed var(--line);
+  color: var(--muted);
+  font-size: 13px;
 }
 
 .team-profile-head {
@@ -846,7 +930,7 @@ code {
   .nav-list { display: flex; }
   .nav-item { white-space: nowrap; }
   .sidebar-footer { display: none; }
-  .metric-grid, .two-col, .split-panel, .client-grid, .user-row { grid-template-columns: 1fr; }
+  .metric-grid, .two-col, .split-panel, .client-grid, .user-row, .task-board { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 640px) {

@@ -32,5 +32,12 @@ assert.match(app, /function realAssignees/);
 assert.match(app, /function unrecognizedAssignees/);
 assert.match(app, /function operationalTasks/);
 assert.match(app, /taskAssignedTo\(task, user\)/);
+assert.match(app, /TASK_STATUS_GROUPS/);
+assert.match(app, /function taskStatusGroup/);
+assert.match(app, /function compareTaskDueDate/);
+assert.match(app, /task-board/);
+assert.match(app, /taskAssigneeFilter/);
+assert.match(app, /taskStatusFilter/);
+assert.match(app, /taskClientFilter/);
 
 console.log("ClickUp task sync checks passed");
