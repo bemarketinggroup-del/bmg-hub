@@ -24,6 +24,10 @@
       "dest": "/api/clients.js"
     },
     {
+      "src": "/api/clients/sync-clickup",
+      "dest": "/api/clients-sync-clickup.js"
+    },
+    {
       "src": "/",
       "dest": "/api/app.js"
     },

@@ -605,6 +605,25 @@ async function submitClient(form) {
   }
 }
 
+async function syncClientsFromClickUp() {
+  const button = document.getElementById("syncClickUpButton");
+  button.disabled = true;
+  button.textContent = "Sincronizzo...";
+  try {
+    const response = await fetch("/api/clients/sync-clickup", { method: "POST" });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || `Sync error ${response.status}`);
+    await loadClientsFromBackend();
+    alert(`Sync completata. Nuovi clienti importati: ${result.imported}`);
+  } catch (error) {
+    renderBackendStatus(error.message);
+    alert("Non riesco a sincronizzare ClickUp. Controlla CLICKUP_API_TOKEN su Vercel.");
+  } finally {
+    button.disabled = false;
+    button.textContent = "Sincronizza ClickUp";
+  }
+}
+
 function renderAll() {
   renderMetrics();
   renderLeads();
@@ -663,6 +682,7 @@ document.getElementById("contentForm").addEventListener("submit", (event) => {
 
 document.getElementById("deleteContentButton").addEventListener("click", deleteContent);
 document.getElementById("newClientButton").addEventListener("click", () => document.getElementById("clientModal").showModal());
+document.getElementById("syncClickUpButton").addEventListener("click", syncClientsFromClickUp);
 
 document.getElementById("clientForm").addEventListener("submit", (event) => {
   if (event.submitter?.value === "cancel") return;
