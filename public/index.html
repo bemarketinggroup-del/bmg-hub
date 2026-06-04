@@ -37,6 +37,10 @@
           <span class="icon">◫</span>
           <span>Clienti</span>
         </button>
+        <button class="nav-item" data-view="team" type="button">
+          <span class="icon">☷</span>
+          <span>Team & Task</span>
+        </button>
         <button class="nav-item" data-view="settings" type="button">
           <span class="icon">⚙</span>
           <span>Setup</span>
@@ -174,6 +178,31 @@
         <div class="client-grid" id="clientGrid"></div>
       </section>
 
+      <section class="view" id="teamView" data-view-panel="team">
+        <div class="toolbar client-toolbar">
+          <label class="search">
+            <span>⌕</span>
+            <input id="taskSearch" type="search" placeholder="Cerca task, cliente, assegnatario">
+          </label>
+          <button class="ghost-button" id="syncTasksButton" type="button">Sincronizza task</button>
+          <button class="primary-button" id="newTaskButton" type="button">Nuova task</button>
+        </div>
+        <div class="split-panel">
+          <section class="panel">
+            <div class="panel-head">
+              <h2>Task ClickUp</h2>
+            </div>
+            <div class="task-list" id="clickupTaskList"></div>
+          </section>
+          <section class="panel">
+            <div class="panel-head">
+              <h2>Utenti agenzia</h2>
+            </div>
+            <div class="team-list" id="agencyTeamList"></div>
+          </section>
+        </div>
+      </section>
+
       <section class="view" id="settingsView" data-view-panel="settings">
         <div class="split-panel">
           <section class="panel">
@@ -263,7 +292,7 @@
         <label class="full">Titolo<input name="title" required></label>
         <label class="full">Sottotitolo<input name="subtitle"></label>
         <label class="full">Testo<textarea name="body" rows="5"></textarea></label>
-        <label>URL immagine<input name="image_url" type="url" placeholder="https://..."></label>
+        <label>URL immagine<input name="image_url" type="text" placeholder="assets/images/... oppure https://..."></label>
         <label>Alt immagine<input name="image_alt" placeholder="Descrizione immagine"></label>
         <label>CTA testo<input name="cta_label" placeholder="Scopri di piu"></label>
         <label>CTA link<input name="cta_url" placeholder="/contatti"></label>
@@ -302,6 +331,32 @@
       <div class="modal-actions">
         <button class="ghost-button" value="cancel" type="submit" formnovalidate>Annulla</button>
         <button class="primary-button" value="default" type="submit">Salva cliente</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="modal" id="taskModal">
+    <form method="dialog" id="taskForm">
+      <div class="modal-head">
+        <h2>Nuova task ClickUp</h2>
+        <button class="icon-button" value="cancel" type="submit" formnovalidate title="Chiudi">×</button>
+      </div>
+      <div class="form-grid">
+        <label class="full">Titolo task<input name="name" required></label>
+        <label>Assegnatari<input name="assignees" placeholder="ID ClickUp separati da virgola"></label>
+        <label>Scadenza<input name="due_date" type="date"></label>
+        <label>Priorità<select name="priority">
+          <option value="">Nessuna</option>
+          <option value="urgent">Urgente</option>
+          <option value="high">Alta</option>
+          <option value="normal">Normale</option>
+          <option value="low">Bassa</option>
+        </select></label>
+        <label class="full">Descrizione<textarea name="description" rows="4"></textarea></label>
+      </div>
+      <div class="modal-actions">
+        <button class="ghost-button" value="cancel" type="submit" formnovalidate>Annulla</button>
+        <button class="primary-button" value="default" type="submit">Crea task</button>
       </div>
     </form>
   </dialog>

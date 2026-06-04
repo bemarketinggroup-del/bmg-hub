@@ -145,6 +145,8 @@ const seed = {
     { name: "Vetera Matera", status: "Onboarding", services: "Brand, sito", clickup: "#", drive: "#" },
     { name: "Zest Restaurant", status: "Attivo", services: "Social, ads", clickup: "#", drive: "#" }
   ],
+  agencyUsers: [],
+  clickupTasks: [],
   tasks: [
     { title: "Collegare form contatti a POST /api/leads", done: false },
     { title: "Definire campi modificabili della home", done: false },
@@ -157,6 +159,7 @@ let state = loadState();
 let backendOnline = false;
 let contentOnline = false;
 let clientsOnline = false;
+let clickupOnline = false;
 
 function loadState() {
   const saved = localStorage.getItem(STORAGE_KEY);
@@ -184,6 +187,7 @@ function setView(view) {
     leads: ["CRM sito", "Lead dal sito"],
     content: ["CMS leggero", "Backend sito"],
     clients: ["Gestionale interno", "Clienti"],
+    team: ["ClickUp operativo", "Team & Task"],
     settings: ["Setup tecnico", "Configurazione"]
   };
   document.getElementById("viewKicker").textContent = titles[view][0];
@@ -291,12 +295,42 @@ function normalizeClient(client) {
   };
 }
 
+async function loadClickUpTeam() {
+  try {
+    const response = await fetch("/api/clickup/team");
+    if (!response.ok) throw new Error(`ClickUp team error ${response.status}`);
+    state.agencyUsers = await response.json();
+    clickupOnline = true;
+    renderBackendStatus();
+    renderTeam();
+  } catch (error) {
+    clickupOnline = false;
+    renderBackendStatus(error.message);
+    renderTeam();
+  }
+}
+
+async function loadClickUpTasks() {
+  try {
+    const response = await fetch("/api/clickup/tasks");
+    if (!response.ok) throw new Error(`ClickUp tasks error ${response.status}`);
+    state.clickupTasks = await response.json();
+    clickupOnline = true;
+    renderBackendStatus();
+    renderTeam();
+  } catch (error) {
+    clickupOnline = false;
+    renderBackendStatus(error.message);
+    renderTeam();
+  }
+}
+
 function renderBackendStatus(message = "") {
   const footer = document.querySelector(".sidebar-footer span:last-child");
   const dot = document.querySelector(".status-dot");
   if (!footer || !dot) return;
-  const connected = backendOnline && contentOnline && clientsOnline;
-  footer.textContent = connected ? "Supabase collegato" : "Connessione parziale";
+  const connected = backendOnline && contentOnline && clientsOnline && clickupOnline;
+  footer.textContent = connected ? "Sistemi collegati" : "Connessione parziale";
   dot.style.background = connected ? "#7cc483" : "#d8a42f";
   if (message) footer.title = message;
 }
@@ -468,6 +502,46 @@ function labelClientStatus(status) {
   }[status] || status;
 }
 
+function renderTeam() {
+  renderAgencyUsers();
+  renderClickUpTasks();
+}
+
+function renderAgencyUsers() {
+  const target = document.getElementById("agencyTeamList");
+  if (!target) return;
+  target.innerHTML = state.agencyUsers.map((user) => `
+    <article class="team-row">
+      <div class="avatar">${user.avatar ? `<img src="${user.avatar}" alt="${user.name}">` : initials(user.name)}</div>
+      <div>
+        <strong>${user.name}</strong>
+        <span>${user.email || "Email non indicata"} · ID ${user.id}</span>
+      </div>
+    </article>
+  `).join("") || emptyState("Nessun utente caricato da ClickUp.");
+}
+
+function renderClickUpTasks() {
+  const target = document.getElementById("clickupTaskList");
+  if (!target) return;
+  const search = document.getElementById("taskSearch")?.value?.toLowerCase() || "";
+  const tasks = state.clickupTasks.filter((task) => `${task.name} ${task.status} ${task.assignees?.join(" ")} ${task.list} ${task.folder}`.toLowerCase().includes(search));
+  target.innerHTML = tasks.map((task) => `
+    <article class="task-card">
+      <div>
+        <strong>${task.name}</strong>
+        <span>${task.status || "Senza stato"} · ${task.list || task.folder || task.space || "ClickUp"}</span>
+        ${task.assignees?.length ? `<p>${task.assignees.join(", ")}</p>` : ""}
+      </div>
+      <a class="badge" href="${task.url}" target="_blank" rel="noreferrer">Apri</a>
+    </article>
+  `).join("") || emptyState("Nessuna task trovata.");
+}
+
+function initials(name) {
+  return String(name || "?").split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase();
+}
+
 function emptyState(text) {
   return `<div class="lead-card"><p>${text}</p></div>`;
 }
@@ -624,12 +698,45 @@ async function syncClientsFromClickUp() {
   }
 }
 
+async function syncTasksFromClickUp() {
+  const button = document.getElementById("syncTasksButton");
+  button.disabled = true;
+  button.textContent = "Sincronizzo...";
+  try {
+    await Promise.all([loadClickUpTeam(), loadClickUpTasks()]);
+  } finally {
+    button.disabled = false;
+    button.textContent = "Sincronizza task";
+  }
+}
+
+async function submitTask(form) {
+  const data = Object.fromEntries(new FormData(form).entries());
+  try {
+    const response = await fetch("/api/clickup/tasks", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data)
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || `ClickUp task error ${response.status}`);
+    clickupOnline = true;
+    form.reset();
+    await loadClickUpTasks();
+  } catch (error) {
+    clickupOnline = false;
+    renderBackendStatus(error.message);
+    alert("Non riesco a creare la task su ClickUp. Controlla CLICKUP_DEFAULT_TASK_LIST_ID su Vercel.");
+  }
+}
+
 function renderAll() {
   renderMetrics();
   renderLeads();
   renderTasks();
   renderContent();
   renderClients();
+  renderTeam();
 }
 
 document.getElementById("navList").addEventListener("click", (event) => {
@@ -651,6 +758,7 @@ document.getElementById("statusFilter").addEventListener("change", renderLeads);
 document.getElementById("contentPageFilter").addEventListener("change", renderContent);
 document.getElementById("contentStatusFilter").addEventListener("change", renderContent);
 document.getElementById("clientSearch").addEventListener("input", renderClients);
+document.getElementById("taskSearch").addEventListener("input", renderClickUpTasks);
 
 document.getElementById("leadForm").addEventListener("submit", (event) => {
   if (event.submitter?.value === "cancel") return;
@@ -683,12 +791,21 @@ document.getElementById("contentForm").addEventListener("submit", (event) => {
 document.getElementById("deleteContentButton").addEventListener("click", deleteContent);
 document.getElementById("newClientButton").addEventListener("click", () => document.getElementById("clientModal").showModal());
 document.getElementById("syncClickUpButton").addEventListener("click", syncClientsFromClickUp);
+document.getElementById("syncTasksButton").addEventListener("click", syncTasksFromClickUp);
+document.getElementById("newTaskButton").addEventListener("click", () => document.getElementById("taskModal").showModal());
 
 document.getElementById("clientForm").addEventListener("submit", (event) => {
   if (event.submitter?.value === "cancel") return;
   event.preventDefault();
   submitClient(event.currentTarget);
   document.getElementById("clientModal").close();
+});
+
+document.getElementById("taskForm").addEventListener("submit", (event) => {
+  if (event.submitter?.value === "cancel") return;
+  event.preventDefault();
+  submitTask(event.currentTarget);
+  document.getElementById("taskModal").close();
 });
 
 document.getElementById("priorityTasks").addEventListener("change", (event) => {
@@ -703,3 +820,5 @@ renderBackendStatus();
 loadLeadsFromBackend();
 loadContentFromBackend();
 loadClientsFromBackend();
+loadClickUpTeam();
+loadClickUpTasks();

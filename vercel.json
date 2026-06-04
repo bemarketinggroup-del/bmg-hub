@@ -28,6 +28,14 @@
       "dest": "/api/clients-sync-clickup.js"
     },
     {
+      "src": "/api/clickup/team",
+      "dest": "/api/clickup-team.js"
+    },
+    {
+      "src": "/api/clickup/tasks",
+      "dest": "/api/clickup-tasks.js"
+    },
+    {
       "src": "/",
       "dest": "/api/app.js"
     },
