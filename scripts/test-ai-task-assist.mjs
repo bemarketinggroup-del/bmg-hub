@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { deterministicClientMatch } from "../lib/ai-task-assist.js";
 
 const api = readFileSync("lib/ai-task-assist.js", "utf8");
 const clickupApi = readFileSync("api/clickup-tasks.js", "utf8");
@@ -33,5 +34,15 @@ assert.match(env, /OPENAI_API_KEY=/);
 assert.match(env, /OPENAI_MODEL=/);
 assert.match(vercel, /\/api\/ai\/task-assist/);
 assert.match(clickupApi, /handleAiTaskAssist/);
+
+const clients = [
+  { id: "client-1", name: "Grand Hotel La Favorita", aliases: [] },
+  { id: "client-2", name: "Artema", aliases: [{ alias: "Artema Matera" }] },
+  { id: "client-3", name: "Zest Restaurant", aliases: [{ alias: "zest" }] },
+  { id: "client-4", name: "Zest Lab", aliases: [{ alias: "zest" }] }
+];
+assert.equal(deterministicClientMatch({ name: "Shooting Grand Hotel La Favorita", description: "", tags: [] }, clients).client_id, "client-1");
+assert.equal(deterministicClientMatch({ name: "Creativita adv Artema Matera", description: "", tags: [] }, clients).client_id, "client-2");
+assert.equal(deterministicClientMatch({ name: "Nuove grafiche zest", description: "", tags: [] }, clients).action, "suggest");
 
 console.log("AI task assist checks passed");
