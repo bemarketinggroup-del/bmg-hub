@@ -39,5 +39,9 @@ assert.match(app, /task-board/);
 assert.match(app, /taskAssigneeFilter/);
 assert.match(app, /taskStatusFilter/);
 assert.match(app, /taskClientFilter/);
+assert.match(app, /ensureTeamSelection/);
+assert.match(app, /mini-avatar/);
+assert.match(app, /Priorit/);
+assert.match(readFileSync("public/index.html", "utf8"), /team-kanban-shell/);
 
 console.log("ClickUp task sync checks passed");

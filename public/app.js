@@ -545,7 +545,7 @@ async function loadClickUpTeam() {
     const response = await apiFetch("/api/clickup/team");
     if (!response.ok) throw new Error(`ClickUp team error ${response.status}`);
     state.agencyUsers = await response.json();
-    if (!selectedTeamMemberId) selectedTeamMemberId = ALL_TEAM_TASKS_ID;
+    ensureTeamSelection();
     clickupOnline = true;
     renderBackendStatus();
     renderTeam();
@@ -761,6 +761,7 @@ function labelClientStatus(status) {
 }
 
 function renderTeam() {
+  ensureTeamSelection();
   renderTaskFilters();
   renderAgencyUsers();
   renderTeamProfile();
@@ -836,30 +837,31 @@ async function saveUserProfile(row) {
 function renderAgencyUsers() {
   const target = document.getElementById("agencyTeamList");
   if (!target) return;
-  if (!selectedTeamMemberId) selectedTeamMemberId = ALL_TEAM_TASKS_ID;
+  ensureTeamSelection();
+  const isAdmin = currentProfile?.role === "admin";
   const tasks = operationalTasks();
   const unassigned = unassignedTasks();
   const unknown = tasks.filter((task) => unrecognizedAssignees(task).length);
-  const systemRows = `
+  const systemRows = isAdmin ? `
     <button class="team-row ${selectedTeamMemberId === ALL_TEAM_TASKS_ID ? "is-active" : ""}" data-team-member="${ALL_TEAM_TASKS_ID}" type="button">
-      <div class="avatar">ALL</div>
+      <div class="mini-avatar">ALL</div>
       <div>
         <strong>Tutte le task</strong>
         <span>${tasks.length} task operative${excludedTaskCount() ? ` · ${excludedTaskCount()} escluse` : ""}</span>
       </div>
     </button>
     <button class="team-row ${selectedTeamMemberId === UNASSIGNED_TASKS_ID ? "is-active" : ""}" data-team-member="${UNASSIGNED_TASKS_ID}" type="button">
-      <div class="avatar">?</div>
+      <div class="mini-avatar">?</div>
       <div>
         <strong>Senza assegnatario</strong>
         <span>${unassigned.length} task da smistare</span>
       </div>
     </button>
-  `;
+  ` : "";
   const users = teamMembers().sort((a, b) => String(a.name).localeCompare(String(b.name), "it", { sensitivity: "base" }));
-  const warningRow = unknown.length ? `
+  const warningRow = isAdmin && unknown.length ? `
     <div class="team-row team-warning">
-      <div class="avatar">!</div>
+      <div class="mini-avatar">!</div>
       <div>
         <strong>Assegnatari non riconosciuti</strong>
         <span>${unknown.length} task da controllare in ClickUp</span>
@@ -868,7 +870,7 @@ function renderAgencyUsers() {
   ` : "";
   target.innerHTML = systemRows + warningRow + users.map((user) => `
     <button class="team-row ${teamMemberKey(user) === selectedTeamMemberId ? "is-active" : ""}" data-team-member="${teamMemberKey(user)}" type="button">
-      <div class="avatar">${user.avatar ? `<img src="${user.avatar}" alt="${user.name}">` : initials(user.name)}</div>
+      <div class="mini-avatar">${user.avatar ? `<img src="${user.avatar}" alt="${user.name}">` : initials(user.name)}</div>
       <div>
         <strong>${user.name}</strong>
         ${teamCountersMarkup(teamMemberTasks(user))}
@@ -951,10 +953,13 @@ function taskCardMarkup(task) {
     <article class="task-card ${taskWarnings(task).length ? "has-warning" : ""}">
       <div>
         <strong>${task.name}</strong>
-        <span>${task.client_tag ? `Cliente: ${task.client_tag}` : "Tag cliente mancante"}</span>
-        <p>${task.status || "Senza stato ClickUp"}</p>
+        <div class="task-card-meta">
+          <span>${task.client_tag || "Tag cliente mancante"}</span>
+          <span>${task.status || "Senza stato ClickUp"}</span>
+        </div>
         <small>${assigneeLabels(task).length ? assigneeLabels(task).join(", ") : "Senza assegnatario"}</small>
-        <small class="${dueClass}">${due ? `Scadenza ${formatContentDate(due)}` : "Senza scadenza"}</small>
+        <small class="${dueClass}">${due ? formatContentDate(due) : "Senza scadenza"}</small>
+        <small>Priorità: ${task.priority || "non impostata"}</small>
         ${taskWarnings(task).map((warning) => `<small class="sync-warning">${warning}</small>`).join("")}
       </div>
       <div class="task-actions">
@@ -993,10 +998,28 @@ function teamMemberTasks(user) {
 }
 
 function selectedTeamTasks() {
+  if (currentProfile?.role !== "admin") {
+    const user = selectedTeamMember() || teamMembers()[0];
+    return user ? teamMemberTasks(user) : operationalTasks();
+  }
   if (selectedTeamMemberId === ALL_TEAM_TASKS_ID) return operationalTasks();
   if (selectedTeamMemberId === UNASSIGNED_TASKS_ID) return unassignedTasks();
   const user = selectedTeamMember();
   return user ? teamMemberTasks(user) : operationalTasks();
+}
+
+function ensureTeamSelection() {
+  const users = teamMembers();
+  const userKeys = new Set(users.map(teamMemberKey));
+  if (currentProfile?.role === "admin") {
+    const validSelection = selectedTeamMemberId === ALL_TEAM_TASKS_ID || selectedTeamMemberId === UNASSIGNED_TASKS_ID || userKeys.has(selectedTeamMemberId);
+    if (!validSelection) selectedTeamMemberId = ALL_TEAM_TASKS_ID;
+    return;
+  }
+  const ownUser = users.find((user) => {
+    return clickupUserId(user) === String(currentProfile?.clickup_user_id || "") || normalizeIdentity(user.email) === normalizeIdentity(currentProfile?.email);
+  }) || users[0];
+  selectedTeamMemberId = ownUser ? teamMemberKey(ownUser) : "";
 }
 
 function filteredTeamTasks() {
