@@ -528,6 +528,83 @@ button { cursor: pointer; }
   border-color: var(--yellow);
 }
 
+.alias-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 1fr) auto;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.alias-form input,
+.alias-form select {
+  min-height: 42px;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--ink);
+  padding: 0 12px;
+}
+
+.ai-inline-actions {
+  padding: 0 18px 4px;
+}
+
+.ai-preview-list {
+  display: grid;
+  gap: 10px;
+  padding: 0 18px 18px;
+  max-height: 62vh;
+  overflow: auto;
+}
+
+.ai-result-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,.65);
+  padding: 12px;
+}
+
+.ai-result-row.auto_apply { border-color: var(--green); }
+.ai-result-row.suggest { border-color: var(--yellow); }
+.ai-result-row.unresolved { border-color: var(--accent); }
+
+.ai-result-row strong,
+.ai-result-row span,
+.ai-result-row small {
+  display: block;
+}
+
+.ai-result-row span,
+.ai-result-row small,
+.ai-result-row p {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.ai-description-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  padding: 0 18px 18px;
+}
+
+.ai-description-grid h3 {
+  margin: 0 0 8px;
+}
+
+.ai-description-grid pre {
+  min-height: 220px;
+  max-height: 42vh;
+  overflow: auto;
+  white-space: pre-wrap;
+  border: 1px solid var(--line);
+  background: #fff;
+  padding: 12px;
+  font-family: inherit;
+}
+
 .team-warning {
   border-color: var(--yellow);
   background: #fff8df;
@@ -1005,7 +1082,7 @@ code {
   .nav-list { display: flex; }
   .nav-item { white-space: nowrap; }
   .sidebar-footer { display: none; }
-  .metric-grid, .two-col, .split-panel, .team-kanban-shell, .client-grid, .user-row, .task-board { grid-template-columns: 1fr; }
+  .metric-grid, .two-col, .split-panel, .team-kanban-shell, .client-grid, .user-row, .task-board, .ai-description-grid, .alias-form { grid-template-columns: 1fr; }
   .team-board-sidebar, .team-board-main { min-height: 0; }
 }
 

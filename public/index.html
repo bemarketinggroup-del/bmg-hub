@@ -221,6 +221,7 @@
           <select id="taskClientFilter" aria-label="Filtra cliente">
             <option value="">Tutti i clienti</option>
           </select>
+          <button class="ghost-button admin-only" id="analyzeTaskClientsButton" type="button">Analizza task senza cliente</button>
           <button class="ghost-button" id="syncTasksButton" type="button">Sincronizza task</button>
           <button class="primary-button" id="newTaskButton" type="button">Nuova task</button>
         </div>
@@ -247,6 +248,17 @@
             <button class="text-button" id="refreshTaskLogsButton" type="button">Aggiorna</button>
           </div>
           <div class="sync-log-list" id="taskSyncLogList"></div>
+        </section>
+        <section class="panel sync-log-panel admin-only">
+          <div class="panel-head">
+            <h2>Alias clienti AI</h2>
+          </div>
+          <form class="alias-form" id="clientAliasForm">
+            <select name="client_id" id="aliasClientSelect" required></select>
+            <input name="alias" placeholder="Alias cliente usato nelle task" required>
+            <button class="ghost-button" type="submit">Aggiungi alias</button>
+          </form>
+          <div class="sync-log-list" id="clientAliasList"></div>
         </section>
       </section>
 
@@ -427,9 +439,49 @@
         </select></label>
         <label class="full">Descrizione<textarea name="description" rows="4"></textarea></label>
       </div>
+      <div class="ai-inline-actions">
+        <button class="ghost-button" id="improveDescriptionButton" type="button">Migliora descrizione con AI</button>
+      </div>
       <div class="modal-actions">
         <button class="ghost-button" value="cancel" type="submit" formnovalidate>Annulla</button>
         <button class="primary-button" id="saveTaskButton" value="default" type="submit">Crea task</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="modal wide-modal" id="aiAnalysisModal">
+    <form method="dialog">
+      <div class="modal-head">
+        <h2>Analisi AI task senza cliente</h2>
+        <button class="icon-button" value="cancel" type="submit" formnovalidate title="Chiudi">×</button>
+      </div>
+      <div class="ai-preview-list" id="aiAnalysisList"></div>
+      <div class="modal-actions">
+        <button class="ghost-button" value="cancel" type="submit" formnovalidate>Chiudi</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="modal wide-modal" id="aiDescriptionModal">
+    <form method="dialog">
+      <div class="modal-head">
+        <h2>Anteprima descrizione AI</h2>
+        <button class="icon-button" value="cancel" type="submit" formnovalidate title="Chiudi">×</button>
+      </div>
+      <div class="ai-description-grid">
+        <section>
+          <h3>Originale</h3>
+          <pre id="aiOriginalDescription"></pre>
+        </section>
+        <section>
+          <h3>Proposta AI</h3>
+          <pre id="aiImprovedDescription"></pre>
+          <div id="aiDescriptionMeta"></div>
+        </section>
+      </div>
+      <div class="modal-actions">
+        <button class="ghost-button" value="cancel" type="submit" formnovalidate>Annulla</button>
+        <button class="primary-button" id="applyAiDescriptionButton" value="default" type="button">Applica proposta</button>
       </div>
     </form>
   </dialog>

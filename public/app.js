@@ -168,6 +168,7 @@ const seed = {
   ],
   agencyUsers: [],
   staffProfiles: [],
+  clientAliases: [],
   clickupTasks: [],
   clickupTaskLogs: [],
   tasks: [
@@ -187,6 +188,7 @@ let selectedTeamMemberId = ALL_TEAM_TASKS_ID;
 let authConfig = null;
 let authSession = loadAuthSession();
 let currentProfile = null;
+let aiDescriptionProposal = null;
 
 function loadState() {
   const saved = localStorage.getItem(STORAGE_KEY);
@@ -583,6 +585,19 @@ async function loadClickUpTaskLogs() {
   }
 }
 
+async function loadClientAliases() {
+  if (currentProfile?.role !== "admin") return;
+  try {
+    const response = await apiFetch("/api/ai/task-assist?aliases=1");
+    if (!response.ok) throw new Error(`AI aliases error ${response.status}`);
+    state.clientAliases = await response.json();
+    renderAliasControls();
+  } catch (error) {
+    renderBackendStatus(error.message);
+    renderAliasControls();
+  }
+}
+
 function renderBackendStatus(message = "") {
   const footer = document.querySelector(".sidebar-footer span:last-child");
   const dot = document.querySelector(".status-dot");
@@ -769,6 +784,7 @@ function renderTeam() {
   renderTaskAssigneeOptions();
   renderTaskClientOptions();
   renderTaskLogs();
+  renderAliasControls();
 }
 
 async function loadUsersFromBackend() {
@@ -1263,6 +1279,165 @@ function normalizeClientLabel(value) {
   return String(value || "").trim().toLowerCase();
 }
 
+function renderAliasControls() {
+  const select = document.getElementById("aliasClientSelect");
+  const list = document.getElementById("clientAliasList");
+  if (!select || !list) return;
+  select.innerHTML = `<option value="">Scegli cliente</option>${state.clients.map((client) => `
+    <option value="${client.id}">${client.name}</option>
+  `).join("")}`;
+  list.innerHTML = (state.clientAliases || []).map((alias) => `
+    <article class="sync-log-row">
+      <div>
+        <strong>${alias.alias}</strong>
+        <span>${alias.clients?.name || state.clients.find((client) => client.id === alias.client_id)?.name || "Cliente"}</span>
+      </div>
+      <button class="badge" data-delete-alias="${alias.id}" type="button">Rimuovi</button>
+    </article>
+  `).join("") || emptyState("Nessun alias cliente configurato.");
+}
+
+async function submitClientAlias(form) {
+  const data = Object.fromEntries(new FormData(form).entries());
+  try {
+    const response = await apiFetch("/api/ai/task-assist?aliases=1", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data)
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || `AI alias error ${response.status}`);
+    form.reset();
+    await loadClientAliases();
+  } catch (error) {
+    renderBackendStatus(error.message);
+    alert("Non riesco a salvare l'alias cliente.");
+  }
+}
+
+async function deleteClientAlias(id) {
+  try {
+    const response = await apiFetch(`/api/ai/task-assist?aliases=1&id=${encodeURIComponent(id)}`, { method: "DELETE" });
+    if (!response.ok && response.status !== 204) throw new Error(`AI alias error ${response.status}`);
+    await loadClientAliases();
+  } catch (error) {
+    renderBackendStatus(error.message);
+    alert("Non riesco a eliminare l'alias cliente.");
+  }
+}
+
+async function analyzeTaskClients() {
+  const button = document.getElementById("analyzeTaskClientsButton");
+  button.disabled = true;
+  button.textContent = "Analizzo...";
+  try {
+    const response = await apiFetch("/api/ai/task-assist", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "analyze_missing_clients" })
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || `AI analysis error ${response.status}`);
+    renderAiAnalysis(result.results || []);
+    document.getElementById("aiAnalysisModal").showModal();
+  } catch (error) {
+    renderBackendStatus(error.message);
+    alert(error.message || "Analisi AI non disponibile.");
+  } finally {
+    button.disabled = false;
+    button.textContent = "Analizza task senza cliente";
+  }
+}
+
+function renderAiAnalysis(results) {
+  const target = document.getElementById("aiAnalysisList");
+  if (!target) return;
+  target.innerHTML = results.map((item) => `
+    <article class="ai-result-row ${item.action}">
+      <div>
+        <strong>${item.task_title}</strong>
+        <span>${item.action} · confidenza ${Math.round((item.confidence || 0) * 100)}% · ${item.source}</span>
+        <p>${item.client_tag ? `Cliente suggerito: ${item.client_tag}` : "Cliente non risolto"}</p>
+        <small>${item.reason || ""}</small>
+      </div>
+      ${item.client_id ? `<button class="badge" data-apply-ai-client="${item.clickup_task_id}" data-client-id="${item.client_id}" data-confidence="${item.confidence}" type="button">Applica tag</button>` : ""}
+    </article>
+  `).join("") || emptyState("Nessuna task senza cliente da analizzare.");
+}
+
+async function applyAiClientTag(button) {
+  button.disabled = true;
+  try {
+    const response = await apiFetch("/api/ai/task-assist", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "apply_client_tag",
+        clickup_task_id: button.dataset.applyAiClient,
+        client_id: button.dataset.clientId,
+        confidence: button.dataset.confidence
+      })
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || `AI apply error ${response.status}`);
+    button.textContent = "Applicato";
+    await loadClickUpTasks();
+    await loadClickUpTaskLogs();
+  } catch (error) {
+    button.disabled = false;
+    renderBackendStatus(error.message);
+    alert("Non riesco ad applicare il tag cliente.");
+  }
+}
+
+async function improveDescriptionWithAi() {
+  const form = document.getElementById("taskForm");
+  const taskId = form.elements.clickup_task_id.value;
+  if (!taskId) {
+    alert("Salva o seleziona una task ClickUp prima di usare l'AI.");
+    return;
+  }
+  const button = document.getElementById("improveDescriptionButton");
+  button.disabled = true;
+  button.textContent = "Genero proposta...";
+  try {
+    const response = await apiFetch("/api/ai/task-assist", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "improve_description",
+        clickup_task_id: taskId,
+        name: form.elements.name.value,
+        description: form.elements.description.value,
+        client_tag: form.elements.client_tag.value
+      })
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || `AI description error ${response.status}`);
+    aiDescriptionProposal = result;
+    document.getElementById("aiOriginalDescription").textContent = form.elements.description.value || "Descrizione vuota";
+    document.getElementById("aiImprovedDescription").textContent = result.improved_description || "";
+    document.getElementById("aiDescriptionMeta").innerHTML = `
+      <div class="setup-box"><code>Checklist</code><span>${(result.suggested_checklist || []).join(" · ") || "Nessuna checklist proposta"}</span></div>
+      <div class="setup-box"><code>Mancanti</code><span>${(result.missing_information || []).join(" · ") || "Nessuna informazione mancante rilevata"}</span></div>
+      <div class="setup-box"><code>Cliente</code><span>${result.client_tag_suggestion || "Nessun suggerimento"}</span></div>
+    `;
+    document.getElementById("aiDescriptionModal").showModal();
+  } catch (error) {
+    renderBackendStatus(error.message);
+    alert(error.message || "AI descrizione non disponibile.");
+  } finally {
+    button.disabled = false;
+    button.textContent = "Migliora descrizione con AI";
+  }
+}
+
+function applyAiDescription() {
+  if (!aiDescriptionProposal?.improved_description) return;
+  document.getElementById("taskForm").elements.description.value = aiDescriptionProposal.improved_description;
+  document.getElementById("aiDescriptionModal").close();
+}
+
 function openTaskModal(userId = selectedTeamMemberId, taskId = "") {
   const form = document.getElementById("taskForm");
   const task = taskId ? state.clickupTasks.find((item) => String(item.clickup_task_id || item.id) === String(taskId)) : null;
@@ -1510,12 +1685,16 @@ document.body.addEventListener("click", (event) => {
   const newTaskFor = event.target.closest("[data-new-task-for]");
   const editTask = event.target.closest("[data-edit-task]");
   const saveUser = event.target.closest("[data-save-user]");
+  const applyAiClient = event.target.closest("[data-apply-ai-client]");
+  const deleteAlias = event.target.closest("[data-delete-alias]");
   if (jump) setView(jump.dataset.jump);
   if (statusButton) advanceStatus(statusButton.dataset.statusNext);
   if (teamMember) selectTeamMember(teamMember.dataset.teamMember);
   if (newTaskFor) openTaskModal(newTaskFor.dataset.newTaskFor);
   if (editTask) openTaskModal(selectedTeamMemberId, editTask.dataset.editTask);
   if (saveUser) saveUserProfile(saveUser.closest("[data-user-id]"));
+  if (applyAiClient) applyAiClientTag(applyAiClient);
+  if (deleteAlias) deleteClientAlias(deleteAlias.dataset.deleteAlias);
 });
 
 document.getElementById("newLeadButton").addEventListener("click", () => document.getElementById("leadModal").showModal());
@@ -1565,6 +1744,9 @@ document.getElementById("newClientButton").addEventListener("click", () => docum
 document.getElementById("syncClickUpButton").addEventListener("click", syncClientsFromClickUp);
 document.getElementById("syncTasksButton").addEventListener("click", syncTasksFromClickUp);
 document.getElementById("refreshTaskLogsButton").addEventListener("click", loadClickUpTaskLogs);
+document.getElementById("analyzeTaskClientsButton").addEventListener("click", analyzeTaskClients);
+document.getElementById("improveDescriptionButton").addEventListener("click", improveDescriptionWithAi);
+document.getElementById("applyAiDescriptionButton").addEventListener("click", applyAiDescription);
 document.getElementById("newTaskButton").addEventListener("click", () => openTaskModal());
 
 document.getElementById("clientForm").addEventListener("submit", (event) => {
@@ -1572,6 +1754,11 @@ document.getElementById("clientForm").addEventListener("submit", (event) => {
   event.preventDefault();
   submitClient(event.currentTarget);
   document.getElementById("clientModal").close();
+});
+
+document.getElementById("clientAliasForm").addEventListener("submit", (event) => {
+  event.preventDefault();
+  submitClientAlias(event.currentTarget);
 });
 
 document.getElementById("taskForm").addEventListener("submit", (event) => {
@@ -1623,7 +1810,8 @@ async function bootApp() {
       loadClickUpTeam(),
       loadClickUpTasks(),
       loadClickUpTaskLogs(),
-      loadUsersFromBackend()
+      loadUsersFromBackend(),
+      loadClientAliases()
     ]);
   } catch (error) {
     showLogin(error.message);
