@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 import { jsonHeaders, readJson, requireUser, supabaseFetch } from "./_auth.js";
+import { handleAiTaskAssist } from "../lib/ai-task-assist.js";
 
 const CLICKUP_API_TOKEN = process.env.CLICKUP_API_TOKEN;
 const CLICKUP_WORKSPACE_ID = process.env.CLICKUP_WORKSPACE_ID || "90152036988";
@@ -388,6 +389,10 @@ async function processWebhook(request, response) {
 
 export default async function handler(request, response) {
   try {
+    if (request.url?.includes("/api/ai/task-assist")) {
+      return handleAiTaskAssist(request, response);
+    }
+
     if (request.url?.includes("/api/clickup/webhook")) {
       return processWebhook(request, response);
     }

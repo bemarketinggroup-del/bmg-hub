@@ -53,7 +53,7 @@
     },
     {
       "src": "/api/ai/task-assist",
-      "dest": "/api/ai-task-assist.js"
+      "dest": "/api/clickup-tasks.js"
     },
     {
       "src": "/",

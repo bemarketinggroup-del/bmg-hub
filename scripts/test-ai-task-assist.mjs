@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
-const api = readFileSync("api/ai-task-assist.js", "utf8");
+const api = readFileSync("lib/ai-task-assist.js", "utf8");
+const clickupApi = readFileSync("api/clickup-tasks.js", "utf8");
 const app = readFileSync("public/app.js", "utf8");
 const html = readFileSync("public/index.html", "utf8");
 const migration = readFileSync("supabase/20260605_ai_task_assist.sql", "utf8");
@@ -31,5 +32,6 @@ assert.match(migration, /ai_rate_limits/);
 assert.match(env, /OPENAI_API_KEY=/);
 assert.match(env, /OPENAI_MODEL=/);
 assert.match(vercel, /\/api\/ai\/task-assist/);
+assert.match(clickupApi, /handleAiTaskAssist/);
 
 console.log("AI task assist checks passed");
