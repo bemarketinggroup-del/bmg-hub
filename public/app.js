@@ -1,4 +1,5 @@
 const STORAGE_KEY = "bmg-hub-v1";
+const PASSWORD_RECOVERY_KEY = "bmg-password-recovery";
 const ALL_TEAM_TASKS_ID = "__all";
 const UNASSIGNED_TASKS_ID = "__unassigned";
 // Mapping centralizzato: aggiorna questi sinonimi se ClickUp introduce nuovi stati operativi.
@@ -264,12 +265,12 @@ async function loginWithPassword(email, password) {
   await loadCurrentUser();
 }
 
-async function updateCurrentPassword(currentPassword, newPassword) {
+async function updateCurrentPassword(currentPassword, newPassword, recoveryMode = false) {
   const response = await apiFetch("/api/me", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      action: "change_password",
+      action: recoveryMode ? "recover_password" : "change_password",
       current_password: currentPassword,
       new_password: newPassword
     })
@@ -377,8 +378,26 @@ async function logout() {
 function openProfileModal() {
   const form = document.getElementById("passwordForm");
   form.reset();
+  renderPasswordRecoveryMode();
   setPasswordMessage("");
   document.getElementById("profileModal").showModal();
+}
+
+function isPasswordRecoveryMode() {
+  return sessionStorage.getItem(PASSWORD_RECOVERY_KEY) === "1";
+}
+
+function renderPasswordRecoveryMode() {
+  const recoveryMode = isPasswordRecoveryMode();
+  const field = document.getElementById("currentPasswordField");
+  const input = field?.querySelector("input");
+  if (field) field.classList.toggle("is-hidden", recoveryMode);
+  if (input) {
+    input.required = !recoveryMode;
+    if (recoveryMode) input.value = "";
+  }
+  const title = document.querySelector("#profileModal h2");
+  if (title) title.textContent = recoveryMode ? "Imposta nuova password" : "Cambia password";
 }
 
 function setPasswordMessage(message, type = "") {
@@ -402,7 +421,7 @@ async function submitPasswordChange(form) {
     setPasswordMessage("La nuova password deve contenere almeno 8 caratteri.", "error");
     return;
   }
-  if (data.current_password === data.new_password) {
+  if (!isPasswordRecoveryMode() && data.current_password === data.new_password) {
     setPasswordMessage("La nuova password deve essere diversa da quella attuale.", "error");
     return;
   }
@@ -410,7 +429,8 @@ async function submitPasswordChange(form) {
   button.disabled = true;
   button.textContent = "Aggiorno...";
   try {
-    await updateCurrentPassword(data.current_password, data.new_password);
+    await updateCurrentPassword(data.current_password, data.new_password, isPasswordRecoveryMode());
+    sessionStorage.removeItem(PASSWORD_RECOVERY_KEY);
     form.reset();
     setPasswordMessage("Password aggiornata correttamente.", "success");
   } catch (error) {
@@ -419,6 +439,24 @@ async function submitPasswordChange(form) {
     button.disabled = false;
     button.textContent = "Aggiorna password";
   }
+}
+
+function consumeRecoverySessionFromUrl() {
+  if (!window.location.hash.includes("access_token=")) return false;
+  const params = new URLSearchParams(window.location.hash.slice(1));
+  if (params.get("type") !== "recovery") return false;
+  const accessToken = params.get("access_token");
+  const refreshToken = params.get("refresh_token");
+  if (!accessToken || !refreshToken) return false;
+  saveAuthSession({
+    access_token: accessToken,
+    refresh_token: refreshToken,
+    expires_at: Date.now() + Number(params.get("expires_in") || 3600) * 1000,
+    user: null
+  });
+  sessionStorage.setItem(PASSWORD_RECOVERY_KEY, "1");
+  window.history.replaceState(null, document.title, window.location.pathname + window.location.search);
+  return true;
 }
 
 function formatDate(value) {
@@ -1798,10 +1836,15 @@ document.getElementById("loginForm").addEventListener("submit", async (event) =>
 
 async function bootApp() {
   try {
+    const recoveryMode = consumeRecoverySessionFromUrl();
     await loadAuthConfig();
     await loadCurrentUser();
     showApp();
     renderAll();
+    if (recoveryMode) {
+      openProfileModal();
+      setPasswordMessage("Imposta una nuova password per completare il recupero.", "success");
+    }
     renderBackendStatus();
     await Promise.all([
       loadLeadsFromBackend(),

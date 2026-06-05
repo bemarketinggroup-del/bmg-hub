@@ -35,7 +35,8 @@ export default async function handler(request, response) {
 
 async function changePassword(request, response, session) {
   const body = await readJson(request);
-  if (body.action !== "change_password") {
+  const recoveryMode = body.action === "recover_password";
+  if (body.action !== "change_password" && !recoveryMode) {
     response.writeHead(400, headers);
     response.end(JSON.stringify({ error: "Azione non valida" }));
     return;
@@ -44,9 +45,9 @@ async function changePassword(request, response, session) {
   const currentPassword = String(body.current_password || "");
   const newPassword = String(body.new_password || "");
 
-  if (!currentPassword || !newPassword) {
+  if ((!currentPassword && !recoveryMode) || !newPassword) {
     response.writeHead(400, headers);
-    response.end(JSON.stringify({ error: "Password attuale e nuova password sono obbligatorie" }));
+    response.end(JSON.stringify({ error: recoveryMode ? "Nuova password obbligatoria" : "Password attuale e nuova password sono obbligatorie" }));
     return;
   }
 
@@ -56,17 +57,19 @@ async function changePassword(request, response, session) {
     return;
   }
 
-  if (currentPassword === newPassword) {
+  if (!recoveryMode && currentPassword === newPassword) {
     response.writeHead(400, headers);
     response.end(JSON.stringify({ error: "La nuova password deve essere diversa da quella attuale" }));
     return;
   }
 
-  const verified = await verifyCurrentPassword(session.user.email, currentPassword);
-  if (!verified.ok) {
-    response.writeHead(400, headers);
-    response.end(JSON.stringify({ error: "La password attuale non e' corretta" }));
-    return;
+  if (!recoveryMode) {
+    const verified = await verifyCurrentPassword(session.user.email, currentPassword);
+    if (!verified.ok) {
+      response.writeHead(400, headers);
+      response.end(JSON.stringify({ error: "La password attuale non e' corretta" }));
+      return;
+    }
   }
 
   const updated = await updateSupabasePassword(session.user.id, newPassword);
