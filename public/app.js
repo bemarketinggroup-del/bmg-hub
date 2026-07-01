@@ -172,6 +172,19 @@ const seed = {
   clientAliases: [],
   clickupTasks: [],
   clickupTaskLogs: [],
+  smartWorking: {
+    week_start_date: "",
+    week_dates: [],
+    rules: { max_remote_per_day: 2, remote_days_per_employee: 1, working_days: ["mon", "tue", "wed", "thu", "fri"] },
+    connections: [],
+    staff: [],
+    all_staff: [],
+    plan: null,
+    assignments: [],
+    events: [],
+    attendees: [],
+    unavailable: []
+  },
   tasks: [
     { title: "Collegare form contatti a POST /api/leads", done: false },
     { title: "Definire campi modificabili della home", done: false },
@@ -186,6 +199,7 @@ let contentOnline = false;
 let clientsOnline = false;
 let clickupOnline = false;
 let selectedTeamMemberId = ALL_TEAM_TASKS_ID;
+let selectedSmartWeek = mondayOf(new Date());
 let authConfig = null;
 let authSession = loadAuthSession();
 let currentProfile = null;
@@ -472,11 +486,21 @@ function setView(view) {
     content: ["CMS leggero", "Backend sito"],
     clients: ["Gestionale interno", "Clienti"],
     team: ["ClickUp operativo", "Team & Task"],
+    smart: ["Turni interni", "Turni / Smart Working"],
     users: ["Accessi interni", "Utenti"],
     settings: ["Setup tecnico", "Configurazione"]
   };
   document.getElementById("viewKicker").textContent = titles[view][0];
   document.getElementById("viewTitle").textContent = titles[view][1];
+}
+
+function mondayOf(value = new Date()) {
+  const date = new Date(value);
+  date.setHours(12, 0, 0, 0);
+  const day = date.getDay();
+  const offset = day === 0 ? -6 : 1 - day;
+  date.setDate(date.getDate() + offset);
+  return date.toISOString().slice(0, 10);
 }
 
 function renderMetrics() {
@@ -634,6 +658,35 @@ async function loadClientAliases() {
     renderBackendStatus(error.message);
     renderAliasControls();
   }
+}
+
+async function loadSmartWorking() {
+  try {
+    const response = await apiFetch(`/api/smart-working?week_start=${encodeURIComponent(selectedSmartWeek)}`);
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || `Smart working error ${response.status}`);
+    state.smartWorking = data;
+    selectedSmartWeek = data.week_start_date || selectedSmartWeek;
+    renderSmartWorking();
+  } catch (error) {
+    renderBackendStatus(error.message);
+    renderSmartWorking();
+  }
+}
+
+async function smartWorkingAction(action, payload = {}) {
+  const response = await apiFetch("/api/smart-working", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action, week_start: selectedSmartWeek, ...payload })
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error || `Smart working error ${response.status}`);
+  if (data.week_start_date) {
+    state.smartWorking = data;
+    selectedSmartWeek = data.week_start_date;
+  }
+  return data;
 }
 
 function renderBackendStatus(message = "") {
@@ -823,6 +876,229 @@ function renderTeam() {
   renderTaskClientOptions();
   renderTaskLogs();
   renderAliasControls();
+}
+
+function renderSmartWorking() {
+  const data = state.smartWorking || seed.smartWorking;
+  const weekInput = document.getElementById("smartWeekInput");
+  if (weekInput) weekInput.value = selectedSmartWeek || mondayOf(new Date());
+  const status = document.getElementById("smartPlanStatus");
+  if (status) {
+    status.textContent = data.plan
+      ? `${labelPlanStatus(data.plan.status)} · settimana dal ${formatSmartDate(data.week_start_date)}`
+      : `Nessuna bozza · settimana dal ${formatSmartDate(selectedSmartWeek)}`;
+  }
+  renderSmartSettings(data);
+  renderSmartWeek(data);
+  renderSmartEvents(data);
+}
+
+function renderSmartSettings(data) {
+  const connection = (data.connections || []).find((item) => item.is_active) || (data.connections || [])[0];
+  const summary = document.getElementById("smartCalendarSummary");
+  if (summary) summary.textContent = connection ? `${connection.calendar_name} · ${connection.calendar_id}` : "Nessun calendario collegato.";
+
+  const connectionForm = document.getElementById("smartConnectionForm");
+  if (connectionForm && connection) {
+    connectionForm.elements.calendar_id.value = connection.calendar_id || "";
+    connectionForm.elements.calendar_name.value = connection.calendar_name || "";
+  }
+  const rulesForm = document.getElementById("smartRulesForm");
+  if (rulesForm && data.rules) {
+    rulesForm.elements.max_remote_per_day.value = data.rules.max_remote_per_day || 2;
+    rulesForm.elements.remote_days_per_employee.value = data.rules.remote_days_per_employee || 1;
+  }
+}
+
+function renderSmartWeek(data) {
+  const target = document.getElementById("smartWeekGrid");
+  if (!target) return;
+  const days = data.week_dates || [];
+  const staff = data.all_staff || data.staff || [];
+  const assignments = data.assignments || [];
+  target.innerHTML = days.map((date) => {
+    const smart = assignments.filter((assignment) => assignment.date === date);
+    const unavailable = unavailableForDate(data, date);
+    const remoteIds = new Set(smart.filter((item) => item.status !== "conflict").map((item) => item.employee_id));
+    const unavailableIds = new Set(unavailable.map((item) => item.employee_id));
+    const office = staff.filter((employee) => !remoteIds.has(employee.id) && !unavailableIds.has(employee.id));
+    return `
+      <section class="smart-day">
+        <div class="smart-day-head">
+          <strong>${weekdayLabel(date)}</strong>
+          <span>${smart.filter((item) => item.status !== "conflict").length}/${data.rules?.max_remote_per_day || 2} smart</span>
+        </div>
+        <div class="smart-block">
+          <h3>Smart working</h3>
+          ${smart.map((assignment) => smartAssignmentCard(assignment, data)).join("") || smartEmpty("Nessuno in smart")}
+        </div>
+        <div class="smart-block">
+          <h3>Ufficio</h3>
+          ${office.map((employee) => `<span class="smart-pill">${staffName(employee)}</span>`).join("") || smartEmpty("Nessuno")}
+        </div>
+        <div class="smart-block">
+          <h3>Shooting / clienti</h3>
+          ${unavailable.map((item) => `<span class="smart-pill is-busy">${staffName(staffById(data, item.employee_id))}: ${item.title || item.type}</span>`).join("") || smartEmpty("Nessun blocco")}
+        </div>
+      </section>
+    `;
+  }).join("") || emptyState("Scegli una settimana e genera una bozza.");
+}
+
+function smartAssignmentCard(assignment, data) {
+  const employee = staffById(data, assignment.employee_id);
+  const statusClass = assignment.status === "conflict" ? "is-conflict" : assignment.status === "manual_changed" ? "is-manual" : "";
+  const canEdit = currentProfile?.role === "admin" && data.plan?.status === "draft";
+  return `
+    <article class="smart-assignment ${statusClass}">
+      <div>
+        <strong>${staffName(employee)}</strong>
+        <span>${labelAssignmentStatus(assignment.status)}</span>
+        <small>${assignment.reason || "Assegnazione smart working"}</small>
+      </div>
+      ${canEdit ? `
+        <select data-smart-move="${assignment.employee_id}" data-plan-id="${assignment.plan_id}" aria-label="Sposta giorno smart">
+          ${(data.week_dates || []).map((date) => `<option value="${date}" ${date === assignment.date ? "selected" : ""}>${weekdayLabel(date)}</option>`).join("")}
+        </select>
+      ` : ""}
+    </article>
+  `;
+}
+
+function renderSmartEvents(data) {
+  const target = document.getElementById("smartEventsList");
+  if (!target) return;
+  const unavailable = data.unavailable || [];
+  target.innerHTML = unavailable.slice(0, 18).map((item) => `
+    <article class="smart-event">
+      <strong>${item.title || "Evento Google"}</strong>
+      <span>${formatSmartDate(item.date)} · ${staffName(staffById(data, item.employee_id))}</span>
+      <small>${item.notes || item.type || "Evento bloccante"}</small>
+    </article>
+  `).join("") || emptyState("Nessun evento bloccante sincronizzato per questa settimana.");
+}
+
+function unavailableForDate(data, date) {
+  return (data.unavailable || []).filter((item) => item.date === date);
+}
+
+function staffById(data, id) {
+  return (data.all_staff || data.staff || []).find((employee) => employee.id === id) || null;
+}
+
+function staffName(employee) {
+  return employee?.full_name || employee?.email || "Staff";
+}
+
+function weekdayLabel(date) {
+  const formatter = new Intl.DateTimeFormat("it-IT", { weekday: "short", day: "2-digit", month: "short" });
+  return formatter.format(new Date(`${date}T12:00:00`));
+}
+
+function formatSmartDate(date) {
+  if (!date) return "";
+  return new Intl.DateTimeFormat("it-IT", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(`${date}T12:00:00`));
+}
+
+function labelPlanStatus(status) {
+  return { draft: "Bozza", approved: "Approvata", archived: "Archiviata" }[status] || status;
+}
+
+function labelAssignmentStatus(status) {
+  return {
+    suggested: "suggerito",
+    confirmed: "confermato",
+    manual_changed: "modificato manualmente",
+    conflict: "conflitto"
+  }[status] || status;
+}
+
+function smartEmpty(text) {
+  return `<span class="smart-empty">${text}</span>`;
+}
+
+async function syncSmartCalendar() {
+  const button = document.getElementById("syncCalendarButton");
+  button.disabled = true;
+  button.textContent = "Sincronizzo...";
+  try {
+    const result = await smartWorkingAction("sync_calendar");
+    await loadSmartWorking();
+    alert(`Google Calendar sincronizzato. Eventi: ${result.imported || 0}, blocchi: ${result.blocking || 0}.`);
+  } catch (error) {
+    renderBackendStatus(error.message);
+    alert(error.message || "Non riesco a sincronizzare Google Calendar.");
+  } finally {
+    button.disabled = false;
+    button.textContent = "Sincronizza Google Calendar";
+  }
+}
+
+async function generateSmartWeek() {
+  const button = document.getElementById("generateSmartWeekButton");
+  button.disabled = true;
+  button.textContent = "Genero...";
+  try {
+    await smartWorkingAction("generate_week");
+    renderSmartWorking();
+  } catch (error) {
+    renderBackendStatus(error.message);
+    alert(error.message || "Non riesco a generare la settimana.");
+  } finally {
+    button.disabled = false;
+    button.textContent = "Genera settimana";
+  }
+}
+
+async function approveSmartWeek() {
+  const planId = state.smartWorking?.plan?.id;
+  if (!planId) return alert("Genera prima una bozza.");
+  if (!confirm("Approvare questa settimana di smart working?")) return;
+  try {
+    await smartWorkingAction("approve_week", { plan_id: planId });
+    await loadSmartWorking();
+  } catch (error) {
+    renderBackendStatus(error.message);
+    alert(error.message || "Non riesco ad approvare la settimana.");
+  }
+}
+
+async function saveSmartConnection(form) {
+  const payload = Object.fromEntries(new FormData(form).entries());
+  try {
+    await smartWorkingAction("save_connection", payload);
+    await loadSmartWorking();
+  } catch (error) {
+    renderBackendStatus(error.message);
+    alert(error.message || "Non riesco a salvare il calendario.");
+  }
+}
+
+async function saveSmartRules(form) {
+  const payload = Object.fromEntries(new FormData(form).entries());
+  try {
+    await smartWorkingAction("save_rules", payload);
+    await loadSmartWorking();
+  } catch (error) {
+    renderBackendStatus(error.message);
+    alert(error.message || "Non riesco a salvare le regole.");
+  }
+}
+
+async function moveSmartAssignment(select) {
+  const previous = state.smartWorking.assignments.find((item) => item.employee_id === select.dataset.smartMove)?.date;
+  try {
+    await smartWorkingAction("move_assignment", {
+      plan_id: select.dataset.planId,
+      employee_id: select.dataset.smartMove,
+      date: select.value
+    });
+    await loadSmartWorking();
+  } catch (error) {
+    if (previous) select.value = previous;
+    renderBackendStatus(error.message);
+    alert(error.message || "Non riesco a spostare questa assegnazione.");
+  }
 }
 
 async function loadUsersFromBackend() {
@@ -1705,6 +1981,7 @@ function renderAll() {
   renderContent();
   renderClients();
   renderTeam();
+  renderSmartWorking();
   renderUsers();
 }
 
@@ -1748,6 +2025,25 @@ document.getElementById("taskSearch").addEventListener("input", renderClickUpTas
 document.getElementById("taskAssigneeFilter").addEventListener("change", renderClickUpTasks);
 document.getElementById("taskStatusFilter").addEventListener("change", renderClickUpTasks);
 document.getElementById("taskClientFilter").addEventListener("change", renderClickUpTasks);
+document.getElementById("smartWeekInput").addEventListener("change", (event) => {
+  selectedSmartWeek = mondayOf(event.target.value || new Date());
+  loadSmartWorking();
+});
+document.getElementById("syncCalendarButton").addEventListener("click", syncSmartCalendar);
+document.getElementById("generateSmartWeekButton").addEventListener("click", generateSmartWeek);
+document.getElementById("approveSmartWeekButton").addEventListener("click", approveSmartWeek);
+document.getElementById("smartConnectionForm").addEventListener("submit", (event) => {
+  event.preventDefault();
+  saveSmartConnection(event.currentTarget);
+});
+document.getElementById("smartRulesForm").addEventListener("submit", (event) => {
+  event.preventDefault();
+  saveSmartRules(event.currentTarget);
+});
+document.getElementById("smartWeekGrid").addEventListener("change", (event) => {
+  const select = event.target.closest("[data-smart-move]");
+  if (select) moveSmartAssignment(select);
+});
 
 document.getElementById("leadForm").addEventListener("submit", (event) => {
   if (event.submitter?.value === "cancel") return;
@@ -1854,7 +2150,8 @@ async function bootApp() {
       loadClickUpTasks(),
       loadClickUpTaskLogs(),
       loadUsersFromBackend(),
-      loadClientAliases()
+      loadClientAliases(),
+      loadSmartWorking()
     ]);
   } catch (error) {
     showLogin(error.message);

@@ -62,6 +62,10 @@
           <span class="icon">☷</span>
           <span>Team & Task</span>
         </button>
+        <button class="nav-item" data-view="smart" type="button">
+          <span class="icon">◷</span>
+          <span>Turni / Smart Working</span>
+        </button>
         <button class="nav-item admin-only" data-view="users" type="button">
           <span class="icon">◧</span>
           <span>Utenti</span>
@@ -260,6 +264,52 @@
           </form>
           <div class="sync-log-list" id="clientAliasList"></div>
         </section>
+      </section>
+
+      <section class="view" id="smartView" data-view-panel="smart">
+        <div class="toolbar client-toolbar">
+          <label class="search week-search">
+            <span>Settimana</span>
+            <input id="smartWeekInput" type="date" aria-label="Settimana smart working">
+          </label>
+          <button class="ghost-button admin-only" id="syncCalendarButton" type="button">Sincronizza Google Calendar</button>
+          <button class="ghost-button admin-only" id="generateSmartWeekButton" type="button">Genera settimana</button>
+          <button class="primary-button admin-only" id="approveSmartWeekButton" type="button">Approva settimana</button>
+        </div>
+        <div class="split-panel smart-layout">
+          <section class="panel smart-main-panel">
+            <div class="panel-head">
+              <div>
+                <h2>Bozza smart working</h2>
+                <span id="smartPlanStatus">Nessuna bozza</span>
+              </div>
+            </div>
+            <div class="smart-week-grid" id="smartWeekGrid"></div>
+          </section>
+          <aside class="panel inspector">
+            <p class="eyebrow">Google Calendar</p>
+            <h2>Regole e connessione</h2>
+            <form class="smart-settings admin-only" id="smartConnectionForm">
+              <label>Calendar ID<input name="calendar_id" placeholder="bmg-calendar@group.calendar.google.com"></label>
+              <label>Nome calendario<input name="calendar_name" placeholder="BMG - Shooting e Appuntamenti"></label>
+              <button class="ghost-button" type="submit">Salva calendario</button>
+            </form>
+            <form class="smart-settings admin-only" id="smartRulesForm">
+              <label>Max persone in smart al giorno<input name="max_remote_per_day" type="number" min="1" max="10" value="2"></label>
+              <label>Giorni smart per dipendente<input name="remote_days_per_employee" type="number" min="1" max="5" value="1"></label>
+              <button class="ghost-button" type="submit">Salva regole</button>
+            </form>
+            <div class="setup-box">
+              <code>Calendario</code>
+              <span id="smartCalendarSummary">Nessun calendario collegato.</span>
+            </div>
+            <div class="setup-box">
+              <code>Eventi bloccanti</code>
+              <span>Shooting, Cliente, Trasferta, Appuntamento esterno, [NO SMART] o eventi lunghi.</span>
+            </div>
+            <div class="smart-events-list" id="smartEventsList"></div>
+          </aside>
+        </div>
       </section>
 
       <section class="view" id="settingsView" data-view-panel="settings">

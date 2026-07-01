@@ -6,6 +6,12 @@ import { dirname, extname, join, normalize } from "node:path";
 const projectRoot = normalize(join(dirname(new URL(import.meta.url).pathname), ".."));
 const publicRoot = join(projectRoot, "public");
 const env = await loadEnv(join(projectRoot, ".env.local"));
+Object.assign(process.env, env);
+const { handleSmartWorking } = await import("../lib/smart-working.js");
+const { default: handleClients } = await import("../api/clients.js");
+const { default: handleClientsSyncClickUp } = await import("../api/clients-sync-clickup.js");
+const { default: handleClickUpTeam } = await import("../api/clickup-team.js");
+const { default: handleClickUpTasks } = await import("../api/clickup-tasks.js");
 const port = Number(process.env.PORT || 8020);
 
 const mimeTypes = {
@@ -49,6 +55,31 @@ createServer(async (request, response) => {
 
     if (url.pathname === "/api/site-content") {
       await handleSiteContent(request, response, url);
+      return;
+    }
+
+    if (url.pathname === "/api/clients") {
+      await handleClients(request, response);
+      return;
+    }
+
+    if (url.pathname === "/api/clients/sync-clickup") {
+      await handleClientsSyncClickUp(request, response);
+      return;
+    }
+
+    if (url.pathname === "/api/clickup/team") {
+      await handleClickUpTeam(request, response);
+      return;
+    }
+
+    if (url.pathname === "/api/clickup/tasks" || url.pathname === "/api/clickup/webhook") {
+      await handleClickUpTasks(request, response);
+      return;
+    }
+
+    if (url.pathname === "/api/smart-working") {
+      await handleSmartWorking(request, response);
       return;
     }
 
