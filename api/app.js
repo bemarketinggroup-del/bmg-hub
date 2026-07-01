@@ -1,5 +1,6 @@
 import { createReadStream, existsSync } from "node:fs";
 import { extname, join, normalize } from "node:path";
+import { handleSmartWorking } from "../lib/smart-working.js";
 
 const HUB_BASIC_USER = process.env.HUB_BASIC_USER;
 const HUB_BASIC_PASSWORD = process.env.HUB_BASIC_PASSWORD;
@@ -20,6 +21,12 @@ const mimeTypes = {
 };
 
 export default async function handler(request, response) {
+  const requestUrl = new URL(request.url, `https://${request.headers.host}`);
+  if (requestUrl.pathname === "/api/smart-working") {
+    await handleSmartWorking(request, response);
+    return;
+  }
+
   if (!await hasBasicAccess(request)) {
     response.writeHead(401, {
       "Content-Type": "text/plain; charset=utf-8",
@@ -29,7 +36,6 @@ export default async function handler(request, response) {
     return;
   }
 
-  const requestUrl = new URL(request.url, `https://${request.headers.host}`);
   const cleanPath = requestUrl.pathname === "/" ? "/index.html" : requestUrl.pathname;
   const filePath = normalize(join(publicRoot, cleanPath));
 

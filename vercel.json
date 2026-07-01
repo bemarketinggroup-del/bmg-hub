@@ -49,7 +49,7 @@
     },
     {
       "src": "/api/smart-working",
-      "dest": "/api/smart-working.js"
+      "dest": "/api/app.js"
     },
     {
       "src": "/api/clickup/webhook",
