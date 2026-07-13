@@ -620,9 +620,9 @@ async function loadClickUpTeam() {
   }
 }
 
-async function loadClickUpTasks() {
+async function loadClickUpTasks({ sync = false } = {}) {
   try {
-    const response = await apiFetch("/api/clickup/tasks");
+    const response = await apiFetch(`/api/clickup/tasks${sync ? "?sync=1" : ""}`);
     if (!response.ok) throw new Error(`ClickUp tasks error ${response.status}`);
     state.clickupTasks = await response.json();
     clickupOnline = true;
@@ -1943,7 +1943,8 @@ async function syncTasksFromClickUp() {
   button.disabled = true;
   button.textContent = "Sincronizzo...";
   try {
-    await Promise.all([loadClickUpTeam(), loadClickUpTasks(), loadClickUpTaskLogs()]);
+    await loadClickUpTasks({ sync: true });
+    await Promise.all([loadClickUpTeam(), loadClickUpTaskLogs()]);
   } finally {
     button.disabled = false;
     button.textContent = "Sincronizza task";

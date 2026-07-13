@@ -13,6 +13,7 @@ assert.match(api, /clickup_task_sync_events/);
 assert.match(api, /clickup_task_sync_logs/);
 assert.match(api, /method === "PATCH"/);
 assert.match(api, /client_tag/);
+assert.match(api, /url\.searchParams\.get\("sync"\) === "1"/);
 
 assert.match(vercel, /\/api\/clickup\/webhook/);
 assert.match(vercel, /clickup-tasks\.js/);
@@ -27,6 +28,7 @@ assert.match(envExample, /CLICKUP_WEBHOOK_SECRET=/);
 assert.match(app, /data-edit-task/);
 assert.match(app, /client_tag/);
 assert.match(app, /loadClickUpTaskLogs/);
+assert.match(app, /loadClickUpTasks\(\{ sync: true \}\)/);
 assert.match(app, /function clickupUserId/);
 assert.match(app, /function realAssignees/);
 assert.match(app, /function unrecognizedAssignees/);

@@ -1,72 +1,128 @@
 # BMG Hub - Stato Attuale
 
-Data audit: 2026-06-04
+Ultima verifica: 2026-07-13
 
-Aggiornamento auth: Supabase Auth e ruoli `admin`/`staff` sono stati introdotti nella milestone successiva. Basic Auth resta temporaneamente davanti all'app come protezione aggiuntiva di deploy.
+Questa fotografia deriva dal codice locale e da test eseguiti sul deploy production `https://bmg-hub.vercel.app`.
 
-Questo documento fotografa la V1 tecnica esistente di BMG Hub. Non descrive funzionalita desiderate, ma solo cio che risulta presente nel codice e nei controlli effettuati.
+## Stato Generale
 
-## Funzioni Realmente Operative
+- Deploy Vercel: operativo e in stato `Ready`.
+- Accesso: doppia protezione Basic Auth + Supabase Auth.
+- Controllo sintattico: `npm run check` completato senza errori.
+- API private: restituiscono `401` senza token Supabase.
+- API pubblica CMS: operativa, ma attualmente non espone contenuti perche' tutti i record sono in bozza.
 
-- Deploy Vercel ancora protetto da Basic Auth come barriera temporanea.
+## Moduli Operativi
+
+### Autenticazione E Utenti
+
 - Login email/password con Supabase Auth.
-- Sessione persistente, logout e redirect al login se non autenticato.
-- Profili staff collegati a utenti Supabase con ruoli `admin` e `staff`.
-- API private protette server-side tramite token Supabase.
-- Dashboard interna: disponibile come SPA in `public/app.js`, servita da `api/app.js`.
-- Lead sito su Supabase: `POST /api/leads` salva lead, `GET /api/leads` e' protetto da Basic Auth.
-- CMS leggero interno: `GET/POST/PATCH/DELETE /api/site-content` gestisce contenuti in tabella `site_content`.
-- Separazione testi/immagini nel CMS: la UI divide i contenuti in viste "Testi" e "Immagini".
-- Pubblicazione contenuti: solo i record con `status = published` vengono esposti dall'API pubblica.
-- API pubblica contenuti: `GET /api/public-site-content` e' pubblica e restituisce solo slug, tipo, titolo, stato, payload e data aggiornamento dei contenuti pubblicati.
-- Collegamento parziale sito pubblico/CMS: homepage e pagina BeViral leggono alcuni slug CMS pubblicati.
-- Clienti da ClickUp: import manuale dei folder ClickUp come clienti nel gestionale.
-- Creazione cliente dal gestionale: crea il record in Supabase e puo creare anche una cartella ClickUp se l'opzione e' attiva.
-- Import utenti ClickUp: `GET /api/clickup/team` importa i membri workspace.
-- Import task ClickUp: `GET /api/clickup/tasks` importa task dal workspace ClickUp.
-- Task per assegnatario: la UI raggruppa le task per utente ClickUp, con pagine personali staff.
-- Viste task: presenti "Tutte le task" e "Senza assegnatario".
-- Creazione task verso ClickUp: `POST /api/clickup/tasks` crea una task nella lista configurata con `CLICKUP_DEFAULT_TASK_LIST_ID`.
+- Sessione persistente e logout.
+- Ruoli `admin` e `staff`.
+- Protezione server-side delle API private.
+- Gestione utenti e ruoli disponibile agli admin.
+- Basic Auth Vercel mantenuta come barriera temporanea aggiuntiva.
 
-## Funzioni Parziali
+### Clienti E ClickUp
 
-- Dashboard: mostra dati reali quando le API sono disponibili, ma mantiene anche fallback locale/demo.
-- CMS sito: il seed contiene molte sezioni, ma il sito pubblico usa solo una parte degli slug.
-- Immagini CMS: si possono modificare URL/percorso immagine, ma non esiste ancora upload file o libreria media.
-- Sincronizzazione clienti ClickUp: ClickUp -> Hub importa nuovi folder; Hub -> ClickUp crea folder in fase di creazione cliente. Non sincronizza modifiche, archiviazioni o cancellazioni.
-- Sincronizzazione task ClickUp: importa task e crea task, ma non aggiorna stato, descrizione, assegnatari o chiusura da gestionale.
-- Protezione API: le API interne passano a token Supabase; Basic Auth resta solo come barriera temporanea per l'app statica.
-- Collegamento sito pubblico: i form lead puntano al backend, ma la protezione anti-spam e' ancora minima.
+- 26 clienti presenti nel database durante la verifica.
+- Import clienti da folder ClickUp.
+- Creazione cliente dal gestionale con creazione folder ClickUp opzionale.
+- Tutti i 26 clienti verificati hanno un collegamento ClickUp.
+- Nessun cliente verificato ha ancora un collegamento Google Drive.
 
-## Funzioni Simulate O Locali
+### Team E Task
 
-- Dati seed/localStorage: `public/app.js` contiene dati iniziali e fallback locale quando il backend non risponde.
-- Task prioritarie dashboard: risultano gestite nello stato locale dell'app, non come fonte ClickUp/Supabase autorevole.
-- Export JSON: esporta lo stato locale dell'app, non un backup completo e autorevole del database.
-- Setup guidato: la sezione Setup e' una guida operativa, non un sistema automatico di configurazione.
+- 9 membri ClickUp restituiti dall'integrazione durante la verifica.
+- 157 task restituite dall'import live.
+- Kanban con viste per membro, tutte le task e senza assegnatario.
+- Raggruppamento To Do / In Progress / Completate.
+- Creazione e modifica task Hub -> ClickUp.
+- Webhook ClickUp -> Hub con firma e idempotenza.
+- Tag cliente, log di sincronizzazione e link diretto ClickUp.
+- AI Task Assist per suggerimento cliente e miglioramento descrizione.
 
-## Funzioni Mancanti
+### CMS Sito
 
-- Ruoli oltre `admin` e `staff`.
-- Webhook ClickUp per sincronizzazione automatica in tempo reale.
-- Sincronizzazione bidirezionale completa di clienti, task, stati, assegnatari e archiviazioni.
-- Integrazione Google Drive.
-- Collegamento completo di tutte le sezioni del sito pubblico al CMS.
-- Upload immagini sicuro su storage.
-- Versioning/revisioni dei contenuti CMS.
-- Audit log delle azioni interne.
-- Rate limiting, captcha/honeypot e protezioni anti-spam sul lead form.
-- Backup e restore documentati per Supabase.
-- Test automatici reali oltre al controllo sintattico JavaScript.
+- 56 record CMS presenti.
+- Separazione UI tra testi e immagini.
+- Stati bozza/pubblicato.
+- API pubblica espone esclusivamente record pubblicati.
+- Homepage e BeViral contengono integrazioni parziali con gli slug CMS.
 
-## Verifiche Eseguite
+### Turni / Smart Working
 
-- `node --check` completato senza errori su `public/app.js` e su tutte le API in `api/`.
-- Endpoint live senza credenziali:
-  - `/` -> `401`
-  - `/api/leads` -> `401` su GET
-  - `/api/site-content` -> `401`
-  - `/api/clients` -> `401`
-  - `/api/clickup/tasks` -> `401`
-  - `/api/public-site-content` -> `200`
-- Secret scan sui file tracciati: nessun valore segreto evidente trovato; presenti solo nomi variabili e placeholder in `.env.example`.
+- Modulo, database, API e interfaccia presenti.
+- 7 dipendenti configurati: Andry, Marta, Marzia, Sabrina, Federica, Francesco e Daniele.
+- Regole settimanali, generazione bozza, modifica manuale e approvazione presenti.
+- Cache eventi e indisponibilita' Google Calendar implementate.
+
+## Funzioni Parziali O Non Configurate
+
+### Google Drive
+
+- Il campo `drive_url` esiste nei clienti.
+- Non esiste una connessione Google Drive che crei o sincronizzi cartelle.
+- Al 2026-07-13, 0 clienti su 26 hanno un link Drive salvato.
+
+### Google Calendar
+
+- Il codice supporta un calendario condiviso, ma nessuna connessione risulta configurata in production.
+- Per la settimana verificata risultano 0 eventi, 0 indisponibilita' e 0 assegnazioni.
+- Le email dei 7 dipendenti devono essere complete per associare gli invitati agli eventi.
+
+### CMS Pubblico
+
+- Tutti i 56 record CMS sono in stato `draft`.
+- L'API pubblica restituisce quindi 0 contenuti.
+- Il sito continua a mostrare i contenuti statici di fallback.
+- Case study, CTA globali, footer e varie sezioni restano statici o solo parzialmente mappati.
+- Non esiste ancora upload immagini o libreria media.
+
+### Task ClickUp
+
+- Il deploy verificato prima della correzione richiedeva circa 26 secondi per 157 task perche' forzava un import ClickUp a ogni apertura.
+- Il codice aggiornato legge subito la cache Supabase e usa `?sync=1` solo per la sincronizzazione esplicita.
+- Il test locale del flusso corretto ha restituito 157 task in circa 0,8 secondi.
+- Il caricamento team usa le sorgenti di fallback solo quando la sorgente precedente non restituisce utenti.
+- La correzione deve essere verificata nuovamente dopo il deploy production.
+
+## Parti Simulate O Di Fallback
+
+- `public/app.js` contiene ancora dati demo/localStorage usati quando alcune API non rispondono.
+- L'export JSON non e' un backup completo del database.
+- Alcuni indicatori dashboard possono derivare dal fallback locale.
+- La sezione Setup e' informativa, non configura automaticamente i servizi.
+
+## Mancanze Principali
+
+- Connessione Google Drive e struttura cliente completa.
+- Collegamento Google Calendar production.
+- Pubblicazione controllata dei contenuti CMS e mappatura completa del sito.
+- Upload media sicuro su storage.
+- Eliminazione dei fallback demo dalla modalita' production.
+- Test automatici end-to-end stabili.
+- Backup/restore Supabase verificato e documentato.
+- Monitoraggio centralizzato di errori e sincronizzazioni.
+
+## Verifiche Live Eseguite
+
+- `/` senza Basic Auth -> `401`.
+- `/api/me` senza token -> `401`.
+- `/api/users` senza token -> `401`.
+- `/api/clients` senza token -> `401`.
+- `/api/site-content` senza token -> `401`.
+- `/api/clickup/team` senza token -> `401`.
+- `/api/clickup/tasks` senza token -> `401`.
+- `/api/smart-working` senza token -> `401`.
+- `/api/public-site-content` -> `200` con 0 record pubblicati.
+- Login admin Supabase -> `200`.
+- API admin utenti, clienti, CMS, team e Smart Working -> `200`.
+- API task -> `200`, ma con latenza elevata.
+
+## Sicurezza
+
+- Nessun secret e' tracciato dal repository nei controlli eseguiti.
+- `.env`, `.env.local`, `.env.*.local` e `.vercel` sono ignorati da Git.
+- `SUPABASE_SERVICE_ROLE_KEY`, token ClickUp, secret webhook e chiave OpenAI restano server-side.
+- Basic Auth e Supabase Auth usano due livelli distinti; la rimozione della Basic Auth va fatta solo dopo una verifica finale della protezione Supabase.

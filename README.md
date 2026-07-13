@@ -14,7 +14,7 @@ Gestionale interno BMG. La prima versione contiene il modulo **Backend sito**:
 Il prototipo non richiede build:
 
 ```bash
-cd /Users/davidedeluca/Desktop/SITO_BMG/bmg-hub
+cd /percorso/del/progetto/bmg-hub
 node scripts/local-server.mjs
 ```
 
@@ -31,11 +31,14 @@ Poi apri `http://localhost:8020`.
 7. Deploya su Vercel.
 8. Collega il sito con `site-integration/contact-form.js`.
 
-## Moduli previsti
+## Moduli presenti
 
-- Backend sito
-- Lead e CRM leggero
-- Clienti
-- Onboarding interno
-- Link ClickUp e Google Drive
-- Integrazioni API future
+- autenticazione e ruoli
+- dashboard e lead sito
+- CMS leggero
+- clienti e collegamento ClickUp
+- Team & Task con Kanban, sync e AI
+- Turni / Smart Working
+- gestione utenti
+
+La checklist aggiornata e' in `docs/MASTER-CHECKLIST.md`.

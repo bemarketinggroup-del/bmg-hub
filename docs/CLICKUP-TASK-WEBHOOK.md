@@ -23,7 +23,8 @@ Non salvare queste variabili nel repository.
 
 ## Flusso
 
-- `GET /api/clickup/tasks`: importa da ClickUp, salva su Supabase, ritorna task filtrate per ruolo.
+- `GET /api/clickup/tasks`: legge subito le task salvate su Supabase e le filtra per ruolo.
+- `GET /api/clickup/tasks?sync=1`: importa da ClickUp, aggiorna Supabase e ritorna le task aggiornate.
 - `POST /api/clickup/tasks`: crea task su ClickUp e salva il mapping `clickup_task_id`.
 - `PATCH /api/clickup/tasks`: aggiorna titolo, descrizione, stato, priorita, scadenza, assegnatari e tag cliente.
 - `POST /api/clickup/webhook`: riceve eventi ClickUp, verifica `X-Signature`, deduplica tramite `event_key`, recupera la task da ClickUp e aggiorna Supabase.

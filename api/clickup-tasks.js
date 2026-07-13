@@ -417,7 +417,7 @@ export default async function handler(request, response) {
     }
 
     if (request.method === "GET") {
-      const pulled = url.searchParams.get("sync") === "0" ? null : await syncFromClickUp();
+      const pulled = url.searchParams.get("sync") === "1" ? await syncFromClickUp() : null;
       if (pulled && pulled.status !== 200) return json(response, pulled.status, pulled.body);
       const result = await savedTasksForSession(session);
       return json(response, result.status, result.body);

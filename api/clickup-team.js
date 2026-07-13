@@ -88,12 +88,10 @@ export default async function handler(request, response) {
     return;
   }
 
-  const sources = [
-    await membersFromWorkspace(),
-    await membersFromAuthorizedTeams(),
-    await membersFromTasks()
-  ];
-  let members = sources.find((source) => source.members.length)?.members || [];
+  let source = await membersFromWorkspace();
+  if (!source.members.length) source = await membersFromAuthorizedTeams();
+  if (!source.members.length) source = await membersFromTasks();
+  let members = source.members;
   if (!members.length) {
     response.writeHead(502, headers());
     response.end(JSON.stringify({ error: "ClickUp team members not available" }));
