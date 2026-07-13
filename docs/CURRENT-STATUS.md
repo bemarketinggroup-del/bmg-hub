@@ -85,7 +85,7 @@ Questa fotografia deriva dal codice locale e da test eseguiti sul deploy product
 - Il codice aggiornato legge subito la cache Supabase e usa `?sync=1` solo per la sincronizzazione esplicita.
 - Il test locale del flusso corretto ha restituito 157 task in circa 0,8 secondi.
 - Il caricamento team usa le sorgenti di fallback solo quando la sorgente precedente non restituisce utenti.
-- La correzione deve essere verificata nuovamente dopo il deploy production.
+- Dopo il deploy production, il test live ha restituito 157 task in circa 2-3 secondi, inclusa la latenza serverless.
 
 ## Parti Simulate O Di Fallback
 
