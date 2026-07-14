@@ -28,6 +28,10 @@
       "dest": "/api/site-content.js"
     },
     {
+      "src": "/api/site-media",
+      "dest": "/api/site-media.js"
+    },
+    {
       "src": "/api/public-site-content",
       "dest": "/api/public-site-content.js"
     },

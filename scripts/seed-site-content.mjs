@@ -6,6 +6,8 @@ const hubAccessToken = process.env.BMG_HUB_ACCESS_TOKEN || "";
 const env = hubAccessToken ? {} : await loadEnv(process.env.ENV_FILE || join(projectRoot, ".env.local"));
 
 const content = [
+  ...siteSeoSlots(),
+  ...homepageStructureSlots(),
   {
     slug: "home.hero.copy",
     type: "copy",
@@ -28,12 +30,7 @@ const content = [
     ["Hero slide 2 - Favorita Hotel", "assets/images/portfolio/favorita_hotel-1200.webp", "Grand Hotel La Favorita"],
     ["Hero slide 3 - Costiera Gin", "assets/images/portfolio/costiera_gin-1200.webp", "Costiera Gin"]
   ]),
-  ...imageSlots("Homepage", "Chi siamo", "home.about.vertical", [
-    ["Verticale Hospitality - Grand Hotel La Favorita", "assets/images/portfolio/favorita_hotel-800.webp", "Grand Hotel La Favorita"],
-    ["Verticale Brand - Vetera Matera", "assets/images/portfolio/vetera_matera-800.webp", "Vetera Matera"],
-    ["Verticale Food - Zest Restaurant", "assets/images/portfolio/zest_restaurant-800.webp", "Zest Restaurant"],
-    ["Verticale Personal Brand - Costiera Gin", "assets/images/portfolio/costiera_gin-800.webp", "Costiera Gin"]
-  ]),
+  ...homepageVerticalSlots(),
   ...homepageCopySlots(),
   {
     slug: "home.services.list",
@@ -54,6 +51,7 @@ const content = [
   },
   ...projectSlots(),
   ...projectGallerySlots(),
+  ...projectVideoSlots(),
   ...projectContentSlots(),
   ...beviralImageSlots(),
   ...beviralCopySlots(),
@@ -136,7 +134,7 @@ if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
   throw new Error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in .env.local");
 }
 
-const currentResult = await fetch(`${env.SUPABASE_URL}/rest/v1/site_content?select=slug`, {
+const currentResult = await fetch(`${env.SUPABASE_URL}/rest/v1/site_content?select=id,slug,title,status,payload`, {
   headers: {
     apikey: env.SUPABASE_SERVICE_ROLE_KEY,
     Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`
@@ -147,11 +145,13 @@ if (!currentResult.ok) {
   throw new Error(`Supabase content lookup failed: ${currentResult.status}`);
 }
 
-const existingSlugs = new Set((await currentResult.json()).map((row) => row.slug));
+const currentRows = await currentResult.json();
+await patchLegacyDrafts(currentRows);
+const existingSlugs = new Set(currentRows.map((row) => row.slug));
 const missingContent = content.filter((row) => !existingSlugs.has(row.slug));
 
 if (!missingContent.length) {
-  console.log("All website content slots already exist. Nothing changed.");
+  console.log("All website content slots already exist. Legacy draft labels checked.");
   process.exit(0);
 }
 
@@ -190,6 +190,25 @@ function imageSlots(page, section, prefix, rows) {
       notes: "Slot immagine reale da data/images.js."
     }
   }));
+}
+
+function homepageVerticalSlots() {
+  return [
+    ["Hotel", "Hospitality e accoglienza", "assets/images/portfolio/favorita_hotel-800.webp", "Grand Hotel La Favorita"],
+    ["Brand", "Identita' e posizionamento", "assets/images/portfolio/vetera_matera-800.webp", "Vetera Matera"],
+    ["Food", "Ristorazione e prodotti", "assets/images/portfolio/zest_restaurant-800.webp", "Zest Restaurant"],
+    ["Personal Brand", "Persone e autorevolezza", "assets/images/portfolio/costiera_gin-800.webp", "Costiera Gin"]
+  ].map(([title, body, imageUrl, imageAlt], index) => contentSlot(
+    `home.about.vertical.${index + 1}`,
+    "image",
+    "Homepage",
+    "Chi siamo",
+    title,
+    "",
+    body,
+    imageUrl,
+    imageAlt
+  ));
 }
 
 function projectSlots() {
@@ -289,6 +308,29 @@ function projectGallerySlots() {
   });
 }
 
+function projectVideoSlots() {
+  return [
+    "bellevue-syrene",
+    "grand-hotel-aminta",
+    "grand-hotel-la-favorita",
+    "vetera-matera",
+    "zest-restaurant",
+    "costiera-gin"
+  ].map((project) => contentSlot(
+    `project.${project}.video.1`,
+    "video",
+    "Pagine progetto",
+    `${project.split("-").map(capitalize).join(" ")} - Gallery`,
+    "Video progetto",
+    "",
+    "",
+    "",
+    "",
+    "",
+    ""
+  ));
+}
+
 function beviralImageSlots() {
   return imageSlots("BeViral", "Asset grafici", "beviral.asset", [
     ["Logo BeViral blu", "assets/images/logos/logo-beviral-blue.png", "Logo BeViral blu"],
@@ -316,6 +358,51 @@ function homepageCopySlots() {
     ...[["Instagram", "#"], ["LinkedIn", "#"], ["Behance", "#"]].map(([label, url], index) =>
       contentSlot(`site.footer.social.${index + 1}`, "link", "Tutto il sito", "Footer", label, "", "", "", "", label, url)
     )
+  ];
+}
+
+function homepageStructureSlots() {
+  const clients = [
+    ["Bellevue Syrene", "assets/images/portfolio/vetera_matera-800.webp"],
+    ["Grand Hotel Aminta", "assets/images/portfolio/favorita_hotel-800.webp"],
+    ["Grand Hotel La Favorita", "assets/images/portfolio/favorita_hotel-800.webp"],
+    ["Vetera Matera", "assets/images/portfolio/vetera_matera-800.webp"],
+    ["Zest Restaurant", "assets/images/portfolio/zest_restaurant-800.webp"],
+    ["Costiera Gin", "assets/images/portfolio/costiera_gin-800.webp"],
+    ["Studio Vallone", "assets/images/portfolio/vetera_matera-800.webp"],
+    ["Marettima Beach Club", "assets/images/portfolio/costiera_gin-800.webp"],
+    ...Array.from({ length: 7 }, (_, index) => [`Cliente ${String(index + 9).padStart(2, "0")}`, [
+      "assets/images/portfolio/favorita_hotel-800.webp",
+      "assets/images/portfolio/zest_restaurant-800.webp",
+      "assets/images/portfolio/vetera_matera-800.webp",
+      "assets/images/portfolio/costiera_gin-800.webp"
+    ][index % 4]])
+  ];
+  return [
+    contentSlot("home.navigation", "link", "Homepage", "Navigazione", "Navigazione principale", "", "Chi siamo\nServizi\nLavori\nBeViral\nContatti", "", "", "Lavoriamo insieme", "#contatti"),
+    contentSlot("home.hero.mobile-video", "video", "Homepage", "Hero", "Video Hero mobile", "", "", "", "", "", "assets/video/hero-mobile.mp4"),
+    contentSlot("home.sectors.list", "copy", "Homepage", "Settori", "Settori serviti", "", "Hospitality\nLuxury\nFood & Beverage\nRetail\nPersonal Brand\nE-commerce"),
+    ...clients.map(([name, imageUrl], index) => contentSlot(`home.client.${index + 1}`, "image", "Homepage", "Clienti", name, "", "", imageUrl, name)),
+    contentSlot("home.beviral.spotlight", "landing", "Homepage", "BeViral", "BeViral", "Una divisione di bmg", "La divisione specializzata in video virali, personal branding e crescita organica. Per chi vuole diventare un punto di riferimento nel proprio settore.", "", "", "Scopri BeViral", "beviral.html"),
+    contentSlot("home.beviral.services", "service", "Homepage", "BeViral", "Servizi BeViral", "", "Personal branding\nVideo & script\nCopertura organica\nStrategia editoriale"),
+    contentSlot("home.contact.form", "landing", "Homepage", "Contatti", "Prenota una consulenza", "Parliamo del tuo prossimo progetto", "Hospitality\nFood\nLuxury / Retail\nPersonal Brand\nAltro", "", "", "Prenota una consulenza", "https://calendly.com/bemarketinggroup/30min"),
+    contentSlot("site.footer.brand", "landing", "Tutto il sito", "Footer", "Be Marketing Group", "© 2026 BMG SRLS · P.IVA e informazioni legali", "Strategia, creativita' e produzione per brand che vogliono crescere.", "", "BMG", "", "")
+  ];
+}
+
+function siteSeoSlots() {
+  const projects = [
+    ["bellevue-syrene", "Bellevue Syrene"],
+    ["grand-hotel-aminta", "Grand Hotel Aminta"],
+    ["grand-hotel-la-favorita", "Grand Hotel La Favorita"],
+    ["vetera-matera", "Vetera Matera"],
+    ["zest-restaurant", "Zest Restaurant"],
+    ["costiera-gin", "Costiera Gin"]
+  ];
+  return [
+    contentSlot("site.seo.home", "landing", "Tutto il sito", "SEO", "BMG - Be Marketing Group", "Agenzia di comunicazione, marketing e produzione creativa.", "", "assets/images/portfolio/vetera_matera-1200.webp", "BMG - Be Marketing Group"),
+    contentSlot("site.seo.beviral", "landing", "Tutto il sito", "SEO", "BeViral - una divisione di BMG", "Video virali, personal branding e crescita organica.", "", "assets/images/logos/logo-beviral-blue.png", "BeViral"),
+    ...projects.map(([slug, name]) => contentSlot(`project.${slug}.seo`, "landing", "Pagine progetto", `${name} - SEO`, `${name} - Case study BMG`, `Scopri il progetto ${name} realizzato da BMG.`, "", "", name))
   ];
 }
 
@@ -406,12 +493,19 @@ function beviralCopySlots() {
   ];
 
   return [
+    contentSlot("beviral.navigation", "link", "BeViral", "Navigazione", "Navigazione BeViral", "", "", "", "", "Inizia ora", "#cta"),
+    contentSlot("beviral.hero.secondary", "link", "BeViral", "Hero", "Pulsante secondario Hero", "", "", "", "", "Il metodo", "#metodo"),
+    contentSlot("beviral.marquee.items", "copy", "BeViral", "Marquee", "Parole in evidenza", "", "VIDEO VIRALI\nPERSONAL BRANDING\nCOPERTURA ORGANICA\nREELS · TIKTOK · IG\nSTORYTELLING\nHOOK & SCRIPT\nCOMMUNITY\nAUTHORITY"),
+    contentSlot("beviral.manifesto.copy", "copy", "BeViral", "Manifesto", "Non solo post. Attenzione.", "Cos'e' BeViral", "BeViral lavora sulla parte piu' dinamica della comunicazione digitale: video brevi, format social, storytelling, contenuti parlati, trend e copertura organica.\nL'obiettivo non e' pubblicare. E' creare contenuti che funzionano: che arrivano al pubblico giusto, costruiscono autorevolezza e generano richieste commerciali reali.\nTrasformiamo idee, competenze e punti di forza in contenuti ad alto impatto."),
+    contentSlot("beviral.manifesto.stats", "copy", "BeViral", "Manifesto", "Numeri BeViral", "", "10M+::visualizzazioni generate\n0€::su sponsorizzazioni\n48h::dal brief al primo video\n100%::contenuti su misura"),
     contentSlot("beviral.services.heading", "copy", "BeViral", "Servizi", "Otto modi per farsi notare."),
     ...services.map(([title, body], index) => contentSlot(`beviral.service.${index + 1}`, "service", "BeViral", "Servizi", title, "", body)),
     contentSlot("beviral.method.heading", "copy", "BeViral", "Metodo", "Un metodo in 5 step.\nNiente magia. Solo lavoro."),
     ...steps.map(([title, body], index) => contentSlot(`beviral.step.${index + 1}`, "copy", "BeViral", "Metodo", title, "", body)),
     contentSlot("beviral.cta.copy", "copy", "BeViral", "CTA", "Pronto a diventare il\npunto di riferimento del\ntuo settore?", "Prenota una call gratuita di 30 minuti", "", "", "", "Iniziamo a far rumore", "#cta"),
+    contentSlot("beviral.cta.form", "link", "BeViral", "CTA", "Prenota una call gratuita di 30 minuti", "GRATIS · 30 MIN", "personal::Personal brand\ncompany::Azienda / B2B\nproduct::Brand prodotto\nother::Altro", "", "", "", "https://calendly.com/bemarketinggroup/30min"),
     contentSlot("beviral.footer.copy", "copy", "BeViral", "Footer", "Contatti BeViral", "hello@beviral.it", "Instagram::#\nTikTok::#\nLinkedIn::#"),
+    contentSlot("beviral.footer.meta", "link", "BeViral", "Footer", "Torna su bmg · una divisione di Be Marketing Group", "© 2026 BeViral · BMG SRLS", "", "", "", "", "index.html"),
     ...Array.from({ length: 8 }, (_, index) => contentSlot(`beviral.showreel.${index + 1}`, "video", "BeViral", "Showreel", index === 0 ? "Radi - Cucina di casa" : `Cliente ${String(index + 1).padStart(2, "0")}`, index === 0 ? "418.977" : "", "", "", "", "Apri TikTok", index === 0 ? "https://www.tiktok.com/@radi_cucinadicasa/video/7637166094301629718" : ""))
   ];
 }
@@ -434,6 +528,37 @@ function contentSlot(slug, type, page, section, title, subtitle = "", body = "",
       notes: "Slot collegato al sito pubblico. Diventa visibile solo quando viene pubblicato."
     }
   };
+}
+
+function capitalize(value) {
+  return value ? value[0].toUpperCase() + value.slice(1) : "";
+}
+
+async function patchLegacyDrafts(rows) {
+  const replacements = new Map([
+    ["home.about.vertical.1", ["Verticale Hospitality - Grand Hotel La Favorita", "Hotel", "Hospitality e accoglienza"]],
+    ["home.about.vertical.2", ["Verticale Brand - Vetera Matera", "Brand", "Identita' e posizionamento"]],
+    ["home.about.vertical.3", ["Verticale Food - Zest Restaurant", "Food", "Ristorazione e prodotti"]],
+    ["home.about.vertical.4", ["Verticale Personal Brand - Costiera Gin", "Personal Brand", "Persone e autorevolezza"]]
+  ]);
+  for (const row of rows) {
+    const replacement = replacements.get(row.slug);
+    if (!replacement || row.status !== "draft" || row.title !== replacement[0]) continue;
+    const response = await fetch(`${env.SUPABASE_URL}/rest/v1/site_content?id=eq.${encodeURIComponent(row.id)}`, {
+      method: "PATCH",
+      headers: {
+        apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+        "Content-Type": "application/json",
+        Prefer: "return=minimal"
+      },
+      body: JSON.stringify({
+        title: replacement[1],
+        payload: { ...(row.payload || {}), body: replacement[2] }
+      })
+    });
+    if (!response.ok) throw new Error(`Legacy content patch failed for ${row.slug}: ${response.status}`);
+  }
 }
 
 async function seedThroughHub(rows, token) {

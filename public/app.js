@@ -21,7 +21,6 @@ const TASK_STATUS_GROUPS = [
   }
 ];
 const DEFAULT_TASK_STATUS_GROUP_ID = "todo";
-
 const seed = {
   leads: [
     {
@@ -331,8 +330,8 @@ async function apiFetch(url, options = {}) {
       Authorization: `Bearer ${token}`
     }
   });
-  if (response.status === 401 || response.status === 403) {
-    if (response.status === 401) saveAuthSession(null);
+  if (response.status === 401) {
+    saveAuthSession(null);
     showLogin();
   }
   return response;
@@ -357,7 +356,8 @@ function renderSession() {
 function applyRoleAccess() {
   const isAdmin = currentProfile?.role === "admin";
   document.querySelectorAll(".admin-only").forEach((item) => item.classList.toggle("is-hidden", !isAdmin));
-  if (!isAdmin && document.querySelector('[data-view-panel="users"]')?.classList.contains("is-active")) {
+  const activeRestrictedView = document.querySelector('[data-view-panel="users"].is-active, [data-view-panel="content"].is-active');
+  if (!isAdmin && activeRestrictedView) {
     setView("dashboard");
   }
 }
@@ -694,7 +694,7 @@ function renderBackendStatus(message = "") {
   const footer = document.querySelector(".sidebar-footer span:last-child");
   const dot = document.querySelector(".status-dot");
   if (!footer || !dot) return;
-  const connected = backendOnline && contentOnline && clientsOnline && clickupOnline;
+  const connected = backendOnline && clientsOnline && clickupOnline && (currentProfile?.role !== "admin" || contentOnline);
   footer.textContent = connected ? "Sistemi collegati" : "Connessione parziale";
   dot.style.background = connected ? "#7cc483" : "#d8a42f";
   if (message) footer.title = message;
@@ -854,24 +854,41 @@ function contentFieldLabel(item) {
   const slug = item.slug || "";
   const number = slug.match(/\.(\d+)$/)?.[1];
   if (slug === "home.hero.copy") return "Titolo, introduzione e pulsante della Hero";
+  if (slug === "home.navigation") return "Voci e pulsante della navigazione";
+  if (slug === "home.hero.mobile-video") return "Video della Hero su smartphone";
   if (slug.startsWith("home.hero.image.")) return `Immagine slideshow ${number || ""}`.trim();
+  if (slug === "home.sectors.list") return "Elenco settori in scorrimento";
   if (slug === "home.about.copy") return "Testo principale Chi siamo";
   if (slug.startsWith("home.about.vertical.")) return `Immagine area di competenza ${number || ""}`.trim();
   if (slug.startsWith("home.about.stat.")) return `Numero in evidenza ${number || ""}`.trim();
   if (slug === "home.services.heading" || slug === "home.projects.heading" || slug === "beviral.services.heading" || slug === "beviral.method.heading") return "Titolo della sezione";
   if (slug.startsWith("home.service.")) return `Servizio ${number || ""}`.trim();
   if (slug.startsWith("home.project.")) return "Scheda progetto in Homepage";
+  if (slug.startsWith("home.client.")) return `Cliente / logo ${number || ""}`.trim();
+  if (slug === "home.beviral.spotlight") return "Presentazione BeViral in Homepage";
+  if (slug === "home.beviral.services") return "Servizi BeViral in Homepage";
   if (slug === "home.contact.copy") return "Titolo e pulsante del form contatti";
+  if (slug === "home.contact.form") return "Etichette, settori e calendario del form";
   if (slug === "site.footer.contact") return "Email di contatto nel footer";
+  if (slug === "site.footer.brand") return "Marchio, descrizione e informazioni legali";
+  if (slug.startsWith("site.seo.") || slug.endsWith(".seo")) return "Titolo, descrizione e immagine per motori di ricerca";
   if (slug.startsWith("site.footer.social.")) return `Link social ${number || ""}`.trim();
   if (slug === "beviral.hero.copy") return "Titolo, descrizione e pulsante della Hero";
+  if (slug === "beviral.navigation") return "Pulsante della navigazione";
+  if (slug === "beviral.hero.secondary") return "Pulsante secondario della Hero";
+  if (slug === "beviral.marquee.items") return "Parole in scorrimento";
+  if (slug === "beviral.manifesto.copy") return "Titolo e testo del manifesto";
+  if (slug === "beviral.manifesto.stats") return "Numeri in evidenza del manifesto";
   if (slug.startsWith("beviral.service.")) return `Servizio ${number || ""}`.trim();
   if (slug.startsWith("beviral.step.")) return `Fase del metodo ${number || ""}`.trim();
   if (slug.startsWith("beviral.showreel.")) return `Video showreel ${number || ""}`.trim();
   if (slug === "beviral.cta.copy") return "Invito all'azione finale";
+  if (slug === "beviral.cta.form") return "Etichette, opzioni e calendario del form";
   if (slug === "beviral.footer.copy") return "Contatti e social del footer";
+  if (slug === "beviral.footer.meta") return "Ritorno al sito e informazioni legali";
   if (slug.startsWith("beviral.asset.")) return `Asset grafico ${number || ""}`.trim();
   if (slug.includes(".gallery.")) return `Immagine gallery ${number || ""}`.trim();
+  if (slug.includes(".video.")) return `Video progetto ${number || ""}`.trim();
   if (slug.endsWith(".hero")) return "Titolo e introduzione del progetto";
   if (slug.endsWith(".meta")) return "Luogo, anno e crediti";
   if (slug.endsWith(".story")) return "Racconto del progetto";
@@ -888,9 +905,9 @@ function contentSectionKey(item) {
 
 function compareContentSections(a, b, page) {
   const order = {
-    Homepage: ["Hero", "Hero slideshow", "Chi siamo", "Chi siamo - numeri", "Servizi", "Lavori selezionati", "Contatti"],
-    BeViral: ["Hero", "Servizi", "Metodo", "Showreel", "CTA", "Asset grafici", "Footer"],
-    "Tutto il sito": ["Footer"]
+    Homepage: ["Navigazione", "Hero", "Hero slideshow", "Settori", "Chi siamo", "Chi siamo - numeri", "Servizi", "Lavori selezionati", "Clienti", "BeViral", "Contatti"],
+    BeViral: ["Navigazione", "Hero", "Marquee", "Manifesto", "Servizi", "Metodo", "Showreel", "CTA", "Asset grafici", "Footer"],
+    "Tutto il sito": ["SEO", "Footer"]
   }[page] || [];
   const ai = order.indexOf(a);
   const bi = order.indexOf(b);
@@ -2002,10 +2019,115 @@ function openContentModal(id = "") {
   document.getElementById("contentModalContext").textContent = item ? `${item.page || "Sito"} / ${item.section || "Sezione"}` : "Nuovo contenuto sito";
   document.getElementById("contentModalTitle").textContent = item ? contentFieldLabel(item) : "Crea un nuovo contenuto";
   document.getElementById("contentModalGuide").textContent = item
-    ? `Stai modificando ${item.page || "il sito"}, sezione ${item.section || "non indicata"}. Il contenuto arriva online solo con stato Pubblicato.`
+    ? `Questo campo e collegato a ${item.page || "il sito"}, sezione ${item.section || "non indicata"}. Salva in Bozza per prepararlo; scegli Pubblicato solo quando vuoi mostrarlo online.`
     : "Indica pagina e sezione in modo chiaro. Il nuovo contenuto viene creato come bozza finche non scegli Pubblicato.";
+  configureContentForm(item);
+  setContentUploadStatus("JPG, PNG, WebP o GIF, massimo 3 MB.");
   document.getElementById("deleteContentButton").hidden = !item;
   document.getElementById("contentModal").showModal();
+}
+
+function configureContentForm(item) {
+  const isNew = !item;
+  const visible = new Set(isNew
+    ? ["slug", "page", "section", "type", "status", "title", "subtitle", "body", "image_url", "image_alt", "cta_label", "cta_url", "notes"]
+    : contentFieldsForItem(item));
+  document.querySelectorAll("#contentForm [data-content-field]").forEach((field) => {
+    field.hidden = !visible.has(field.dataset.contentField);
+  });
+
+  const labels = contentInputLabels(item);
+  Object.entries(labels).forEach(([name, label]) => {
+    const target = document.querySelector(`#contentForm [data-content-label="${name}"]`);
+    if (target) target.textContent = label;
+  });
+}
+
+function contentFieldsForItem(item) {
+  const fields = new Set(["status", "notes"]);
+  ["title", "subtitle", "body", "image_url", "image_alt", "cta_label", "cta_url"].forEach((field) => {
+    if (item[field]) fields.add(field);
+  });
+  if (item.type === "image") ["title", "image_url", "image_alt"].forEach((field) => fields.add(field));
+  if (item.type === "video") ["title", "subtitle", "cta_url"].forEach((field) => fields.add(field));
+  if (item.type === "project") ["title", "subtitle", "body", "image_url", "image_alt", "cta_label", "cta_url"].forEach((field) => fields.add(field));
+  if (item.slug?.startsWith("home.about.vertical.")) fields.add("body");
+  if (item.slug?.startsWith("site.seo.") || item.slug?.endsWith(".seo")) {
+    return ["status", "title", "subtitle", "image_url", "image_alt", "notes"];
+  }
+  return [...fields];
+}
+
+function contentInputLabels(item) {
+  const defaults = {
+    title: "Titolo",
+    subtitle: "Sottotitolo",
+    body: "Testo",
+    image_url: "Immagine",
+    image_alt: "Testo alternativo immagine",
+    cta_label: "Testo pulsante",
+    cta_url: item?.type === "video" ? "URL video" : "Destinazione pulsante",
+    notes: "Note interne"
+  };
+  if (!item) return defaults;
+  if (item.type === "image") {
+    defaults.title = "Nome riconoscibile nel gestionale";
+    defaults.body = item.slug.startsWith("home.about.vertical.") ? "Descrizione dell'area" : "Didascalia o testo associato";
+  }
+  if (item.slug.startsWith("home.about.vertical.")) defaults.title = "Nome area di competenza";
+  if (item.slug.includes(".gallery.")) defaults.body = "Didascalia immagine";
+  if (item.slug.startsWith("home.client.")) defaults.title = "Nome cliente";
+  if (item.slug.startsWith("site.seo.") || item.slug.endsWith(".seo")) {
+    defaults.title = "Titolo SEO";
+    defaults.subtitle = "Descrizione SEO";
+    defaults.image_url = "Immagine di condivisione";
+  }
+  if (item.type === "service") defaults.title = "Nome servizio";
+  if (item.type === "project") defaults.subtitle = "Settore / categoria";
+  if (item.slug.endsWith(".meta")) {
+    defaults.title = "Luogo";
+    defaults.subtitle = "Anno";
+    defaults.body = "Crediti";
+  }
+  return defaults;
+}
+
+function setContentUploadStatus(message, tone = "") {
+  const status = document.getElementById("contentImageUploadStatus");
+  status.textContent = message;
+  status.className = tone;
+}
+
+async function uploadContentImage(file) {
+  if (!file) return;
+  if (file.size > 3 * 1024 * 1024) {
+    setContentUploadStatus("L'immagine supera il limite di 3 MB.", "is-error");
+    return;
+  }
+  setContentUploadStatus("Caricamento in corso...");
+  try {
+    const data = await fileToDataUrl(file);
+    const response = await apiFetch("/api/site-media", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: file.type, data })
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || "Caricamento non riuscito");
+    document.getElementById("contentForm").elements.image_url.value = result.url;
+    setContentUploadStatus("Immagine caricata. Salva il contenuto per applicarla.", "is-success");
+  } catch (error) {
+    setContentUploadStatus(error.message, "is-error");
+  }
+}
+
+function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(new Error("Impossibile leggere il file"));
+    reader.readAsDataURL(file);
+  });
 }
 
 function contentPayloadFromForm(form) {
@@ -2243,6 +2365,13 @@ document.getElementById("contentForm").addEventListener("submit", (event) => {
 });
 
 document.getElementById("deleteContentButton").addEventListener("click", deleteContent);
+document.getElementById("uploadContentImageButton").addEventListener("click", () => {
+  document.getElementById("contentImageFile").click();
+});
+document.getElementById("contentImageFile").addEventListener("change", (event) => {
+  uploadContentImage(event.target.files?.[0]);
+  event.target.value = "";
+});
 document.getElementById("newClientButton").addEventListener("click", () => document.getElementById("clientModal").showModal());
 document.getElementById("syncClickUpButton").addEventListener("click", syncClientsFromClickUp);
 document.getElementById("syncTasksButton").addEventListener("click", syncTasksFromClickUp);
@@ -2311,9 +2440,8 @@ async function bootApp() {
       setPasswordMessage("Imposta una nuova password per completare il recupero.", "success");
     }
     renderBackendStatus();
-    await Promise.all([
+    const loaders = [
       loadLeadsFromBackend(),
-      loadContentFromBackend(),
       loadClientsFromBackend(),
       loadClickUpTeam(),
       loadClickUpTasks(),
@@ -2321,7 +2449,9 @@ async function bootApp() {
       loadUsersFromBackend(),
       loadClientAliases(),
       loadSmartWorking()
-    ]);
+    ];
+    if (currentProfile?.role === "admin") loaders.push(loadContentFromBackend());
+    await Promise.all(loaders);
   } catch (error) {
     showLogin(error.message);
   }

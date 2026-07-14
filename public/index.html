@@ -46,7 +46,7 @@
           <span class="icon"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg></span>
           <span>Lead sito</span>
         </button>
-        <button class="nav-item" data-view="content" type="button">
+        <button class="nav-item admin-only" data-view="content" type="button">
           <span class="icon"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"/></svg></span>
           <span>Backend sito</span>
         </button>
@@ -150,7 +150,7 @@
         <div class="lead-list" id="leadList"></div>
       </section>
 
-      <section class="view" id="contentView" data-view-panel="content">
+      <section class="view admin-only" id="contentView" data-view-panel="content">
         <section class="panel cms-workspace">
           <div class="panel-head cms-heading">
             <div>
@@ -413,10 +413,10 @@
       </div>
       <input name="id" type="hidden">
       <div class="form-grid">
-        <label>Slug<input name="slug" required placeholder="home-hero"></label>
-        <label>Pagina<input name="page" placeholder="Home"></label>
-        <label>Sezione reale<input name="section" placeholder="Hero, Servizi, Portfolio"></label>
-        <label>Tipo<select name="type">
+        <label data-content-field="slug">Slug<input name="slug" required placeholder="home-hero"></label>
+        <label data-content-field="page">Pagina<input name="page" placeholder="Home"></label>
+        <label data-content-field="section">Sezione reale<input name="section" placeholder="Hero, Servizi, Portfolio"></label>
+        <label data-content-field="type">Tipo<select name="type">
           <option value="copy">Testo</option>
           <option value="image">Immagine</option>
           <option value="service">Servizio</option>
@@ -425,19 +425,27 @@
           <option value="video">Video</option>
           <option value="landing">Landing</option>
         </select></label>
-        <label>Stato<select name="status">
+        <label data-content-field="status">Stato<select name="status">
           <option value="draft">Bozza</option>
           <option value="published">Pubblicato</option>
           <option value="archived">Archiviato</option>
         </select></label>
-        <label class="full">Titolo<input name="title" required></label>
-        <label class="full">Sottotitolo<input name="subtitle"></label>
-        <label class="full">Testo<textarea name="body" rows="5"></textarea></label>
-        <label>URL immagine<input name="image_url" type="text" placeholder="assets/images/... oppure https://..."></label>
-        <label>Alt immagine<input name="image_alt" placeholder="Descrizione immagine"></label>
-        <label>CTA testo<input name="cta_label" placeholder="Scopri di piu"></label>
-        <label>CTA link<input name="cta_url" placeholder="/contatti"></label>
-        <label class="full">Note interne<textarea name="notes" rows="3"></textarea></label>
+        <label class="full" data-content-field="title"><span data-content-label="title">Titolo</span><input name="title" required></label>
+        <label class="full" data-content-field="subtitle"><span data-content-label="subtitle">Sottotitolo</span><input name="subtitle"></label>
+        <label class="full" data-content-field="body"><span data-content-label="body">Testo</span><textarea name="body" rows="5"></textarea></label>
+        <label class="full" data-content-field="image_url">
+          <span data-content-label="image_url">Immagine</span>
+          <div class="cms-media-field">
+            <input name="image_url" type="text" placeholder="assets/images/... oppure https://...">
+            <button class="ghost-button" id="uploadContentImageButton" type="button">Carica immagine</button>
+          </div>
+          <input id="contentImageFile" type="file" accept="image/jpeg,image/png,image/webp,image/gif" hidden>
+          <small id="contentImageUploadStatus">JPG, PNG, WebP o GIF, massimo 3 MB.</small>
+        </label>
+        <label data-content-field="image_alt"><span data-content-label="image_alt">Testo alternativo immagine</span><input name="image_alt" placeholder="Descrizione immagine"></label>
+        <label data-content-field="cta_label"><span data-content-label="cta_label">Testo pulsante</span><input name="cta_label" placeholder="Scopri di piu"></label>
+        <label data-content-field="cta_url"><span data-content-label="cta_url">Destinazione pulsante</span><input name="cta_url" placeholder="/contatti"></label>
+        <label class="full" data-content-field="notes"><span data-content-label="notes">Note interne</span><textarea name="notes" rows="3"></textarea></label>
       </div>
       <div class="modal-actions">
         <button class="danger-button" id="deleteContentButton" type="button">Elimina</button>

@@ -1018,6 +1018,11 @@ svg.lc {
   color: var(--stone);
   font-size: 12.5px;
 }
+.cms-media-field { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+.cms-media-field .ghost-button { min-height: 42px; white-space: nowrap; }
+#contentImageUploadStatus { color: var(--subtle); font-size: 11.5px; font-weight: 500; }
+#contentImageUploadStatus.is-error { color: var(--red); }
+#contentImageUploadStatus.is-success { color: var(--green); }
 
 /* ============================================================
    INSPECTOR / SETUP / ENDPOINT
@@ -1296,6 +1301,8 @@ code { font-family: var(--font-mono); font-size: 12px; }
   .cms-controls > select { width: 100%; }
   .cms-mobile-page-select { display: block; }
   .content-row-action { justify-content: space-between; }
+  .cms-media-field { grid-template-columns: 1fr; }
+  .cms-media-field .ghost-button { width: 100%; }
   .modal form { padding: 18px; }
 }
 

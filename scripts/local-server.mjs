@@ -12,6 +12,7 @@ const { default: handleClients } = await import("../api/clients.js");
 const { default: handleClientsSyncClickUp } = await import("../api/clients-sync-clickup.js");
 const { default: handleClickUpTeam } = await import("../api/clickup-team.js");
 const { default: handleClickUpTasks } = await import("../api/clickup-tasks.js");
+const { default: handleSiteMedia } = await import("../api/site-media.js");
 const port = Number(process.env.PORT || 8020);
 
 const mimeTypes = {
@@ -55,6 +56,11 @@ createServer(async (request, response) => {
 
     if (url.pathname === "/api/site-content") {
       await handleSiteContent(request, response, url);
+      return;
+    }
+
+    if (url.pathname === "/api/site-media") {
+      await handleSiteMedia(request, response);
       return;
     }
 
@@ -149,7 +155,7 @@ async function handleSiteContent(request, response, url) {
     return;
   }
 
-  if (!await requireUser(request, response)) return;
+  if (!await requireUser(request, response, ["admin"])) return;
 
   if (request.method === "GET") {
     const result = await supabaseFetch("/site_content?select=*&order=updated_at.desc");
