@@ -408,6 +408,95 @@ svg.lc {
 .view.is-active { display: block; animation: viewIn .22s ease; }
 @keyframes viewIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 
+/* --- Home --- */
+.home-welcome {
+  position: relative;
+  min-height: 210px;
+  margin-bottom: 30px;
+  padding: 34px 38px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 32px;
+  overflow: hidden;
+  border-radius: var(--r);
+  background: var(--ink);
+  color: var(--paper);
+  box-shadow: var(--shadow);
+}
+.home-welcome::after {
+  content: "bmg";
+  position: absolute;
+  top: -30px;
+  right: 24px;
+  color: rgba(243, 239, 231, .055);
+  font-size: 190px;
+  font-weight: 700;
+  line-height: 1;
+  pointer-events: none;
+}
+.home-welcome-copy { position: relative; z-index: 1; max-width: 760px; }
+.home-welcome .eyebrow { margin: 0 0 18px; color: #D79072; }
+.home-welcome h2 {
+  max-width: 720px;
+  margin: 0;
+  font-size: 46px;
+  font-weight: 600;
+  line-height: 1.02;
+  letter-spacing: 0;
+}
+.home-welcome-copy > p:last-child { margin: 16px 0 0; color: rgba(243, 239, 231, .72); font-size: 16px; }
+.home-date {
+  position: relative;
+  z-index: 1;
+  width: min(220px, 100%);
+  padding-left: 22px;
+  display: grid;
+  gap: 5px;
+  border-left: 1px solid rgba(243, 239, 231, .22);
+}
+.home-date span { color: rgba(243, 239, 231, .55); font-family: var(--font-mono); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; }
+.home-date strong { font-size: 17px; font-weight: 500; line-height: 1.25; }
+
+.home-section-head { margin: 0 0 14px; }
+.home-section-head .eyebrow { margin: 0 0 4px; }
+.home-section-head h2 { margin: 0; color: var(--ink); font-size: 21px; }
+.metric strong.metric-status { max-width: 100%; font-size: 25px; line-height: 1; overflow-wrap: anywhere; }
+
+.home-quick-panel { margin-top: 4px; }
+.home-quick-panel .panel-head { margin-bottom: 18px; }
+.home-quick-panel .eyebrow { margin: 0 0 4px; }
+.home-quick-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.home-quick-link {
+  min-width: 0;
+  min-height: 92px;
+  padding: 16px;
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) 20px;
+  align-items: center;
+  gap: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface-soft);
+  color: var(--text);
+  text-align: left;
+  transition: border-color .14s, background .14s, transform .14s;
+}
+.home-quick-link:hover { transform: translateY(-1px); border-color: var(--terra-line); background: var(--surface); }
+.home-quick-icon {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--terra-tint);
+  color: var(--terracotta);
+}
+.home-quick-link > span:nth-child(2) { min-width: 0; display: grid; gap: 3px; }
+.home-quick-link strong { color: var(--ink); font-size: 15px; }
+.home-quick-link small { color: var(--muted); font-size: 12px; line-height: 1.35; }
+.home-quick-arrow { color: var(--subtle); }
+
 /* --- KPI --- */
 .metric-grid {
   display: grid;
@@ -1275,6 +1364,8 @@ code { font-family: var(--font-mono); font-size: 12px; }
   #smartView .inspector > .smart-settings { grid-template-columns: 1fr; }
   #smartView .inspector > .setup-box,
   #smartView .inspector > .smart-events-list { grid-column: 1; }
+  .home-welcome { align-items: flex-start; flex-direction: column; }
+  .home-date { width: 100%; padding: 16px 0 0; border-top: 1px solid rgba(243, 239, 231, .22); border-left: 0; }
 }
 
 @media (max-width: 640px) {
@@ -1284,6 +1375,10 @@ code { font-family: var(--font-mono); font-size: 12px; }
   .toolbar { flex-direction: column; }
   .toolbar select { min-width: 0; }
   .metric-grid { grid-template-columns: 1fr 1fr; }
+  .home-welcome { min-height: 0; padding: 26px 22px; }
+  .home-welcome::after { top: 4px; right: -6px; font-size: 112px; }
+  .home-welcome h2 { font-size: 34px; }
+  .home-quick-grid { grid-template-columns: 1fr; }
   .client-grid { grid-template-columns: 1fr; }
   .lead-card, .content-row, .image-card, .form-grid, .compact-toolbar,
   .user-row, .sync-log-row, .ai-result-row { grid-template-columns: 1fr; }

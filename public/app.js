@@ -22,41 +22,6 @@ const TASK_STATUS_GROUPS = [
 ];
 const DEFAULT_TASK_STATUS_GROUP_ID = "todo";
 const seed = {
-  leads: [
-    {
-      id: "lead_001",
-      name: "Giulia Romano",
-      company: "Vetera Matera",
-      email: "giulia@example.com",
-      phone: "+39 333 000 0001",
-      service: "Sito Web",
-      status: "nuovo",
-      message: "Vorremmo rivedere struttura e contenuti del sito.",
-      createdAt: "2026-06-03T09:25:00.000Z"
-    },
-    {
-      id: "lead_002",
-      name: "Marco De Santis",
-      company: "Zest Restaurant",
-      email: "marco@example.com",
-      phone: "+39 333 000 0002",
-      service: "Social Media",
-      status: "preventivo",
-      message: "Serve una proposta per lancio estivo e shooting.",
-      createdAt: "2026-06-02T15:40:00.000Z"
-    },
-    {
-      id: "lead_003",
-      name: "Laura Ferri",
-      company: "Costiera Gin",
-      email: "laura@example.com",
-      phone: "+39 333 000 0003",
-      service: "Brand Identity",
-      status: "contattato",
-      message: "Richiesta naming, packaging e piano lancio.",
-      createdAt: "2026-06-01T12:00:00.000Z"
-    }
-  ],
   content: [
     {
       id: "seed_home_hero_copy",
@@ -183,17 +148,10 @@ const seed = {
     events: [],
     attendees: [],
     unavailable: []
-  },
-  tasks: [
-    { title: "Collegare form contatti a POST /api/leads", done: false },
-    { title: "Definire campi modificabili della home", done: false },
-    { title: "Creare tabella immagini e bucket storage", done: false },
-    { title: "Preparare login interno BMG", done: false }
-  ]
+  }
 };
 
 let state = loadState();
-let backendOnline = false;
 let contentOnline = false;
 let clientsOnline = false;
 let clickupOnline = false;
@@ -474,16 +432,11 @@ function consumeRecoverySessionFromUrl() {
   return true;
 }
 
-function formatDate(value) {
-  return new Intl.DateTimeFormat("it-IT", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(value));
-}
-
 function setView(view) {
   document.querySelectorAll(".nav-item").forEach((item) => item.classList.toggle("is-active", item.dataset.view === view));
   document.querySelectorAll("[data-view-panel]").forEach((panel) => panel.classList.toggle("is-active", panel.dataset.viewPanel === view));
   const titles = {
-    dashboard: ["Backend sito", "Dashboard operativa"],
-    leads: ["CRM sito", "Lead dal sito"],
+    dashboard: ["BMG Internal OS", "Home"],
     content: ["CMS leggero", "Backend sito"],
     clients: ["Gestionale interno", "Clienti"],
     team: ["ClickUp operativo", "Team & Task"],
@@ -504,25 +457,35 @@ function mondayOf(value = new Date()) {
   return date.toISOString().slice(0, 10);
 }
 
-function renderMetrics() {
-  document.getElementById("newLeadsCount").textContent = state.leads.filter((lead) => lead.status === "nuovo").length;
-  document.getElementById("quoteLeadsCount").textContent = state.leads.filter((lead) => lead.status === "preventivo").length;
-  document.getElementById("activeClientsCount").textContent = state.clients.filter((client) => client.status === "Attivo").length;
-  document.getElementById("contentCount").textContent = state.content.length;
+function renderHome() {
+  const activeClients = state.clients.filter((client) => {
+    return ["attivo", "active"].includes(normalizeIdentity(client.status));
+  }).length;
+  const tasks = dashboardTasks();
+  const counts = taskGroupCounts(tasks);
+  const profileName = firstName(currentProfile?.full_name || currentProfile?.email?.split("@")[0] || "");
+  const planStatus = state.smartWorking?.plan?.status || "none";
+  const statusLabels = { draft: "Bozza", approved: "Approvata", archived: "Archiviata", none: "Da generare" };
+  const today = new Intl.DateTimeFormat("it-IT", { weekday: "long", day: "numeric", month: "long" }).format(new Date());
+
+  document.getElementById("activeClientsCount").textContent = activeClients;
+  document.getElementById("todoTasksCount").textContent = counts.todo || 0;
+  document.getElementById("progressTasksCount").textContent = counts.progress || 0;
+  document.getElementById("homeSmartPlanStatus").textContent = statusLabels[planStatus] || planStatus;
+  document.getElementById("homeToday").textContent = today.charAt(0).toUpperCase() + today.slice(1);
+  document.getElementById("homeWelcomeMessage").textContent = profileName
+    ? `Ciao ${profileName}. Da qui puoi gestire clienti, task, turni e contenuti del sito.`
+    : "Da qui puoi gestire clienti, task, turni e contenuti del sito.";
 }
 
-function normalizeLead(lead) {
-  return {
-    id: lead.id,
-    name: lead.name,
-    company: lead.company || "",
-    email: lead.email,
-    phone: lead.phone || "",
-    service: lead.service || "Non indicato",
-    status: lead.status || "nuovo",
-    message: lead.message || "",
-    createdAt: lead.created_at || lead.createdAt || new Date().toISOString()
-  };
+function dashboardTasks() {
+  const tasks = operationalTasks();
+  if (currentProfile?.role === "admin") return tasks;
+  const ownUser = teamMembers().find((user) => {
+    return clickupUserId(user) === String(currentProfile?.clickup_user_id || "")
+      || normalizeIdentity(user.email) === normalizeIdentity(currentProfile?.email);
+  });
+  return ownUser ? teamMemberTasks(ownUser) : [];
 }
 
 function normalizeContent(item) {
@@ -544,21 +507,6 @@ function normalizeContent(item) {
     status: item.status || "draft",
     updatedAt: item.updated_at || item.updatedAt || new Date().toISOString()
   };
-}
-
-async function loadLeadsFromBackend() {
-  try {
-    const response = await apiFetch("/api/leads");
-    if (!response.ok) throw new Error(`Backend error ${response.status}`);
-    const rows = await response.json();
-    state.leads = rows.map(normalizeLead);
-    backendOnline = true;
-    renderBackendStatus();
-    renderAll();
-  } catch (error) {
-    backendOnline = false;
-    renderBackendStatus(error.message);
-  }
 }
 
 async function loadContentFromBackend() {
@@ -613,6 +561,7 @@ async function loadClickUpTeam() {
     ensureTeamSelection();
     clickupOnline = true;
     renderBackendStatus();
+    renderHome();
     renderTeam();
   } catch (error) {
     clickupOnline = false;
@@ -628,6 +577,7 @@ async function loadClickUpTasks({ sync = false } = {}) {
     state.clickupTasks = await response.json();
     clickupOnline = true;
     renderBackendStatus();
+    renderHome();
     renderTeam();
   } catch (error) {
     clickupOnline = false;
@@ -668,6 +618,7 @@ async function loadSmartWorking() {
     if (!response.ok) throw new Error(data.error || `Smart working error ${response.status}`);
     state.smartWorking = data;
     selectedSmartWeek = data.week_start_date || selectedSmartWeek;
+    renderHome();
     renderSmartWorking();
   } catch (error) {
     renderBackendStatus(error.message);
@@ -694,49 +645,10 @@ function renderBackendStatus(message = "") {
   const footer = document.querySelector(".sidebar-footer span:last-child");
   const dot = document.querySelector(".status-dot");
   if (!footer || !dot) return;
-  const connected = backendOnline && clientsOnline && clickupOnline && (currentProfile?.role !== "admin" || contentOnline);
+  const connected = clientsOnline && clickupOnline && (currentProfile?.role !== "admin" || contentOnline);
   footer.textContent = connected ? "Sistemi collegati" : "Connessione parziale";
   dot.style.background = connected ? "#7cc483" : "#d8a42f";
   if (message) footer.title = message;
-}
-
-function leadCard(lead, compact = false) {
-  const message = compact ? "" : `<p>${lead.message || "Nessun messaggio inserito."}</p>`;
-  return `
-    <article class="lead-card">
-      <div>
-        <h3>${lead.name}</h3>
-        <p>${lead.company || "Azienda non indicata"} · ${lead.email}</p>
-        ${message}
-        <div class="lead-meta">
-          <span class="badge ${lead.status}">${lead.status}</span>
-          <span class="badge">${lead.service}</span>
-          <span class="badge">${formatDate(lead.createdAt)}</span>
-        </div>
-      </div>
-      <button class="ghost-button" data-status-next="${lead.id}" type="button">Avanza</button>
-    </article>
-  `;
-}
-
-function renderLeads() {
-  const search = document.getElementById("leadSearch")?.value?.toLowerCase() || "";
-  const status = document.getElementById("statusFilter")?.value || "all";
-  const filtered = state.leads.filter((lead) => {
-    const haystack = `${lead.name} ${lead.company} ${lead.email} ${lead.service} ${lead.message}`.toLowerCase();
-    return haystack.includes(search) && (status === "all" || lead.status === status);
-  });
-  document.getElementById("leadList").innerHTML = filtered.map((lead) => leadCard(lead)).join("") || emptyState("Nessun lead trovato.");
-  document.getElementById("recentLeads").innerHTML = state.leads.slice(0, 3).map((lead) => leadCard(lead, true)).join("");
-}
-
-function renderTasks() {
-  document.getElementById("priorityTasks").innerHTML = state.tasks.map((task, index) => `
-    <label class="task-row">
-      <input type="checkbox" data-task="${index}" ${task.done ? "checked" : ""}>
-      <span>${task.title}</span>
-    </label>
-  `).join("");
 }
 
 function renderContent() {
@@ -1947,49 +1859,9 @@ function emptyState(text) {
   return `<div class="lead-card"><p>${text}</p></div>`;
 }
 
-function advanceStatus(id) {
-  const order = ["nuovo", "contattato", "preventivo", "cliente"];
-  const lead = state.leads.find((item) => item.id === id);
-  if (!lead) return;
-  const index = order.indexOf(lead.status);
-  lead.status = order[Math.min(index + 1, order.length - 1)] || "contattato";
-  saveState();
-  renderAll();
-}
-
-function addLead(form) {
-  const data = Object.fromEntries(new FormData(form).entries());
-  state.leads.unshift({
-    id: `lead_${Date.now()}`,
-    ...data,
-    createdAt: new Date().toISOString()
-  });
-  saveState();
-  form.reset();
-  renderAll();
-}
-
-async function submitLead(form) {
-  const data = Object.fromEntries(new FormData(form).entries());
-  try {
-    const response = await fetch("/api/leads", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data)
-    });
-    if (!response.ok) throw new Error(`Backend error ${response.status}`);
-    backendOnline = true;
-    form.reset();
-    await loadLeadsFromBackend();
-  } catch (error) {
-    backendOnline = false;
-    addLead(form);
-    renderBackendStatus(error.message);
-  }
-}
-
 function exportData() {
-  const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+  const { leads: _legacyLeads, tasks: _legacyTasks, ...exportableState } = state;
+  const blob = new Blob([JSON.stringify(exportableState, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -2246,9 +2118,7 @@ async function submitTask(form) {
 }
 
 function renderAll() {
-  renderMetrics();
-  renderLeads();
-  renderTasks();
+  renderHome();
   renderContent();
   renderClients();
   renderTeam();
@@ -2266,7 +2136,6 @@ document.getElementById("navList").addEventListener("click", (event) => {
 
 document.body.addEventListener("click", (event) => {
   const jump = event.target.closest("[data-jump]");
-  const statusButton = event.target.closest("[data-status-next]");
   const teamMember = event.target.closest("[data-team-member]");
   const newTaskFor = event.target.closest("[data-new-task-for]");
   const editTask = event.target.closest("[data-edit-task]");
@@ -2274,7 +2143,6 @@ document.body.addEventListener("click", (event) => {
   const applyAiClient = event.target.closest("[data-apply-ai-client]");
   const deleteAlias = event.target.closest("[data-delete-alias]");
   if (jump) setView(jump.dataset.jump);
-  if (statusButton) advanceStatus(statusButton.dataset.statusNext);
   if (teamMember) selectTeamMember(teamMember.dataset.teamMember);
   if (newTaskFor) openTaskModal(newTaskFor.dataset.newTaskFor);
   if (editTask) openTaskModal(selectedTeamMemberId, editTask.dataset.editTask);
@@ -2283,12 +2151,9 @@ document.body.addEventListener("click", (event) => {
   if (deleteAlias) deleteClientAlias(deleteAlias.dataset.deleteAlias);
 });
 
-document.getElementById("newLeadButton").addEventListener("click", () => document.getElementById("leadModal").showModal());
 document.getElementById("profileButton").addEventListener("click", openProfileModal);
 document.getElementById("logoutButton").addEventListener("click", logout);
 document.getElementById("exportButton").addEventListener("click", exportData);
-document.getElementById("leadSearch").addEventListener("input", renderLeads);
-document.getElementById("statusFilter").addEventListener("change", renderLeads);
 document.getElementById("contentPageFilter").addEventListener("change", () => {
   selectedContentSection = "all";
   renderContent();
@@ -2318,13 +2183,6 @@ document.getElementById("smartRulesForm").addEventListener("submit", (event) => 
 document.getElementById("smartWeekGrid").addEventListener("change", (event) => {
   const select = event.target.closest("[data-smart-move]");
   if (select) moveSmartAssignment(select);
-});
-
-document.getElementById("leadForm").addEventListener("submit", (event) => {
-  if (event.submitter?.value === "cancel") return;
-  event.preventDefault();
-  submitLead(event.currentTarget);
-  document.getElementById("leadModal").close();
 });
 
 document.getElementById("contentTable").addEventListener("click", (event) => {
@@ -2406,13 +2264,6 @@ document.getElementById("passwordForm").addEventListener("submit", (event) => {
   submitPasswordChange(event.currentTarget);
 });
 
-document.getElementById("priorityTasks").addEventListener("change", (event) => {
-  const input = event.target.closest("[data-task]");
-  if (!input) return;
-  state.tasks[Number(input.dataset.task)].done = input.checked;
-  saveState();
-});
-
 document.getElementById("loginForm").addEventListener("submit", async (event) => {
   event.preventDefault();
   const form = event.currentTarget;
@@ -2441,7 +2292,6 @@ async function bootApp() {
     }
     renderBackendStatus();
     const loaders = [
-      loadLeadsFromBackend(),
       loadClientsFromBackend(),
       loadClickUpTeam(),
       loadClickUpTasks(),
@@ -2452,6 +2302,7 @@ async function bootApp() {
     ];
     if (currentProfile?.role === "admin") loaders.push(loadContentFromBackend());
     await Promise.all(loaders);
+    renderHome();
   } catch (error) {
     showLogin(error.message);
   }
