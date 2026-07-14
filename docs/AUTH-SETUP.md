@@ -9,10 +9,8 @@ Aggiungere su Vercel e in `.env.local`:
 - `SUPABASE_URL`
 - `SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
-- `HUB_BASIC_USER`
-- `HUB_BASIC_PASSWORD`
 
-`HUB_BASIC_USER` e `HUB_BASIC_PASSWORD` restano temporaneamente come barriera aggiuntiva davanti all'app. La protezione definitiva delle API private ora e' il token Supabase Auth.
+La protezione dell'app e delle API private usa Supabase Auth. La vecchia Basic Auth e' stata rimossa il 15 luglio 2026 per evitare il doppio login.
 
 ## Migrazione SQL
 
@@ -125,11 +123,6 @@ curl -i \
 
 Utente `staff` su `/api/users` deve ricevere `403`.
 
-## Rimozione Futura Basic Auth
+## Basic Auth Rimossa
 
-Quando Supabase Auth sara' verificata in produzione:
-
-1. rimuovere `HUB_BASIC_USER` e `HUB_BASIC_PASSWORD` da Vercel;
-2. rimuovere il check Basic Auth da `api/app.js`;
-3. mantenere obbligatorio Supabase Auth su tutte le API private;
-4. verificare redirect login e ruoli prima di aprire l'app ai dipendenti.
+La Basic Auth e' stata rimossa dal server. L'HTML del login puo' essere caricato senza credenziali, ma l'interfaccia interna resta nascosta finche' Supabase Auth non valida la sessione. Tutte le API private mantengono il controllo del token e dei ruoli lato server.

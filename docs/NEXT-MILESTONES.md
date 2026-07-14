@@ -60,7 +60,7 @@ Criterio di uscita: ogni flusso principale si completa senza istruzioni esterne.
 - Verificare backup e ripristino Supabase.
 - Controllare audit log, rate limit e gestione errori.
 - Cambiare la password amministrativa temporanea.
-- Valutare la rimozione della Basic Auth solo dopo il collaudo degli accessi Supabase.
+- [x] Rimuovere la Basic Auth dopo il collaudo degli accessi Supabase.
 
 ## Definizione Di V1 Completa
 

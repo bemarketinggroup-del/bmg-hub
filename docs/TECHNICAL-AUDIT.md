@@ -7,7 +7,7 @@ Data audit: 2026-06-04
 BMG Hub e' una SPA statica servita da funzioni serverless Vercel.
 
 - Frontend interno: `public/index.html`, `public/app.js`, `public/styles.css`.
-- Server app protetto: `api/app.js` serve i file statici dietro Basic Auth.
+- Server app: `api/app.js` serve i file statici; Supabase Auth protegge l'accesso ai dati e alle aree interne.
 - API interne: funzioni in `api/*.js`.
 - Database: Supabase via REST API.
 - Integrazione esterna: ClickUp via REST API.
@@ -48,16 +48,16 @@ Le operazioni interne usano `SUPABASE_SERVICE_ROLE_KEY` lato server. Questo bypa
 
 | Endpoint | Stato | Protezione | Note |
 | --- | --- | --- | --- |
-| `GET /` | operativo | Basic Auth | Serve app interna. |
-| `GET /api/leads` | operativo | Basic Auth | Lista lead da Supabase. |
+| `GET /` | operativo | Login Supabase nel frontend | Serve la pagina login; l'app interna resta nascosta senza sessione. |
+| `GET /api/leads` | operativo | Supabase Auth | Lista lead da Supabase. |
 | `POST /api/leads` | operativo/parziale | Pubblico con controllo Origin | Necessita anti-spam/rate limit. |
-| `/api/site-content` | operativo | Basic Auth | CRUD CMS interno. |
+| `/api/site-content` | operativo | Supabase Auth admin | CRUD CMS interno. |
 | `GET /api/public-site-content` | operativo | Pubblico | Espone solo contenuti pubblicati. |
-| `/api/clients` | operativo/parziale | Basic Auth | GET/POST/PATCH clienti; crea folder ClickUp opzionale. |
-| `POST /api/clients/sync-clickup` | operativo/parziale | Basic Auth | Import manuale folder ClickUp. |
-| `GET /api/clickup/team` | operativo | Basic Auth | Import membri workspace. |
-| `GET /api/clickup/tasks` | operativo | Basic Auth | Import task, paginazione fino a 25 pagine. |
-| `POST /api/clickup/tasks` | operativo/parziale | Basic Auth | Crea task su lista default. |
+| `/api/clients` | operativo/parziale | Supabase Auth | GET/POST/PATCH clienti; crea folder ClickUp opzionale. |
+| `POST /api/clients/sync-clickup` | operativo/parziale | Supabase Auth admin | Import manuale folder ClickUp. |
+| `GET /api/clickup/team` | operativo | Supabase Auth | Import membri workspace. |
+| `GET /api/clickup/tasks` | operativo | Supabase Auth | Import task, paginazione fino a 25 pagine. |
+| `POST /api/clickup/tasks` | operativo/parziale | Supabase Auth | Crea task su lista default. |
 
 ## Variabili Ambiente
 
@@ -66,8 +66,6 @@ Presenti in `.env.example`:
 - `SUPABASE_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `ALLOWED_ORIGIN`
-- `HUB_BASIC_USER`
-- `HUB_BASIC_PASSWORD`
 - `CLICKUP_API_TOKEN`
 - `CLICKUP_WORKSPACE_ID`
 - `CLICKUP_CLIENT_SPACE_ID`
@@ -77,11 +75,10 @@ Variabili critiche:
 
 - `SUPABASE_SERVICE_ROLE_KEY`: chiave ad alto privilegio, mai da esporre nel browser.
 - `CLICKUP_API_TOKEN`: accesso all'ambiente ClickUp, da trattare come segreto sensibile.
-- `HUB_BASIC_PASSWORD`: protezione provvisoria del gestionale.
 
 ## Sicurezza
 
-Aggiornamento 2026-06-04: la milestone auth introduce Supabase Auth per le API private e mantiene Basic Auth solo come barriera temporanea davanti all'app statica.
+Aggiornamento 2026-07-15: la Basic Auth e' stata rimossa. Supabase Auth resta l'unico sistema di autenticazione e autorizzazione per il gestionale.
 
 ### Aspetti Positivi
 
@@ -92,7 +89,6 @@ Aggiornamento 2026-06-04: la milestone auth introduce Supabase Auth per le API p
 
 ### Criticita
 
-- Basic Auth resta temporanea: non distingue utenti, ruoli, permessi o responsabilita.
 - Le API private ora devono ricevere `Authorization: Bearer <Supabase access token>`.
 - I ruoli server-side sono `admin` e `staff`, derivati da `public.staff_profiles`.
 - Mancano audit log: non e' possibile sapere chi ha modificato cosa.
@@ -101,7 +97,7 @@ Aggiornamento 2026-06-04: la milestone auth introduce Supabase Auth per le API p
 - Il fallback locale puo far sembrare operativo un dato che non arriva davvero da Supabase/ClickUp.
 - Non esiste gestione sicura upload immagini.
 - Non esiste revisione/versioning CMS.
-- Non esiste protezione CSRF specifica oltre Basic Auth/CORS.
+- Non esiste protezione CSRF specifica oltre token bearer e CORS.
 
 ## Errori Potenziali
 
@@ -156,7 +152,7 @@ Ricerca nei file tracciati: nessun secret reale evidente. Sono presenti solo nom
 
 ### P0 - Prima di aumentare uso interno
 
-- Completare rollout Supabase Auth in produzione e pianificare rimozione Basic Auth.
+- Mantenere verificati login Supabase, ruoli e protezione delle API private.
 - Aggiungere rate limiting/captcha/honeypot al lead form.
 - Uniformare CORS e protezione API interne.
 - Rendere evidente in UI quando si stanno vedendo dati fallback/locali.

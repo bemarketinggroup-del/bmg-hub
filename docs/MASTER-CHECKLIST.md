@@ -82,7 +82,7 @@ Questa e' la checklist operativa unica da usare fino alla chiusura della V1.
 
 ## Sicurezza E Rilascio
 
-- [x] Basic Auth temporanea davanti al deploy.
+- [x] Basic Auth temporanea rimossa dopo il collaudo Supabase Auth.
 - [x] Supabase Auth interna.
 - [x] Ruoli server-side.
 - [x] Webhook ClickUp firmato.
@@ -92,4 +92,4 @@ Questa e' la checklist operativa unica da usare fino alla chiusura della V1.
 - [ ] Verifica log senza dati sensibili.
 - [ ] Rimuovere fallback demo dalla production.
 - [ ] Cambio password admin finale.
-- [ ] Decisione finale sulla rimozione della Basic Auth.
+- [x] Decisione finale: Basic Auth rimossa, Supabase Auth mantenuta.

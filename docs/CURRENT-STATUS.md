@@ -1,13 +1,13 @@
 # BMG Hub - Stato Attuale
 
-Ultima verifica: 2026-07-13
+Ultima verifica: 2026-07-15
 
 Questa fotografia deriva dal codice locale e da test eseguiti sul deploy production `https://bmg-hub.vercel.app`.
 
 ## Stato Generale
 
 - Deploy Vercel: operativo e in stato `Ready`.
-- Accesso: doppia protezione Basic Auth + Supabase Auth.
+- Accesso: Supabase Auth con login email/password e ruoli.
 - Controllo sintattico: `npm run check` completato senza errori.
 - API private: restituiscono `401` senza token Supabase.
 - API pubblica CMS: operativa, ma attualmente non espone contenuti perche' tutti i record sono in bozza.
@@ -21,7 +21,7 @@ Questa fotografia deriva dal codice locale e da test eseguiti sul deploy product
 - Ruoli `admin` e `staff`.
 - Protezione server-side delle API private.
 - Gestione utenti e ruoli disponibile agli admin.
-- Basic Auth Vercel mantenuta come barriera temporanea aggiuntiva.
+- Basic Auth rimossa: non esiste piu' il doppio login del browser.
 
 ### Clienti E ClickUp
 
@@ -107,7 +107,7 @@ Questa fotografia deriva dal codice locale e da test eseguiti sul deploy product
 
 ## Verifiche Live Eseguite
 
-- `/` senza Basic Auth -> `401`.
+- `/` senza sessione -> `200` sulla pagina login, senza accesso ai dati interni.
 - `/api/me` senza token -> `401`.
 - `/api/users` senza token -> `401`.
 - `/api/clients` senza token -> `401`.
@@ -125,4 +125,4 @@ Questa fotografia deriva dal codice locale e da test eseguiti sul deploy product
 - Nessun secret e' tracciato dal repository nei controlli eseguiti.
 - `.env`, `.env.local`, `.env.*.local` e `.vercel` sono ignorati da Git.
 - `SUPABASE_SERVICE_ROLE_KEY`, token ClickUp, secret webhook e chiave OpenAI restano server-side.
-- Basic Auth e Supabase Auth usano due livelli distinti; la rimozione della Basic Auth va fatta solo dopo una verifica finale della protezione Supabase.
+- Le API private continuano a restituire `401` senza token Supabase e applicano i ruoli lato server.
