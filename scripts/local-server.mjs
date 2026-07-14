@@ -12,7 +12,7 @@ const { default: handleClients } = await import("../api/clients.js");
 const { default: handleClientsSyncClickUp } = await import("../api/clients-sync-clickup.js");
 const { default: handleClickUpTeam } = await import("../api/clickup-team.js");
 const { default: handleClickUpTasks } = await import("../api/clickup-tasks.js");
-const { default: handleSiteMedia } = await import("../api/site-media.js");
+const { handleSiteMedia } = await import("../lib/site-media.js");
 const port = Number(process.env.PORT || 8020);
 
 const mimeTypes = {

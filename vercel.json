@@ -29,7 +29,7 @@
     },
     {
       "src": "/api/site-media",
-      "dest": "/api/site-media.js"
+      "dest": "/api/site-content.js"
     },
     {
       "src": "/api/public-site-content",
