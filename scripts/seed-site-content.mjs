@@ -2,7 +2,8 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
 const projectRoot = new URL("..", import.meta.url).pathname;
-const env = await loadEnv(join(projectRoot, ".env.local"));
+const hubAccessToken = process.env.BMG_HUB_ACCESS_TOKEN || "";
+const env = hubAccessToken ? {} : await loadEnv(process.env.ENV_FILE || join(projectRoot, ".env.local"));
 
 const content = [
   {
@@ -33,6 +34,7 @@ const content = [
     ["Verticale Food - Zest Restaurant", "assets/images/portfolio/zest_restaurant-800.webp", "Zest Restaurant"],
     ["Verticale Personal Brand - Costiera Gin", "assets/images/portfolio/costiera_gin-800.webp", "Costiera Gin"]
   ]),
+  ...homepageCopySlots(),
   {
     slug: "home.services.list",
     type: "service",
@@ -52,7 +54,9 @@ const content = [
   },
   ...projectSlots(),
   ...projectGallerySlots(),
+  ...projectContentSlots(),
   ...beviralImageSlots(),
+  ...beviralCopySlots(),
   {
     slug: "home.contact.copy",
     type: "copy",
@@ -123,26 +127,50 @@ const content = [
   }
 ];
 
+if (hubAccessToken) {
+  await seedThroughHub(content, hubAccessToken);
+  process.exit(0);
+}
+
 if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
   throw new Error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in .env.local");
 }
 
-const result = await fetch(`${env.SUPABASE_URL}/rest/v1/site_content?on_conflict=slug`, {
+const currentResult = await fetch(`${env.SUPABASE_URL}/rest/v1/site_content?select=slug`, {
+  headers: {
+    apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+    Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`
+  }
+});
+
+if (!currentResult.ok) {
+  throw new Error(`Supabase content lookup failed: ${currentResult.status}`);
+}
+
+const existingSlugs = new Set((await currentResult.json()).map((row) => row.slug));
+const missingContent = content.filter((row) => !existingSlugs.has(row.slug));
+
+if (!missingContent.length) {
+  console.log("All website content slots already exist. Nothing changed.");
+  process.exit(0);
+}
+
+const result = await fetch(`${env.SUPABASE_URL}/rest/v1/site_content`, {
   method: "POST",
   headers: {
     apikey: env.SUPABASE_SERVICE_ROLE_KEY,
     Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
     "Content-Type": "application/json",
-    Prefer: "resolution=merge-duplicates,return=minimal"
+    Prefer: "return=minimal"
   },
-  body: JSON.stringify(content)
+  body: JSON.stringify(missingContent)
 });
 
 if (!result.ok) {
   throw new Error(`Supabase seed failed: ${result.status} ${await result.text()}`);
 }
 
-console.log(`Seeded ${content.length} real website content slots.`);
+console.log(`Created ${missingContent.length} missing website content slots without changing existing content.`);
 
 function imageSlots(page, section, prefix, rows) {
   return rows.map(([title, imageUrl, alt], index) => ({
@@ -273,10 +301,173 @@ function beviralImageSlots() {
   ]);
 }
 
+function homepageCopySlots() {
+  return [
+    contentSlot("home.about.copy", "copy", "Homepage", "Chi siamo", "Siamo un team di marketer, creativi e produttori. Diamo forma a brand che vogliono distinguersi - nell'hospitality, nel luxury, nel food, nel retail e nel personal brand.", "", "Lavoriamo come un partner integrato: niente passaggi di mano, niente perdite in traduzione. La stessa squadra pensa la strategia, scrive il claim, gira il video, costruisce il sito e fa girare le campagne."),
+    ...[["50", "brand seguiti"], ["6", "anni di lavoro"], ["4", "settori verticali"], ["1", "unico partner"]].map(([number, label], index) =>
+      contentSlot(`home.about.stat.${index + 1}`, "copy", "Homepage", "Chi siamo - numeri", number, label)
+    ),
+    contentSlot("home.services.heading", "copy", "Homepage", "Servizi", "Tre aree, un unico linguaggio."),
+    contentSlot("home.service.1", "service", "Homepage", "Servizi", "Content Production", "Contenuti di alta qualita' per campagne pubblicitarie, corporate e brand identity.", "Shooting ADV | Video & Foto | Graphic Design & Branding | Copywriting & Storytelling"),
+    contentSlot("home.service.2", "service", "Homepage", "Servizi", "Digital Marketing & Social", "Strategie di crescita digitale e advertising per visibilita' e performance online.", "Gestione Social | Meta - Google - TikTok Ads | Email & Automation"),
+    contentSlot("home.service.3", "service", "Homepage", "Servizi", "Web & Digital Experience", "Soluzioni digitali avanzate per la presenza online e le performance dei brand.", "Web & E-commerce | UX/UI Design | SEO & Positioning | Data & Tracking"),
+    contentSlot("home.projects.heading", "copy", "Homepage", "Lavori selezionati", "Una selezione di brand che abbiamo costruito."),
+    contentSlot("site.footer.contact", "copy", "Tutto il sito", "Footer", "Contatti BMG", "info@bemarketinggroup.it"),
+    ...[["Instagram", "#"], ["LinkedIn", "#"], ["Behance", "#"]].map(([label, url], index) =>
+      contentSlot(`site.footer.social.${index + 1}`, "link", "Tutto il sito", "Footer", label, "", "", "", "", label, url)
+    )
+  ];
+}
+
+function projectContentSlots() {
+  const projects = [
+    {
+      slug: "bellevue-syrene", name: "Bellevue Syrene", sector: "Hospitality / Luxury", location: "Sorrento, IT", year: "Anno 2025", credit: "BMG Studio",
+      lead: "Icona della costiera sorrentina dal 1820. Un'identita' contemporanea che conserva la grazia della Belle Epoque.",
+      bio: "Bellevue Syrene e' un luogo sospeso tra storia e Mediterraneo. Il progetto valorizza il carattere dell'hotel con un sistema visivo elegante, riconoscibile e internazionale.",
+      story: "Un racconto di ospitalita', cultura e paesaggio tradotto in identita', contenuti e presenza digitale.",
+      services: "Brand Identity | Sito Web | Direzione Creativa | Social Media | Content Production",
+      stats: "+128%::Engagement social YoY\n3.2M::Impression campagna\n+41%::Direct booking",
+      next: ["Grand Hotel Aminta", "projects/grand-hotel-aminta.html"]
+    },
+    {
+      slug: "grand-hotel-aminta", name: "Grand Hotel Aminta", sector: "Hospitality / Resort", location: "Sorrento, IT", year: "Anno 2025", credit: "BMG Studio",
+      lead: "Un resort affacciato sul golfo di Napoli, riposizionato attraverso un linguaggio di lusso quieto e contemporaneo.",
+      bio: "Dal logo al sito, dai social alle campagne ADV, abbiamo costruito un sistema coerente capace di raccontare l'esperienza Aminta a un pubblico internazionale.",
+      story: "Un riposizionamento completo che unisce strategia, identita', contenuti e performance.",
+      services: "Brand Identity | Sito Web | Social Media | Performance Advertising | Email Marketing",
+      stats: "+62%::Traffico organico\n4.8 stelle::Rating medio social\n2.1M::Reach campagna estiva",
+      next: ["Grand Hotel La Favorita", "projects/grand-hotel-la-favorita.html"]
+    },
+    {
+      slug: "grand-hotel-la-favorita", name: "Grand Hotel La Favorita", sector: "Hospitality", location: "Sorrento, IT", year: "Anno 2024", credit: "BMG Studio",
+      lead: "Un hotel storico nel cuore di Sorrento raccontato attraverso una presenza digitale autentica e orientata alla prenotazione.",
+      bio: "La Favorita unisce tradizione, accoglienza e una posizione unica. Il progetto digitale mette in primo piano questi elementi con contenuti e percorsi chiari.",
+      story: "Una presenza digitale pensata per trasformare la curiosita' in relazione e prenotazione.",
+      services: "Sito Web | Content Strategy | Social Media | Advertising",
+      stats: "+74%::Richieste dirette\n1.8M::Visualizzazioni contenuti\n+39%::Conversion rate",
+      next: ["Vetera Matera", "projects/vetera-matera.html"]
+    },
+    {
+      slug: "vetera-matera", name: "Vetera Matera", sector: "Hospitality / Boutique", location: "Matera, IT", year: "Anno 2024", credit: "BeViral x BMG",
+      lead: "Boutique hotel scavato nella pietra dei Sassi. L'identita' nasce dalla materia: la pietra, il tempo, la luce.",
+      bio: "Scavato nella pietra millenaria dei Sassi, Vetera e' un boutique hotel che e' esso stesso un racconto di Matera. Dal naming all'identita' visiva, abbiamo lasciato parlare la materia.",
+      story: "Un brand essenziale e tattile che racconta Matera senza didascalie.",
+      services: "Brand Identity | Naming | Sito Web | Social Media | Photography",
+      stats: "100%::Occupancy stagione 2024\n+210%::Crescita IG dal lancio\n12::Press internazionali",
+      next: ["Zest Restaurant", "projects/zest-restaurant.html"]
+    },
+    {
+      slug: "zest-restaurant", name: "Zest Restaurant", sector: "Food & Beverage", location: "Sorrento, IT", year: "Anno 2025", credit: "BMG Studio",
+      lead: "Una cucina contemporanea e solare trasformata in un'identita' visiva fresca, riconoscibile e pronta a vivere sui social.",
+      bio: "Zest nasce dall'incontro tra materia prima, energia e convivialita'. Il progetto costruisce un tono di voce e un'immagine capaci di portare questa esperienza anche online.",
+      story: "Identita', contenuti e campagne per un ristorante che vuole essere ricordato prima ancora di essere visitato.",
+      services: "Brand Identity | Social Media | Content Production | Advertising",
+      stats: "+186%::Engagement social\n2.4M::Reach organica\n+52%::Prenotazioni da social",
+      next: ["Costiera Gin", "projects/costiera-gin.html"]
+    },
+    {
+      slug: "costiera-gin", name: "Costiera Gin", sector: "Brand / Beverage", location: "Costiera Amalfitana, IT", year: "Anno 2025", credit: "BMG Studio",
+      lead: "Un gin che porta nel bicchiere il carattere della Costiera, dal paesaggio agli agrumi, attraverso un brand distintivo.",
+      bio: "Costiera Gin nasce come prodotto e come racconto. Naming, identita', packaging e contenuti lavorano insieme per costruire un immaginario mediterraneo contemporaneo.",
+      story: "Un sistema di marca pensato per distinguersi sullo scaffale, nei locali e sui canali digitali.",
+      services: "Brand Strategy | Naming | Packaging | Content Production | Social Media",
+      stats: "6 mesi::Dal lancio alla distribuzione\n1.6M::Impression campagna\n+94%::Crescita community",
+      next: ["Bellevue Syrene", "projects/bellevue-syrene.html"]
+    }
+  ];
+
+  return projects.flatMap((project) => [
+    contentSlot(`project.${project.slug}.hero`, "copy", "Pagine progetto", `${project.name} - Hero`, project.name, project.sector, project.lead),
+    contentSlot(`project.${project.slug}.meta`, "copy", "Pagine progetto", `${project.name} - Metadati`, project.location, project.year, project.credit),
+    contentSlot(`project.${project.slug}.story`, "copy", "Pagine progetto", `${project.name} - Racconto`, "Racconto progetto", project.bio, project.story),
+    contentSlot(`project.${project.slug}.services`, "service", "Pagine progetto", `${project.name} - Servizi e risultati`, "Servizi e risultati", project.services, project.stats),
+    contentSlot(`project.${project.slug}.cta`, "link", "Pagine progetto", `${project.name} - Prossimo progetto`, project.next[0], "", "", "", "", "Vedi il progetto", project.next[1])
+  ]);
+}
+
+function beviralCopySlots() {
+  const services = [
+    ["Personal Branding", "Costruzione e valorizzazione dell'immagine dell'imprenditore o del volto aziendale."],
+    ["Video Virali", "Ideazione, scrittura e produzione di video pensati per aumentare visualizzazioni e copertura."],
+    ["Copertura Organica", "Strategie di contenuto per raggiungere pubblico senza dipendere dalle sponsorizzazioni."],
+    ["Strategia Editoriale", "Piani contenuto, rubriche, format ricorrenti e linee narrative coerenti."],
+    ["Script & Hook", "Scrittura di testi, ganci iniziali, call to action e strutture narrative per reel e TikTok."],
+    ["Produzione Contenuti", "Realizzazione di video, shooting, reel, stories e caroselli pronti a essere pubblicati."],
+    ["Comunicazione Organica", "Supporto alle aziende che vogliono raccontarsi online in modo diretto, umano, riconoscibile."],
+    ["Crescita Community", "Contenuti pensati per aumentare interazioni, salvataggi, condivisioni e rapporto con il pubblico."]
+  ];
+  const steps = [
+    ["Discovery", "Analizziamo brand, settore e competitors per trovare la posizione giusta."],
+    ["Strategia", "Definiamo posizionamento, pubblico, format ricorrenti e linee narrative."],
+    ["Script & Hook", "Scriviamo ganci iniziali, copioni, rubriche e obiettivi di ogni contenuto."],
+    ["Shooting & Produzione", "Realizziamo reel, parlati, video corporate e materiali pronti per i canali."],
+    ["Crescita & Iterazione", "Pubblichiamo, analizziamo e miglioriamo sulla base dei risultati."]
+  ];
+
+  return [
+    contentSlot("beviral.services.heading", "copy", "BeViral", "Servizi", "Otto modi per farsi notare."),
+    ...services.map(([title, body], index) => contentSlot(`beviral.service.${index + 1}`, "service", "BeViral", "Servizi", title, "", body)),
+    contentSlot("beviral.method.heading", "copy", "BeViral", "Metodo", "Un metodo in 5 step.\nNiente magia. Solo lavoro."),
+    ...steps.map(([title, body], index) => contentSlot(`beviral.step.${index + 1}`, "copy", "BeViral", "Metodo", title, "", body)),
+    contentSlot("beviral.cta.copy", "copy", "BeViral", "CTA", "Pronto a diventare il\npunto di riferimento del\ntuo settore?", "Prenota una call gratuita di 30 minuti", "", "", "", "Iniziamo a far rumore", "#cta"),
+    contentSlot("beviral.footer.copy", "copy", "BeViral", "Footer", "Contatti BeViral", "hello@beviral.it", "Instagram::#\nTikTok::#\nLinkedIn::#"),
+    ...Array.from({ length: 8 }, (_, index) => contentSlot(`beviral.showreel.${index + 1}`, "video", "BeViral", "Showreel", index === 0 ? "Radi - Cucina di casa" : `Cliente ${String(index + 1).padStart(2, "0")}`, index === 0 ? "418.977" : "", "", "", "", "Apri TikTok", index === 0 ? "https://www.tiktok.com/@radi_cucinadicasa/video/7637166094301629718" : ""))
+  ];
+}
+
+function contentSlot(slug, type, page, section, title, subtitle = "", body = "", imageUrl = "", imageAlt = "", ctaLabel = "", ctaUrl = "") {
+  return {
+    slug,
+    type,
+    title,
+    status: "draft",
+    payload: {
+      page,
+      section,
+      subtitle,
+      body,
+      image_url: imageUrl,
+      image_alt: imageAlt,
+      cta_label: ctaLabel,
+      cta_url: ctaUrl,
+      notes: "Slot collegato al sito pubblico. Diventa visibile solo quando viene pubblicato."
+    }
+  };
+}
+
+async function seedThroughHub(rows, token) {
+  const endpoint = process.env.BMG_HUB_URL || "https://bmg-hub.vercel.app";
+  const current = await fetch(`${endpoint}/api/site-content`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  if (!current.ok) throw new Error(`BMG Hub content lookup failed: ${current.status}`);
+
+  const existingSlugs = new Set((await current.json()).map((row) => row.slug));
+  const missing = rows.filter((row) => !existingSlugs.has(row.slug));
+  for (const row of missing) {
+    const response = await fetch(`${endpoint}/api/site-content`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(row)
+    });
+    if (!response.ok) throw new Error(`BMG Hub seed failed for ${row.slug}: ${response.status}`);
+  }
+  console.log(`Created ${missing.length} missing website content slots through the protected BMG Hub API.`);
+}
+
 async function loadEnv(path) {
   const file = await readFile(path, "utf8");
   return Object.fromEntries(file.split(/\r?\n/).filter((line) => line && !line.startsWith("#")).map((line) => {
     const index = line.indexOf("=");
-    return [line.slice(0, index), line.slice(index + 1)];
+    const key = line.slice(0, index).trim();
+    let value = line.slice(index + 1).trim();
+    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+      value = value.slice(1, -1);
+    }
+    return [key, value.replace(/\\n/g, "\n")];
   }));
 }

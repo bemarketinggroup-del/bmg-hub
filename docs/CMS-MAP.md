@@ -1,239 +1,112 @@
 # BMG Hub - CMS Map
 
-Data audit: 2026-06-04
+Data audit: 2026-07-14
 
-## Modello CMS
+## Regola di pubblicazione
 
-I contenuti sono salvati in `site_content`.
+I contenuti sono salvati in `site_content`. Il sito pubblico legge esclusivamente le righe con `status = published` tramite `GET /api/public-site-content`.
 
-Campi principali:
+- `draft`: visibile e modificabile solo nel gestionale.
+- `published`: sovrascrive il contenuto di fallback nel sito pubblico.
+- `archived`: non viene inviato al sito pubblico.
 
-- `slug`: identificatore stabile del contenuto.
-- `type`: tipo contenuto.
-- `title`: titolo interno.
-- `payload`: dati JSON.
-- `status`: `draft`, `published`, `archived`.
-- `published_at`: valorizzato quando il contenuto viene pubblicato.
+Il seed `scripts/seed-site-content.mjs` inserisce solo gli slug mancanti. Non modifica, non ripubblica e non riporta in bozza contenuti gia esistenti.
 
-Solo i contenuti `published` arrivano al sito pubblico tramite `GET /api/public-site-content`.
+## Homepage
 
-## Sezioni Gia Collegate Al Sito Pubblico
+File pubblico: `index.html`
 
-### Homepage
+### Hero
 
-File: `bmg-website-export/index.html`
+- `home.hero.copy`: titolo, sottotitolo, testo e CTA.
+- `home.hero.image.1..3`: immagini e testi alternativi dello slideshow.
 
-Collegamenti CMS rilevati:
+### Chi siamo
 
-- `home.hero.copy`
-  - `title`
-  - `subtitle`
-  - `body`
-- `home.hero.image.1`
-  - `image_url`
-- `home.hero.image.2`
-  - `image_url`
-- `home.hero.image.3`
-  - `image_url`
-- `home.about.vertical.1`
-  - `image_url`
-  - `body`
-- `home.about.vertical.2`
-  - `image_url`
-  - `body`
-- `home.about.vertical.3`
-  - `image_url`
-  - `body`
-- `home.about.vertical.4`
-  - `image_url`
-  - `body`
+- `home.about.copy`: testo principale e testo descrittivo.
+- `home.about.vertical.1..4`: immagini e descrizioni dei verticali.
+- `home.about.stat.1..4`: numero e relativa etichetta.
 
-### BeViral
+### Servizi
 
-File: `bmg-website-export/beviral.html`
+- `home.services.heading`: titolo sezione.
+- `home.service.1..3`: titolo, descrizione e tag separati da `|` o a capo.
+- `home.services.list`: slot storico mantenuto per compatibilita, non usato dal frontend.
 
-Collegamenti CMS rilevati:
+### Portfolio
 
-- `beviral.hero.copy`
-  - `title`
-  - `subtitle`
-  - `body`
+- `home.projects.heading`: titolo sezione.
+- `home.project.<slug>`: nome, settore, descrizione, immagine, etichetta e URL CTA.
 
-### Lead Form
+Gli slug progetto sono:
 
-Non e' CMS, ma e' collegato al backend:
+- `bellevue-syrene`
+- `grand-hotel-aminta`
+- `grand-hotel-la-favorita`
+- `vetera-matera`
+- `zest-restaurant`
+- `costiera-gin`
 
-- Homepage -> `https://bmg-hub.vercel.app/api/leads`
-- BeViral -> `https://bmg-hub.vercel.app/api/leads`
+### Contatti e footer
 
-## Sezioni Presenti Nel Seed Ma Non Ancora Collegate Al Frontend
+- `home.contact.copy`: titolo e testo del pulsante di invio.
+- `site.footer.contact`: email.
+- `site.footer.social.1..3`: etichetta e URL dei social.
 
-Il seed `scripts/seed-site-content.mjs` contiene piu slot di quelli realmente usati dal sito pubblico.
+Il form lead continua a usare `POST /api/leads` e non dipende dal CMS.
 
-Slot/sezioni seed non risultate collegate direttamente:
+## BeViral
 
-- `home.services.list`
-- `home.contact.copy`
-- `home.project.*`
-- `project.*.gallery.*`
-- `beviral.services.list`
-- `beviral.method.steps`
-- `beviral.asset.*`
+File pubblico: `beviral.html`
 
-Questi dati possono esistere nel CMS, ma se pubblicati non modificano automaticamente il sito finche il frontend pubblico non legge quegli slug.
+- `beviral.hero.copy`: titolo, sottotitolo, descrizione e CTA.
+- `beviral.services.heading`: titolo servizi.
+- `beviral.service.1..8`: titolo e descrizione di ogni servizio.
+- `beviral.method.heading`: titolo metodo.
+- `beviral.step.1..5`: titolo e descrizione di ogni step.
+- `beviral.showreel.1..8`: cliente, visualizzazioni e URL TikTok.
+- `beviral.cta.copy`: titolo e testo pulsante CTA.
+- `beviral.footer.copy`: email e social nel formato `Etichetta::URL`, uno per riga.
+- `beviral.asset.2`: logo bianco del footer.
+- `beviral.asset.7`: cornice iPhone dello showreel.
 
-## Sezioni Ancora Statiche
+Gli altri `beviral.asset.*` restano disponibili nel gestionale per l'estensione futura degli sticker decorativi.
 
-### Homepage
+Gli slot storici `beviral.services.list` e `beviral.method.steps` restano nel database per compatibilita, ma i componenti usano gli slot singoli, piu semplici da modificare.
 
-- Navigazione/header.
-- Servizi principali.
-- Accordion/progetti portfolio.
-- CTA di sezione, salvo parti gia collegate.
-- Footer.
-- Gran parte dei testi descrittivi non hero/about.
+## Pagine progetto
 
-### BeViral
+File pubblici: `projects/*.html`.
 
-- Servizi.
-- Metodo.
-- Asset grafici.
-- CTA non hero.
-- Footer.
+Ogni progetto usa:
 
-### Case Study / Project Pages
+- `project.<slug>.hero`: nome, settore e testo introduttivo.
+- `project.<slug>.meta`: luogo, anno e credito.
+- `project.<slug>.story`: biografia e racconto progetto.
+- `project.<slug>.services`: servizi separati da `|` e risultati nel formato `Valore::Etichetta`, uno per riga.
+- `project.<slug>.gallery.1..5`: URL e testo alternativo delle immagini.
+- `project.<slug>.cta`: prossimo progetto, etichetta e URL.
 
-Le pagine in `bmg-website-export/projects/*.html` non risultano collegate a `public-site-content`.
+Il file condiviso `assets/js/cms-content.js` applica i contenuti pubblicati e corregge i percorsi relativi dalla cartella `projects/`.
 
-Da completare:
+## Stato reale
 
-- testi case study;
-- gallery immagini;
-- descrizioni progetto;
-- CTA specifiche;
-- metadati pagina.
+| Area | Stato |
+| --- | --- |
+| Homepage hero, about, servizi, portfolio, contatti e footer | Collegata |
+| BeViral hero, servizi, metodo, showreel, CTA e footer | Collegata |
+| Sei case study: testi, metadati, servizi, risultati, gallery e CTA | Collegata |
+| Lead form Homepage e BeViral | Collegato separatamente |
+| Upload diretto file dal gestionale | Mancante |
+| Libreria media con ridimensionamento e validazione | Mancante |
+| Testi puramente decorativi o micro-label dell'interfaccia pubblica | Statici |
 
-## Testi
+## Limiti immagini
 
-Operativi:
+Il CMS accetta oggi un URL/percorso immagine, non carica fisicamente file. I percorsi relativi consigliati sono:
 
-- Hero homepage.
-- Hero BeViral.
-- Testi brevi verticali "Chi siamo" homepage.
+- `assets/images/portfolio/*.webp`
+- `assets/images/beviral/*`
+- `assets/images/logos/*`
 
-Parziali:
-
-- Seed di servizi, contatti, metodo BeViral e progetti.
-
-Mancanti:
-
-- Editing completo di tutti i testi del sito.
-- Editing testi case study.
-- Editing footer.
-- Editing CTA globali.
-
-## Immagini
-
-Operative:
-
-- Hero slideshow homepage.
-- Immagini verticali "Chi siamo" homepage.
-
-Parziali:
-
-- Slot immagini portfolio/case study presenti nel seed.
-- Slot asset BeViral presenti nel seed.
-
-Mancanti:
-
-- Upload immagine da gestionale.
-- Libreria media.
-- Validazione dimensioni/formato.
-- Collegamento completo a project pages e gallery.
-
-## Pagine
-
-| Pagina | Collegamento CMS | Stato |
-| --- | --- | --- |
-| Homepage | Parziale | Hero e verticali about collegati. |
-| BeViral | Parziale | Hero collegato. |
-| Project pages | No | Statiche. |
-| Footer globale | No | Statico. |
-
-## Slider
-
-Homepage hero slideshow:
-
-- collegato a `home.hero.image.1`
-- collegato a `home.hero.image.2`
-- collegato a `home.hero.image.3`
-
-Altri slider/gallery:
-
-- seed presente per gallery progetto;
-- collegamento frontend non completato.
-
-## Contenuti BeViral
-
-Operativo:
-
-- `beviral.hero.copy`
-
-Seed/parziale:
-
-- `beviral.services.list`
-- `beviral.method.steps`
-- `beviral.asset.*`
-
-Statico:
-
-- resto della pagina BeViral.
-
-## CTA
-
-Parzialmente presenti come dati seed o fallback statici. Non risultano ancora tutte gestibili dal CMS.
-
-Da mappare:
-
-- CTA homepage.
-- CTA BeViral.
-- CTA portfolio/case study.
-- CTA footer.
-
-## Footer
-
-Il footer risulta statico. Non risultano slug CMS dedicati e collegati per:
-
-- indirizzi;
-- email;
-- link;
-- claim;
-- social;
-- policy.
-
-## Asset E Percorsi
-
-Nel sito pubblico esistono sia immagini root `assets/images/*.jpg|webp` sia immagini portfolio `assets/images/portfolio/*.webp`.
-
-Nota tecnica:
-
-- Alcuni riferimenti storici con `.jpg` sotto `assets/images/portfolio/` non risultano presenti.
-- I percorsi `.webp` sotto `assets/images/portfolio/` risultano presenti per i principali asset portfolio.
-
-Prima di completare il CMS immagini conviene normalizzare una sola convenzione:
-
-- usare `assets/images/portfolio/*.webp` per portfolio;
-- usare `assets/images/homepage/*` per hero homepage;
-- usare `assets/images/beviral/*` per asset BeViral.
-
-## Prossima Mappatura Consigliata
-
-Ordine consigliato:
-
-1. Homepage completa.
-2. BeViral completa.
-3. Footer globale.
-4. Project/case study.
-5. Gallery e slider.
-6. CTA globali.
-7. Media library/upload.
+Per caricare una nuova fotografia da interfaccia serve una futura media library basata su Supabase Storage. Fino ad allora l'immagine deve prima essere aggiunta al repository o ospitata su un URL HTTPS affidabile.
