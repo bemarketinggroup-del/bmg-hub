@@ -151,47 +151,52 @@
       </section>
 
       <section class="view" id="contentView" data-view-panel="content">
-        <div class="split-panel">
-          <section class="panel">
-            <div class="panel-head">
-              <h2>Backend sito</h2>
-              <button class="text-button" id="addContentButton" type="button">Aggiungi</button>
+        <section class="panel cms-workspace">
+          <div class="panel-head cms-heading">
+            <div>
+              <p class="eyebrow">Gestione contenuti</p>
+              <h2>Scegli la pagina da modificare</h2>
+              <span>Ogni contenuto e organizzato come appare nel sito: pagina, sezione e campo.</span>
             </div>
-            <div class="mode-tabs" role="tablist" aria-label="Tipo contenuti sito">
-              <button class="mode-tab is-active" data-content-mode="texts" type="button">Testi</button>
-              <button class="mode-tab" data-content-mode="images" type="button">Immagini</button>
+            <button class="primary-button" id="addContentButton" type="button"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg>Nuovo contenuto</button>
+          </div>
+
+          <nav class="cms-page-nav" id="contentPageNav" aria-label="Pagine del sito"></nav>
+
+          <div class="cms-browser">
+            <div class="cms-browser-head">
+              <div>
+                <p class="eyebrow" id="contentPageEyebrow">Tutto il sito</p>
+                <h3 id="contentPageTitle">Tutti i contenuti</h3>
+                <p id="contentPageDescription">Seleziona una pagina per vedere le sezioni nello stesso ordine del sito.</p>
+              </div>
+              <div class="cms-summary" id="contentSummary" aria-label="Riepilogo contenuti"></div>
             </div>
-            <div class="toolbar compact-toolbar">
-              <select id="contentPageFilter" aria-label="Filtra per pagina">
-                <option value="all">Tutte le pagine</option>
-              </select>
+
+            <div class="cms-controls">
+              <div class="mode-tabs" role="tablist" aria-label="Tipo contenuti sito">
+                <button class="mode-tab is-active" data-content-mode="texts" type="button"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/></svg>Testi</button>
+                <button class="mode-tab" data-content-mode="images" type="button"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/></svg>Immagini</button>
+              </div>
+              <label class="search cms-search">
+                <span><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></span>
+                <input id="contentSearch" type="search" placeholder="Cerca titolo, sezione o contenuto">
+              </label>
               <select id="contentStatusFilter" aria-label="Filtra per stato">
                 <option value="all">Tutti gli stati</option>
                 <option value="draft">Bozze</option>
                 <option value="published">Pubblicati</option>
                 <option value="archived">Archiviati</option>
               </select>
+              <select class="cms-mobile-page-select" id="contentPageFilter" aria-label="Filtra per pagina">
+                <option value="all">Tutte le pagine</option>
+              </select>
             </div>
+
+            <nav class="cms-section-nav" id="contentSectionNav" aria-label="Sezioni della pagina"></nav>
             <div class="content-table" id="contentTable"></div>
-          </section>
-          <section class="panel inspector">
-            <p class="eyebrow">Backend sito</p>
-            <h2>Testi separati dalle immagini</h2>
-            <p>Usa Testi per copy, titoli, servizi e CTA. Usa Immagini per vedere e cambiare tutte le foto mappate del sito con anteprima.</p>
-            <div class="setup-box">
-              <code>Testi</code>
-              <span>Homepage, BeViral, servizi, portfolio, contatti.</span>
-            </div>
-            <div class="setup-box">
-              <code>Immagini</code>
-              <span>Hero, chi siamo, portfolio, gallery progetti e asset BeViral.</span>
-            </div>
-            <div class="setup-box">
-              <code>Pubblicato</code>
-              <span>Solo i contenuti pubblicati arrivano al sito pubblico.</span>
-            </div>
-          </section>
-        </div>
+          </div>
+        </section>
       </section>
 
       <section class="view" id="clientsView" data-view-panel="clients">
@@ -397,8 +402,14 @@
   <dialog class="modal wide-modal" id="contentModal">
     <form method="dialog" id="contentForm">
       <div class="modal-head">
-        <h2 id="contentModalTitle">Blocco sito</h2>
+        <div>
+          <p class="eyebrow" id="contentModalContext">Contenuto sito</p>
+          <h2 id="contentModalTitle">Blocco sito</h2>
+        </div>
         <button class="icon-button" value="cancel" type="submit" formnovalidate title="Chiudi"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+      </div>
+      <div class="cms-modal-guide" id="contentModalGuide">
+        Modifica i campi compilati. Il contenuto arriva sul sito pubblico solo quando lo stato e Pubblicato.
       </div>
       <input name="id" type="hidden">
       <div class="form-grid">
@@ -410,6 +421,8 @@
           <option value="image">Immagine</option>
           <option value="service">Servizio</option>
           <option value="project">Progetto</option>
+          <option value="link">Link / CTA</option>
+          <option value="video">Video</option>
           <option value="landing">Landing</option>
         </select></label>
         <label>Stato<select name="status">

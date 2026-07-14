@@ -200,6 +200,7 @@ let clientsOnline = false;
 let clickupOnline = false;
 let selectedTeamMemberId = ALL_TEAM_TASKS_ID;
 let selectedSmartWeek = mondayOf(new Date());
+let selectedContentSection = "all";
 let authConfig = null;
 let authSession = loadAuthSession();
 let currentProfile = null;
@@ -742,29 +743,43 @@ function renderContent() {
   renderContentFilters();
   const pageFilter = document.getElementById("contentPageFilter")?.value || "all";
   const statusFilter = document.getElementById("contentStatusFilter")?.value || "all";
+  const search = document.getElementById("contentSearch")?.value?.trim().toLowerCase() || "";
   const mode = document.querySelector(".mode-tab.is-active")?.dataset.contentMode || "texts";
-  const filtered = state.content.filter((item) => {
+  const pageItems = state.content.filter((item) => pageFilter === "all" || item.page === pageFilter);
+  const modeItems = pageItems.filter((item) => mode === "images" ? isImageContent(item) : isTextContent(item));
+  const availableSections = [...new Set(modeItems.map(contentSectionKey))];
+  if (selectedContentSection !== "all" && !availableSections.includes(selectedContentSection)) selectedContentSection = "all";
+  const filtered = pageItems.filter((item) => {
     const pageMatches = pageFilter === "all" || item.page === pageFilter;
     const statusMatches = statusFilter === "all" || item.status === statusFilter;
     const modeMatches = mode === "images" ? isImageContent(item) : isTextContent(item);
-    return pageMatches && statusMatches && modeMatches;
+    const sectionMatches = selectedContentSection === "all" || contentSectionKey(item) === selectedContentSection;
+    const searchable = `${contentFieldLabel(item)} ${item.page} ${item.section} ${item.title} ${item.subtitle} ${item.body} ${item.image_alt}`.toLowerCase();
+    return pageMatches && statusMatches && modeMatches && sectionMatches && searchable.includes(search);
   });
   const groups = filtered.reduce((acc, item) => {
     const page = item.page || "Senza pagina";
-    const section = item.section || "Senza sezione";
+    const section = contentSectionKey(item);
     const key = `${page}__${section}`;
     if (!acc[key]) acc[key] = { page, section, items: [] };
     acc[key].items.push(item);
     return acc;
   }, {});
 
-  document.getElementById("contentTable").innerHTML = Object.values(groups).map((group) => `
+  renderContentPageHeader(pageFilter, pageItems);
+  renderContentSectionNav(pageItems, mode);
+  document.getElementById("contentTable").innerHTML = Object.values(groups)
+    .sort((a, b) => compareContentSections(a.section, b.section, pageFilter))
+    .map((group) => `
     <section class="content-group">
       <div class="content-group-head">
-        <span>${group.page}</span>
-        <strong>${group.section}</strong>
+        <div>
+          <span>${group.page}</span>
+          <strong>${group.section}</strong>
+        </div>
+        <small>${group.items.length} ${group.items.length === 1 ? "contenuto" : "contenuti"}</small>
       </div>
-      ${group.items.map((item) => `
+      ${group.items.sort((a, b) => a.slug.localeCompare(b.slug, "it", { numeric: true })).map((item) => `
         ${mode === "images" ? imageCard(item) : textRow(item)}
       `).join("")}
     </section>
@@ -780,14 +795,19 @@ function isTextContent(item) {
 }
 
 function textRow(item) {
+  const preview = item.title || item.subtitle || item.body || item.cta_label || "Contenuto non compilato";
   return `
     <article class="content-row" data-content-id="${item.id}">
-      <span class="badge">${item.type}</span>
+      <div class="content-kind" aria-hidden="true">${contentTypeInitial(item)}</div>
       <div>
-        <strong>${item.title}</strong>
-        <span>${item.slug} · ${item.body ? "testo + " : ""}${item.cta_label ? "cta + " : ""}Aggiornato ${formatContentDate(item.updatedAt)}</span>
+        <small class="content-field-label">${contentFieldLabel(item)}</small>
+        <strong>${preview}</strong>
+        <span>${contentFieldsSummary(item)} · Aggiornato ${formatContentDate(item.updatedAt)}</span>
       </div>
-      <span class="badge ${item.status === "published" ? "cliente" : "preventivo"}">${labelStatus(item.status)}</span>
+      <div class="content-row-action">
+        <span class="badge ${contentStatusClass(item.status)}">${labelStatus(item.status)}</span>
+        <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+      </div>
     </article>
   `;
 }
@@ -800,14 +820,82 @@ function imageCard(item) {
     <article class="image-card" data-content-id="${item.id}">
       <div class="image-preview">${preview}</div>
       <div class="image-card-body">
-        <span class="badge">${item.page || "Sito"} · ${item.section || "Immagine"}</span>
-        <strong>${item.title}</strong>
-        <small>${item.slug}</small>
+        <small class="content-field-label">${contentFieldLabel(item)}</small>
+        <strong>${item.title || item.image_alt || "Immagine non nominata"}</strong>
+        <small>${item.image_alt ? `Testo alternativo: ${item.image_alt}` : "Testo alternativo mancante"}</small>
         <small>${item.image_url || "URL immagine mancante"}</small>
       </div>
-      <span class="badge ${item.status === "published" ? "cliente" : "preventivo"}">${labelStatus(item.status)}</span>
+      <div class="content-row-action">
+        <span class="badge ${contentStatusClass(item.status)}">${labelStatus(item.status)}</span>
+        <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+      </div>
     </article>
   `;
+}
+
+function contentTypeInitial(item) {
+  return { copy: "T", service: "S", project: "P", link: "L", video: "V" }[item.type] || "T";
+}
+
+function contentStatusClass(status) {
+  return status === "published" ? "cliente" : status === "archived" ? "perso" : "preventivo";
+}
+
+function contentFieldsSummary(item) {
+  const fields = [];
+  if (item.title) fields.push("Titolo");
+  if (item.subtitle) fields.push("Sottotitolo");
+  if (item.body) fields.push("Testo");
+  if (item.cta_label || item.cta_url) fields.push("Pulsante / link");
+  return fields.join(" + ") || "Da compilare";
+}
+
+function contentFieldLabel(item) {
+  const slug = item.slug || "";
+  const number = slug.match(/\.(\d+)$/)?.[1];
+  if (slug === "home.hero.copy") return "Titolo, introduzione e pulsante della Hero";
+  if (slug.startsWith("home.hero.image.")) return `Immagine slideshow ${number || ""}`.trim();
+  if (slug === "home.about.copy") return "Testo principale Chi siamo";
+  if (slug.startsWith("home.about.vertical.")) return `Immagine area di competenza ${number || ""}`.trim();
+  if (slug.startsWith("home.about.stat.")) return `Numero in evidenza ${number || ""}`.trim();
+  if (slug === "home.services.heading" || slug === "home.projects.heading" || slug === "beviral.services.heading" || slug === "beviral.method.heading") return "Titolo della sezione";
+  if (slug.startsWith("home.service.")) return `Servizio ${number || ""}`.trim();
+  if (slug.startsWith("home.project.")) return "Scheda progetto in Homepage";
+  if (slug === "home.contact.copy") return "Titolo e pulsante del form contatti";
+  if (slug === "site.footer.contact") return "Email di contatto nel footer";
+  if (slug.startsWith("site.footer.social.")) return `Link social ${number || ""}`.trim();
+  if (slug === "beviral.hero.copy") return "Titolo, descrizione e pulsante della Hero";
+  if (slug.startsWith("beviral.service.")) return `Servizio ${number || ""}`.trim();
+  if (slug.startsWith("beviral.step.")) return `Fase del metodo ${number || ""}`.trim();
+  if (slug.startsWith("beviral.showreel.")) return `Video showreel ${number || ""}`.trim();
+  if (slug === "beviral.cta.copy") return "Invito all'azione finale";
+  if (slug === "beviral.footer.copy") return "Contatti e social del footer";
+  if (slug.startsWith("beviral.asset.")) return `Asset grafico ${number || ""}`.trim();
+  if (slug.includes(".gallery.")) return `Immagine gallery ${number || ""}`.trim();
+  if (slug.endsWith(".hero")) return "Titolo e introduzione del progetto";
+  if (slug.endsWith(".meta")) return "Luogo, anno e crediti";
+  if (slug.endsWith(".story")) return "Racconto del progetto";
+  if (slug.endsWith(".services")) return "Servizi e risultati";
+  if (slug.endsWith(".cta")) return "Progetto successivo e pulsante";
+  return item.type === "image" ? "Immagine della sezione" : "Contenuto della sezione";
+}
+
+function contentSectionKey(item) {
+  const section = item.section || "Senza sezione";
+  if (item.page !== "Pagine progetto") return section;
+  return section.split(" - ")[0] || section;
+}
+
+function compareContentSections(a, b, page) {
+  const order = {
+    Homepage: ["Hero", "Hero slideshow", "Chi siamo", "Chi siamo - numeri", "Servizi", "Lavori selezionati", "Contatti"],
+    BeViral: ["Hero", "Servizi", "Metodo", "Showreel", "CTA", "Asset grafici", "Footer"],
+    "Tutto il sito": ["Footer"]
+  }[page] || [];
+  const ai = order.indexOf(a);
+  const bi = order.indexOf(b);
+  if (ai !== -1 || bi !== -1) return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+  return a.localeCompare(b, "it", { numeric: true });
 }
 
 function previewImageUrl(url) {
@@ -819,10 +907,66 @@ function previewImageUrl(url) {
 function renderContentFilters() {
   const select = document.getElementById("contentPageFilter");
   if (!select) return;
-  const current = select.value || "all";
-  const pages = [...new Set(state.content.map((item) => item.page).filter(Boolean))].sort();
+  const current = select.dataset.initialized ? (select.value || "all") : "Homepage";
+  select.dataset.initialized = "true";
+  const preferredOrder = ["Homepage", "BeViral", "Pagine progetto", "Tutto il sito"];
+  const pages = [...new Set(state.content.map((item) => item.page).filter(Boolean))].sort((a, b) => {
+    const ai = preferredOrder.indexOf(a);
+    const bi = preferredOrder.indexOf(b);
+    if (ai !== -1 || bi !== -1) return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+    return a.localeCompare(b, "it");
+  });
   select.innerHTML = `<option value="all">Tutte le pagine</option>${pages.map((page) => `<option value="${page}">${page}</option>`).join("")}`;
   select.value = pages.includes(current) ? current : "all";
+  const pageNav = document.getElementById("contentPageNav");
+  pageNav.innerHTML = [`all`, ...pages].map((page) => {
+    const items = page === "all" ? state.content : state.content.filter((item) => item.page === page);
+    const label = page === "all" ? "Panoramica" : page === "Pagine progetto" ? "Case study" : page === "Tutto il sito" ? "Footer globale" : page;
+    const description = page === "all" ? "Tutte le pagine" : page === "Pagine progetto"
+      ? `${new Set(items.map(contentSectionKey)).size} progetti`
+      : `${new Set(items.map(contentSectionKey)).size} sezioni`;
+    return `<button class="cms-page-button ${select.value === page ? "is-active" : ""}" data-content-page="${page}" type="button"><span>${cmsPageIcon(page)}</span><strong>${label}</strong><small>${description} · ${items.length} contenuti</small></button>`;
+  }).join("");
+}
+
+function cmsPageIcon(page) {
+  if (page === "Homepage") return `<svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg>`;
+  if (page === "BeViral") return `<svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/></svg>`;
+  if (page === "Pagine progetto") return `<svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>`;
+  if (page === "Tutto il sito") return `<svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16H4z"/><path d="M4 15h16"/></svg>`;
+  return `<svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg>`;
+}
+
+function renderContentPageHeader(page, items) {
+  const copy = {
+    all: ["Mappa completa", "Tutti i contenuti", "Usa le pagine qui sopra per arrivare rapidamente al punto del sito che vuoi modificare."],
+    Homepage: ["Pagina principale", "Homepage", "Hero, presentazione dell'agenzia, servizi, lavori selezionati e contatti."],
+    BeViral: ["Landing dedicata", "BeViral", "Hero, servizi, metodo, showreel, call to action e contenuti del footer."],
+    "Pagine progetto": ["Portfolio", "Case study", "Contenuti e gallery delle singole pagine progetto."],
+    "Tutto il sito": ["Elementi condivisi", "Footer globale", "Contatti e link social visibili nelle aree condivise del sito."]
+  }[page] || ["Pagina del sito", page, "Contenuti organizzati secondo le sezioni reali della pagina."];
+  document.getElementById("contentPageEyebrow").textContent = copy[0];
+  document.getElementById("contentPageTitle").textContent = copy[1];
+  document.getElementById("contentPageDescription").textContent = copy[2];
+  const published = items.filter((item) => item.status === "published").length;
+  const drafts = items.filter((item) => item.status === "draft").length;
+  document.getElementById("contentSummary").innerHTML = `
+    <span><strong>${items.length}</strong> totali</span>
+    <span class="is-published"><strong>${published}</strong> pubblicati</span>
+    <span class="is-draft"><strong>${drafts}</strong> bozze</span>
+  `;
+}
+
+function renderContentSectionNav(items, mode) {
+  const nav = document.getElementById("contentSectionNav");
+  const modeItems = items.filter((item) => mode === "images" ? isImageContent(item) : isTextContent(item));
+  const page = document.getElementById("contentPageFilter")?.value || "all";
+  const sections = [...new Set(modeItems.map(contentSectionKey))].sort((a, b) => compareContentSections(a, b, page));
+  nav.innerHTML = [`all`, ...sections].map((section) => {
+    const count = section === "all" ? modeItems.length : modeItems.filter((item) => contentSectionKey(item) === section).length;
+    const label = section === "all" ? "Tutte le sezioni" : section;
+    return `<button class="cms-section-button ${selectedContentSection === section ? "is-active" : ""}" data-content-section="${section}" type="button">${label}<span>${count}</span></button>`;
+  }).join("");
 }
 
 function formatContentDate(value) {
@@ -1855,7 +1999,11 @@ function openContentModal(id = "") {
   form.elements.cta_label.value = item?.cta_label || "";
   form.elements.cta_url.value = item?.cta_url || "";
   form.elements.notes.value = item?.notes || "";
-  document.getElementById("contentModalTitle").textContent = item ? "Modifica blocco sito" : "Nuovo blocco sito";
+  document.getElementById("contentModalContext").textContent = item ? `${item.page || "Sito"} / ${item.section || "Sezione"}` : "Nuovo contenuto sito";
+  document.getElementById("contentModalTitle").textContent = item ? contentFieldLabel(item) : "Crea un nuovo contenuto";
+  document.getElementById("contentModalGuide").textContent = item
+    ? `Stai modificando ${item.page || "il sito"}, sezione ${item.section || "non indicata"}. Il contenuto arriva online solo con stato Pubblicato.`
+    : "Indica pagina e sezione in modo chiaro. Il nuovo contenuto viene creato come bozza finche non scegli Pubblicato.";
   document.getElementById("deleteContentButton").hidden = !item;
   document.getElementById("contentModal").showModal();
 }
@@ -2019,8 +2167,12 @@ document.getElementById("logoutButton").addEventListener("click", logout);
 document.getElementById("exportButton").addEventListener("click", exportData);
 document.getElementById("leadSearch").addEventListener("input", renderLeads);
 document.getElementById("statusFilter").addEventListener("change", renderLeads);
-document.getElementById("contentPageFilter").addEventListener("change", renderContent);
+document.getElementById("contentPageFilter").addEventListener("change", () => {
+  selectedContentSection = "all";
+  renderContent();
+});
 document.getElementById("contentStatusFilter").addEventListener("change", renderContent);
+document.getElementById("contentSearch").addEventListener("input", renderContent);
 document.getElementById("clientSearch").addEventListener("input", renderClients);
 document.getElementById("taskSearch").addEventListener("input", renderClickUpTasks);
 document.getElementById("taskAssigneeFilter").addEventListener("change", renderClickUpTasks);
@@ -2058,9 +2210,25 @@ document.getElementById("contentTable").addEventListener("click", (event) => {
   if (row) openContentModal(row.dataset.contentId);
 });
 
+document.getElementById("contentPageNav").addEventListener("click", (event) => {
+  const button = event.target.closest("[data-content-page]");
+  if (!button) return;
+  selectedContentSection = "all";
+  document.getElementById("contentPageFilter").value = button.dataset.contentPage;
+  renderContent();
+});
+
+document.getElementById("contentSectionNav").addEventListener("click", (event) => {
+  const button = event.target.closest("[data-content-section]");
+  if (!button) return;
+  selectedContentSection = button.dataset.contentSection;
+  renderContent();
+});
+
 document.querySelectorAll("[data-content-mode]").forEach((button) => {
   button.addEventListener("click", () => {
     document.querySelectorAll("[data-content-mode]").forEach((item) => item.classList.toggle("is-active", item === button));
+    selectedContentSection = "all";
     renderContent();
   });
 });
