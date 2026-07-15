@@ -172,6 +172,25 @@ async function upsertTask(task, clientRows) {
   return rows[0] || payload;
 }
 
+async function removeStaleCachedTasks(pulledTaskIds) {
+  if (!pulledTaskIds.size) return 0;
+  const result = await supabaseFetch("/clickup_tasks?select=clickup_task_id");
+  if (!result.ok) return 0;
+  const cachedRows = await result.json();
+  const staleIds = cachedRows
+    .map((row) => clean(row.clickup_task_id))
+    .filter((taskId) => taskId && !pulledTaskIds.has(taskId));
+
+  let removed = 0;
+  for (const taskId of staleIds) {
+    const deleted = await supabaseFetch(`/clickup_tasks?clickup_task_id=eq.${encodeURIComponent(taskId)}`, {
+      method: "DELETE"
+    });
+    if (deleted.ok) removed += 1;
+  }
+  return removed;
+}
+
 async function logSync(clickupTaskId, source, action, status, message, details = {}) {
   await supabaseFetch("/clickup_task_sync_logs", {
     method: "POST",
@@ -194,6 +213,7 @@ async function fetchTask(taskId) {
 
 async function syncFromClickUp() {
   const taskRows = [];
+  const pulledTaskIds = new Set();
   const clientRows = await clients();
   const maxPages = 25;
 
@@ -211,11 +231,15 @@ async function syncFromClickUp() {
     }
 
     const pageTasks = data.tasks || [];
-    for (const task of pageTasks) taskRows.push(taskFromRow(await upsertTask(task, clientRows)));
+    for (const task of pageTasks) {
+      pulledTaskIds.add(clean(task.id));
+      taskRows.push(taskFromRow(await upsertTask(task, clientRows)));
+    }
     if (data.last_page === true || pageTasks.length === 0) break;
   }
 
-  await logSync(null, "clickup", "pull", "success", `Task importate/aggiornate: ${taskRows.length}`);
+  const removed = await removeStaleCachedTasks(pulledTaskIds);
+  await logSync(null, "clickup", "pull", "success", `Task importate/aggiornate: ${taskRows.length}; cache obsolete rimosse: ${removed}`);
   return { status: 200, body: taskRows };
 }
 
