@@ -25,6 +25,8 @@ Non salvare queste variabili nel repository.
 
 - `GET /api/clickup/tasks`: legge subito le task salvate su Supabase e le filtra per ruolo.
 - `GET /api/clickup/tasks?sync=1`: importa da ClickUp, aggiorna Supabase e ritorna le task aggiornate.
+- La vista operativa `Team & Task` usa solo le task principali della lista `TASK DEL TEAM`: altre liste, documenti, template e subtask restano nella cache ma non alterano i contatori della bacheca.
+- Le task completate restano sincronizzate nella cache, ma sono nascoste nelle viste operative del team e personali.
 - `POST /api/clickup/tasks`: crea task su ClickUp e salva il mapping `clickup_task_id`.
 - `PATCH /api/clickup/tasks`: aggiorna titolo, descrizione, stato, priorita, scadenza, assegnatari e tag cliente.
 - `POST /api/clickup/webhook`: riceve eventi ClickUp, verifica `X-Signature`, deduplica tramite `event_key`, recupera la task da ClickUp e aggiorna Supabase.

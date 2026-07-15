@@ -2,6 +2,7 @@ const STORAGE_KEY = "bmg-hub-v1";
 const PASSWORD_RECOVERY_KEY = "bmg-password-recovery";
 const ALL_TEAM_TASKS_ID = "__all";
 const UNASSIGNED_TASKS_ID = "__unassigned";
+const TEAM_TASK_LIST_NAME = "task del team";
 // Mapping centralizzato: aggiorna questi sinonimi se ClickUp introduce nuovi stati operativi.
 const TASK_STATUS_GROUPS = [
   {
@@ -481,7 +482,7 @@ function renderHome() {
 }
 
 function dashboardTasks() {
-  const tasks = operationalTasks();
+  const tasks = activeOperationalTasks();
   if (currentProfile?.role === "admin") return tasks;
   const ownUser = teamMembers().find((user) => {
     return clickupUserId(user) === String(currentProfile?.clickup_user_id || "")
@@ -1244,7 +1245,7 @@ function renderAgencyUsers() {
   if (!target) return;
   ensureTeamSelection();
   const isAdmin = currentProfile?.role === "admin";
-  const tasks = operationalTasks();
+  const tasks = activeOperationalTasks();
   const unassigned = unassignedTasks();
   const users = teamMembers().sort((a, b) => String(a.name).localeCompare(String(b.name), "it", { sensitivity: "base" }));
   const visibleUsers = isAdmin ? users : users.filter((user) => teamMemberKey(user) === selectedTeamMemberId);
@@ -1276,7 +1277,7 @@ function renderTeamProfile() {
   const target = document.getElementById("teamProfileHead");
   if (!target) return;
   if (selectedTeamMemberId === ALL_TEAM_TASKS_ID) {
-    const tasks = operationalTasks();
+    const tasks = activeOperationalTasks();
     const unknown = tasks.filter((task) => unrecognizedAssignees(task).length).length;
     target.innerHTML = `
       <div>
@@ -1318,7 +1319,7 @@ function renderClickUpTasks() {
   const target = document.getElementById("clickupTaskList");
   if (!target) return;
   const tasks = filteredTeamTasks();
-  const statusGroups = isPersonalTaskView() ? activeTaskStatusGroups() : TASK_STATUS_GROUPS;
+  const statusGroups = hidesCompletedTasks() ? activeTaskStatusGroups() : TASK_STATUS_GROUPS;
   const groups = statusGroups.map((group) => {
     const groupTasks = tasks.filter((task) => taskStatusGroup(task).id === group.id).sort(compareTaskDueDate);
     return `
@@ -1432,6 +1433,12 @@ function isPersonalTaskView() {
     && Boolean(selectedTeamMember());
 }
 
+function hidesCompletedTasks() {
+  return selectedTeamMemberId === ALL_TEAM_TASKS_ID
+    || selectedTeamMemberId === UNASSIGNED_TASKS_ID
+    || isPersonalTaskView();
+}
+
 function activeTaskStatusGroups() {
   return TASK_STATUS_GROUPS.filter((group) => group.id !== "done");
 }
@@ -1441,7 +1448,7 @@ function selectedTeamTasks() {
     const user = selectedTeamMember();
     return user ? personalTeamMemberTasks(user) : [];
   }
-  if (selectedTeamMemberId === ALL_TEAM_TASKS_ID) return operationalTasks();
+  if (selectedTeamMemberId === ALL_TEAM_TASKS_ID) return activeOperationalTasks();
   if (selectedTeamMemberId === UNASSIGNED_TASKS_ID) return unassignedTasks();
   const user = selectedTeamMember();
   return user ? personalTeamMemberTasks(user) : operationalTasks();
@@ -1487,7 +1494,7 @@ function filteredTeamTasks() {
 }
 
 function unassignedTasks() {
-  return operationalTasks().filter((task) => !realAssignees(task).length);
+  return activeOperationalTasks().filter((task) => !realAssignees(task).length);
 }
 
 function taskAssignedTo(task, user) {
@@ -1678,7 +1685,11 @@ function taskWarnings(task) {
 }
 
 function operationalTasks() {
-  return (state.clickupTasks || []).filter(isOperationalTask);
+  return (state.clickupTasks || []).filter((task) => isOperationalTask(task) && isTeamTask(task) && !isSubtask(task));
+}
+
+function activeOperationalTasks() {
+  return operationalTasks().filter((task) => taskStatusGroup(task).id !== "done");
 }
 
 function excludedTaskCount() {
@@ -1691,6 +1702,14 @@ function isOperationalTask(task) {
   if (/\b(template|templates|modelli|modello)\b/.test(container) || /\b(template|templates|modelli|modello)\b/.test(tags)) return false;
   if (/\b(documenti|documents|documentation|docs)\b/.test(container)) return false;
   return true;
+}
+
+function isTeamTask(task) {
+  return normalizeIdentity(task.list).includes(TEAM_TASK_LIST_NAME);
+}
+
+function isSubtask(task) {
+  return Boolean(task.is_subtask || task.parent_id);
 }
 
 function renderTaskAssigneeOptions() {

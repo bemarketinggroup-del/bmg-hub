@@ -66,6 +66,7 @@ function taskBelongsToProfile(task, profile) {
 }
 
 function taskFromRow(row) {
+  const source = row.payload || {};
   return {
     id: row.clickup_task_id,
     clickup_task_id: row.clickup_task_id,
@@ -83,8 +84,11 @@ function taskFromRow(row) {
     sync_error: row.sync_error || "",
     url: row.clickup_url || clickupTaskUrl(row.clickup_task_id),
     list: row.list_name || "",
+    list_id: String(source.list?.id || ""),
     folder: row.folder_name || "",
     space: row.space_name || "",
+    parent_id: String(source.parent || ""),
+    is_subtask: Boolean(source.parent),
     updated_at: row.updated_at
   };
 }
