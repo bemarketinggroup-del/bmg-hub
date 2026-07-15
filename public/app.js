@@ -5,14 +5,14 @@ const UNASSIGNED_TASKS_ID = "__unassigned";
 // Mapping centralizzato: aggiorna questi sinonimi se ClickUp introduce nuovi stati operativi.
 const TASK_STATUS_GROUPS = [
   {
-    id: "todo",
-    label: "To Do",
-    match: ["todo", "to do", "da fare", "aperto", "aperti", "open", "backlog", "nuovo", "new"]
+    id: "progress",
+    label: "In corso",
+    match: ["in progress", "progress", "in lavorazione", "lavorazione", "doing", "work", "review", "revisione", "attesa", "waiting"]
   },
   {
-    id: "progress",
-    label: "In Progress",
-    match: ["in progress", "progress", "in lavorazione", "lavorazione", "doing", "work", "review", "revisione", "attesa", "waiting"]
+    id: "todo",
+    label: "Da fare",
+    match: ["todo", "to do", "da fare", "aperto", "aperti", "open", "backlog", "nuovo", "new"]
   },
   {
     id: "done",
@@ -439,7 +439,7 @@ function setView(view) {
     dashboard: ["BMG Internal OS", "Home"],
     content: ["CMS leggero", "Backend sito"],
     clients: ["Gestionale interno", "Clienti"],
-    team: ["ClickUp operativo", "Team & Task"],
+    team: ["ClickUp operativo", "Task del team"],
     smart: ["Turni interni", "Turni / Smart Working"],
     users: ["Accessi interni", "Utenti"],
     settings: ["Setup tecnico", "Configurazione"]
@@ -1244,87 +1244,71 @@ function renderAgencyUsers() {
   const isAdmin = currentProfile?.role === "admin";
   const tasks = operationalTasks();
   const unassigned = unassignedTasks();
-  const unknown = tasks.filter((task) => unrecognizedAssignees(task).length);
-  const systemRows = isAdmin ? `
-    <button class="team-row ${selectedTeamMemberId === ALL_TEAM_TASKS_ID ? "is-active" : ""}" data-team-member="${ALL_TEAM_TASKS_ID}" type="button">
-      <div class="mini-avatar">ALL</div>
-      <div>
-        <strong>Tutte le task</strong>
-        <span>${tasks.length} task operative${excludedTaskCount() ? ` · ${excludedTaskCount()} escluse` : ""}</span>
-      </div>
-    </button>
-    <button class="team-row ${selectedTeamMemberId === UNASSIGNED_TASKS_ID ? "is-active" : ""}" data-team-member="${UNASSIGNED_TASKS_ID}" type="button">
-      <div class="mini-avatar">?</div>
-      <div>
-        <strong>Senza assegnatario</strong>
-        <span>${unassigned.length} task da smistare</span>
-      </div>
-    </button>
-  ` : "";
   const users = teamMembers().sort((a, b) => String(a.name).localeCompare(String(b.name), "it", { sensitivity: "base" }));
-  const warningRow = isAdmin && unknown.length ? `
-    <div class="team-row team-warning">
-      <div class="mini-avatar">!</div>
-      <div>
-        <strong>Assegnatari non riconosciuti</strong>
-        <span>${unknown.length} task da controllare in ClickUp</span>
-      </div>
-    </div>
-  ` : "";
-  target.innerHTML = systemRows + warningRow + users.map((user) => `
-    <button class="team-row ${teamMemberKey(user) === selectedTeamMemberId ? "is-active" : ""}" data-team-member="${teamMemberKey(user)}" type="button">
-      <div class="mini-avatar">${user.avatar ? `<img src="${user.avatar}" alt="${user.name}">` : initials(user.name)}</div>
-      <div>
-        <strong>${user.name}</strong>
-        ${teamCountersMarkup(teamMemberTasks(user))}
-      </div>
+  const visibleUsers = isAdmin ? users : users.filter((user) => teamMemberKey(user) === selectedTeamMemberId);
+  const teamTab = isAdmin ? `
+    <button class="team-tab team-tab-main ${selectedTeamMemberId === ALL_TEAM_TASKS_ID ? "is-active" : ""}" data-team-member="${ALL_TEAM_TASKS_ID}" type="button">
+      <span class="team-tab-icon"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M8 7v7M12 7v4M16 7v9"/></svg></span>
+      <span><strong>Task del team</strong><small>${tasks.length}</small></span>
     </button>
-  `).join("") || emptyState("Nessun utente caricato da ClickUp.");
+  ` : "";
+  const userTabs = visibleUsers.map((user) => `
+    <button class="team-tab ${teamMemberKey(user) === selectedTeamMemberId ? "is-active" : ""}" data-team-member="${teamMemberKey(user)}" type="button">
+      <div class="mini-avatar">${user.avatar ? `<img src="${user.avatar}" alt="${user.name}">` : initials(user.name)}</div>
+      <span>
+        <strong>${user.name}</strong>
+        <small>${teamMemberTasks(user).length}</small>
+      </span>
+    </button>
+  `).join("");
+  const unassignedTab = isAdmin ? `
+    <button class="team-tab team-tab-unassigned ${selectedTeamMemberId === UNASSIGNED_TASKS_ID ? "is-active" : ""}" data-team-member="${UNASSIGNED_TASKS_ID}" type="button">
+      <span class="team-tab-icon">!</span>
+      <span><strong>Senza assegnatario</strong><small>${unassigned.length}</small></span>
+    </button>
+  ` : "";
+  target.innerHTML = teamTab + userTabs + unassignedTab || `<span class="team-tabs-empty">Nessun utente caricato da ClickUp.</span>`;
 }
 
 function renderTeamProfile() {
   const target = document.getElementById("teamProfileHead");
   if (!target) return;
   if (selectedTeamMemberId === ALL_TEAM_TASKS_ID) {
+    const tasks = operationalTasks();
+    const unknown = tasks.filter((task) => unrecognizedAssignees(task).length).length;
     target.innerHTML = `
-      <div class="profile-title">
-        <div class="avatar">ALL</div>
-        <div>
-          <h2>Tutte le task</h2>
-          <span>${operationalTasks().length} task operative · filtri assegnatario, stato e cliente attivi qui</span>
-        </div>
+      <div>
+        <h3>Task del team</h3>
+        <span>${tasks.length} task operative${excludedTaskCount() ? ` · ${excludedTaskCount()} elementi non operativi esclusi` : ""}</span>
       </div>
-      <button class="ghost-button" data-new-task-for="" type="button">Nuova task</button>
+      ${taskSummaryMarkup(tasks)}
+      ${unknown ? `<span class="task-view-warning">${unknown} con assegnatario da verificare</span>` : ""}
     `;
     return;
   }
   if (selectedTeamMemberId === UNASSIGNED_TASKS_ID) {
+    const tasks = unassignedTasks();
     target.innerHTML = `
-      <div class="profile-title">
-        <div class="avatar">?</div>
-        <div>
-          <h2>Senza assegnatario</h2>
-          <span>${unassignedTasks().length} task da assegnare al team · divise per stato</span>
-        </div>
+      <div>
+        <h3>Senza assegnatario</h3>
+        <span>${tasks.length} task da smistare</span>
       </div>
-      <button class="ghost-button" data-new-task-for="" type="button">Nuova task</button>
+      ${taskSummaryMarkup(tasks)}
     `;
     return;
   }
   const user = selectedTeamMember();
   if (!user) {
-    target.innerHTML = "<h2>Task assegnate</h2>";
+    target.innerHTML = "<div><h3>Task assegnate</h3></div>";
     return;
   }
+  const tasks = teamMemberTasks(user);
   target.innerHTML = `
-    <div class="profile-title">
-      <div class="avatar">${user.avatar ? `<img src="${user.avatar}" alt="${user.name}">` : initials(user.name)}</div>
-      <div>
-        <h2>${user.name}</h2>
-        <span>${user.email || "Email non indicata"} · ${teamMemberTasks(user).length} task · divise per stato</span>
-      </div>
+    <div>
+      <h3>Task di ${user.name}</h3>
+      <span>${tasks.length} task assegnate${user.email ? ` · ${user.email}` : ""}</span>
     </div>
-    <button class="ghost-button" data-new-task-for="${clickupUserId(user)}" type="button">Task per ${firstName(user.name)}</button>
+    ${taskSummaryMarkup(tasks)}
   `;
 }
 
@@ -1335,42 +1319,75 @@ function renderClickUpTasks() {
   const groups = TASK_STATUS_GROUPS.map((group) => {
     const groupTasks = tasks.filter((task) => taskStatusGroup(task).id === group.id).sort(compareTaskDueDate);
     return `
-      <section class="task-column" data-task-column="${group.id}">
-        <div class="task-column-head">
-          <h3>${group.label}</h3>
-          <span>${groupTasks.length}</span>
+      <section class="clickup-status-group is-${group.id}" data-task-group="${group.id}">
+        <div class="clickup-group-head">
+          <span class="clickup-group-toggle">⌄</span>
+          <span class="clickup-status-pill">${group.label}</span>
+          <strong>${groupTasks.length}</strong>
         </div>
-        <div class="task-column-list">
-          ${groupTasks.map(taskCardMarkup).join("") || emptyColumnState("Nessuna task")}
+        <div class="clickup-table-head" aria-hidden="true">
+          <span>Nome</span>
+          <span>Assegnatari</span>
+          <span>Scadenza</span>
+          <span>Priorita</span>
+          <span></span>
+        </div>
+        <div class="clickup-task-rows">
+          ${groupTasks.map(taskRowMarkup).join("") || emptyColumnState("Nessuna task in questo stato")}
         </div>
       </section>
     `;
   }).join("");
-  target.innerHTML = `<div class="task-board">${groups}</div>`;
+  target.innerHTML = `<div class="clickup-task-list">${groups}</div>`;
 }
 
-function taskCardMarkup(task) {
+function taskRowMarkup(task) {
   const due = dueDateValue(task);
   const dueClass = due && due < startOfToday() ? "is-overdue" : "";
+  const warnings = taskWarnings(task);
+  const groupId = taskStatusGroup(task).id;
   return `
-    <article class="task-card ${taskWarnings(task).length ? "has-warning" : ""}">
-      <div>
-        <strong>${task.name}</strong>
-        <div class="task-card-meta">
-          <span>${task.client_tag || "Tag cliente mancante"}</span>
-          <span>${task.status || "Senza stato ClickUp"}</span>
+    <article class="clickup-task-row ${warnings.length ? "has-warning" : ""}">
+      <div class="clickup-task-name">
+        <span class="task-state-ring is-${groupId}" aria-hidden="true"></span>
+        <div>
+          <strong>${task.name}</strong>
+          <div class="clickup-task-meta">
+            <span class="client-tag ${task.client_tag ? "" : "is-missing"}">${task.client_tag || "Cliente mancante"}</span>
+            <small>${task.status || "Senza stato ClickUp"}</small>
+          </div>
         </div>
-        <small>${assigneeLabels(task).length ? assigneeLabels(task).join(", ") : "Senza assegnatario"}</small>
-        <small class="${dueClass}">${due ? formatContentDate(due) : "Senza scadenza"}</small>
-        <small>Priorità: ${task.priority || "non impostata"}</small>
-        ${taskWarnings(task).map((warning) => `<small class="sync-warning">${warning}</small>`).join("")}
       </div>
-      <div class="task-actions">
-        <button class="badge" data-edit-task="${task.clickup_task_id || task.id}" type="button">Modifica</button>
-        <a class="badge" href="${task.url}" target="_blank" rel="noreferrer">ClickUp</a>
+      ${taskAssigneesMarkup(task)}
+      <span class="clickup-task-due ${dueClass}">${due ? formatContentDate(due) : "-"}</span>
+      <span class="task-priority ${priorityClass(task.priority)}">${task.priority || "Nessuna"}</span>
+      <div class="clickup-task-actions">
+        <button class="task-icon-action" data-edit-task="${task.clickup_task_id || task.id}" type="button" title="Modifica task" aria-label="Modifica task"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+        <a class="task-icon-action" href="${task.url}" target="_blank" rel="noreferrer" title="Apri in ClickUp" aria-label="Apri in ClickUp"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg></a>
       </div>
+      ${warnings.length ? `<div class="clickup-row-warning">${warnings.join(" · ")}</div>` : ""}
     </article>
   `;
+}
+
+function taskAssigneesMarkup(task) {
+  const assignees = realAssignees(task);
+  if (!assignees.length) return `<div class="clickup-assignees is-empty"><span>Non assegnata</span></div>`;
+  const avatars = assignees.slice(0, 3).map((assignee) => {
+    const member = teamMembers().find((user) => taskAssignedTo({ assignees: [assignee] }, user));
+    const name = typeof assignee === "string" ? assignee : (assignee.name || assignee.email || "Staff");
+    return `<span class="task-assignee-avatar" title="${name}">${member?.avatar ? `<img src="${member.avatar}" alt="${name}">` : initials(name)}</span>`;
+  }).join("");
+  const extra = assignees.length > 3 ? `<span class="task-assignee-more">+${assignees.length - 3}</span>` : "";
+  return `<div class="clickup-assignees"><span class="task-avatar-stack">${avatars}${extra}</span><span>${assigneeLabels(task).join(", ")}</span></div>`;
+}
+
+function priorityClass(priority) {
+  const value = normalizeIdentity(priority);
+  if (value.includes("urgent") || value.includes("urgente")) return "is-urgent";
+  if (value.includes("high") || value.includes("alta")) return "is-high";
+  if (value.includes("normal") || value.includes("normale")) return "is-normal";
+  return "is-low";
 }
 
 function renderTaskLogs() {
@@ -1402,8 +1419,8 @@ function teamMemberTasks(user) {
 
 function selectedTeamTasks() {
   if (currentProfile?.role !== "admin") {
-    const user = selectedTeamMember() || teamMembers()[0];
-    return user ? teamMemberTasks(user) : operationalTasks();
+    const user = selectedTeamMember();
+    return user ? teamMemberTasks(user) : [];
   }
   if (selectedTeamMemberId === ALL_TEAM_TASKS_ID) return operationalTasks();
   if (selectedTeamMemberId === UNASSIGNED_TASKS_ID) return unassignedTasks();
@@ -1421,7 +1438,7 @@ function ensureTeamSelection() {
   }
   const ownUser = users.find((user) => {
     return clickupUserId(user) === String(currentProfile?.clickup_user_id || "") || normalizeIdentity(user.email) === normalizeIdentity(currentProfile?.email);
-  }) || users[0];
+  });
   selectedTeamMemberId = ownUser ? teamMemberKey(ownUser) : "";
 }
 
@@ -1444,8 +1461,8 @@ function filteredTeamTasks() {
     const matchesAssignee = selectedTeamMemberId !== ALL_TEAM_TASKS_ID || !assigneeFilter || task.assignees?.some((assignee) => {
       return clickupUserId(assignee) === assigneeFilter || normalizeIdentity(assignee.email || assignee.name || assignee) === assigneeFilter;
     });
-    const matchesStatus = selectedTeamMemberId !== ALL_TEAM_TASKS_ID || !statusFilter || normalizeIdentity(task.status) === statusFilter;
-    const matchesClient = selectedTeamMemberId !== ALL_TEAM_TASKS_ID || !clientFilter || normalizeIdentity(task.client_tag) === clientFilter;
+    const matchesStatus = !statusFilter || normalizeIdentity(task.status) === statusFilter;
+    const matchesClient = !clientFilter || normalizeIdentity(task.client_tag) === clientFilter;
     return matchesSearch && matchesAssignee && matchesStatus && matchesClient;
   });
 }
@@ -1473,10 +1490,12 @@ function renderTaskFilters() {
   const statusFilter = document.getElementById("taskStatusFilter");
   const clientFilter = document.getElementById("taskClientFilter");
   if (!assigneeFilter || !statusFilter || !clientFilter) return;
-  [assigneeFilter, statusFilter, clientFilter].forEach((filter) => {
-    filter.classList.toggle("is-hidden", !onlyAll);
-    filter.disabled = !onlyAll;
-  });
+  assigneeFilter.classList.toggle("is-hidden", !onlyAll);
+  assigneeFilter.disabled = !onlyAll;
+  statusFilter.classList.remove("is-hidden");
+  statusFilter.disabled = false;
+  clientFilter.classList.remove("is-hidden");
+  clientFilter.disabled = false;
   renderTaskAssigneeFilter(assigneeFilter);
   renderTaskStatusFilter(statusFilter);
   renderTaskClientFilter(clientFilter);
@@ -1516,12 +1535,11 @@ function taskStatusGroup(task) {
   return matched || TASK_STATUS_GROUPS.find((group) => group.id === DEFAULT_TASK_STATUS_GROUP_ID);
 }
 
-function teamCountersMarkup(tasks) {
+function taskSummaryMarkup(tasks) {
   const counts = taskGroupCounts(tasks);
   return `
-    <span>${tasks.length} task assegnate</span>
-    <div class="team-counts">
-      ${TASK_STATUS_GROUPS.map((group) => `<small>${group.label}: ${counts[group.id] || 0}</small>`).join("")}
+    <div class="task-summary-counts">
+      ${TASK_STATUS_GROUPS.map((group) => `<span class="is-${group.id}"><strong>${counts[group.id] || 0}</strong>${group.label}</span>`).join("")}
     </div>
   `;
 }
@@ -1570,7 +1588,19 @@ function teamMembers() {
   const profileByEmail = new Map((state.staffProfiles || [])
     .filter((profile) => profile.email)
     .map((profile) => [normalizeIdentity(profile.email), profile]));
-  const members = (state.agencyUsers || []).map((user) => {
+  const sourceMembers = new Map();
+  const addSourceMember = (user) => {
+    const id = clickupUserId(user);
+    const email = normalizeIdentity(user?.email);
+    const name = normalizeIdentity(user?.name || user?.username);
+    const key = id || email || name;
+    if (!key || sourceMembers.has(key)) return;
+    sourceMembers.set(key, user);
+  };
+  (state.agencyUsers || []).forEach(addSourceMember);
+  operationalTasks().forEach((task) => (task.assignees || []).forEach(addSourceMember));
+
+  const members = [...sourceMembers.values()].map((user) => {
     const id = clickupUserId(user);
     const profile = profileByClickUp.get(id) || profileByEmail.get(normalizeIdentity(user.email)) || null;
     return {
@@ -1578,7 +1608,7 @@ function teamMembers() {
       clickup_user_id: id,
       profile_id: profile?.id || "",
       role: profile?.role || "staff",
-      name: user.name || profile?.full_name || profile?.email || "Staff",
+      name: user.name || user.username || profile?.full_name || profile?.email || "Staff",
       email: user.email || profile?.email || ""
     };
   });

@@ -52,7 +52,7 @@
         </button>
         <button class="nav-item" data-view="team" type="button">
           <span class="icon"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M8 7v7"/><path d="M12 7v4"/><path d="M16 7v9"/></svg></span>
-          <span>Team & Task</span>
+          <span>Task del team</span>
         </button>
         <button class="nav-item" data-view="smart" type="button">
           <span class="icon"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3.5"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h5"/><circle cx="16" cy="16" r="6"/><path d="M16 14v2l1.5 1"/></svg></span>
@@ -220,59 +220,76 @@
       </section>
 
       <section class="view" id="teamView" data-view-panel="team">
-        <div class="toolbar client-toolbar">
-          <label class="search">
-            <span><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></span>
-            <input id="taskSearch" type="search" placeholder="Cerca task, cliente, assegnatario">
-          </label>
-          <select id="taskAssigneeFilter" aria-label="Filtra assegnatario">
-            <option value="">Tutti gli assegnatari</option>
-          </select>
-          <select id="taskStatusFilter" aria-label="Filtra stato">
-            <option value="">Tutti gli stati</option>
-          </select>
-          <select id="taskClientFilter" aria-label="Filtra cliente">
-            <option value="">Tutti i clienti</option>
-          </select>
-          <button class="ghost-button admin-only" id="analyzeTaskClientsButton" type="button">Analizza task senza cliente</button>
-          <button class="ghost-button" id="syncTasksButton" type="button">Sincronizza task</button>
-          <button class="primary-button" id="newTaskButton" type="button"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg>Nuova task</button>
-        </div>
-        <div class="team-kanban-shell">
-          <aside class="panel team-board-sidebar">
-            <div class="panel-head team-sidebar-head">
-              <div>
-                <h2>Team & Task</h2>
-                <span>Bacheca interna</span>
-              </div>
+        <section class="panel task-workspace">
+          <div class="task-workspace-head">
+            <div>
+              <p class="eyebrow">ClickUp operativo</p>
+              <h2>Task del team</h2>
+              <span>Attivita condivise e assegnazioni personali</span>
             </div>
-            <div class="team-list" id="agencyTeamList"></div>
-          </aside>
-          <section class="panel team-board-main">
-            <div class="panel-head team-profile-head" id="teamProfileHead">
-              <h2>Task assegnate</h2>
+            <div class="task-workspace-actions">
+              <button class="ghost-button admin-only" id="analyzeTaskClientsButton" type="button">Analizza clienti</button>
+              <button class="ghost-button" id="syncTasksButton" type="button"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7h-9"/><path d="m17 4 3 3-3 3"/><path d="M4 17h9"/><path d="m7 20-3-3 3-3"/></svg>Sincronizza</button>
+              <button class="primary-button" id="newTaskButton" type="button"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg>Nuova task</button>
             </div>
-            <div class="task-list" id="clickupTaskList"></div>
-          </section>
-        </div>
-        <section class="panel sync-log-panel">
-          <div class="panel-head">
-            <h2>Log sincronizzazione</h2>
-            <button class="text-button" id="refreshTaskLogsButton" type="button">Aggiorna</button>
           </div>
-          <div class="sync-log-list" id="taskSyncLogList"></div>
-        </section>
-        <section class="panel sync-log-panel admin-only">
-          <div class="panel-head">
-            <h2>Alias clienti AI</h2>
+
+          <nav class="team-tabs" id="agencyTeamList" aria-label="Vista task per membro del team"></nav>
+
+          <div class="task-view-head" id="teamProfileHead">
+            <div>
+              <h3>Task del team</h3>
+              <span>Vista completa delle attivita operative</span>
+            </div>
           </div>
-          <form class="alias-form" id="clientAliasForm">
-            <select name="client_id" id="aliasClientSelect" required></select>
-            <input name="alias" placeholder="Alias cliente usato nelle task" required>
-            <button class="ghost-button" type="submit">Aggiungi alias</button>
-          </form>
-          <div class="sync-log-list" id="clientAliasList"></div>
+
+          <div class="toolbar task-toolbar">
+            <label class="search">
+              <span><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></span>
+              <input id="taskSearch" type="search" placeholder="Cerca task o cliente">
+            </label>
+            <select id="taskAssigneeFilter" aria-label="Filtra assegnatario">
+              <option value="">Tutti gli assegnatari</option>
+            </select>
+            <select id="taskStatusFilter" aria-label="Filtra stato">
+              <option value="">Tutti gli stati</option>
+            </select>
+            <select id="taskClientFilter" aria-label="Filtra cliente">
+              <option value="">Tutti i clienti</option>
+            </select>
+          </div>
+
+          <div class="task-list" id="clickupTaskList"></div>
         </section>
+
+        <details class="panel team-details-panel">
+          <summary>
+            <span>Log sincronizzazione</span>
+            <small>Controlla gli ultimi aggiornamenti ClickUp</small>
+          </summary>
+          <div class="team-details-content">
+            <div class="panel-head">
+              <h2>Log sincronizzazione</h2>
+              <button class="text-button" id="refreshTaskLogsButton" type="button">Aggiorna</button>
+            </div>
+            <div class="sync-log-list" id="taskSyncLogList"></div>
+          </div>
+        </details>
+
+        <details class="panel team-details-panel admin-only">
+          <summary>
+            <span>Alias clienti AI</span>
+            <small>Gestisci i nomi alternativi usati nelle task</small>
+          </summary>
+          <div class="team-details-content">
+            <form class="alias-form" id="clientAliasForm">
+              <select name="client_id" id="aliasClientSelect" required></select>
+              <input name="alias" placeholder="Alias cliente usato nelle task" required>
+              <button class="ghost-button" type="submit">Aggiungi alias</button>
+            </form>
+            <div class="sync-log-list" id="clientAliasList"></div>
+          </div>
+        </details>
       </section>
 
       <section class="view" id="smartView" data-view-panel="smart">
