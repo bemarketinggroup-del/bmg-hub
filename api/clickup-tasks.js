@@ -268,6 +268,28 @@ async function updateTask(body, session, clientRows) {
     return { status: 403, body: { error: "Puoi modificare solo task assegnate a te" } };
   }
 
+  if (body.quick_status === true) {
+    const status = clean(body.status);
+    if (!status || status.length > 100) return { status: 400, body: { error: "Stato task non valido" } };
+    const result = await clickupFetch(`/task/${encodeURIComponent(taskId)}`, {
+      method: "PUT",
+      body: JSON.stringify({ status })
+    });
+    const data = await result.json().catch(() => ({}));
+    if (!result.ok) {
+      await logSync(taskId, "hub", "quick_status", "error", "Cambio stato ClickUp fallito", { status: result.status });
+      return { status: result.status, body: data };
+    }
+    const fresh = await fetchTask(taskId);
+    if (!fresh.result.ok) {
+      await logSync(taskId, "hub", "quick_status", "error", "Rilettura task dopo cambio stato fallita", { status: fresh.result.status });
+      return { status: fresh.result.status, body: fresh.data };
+    }
+    const row = await upsertTask(fresh.data, clientRows);
+    await logSync(taskId, "hub", "quick_status", "success", `Stato task aggiornato: ${status}`);
+    return { status: 200, body: taskFromRow(row) };
+  }
+
   const clientMatch = validateClientTag(body.client_tag, clientRows);
   if (!clientMatch) return { status: 400, body: { error: "Cliente non riconosciuto: scegli un tag cliente valido" } };
 

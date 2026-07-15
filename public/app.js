@@ -162,6 +162,8 @@ let authConfig = null;
 let authSession = loadAuthSession();
 let currentProfile = null;
 let aiDescriptionProposal = null;
+let taskDetailTaskId = "";
+let quickStatusTaskId = "";
 
 function loadState() {
   const saved = localStorage.getItem(STORAGE_KEY);
@@ -1257,7 +1259,7 @@ function renderAgencyUsers() {
       <div class="mini-avatar">${user.avatar ? `<img src="${user.avatar}" alt="${user.name}">` : initials(user.name)}</div>
       <span>
         <strong>${user.name}</strong>
-        <small>${teamMemberTasks(user).length}</small>
+        <small>${personalTeamMemberTasks(user).length}</small>
       </span>
     </button>
   `).join("");
@@ -1302,13 +1304,13 @@ function renderTeamProfile() {
     target.innerHTML = "<div><h3>Task assegnate</h3></div>";
     return;
   }
-  const tasks = teamMemberTasks(user);
+  const tasks = personalTeamMemberTasks(user);
   target.innerHTML = `
     <div>
       <h3>Task di ${user.name}</h3>
       <span>${tasks.length} task assegnate${user.email ? ` · ${user.email}` : ""}</span>
     </div>
-    ${taskSummaryMarkup(tasks)}
+    ${taskSummaryMarkup(tasks, activeTaskStatusGroups())}
   `;
 }
 
@@ -1316,7 +1318,8 @@ function renderClickUpTasks() {
   const target = document.getElementById("clickupTaskList");
   if (!target) return;
   const tasks = filteredTeamTasks();
-  const groups = TASK_STATUS_GROUPS.map((group) => {
+  const statusGroups = isPersonalTaskView() ? activeTaskStatusGroups() : TASK_STATUS_GROUPS;
+  const groups = statusGroups.map((group) => {
     const groupTasks = tasks.filter((task) => taskStatusGroup(task).id === group.id).sort(compareTaskDueDate);
     return `
       <section class="clickup-status-group is-${group.id}" data-task-group="${group.id}">
@@ -1347,9 +1350,11 @@ function taskRowMarkup(task) {
   const warnings = taskWarnings(task);
   const groupId = taskStatusGroup(task).id;
   return `
-    <article class="clickup-task-row ${warnings.length ? "has-warning" : ""}">
+    <article class="clickup-task-row ${warnings.length ? "has-warning" : ""}" data-task-detail="${task.clickup_task_id || task.id}" tabindex="0" role="button" aria-label="Apri dettaglio task">
       <div class="clickup-task-name">
-        <span class="task-state-ring is-${groupId}" aria-hidden="true"></span>
+        <button class="task-state-trigger" data-task-status-trigger="${task.clickup_task_id || task.id}" type="button" aria-label="Cambia stato task" title="Cambia stato">
+          <span class="task-state-ring is-${groupId}" aria-hidden="true"></span>
+        </button>
         <div>
           <strong>${task.name}</strong>
           <div class="clickup-task-meta">
@@ -1417,15 +1422,29 @@ function teamMemberTasks(user) {
   return operationalTasks().filter((task) => taskAssignedTo(task, user));
 }
 
+function personalTeamMemberTasks(user) {
+  return teamMemberTasks(user).filter((task) => taskStatusGroup(task).id !== "done");
+}
+
+function isPersonalTaskView() {
+  return selectedTeamMemberId !== ALL_TEAM_TASKS_ID
+    && selectedTeamMemberId !== UNASSIGNED_TASKS_ID
+    && Boolean(selectedTeamMember());
+}
+
+function activeTaskStatusGroups() {
+  return TASK_STATUS_GROUPS.filter((group) => group.id !== "done");
+}
+
 function selectedTeamTasks() {
   if (currentProfile?.role !== "admin") {
     const user = selectedTeamMember();
-    return user ? teamMemberTasks(user) : [];
+    return user ? personalTeamMemberTasks(user) : [];
   }
   if (selectedTeamMemberId === ALL_TEAM_TASKS_ID) return operationalTasks();
   if (selectedTeamMemberId === UNASSIGNED_TASKS_ID) return unassignedTasks();
   const user = selectedTeamMember();
-  return user ? teamMemberTasks(user) : operationalTasks();
+  return user ? personalTeamMemberTasks(user) : operationalTasks();
 }
 
 function ensureTeamSelection() {
@@ -1535,11 +1554,11 @@ function taskStatusGroup(task) {
   return matched || TASK_STATUS_GROUPS.find((group) => group.id === DEFAULT_TASK_STATUS_GROUP_ID);
 }
 
-function taskSummaryMarkup(tasks) {
+function taskSummaryMarkup(tasks, groups = TASK_STATUS_GROUPS) {
   const counts = taskGroupCounts(tasks);
   return `
     <div class="task-summary-counts">
-      ${TASK_STATUS_GROUPS.map((group) => `<span class="is-${group.id}"><strong>${counts[group.id] || 0}</strong>${group.label}</span>`).join("")}
+      ${groups.map((group) => `<span class="is-${group.id}"><strong>${counts[group.id] || 0}</strong>${group.label}</span>`).join("")}
     </div>
   `;
 }
@@ -1855,9 +1874,106 @@ function applyAiDescription() {
   document.getElementById("aiDescriptionModal").close();
 }
 
+function findTask(taskId) {
+  return state.clickupTasks.find((item) => String(item.clickup_task_id || item.id) === String(taskId)) || null;
+}
+
+function openTaskDetailModal(taskId) {
+  const task = findTask(taskId);
+  if (!task) return;
+  taskDetailTaskId = String(task.clickup_task_id || task.id);
+  const client = document.getElementById("taskDetailClient");
+  const due = dueDateValue(task);
+  document.getElementById("taskDetailTitle").textContent = task.name || "Task senza titolo";
+  client.textContent = task.client_tag || "Cliente mancante";
+  client.classList.toggle("is-missing", !task.client_tag);
+  document.getElementById("taskDetailStatus").textContent = task.status || "Senza stato";
+  document.getElementById("taskDetailPriority").textContent = `Priorita: ${task.priority || "nessuna"}`;
+  document.getElementById("taskDetailDueDate").textContent = due ? `Scadenza: ${formatContentDate(due)}` : "Senza scadenza";
+  document.getElementById("taskDetailAssignees").textContent = assigneeLabels(task).join(", ") || "Nessun assegnatario";
+  document.getElementById("taskDetailDescription").textContent = String(task.description || "").trim() || "Nessuna descrizione disponibile.";
+  const clickupLink = document.getElementById("taskDetailClickUpLink");
+  clickupLink.href = task.url || `https://app.clickup.com/t/${taskDetailTaskId}`;
+  document.getElementById("taskDetailModal").showModal();
+}
+
+function quickStatusValue(task, groupId) {
+  if (taskStatusGroup(task).id === groupId && task.status) return String(task.status).trim();
+  const sameList = operationalTasks().filter((item) => {
+    const sameContainer = !task.list || !item.list || normalizeIdentity(item.list) === normalizeIdentity(task.list);
+    return sameContainer && taskStatusGroup(item).id === groupId && item.status;
+  });
+  const counts = sameList.reduce((map, item) => {
+    const value = String(item.status).trim();
+    map.set(value, (map.get(value) || 0) + 1);
+    return map;
+  }, new Map());
+  const existing = [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
+  return existing || { todo: "to do", progress: "in progress", done: "complete" }[groupId];
+}
+
+function openTaskStatusPopover(trigger, taskId) {
+  const task = findTask(taskId);
+  const popover = document.getElementById("taskStatusPopover");
+  if (!task || !popover) return;
+  quickStatusTaskId = String(task.clickup_task_id || task.id);
+  const currentGroup = taskStatusGroup(task).id;
+  const menuGroups = ["todo", "progress", "done"].map((id) => TASK_STATUS_GROUPS.find((group) => group.id === id));
+  popover.innerHTML = menuGroups.map((group) => {
+    const status = quickStatusValue(task, group.id);
+    const label = group.id === "done" ? "Completato" : group.label;
+    return `
+      <button class="task-status-option ${currentGroup === group.id ? "is-current" : ""}" data-quick-task-status="${encodeURIComponent(status)}" type="button" role="menuitem">
+        <span class="task-state-ring is-${group.id}" aria-hidden="true"></span>
+        <span>${label}</span>
+        ${currentGroup === group.id ? `<svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg>` : ""}
+      </button>
+    `;
+  }).join("");
+  popover.classList.remove("is-hidden");
+  const rect = trigger.getBoundingClientRect();
+  const width = popover.offsetWidth;
+  const height = popover.offsetHeight;
+  const left = Math.max(10, Math.min(rect.left, window.innerWidth - width - 10));
+  const below = rect.bottom + 7;
+  const top = below + height <= window.innerHeight - 10 ? below : Math.max(10, rect.top - height - 7);
+  popover.style.left = `${left}px`;
+  popover.style.top = `${top}px`;
+}
+
+function closeTaskStatusPopover() {
+  const popover = document.getElementById("taskStatusPopover");
+  popover?.classList.add("is-hidden");
+  quickStatusTaskId = "";
+}
+
+async function updateTaskStatus(taskId, status) {
+  const task = findTask(taskId);
+  if (!task || !status) return;
+  closeTaskStatusPopover();
+  const row = document.querySelector(`[data-task-detail="${CSS.escape(String(taskId))}"]`);
+  row?.classList.add("is-updating");
+  try {
+    const response = await apiFetch("/api/clickup/tasks", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ clickup_task_id: taskId, quick_status: true, status })
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || `ClickUp status error ${response.status}`);
+    clickupOnline = true;
+    await Promise.all([loadClickUpTasks(), loadClickUpTaskLogs()]);
+  } catch (error) {
+    clickupOnline = false;
+    row?.classList.remove("is-updating");
+    renderBackendStatus(error.message);
+    alert(error.message || "Non riesco ad aggiornare lo stato su ClickUp.");
+  }
+}
+
 function openTaskModal(userId = selectedTeamMemberId, taskId = "") {
   const form = document.getElementById("taskForm");
-  const task = taskId ? state.clickupTasks.find((item) => String(item.clickup_task_id || item.id) === String(taskId)) : null;
+  const task = taskId ? findTask(taskId) : null;
   form.reset();
   form.elements.clickup_task_id.value = task?.clickup_task_id || task?.id || "";
   form.elements.name.value = task?.name || "";
@@ -2165,6 +2281,19 @@ document.getElementById("navList").addEventListener("click", (event) => {
 });
 
 document.body.addEventListener("click", (event) => {
+  const quickStatusOption = event.target.closest("[data-quick-task-status]");
+  const statusTrigger = event.target.closest("[data-task-status-trigger]");
+  const taskRow = event.target.closest("[data-task-detail]");
+  if (quickStatusOption) {
+    updateTaskStatus(quickStatusTaskId, decodeURIComponent(quickStatusOption.dataset.quickTaskStatus));
+    return;
+  }
+  if (statusTrigger) {
+    openTaskStatusPopover(statusTrigger, statusTrigger.dataset.taskStatusTrigger);
+    return;
+  }
+  if (!event.target.closest("#taskStatusPopover")) closeTaskStatusPopover();
+
   const jump = event.target.closest("[data-jump]");
   const teamMember = event.target.closest("[data-team-member]");
   const newTaskFor = event.target.closest("[data-new-task-for]");
@@ -2172,13 +2301,23 @@ document.body.addEventListener("click", (event) => {
   const saveUser = event.target.closest("[data-save-user]");
   const applyAiClient = event.target.closest("[data-apply-ai-client]");
   const deleteAlias = event.target.closest("[data-delete-alias]");
-  if (jump) setView(jump.dataset.jump);
-  if (teamMember) selectTeamMember(teamMember.dataset.teamMember);
-  if (newTaskFor) openTaskModal(newTaskFor.dataset.newTaskFor);
-  if (editTask) openTaskModal(selectedTeamMemberId, editTask.dataset.editTask);
+  if (jump) return setView(jump.dataset.jump);
+  if (teamMember) return selectTeamMember(teamMember.dataset.teamMember);
+  if (newTaskFor) return openTaskModal(newTaskFor.dataset.newTaskFor);
+  if (editTask) return openTaskModal(selectedTeamMemberId, editTask.dataset.editTask);
+  if (taskRow && !event.target.closest("a, button, input, select, textarea")) return openTaskDetailModal(taskRow.dataset.taskDetail);
   if (saveUser) saveUserProfile(saveUser.closest("[data-user-id]"));
   if (applyAiClient) applyAiClientTag(applyAiClient);
   if (deleteAlias) deleteClientAlias(deleteAlias.dataset.deleteAlias);
+});
+
+document.body.addEventListener("keydown", (event) => {
+  const taskRow = event.target.closest("[data-task-detail]");
+  if (!taskRow || event.target.closest("button, a, input, select, textarea")) return;
+  if (event.key === "Enter" || event.key === " ") {
+    event.preventDefault();
+    openTaskDetailModal(taskRow.dataset.taskDetail);
+  }
 });
 
 document.getElementById("profileButton").addEventListener("click", openProfileModal);
@@ -2268,6 +2407,11 @@ document.getElementById("analyzeTaskClientsButton").addEventListener("click", an
 document.getElementById("improveDescriptionButton").addEventListener("click", improveDescriptionWithAi);
 document.getElementById("applyAiDescriptionButton").addEventListener("click", applyAiDescription);
 document.getElementById("newTaskButton").addEventListener("click", () => openTaskModal());
+document.getElementById("closeTaskDetailButton").addEventListener("click", () => document.getElementById("taskDetailModal").close());
+document.getElementById("editTaskFromDetailButton").addEventListener("click", () => {
+  document.getElementById("taskDetailModal").close();
+  openTaskModal(selectedTeamMemberId, taskDetailTaskId);
+});
 
 document.getElementById("clientForm").addEventListener("submit", (event) => {
   if (event.submitter?.value === "cancel") return;

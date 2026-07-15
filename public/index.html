@@ -507,6 +507,38 @@
     </form>
   </dialog>
 
+  <dialog class="modal task-detail-modal" id="taskDetailModal">
+    <div class="task-detail-shell">
+      <div class="modal-head">
+        <div>
+          <p class="eyebrow">Dettaglio task</p>
+          <h2 id="taskDetailTitle">Task</h2>
+        </div>
+        <button class="icon-button" id="closeTaskDetailButton" type="button" title="Chiudi" aria-label="Chiudi dettaglio task"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+      </div>
+      <div class="task-detail-meta">
+        <span class="client-tag" id="taskDetailClient">Cliente</span>
+        <span id="taskDetailStatus">Stato</span>
+        <span id="taskDetailPriority">Priorita</span>
+        <span id="taskDetailDueDate">Scadenza</span>
+      </div>
+      <section class="task-detail-section">
+        <span>Assegnatari</span>
+        <strong id="taskDetailAssignees">-</strong>
+      </section>
+      <section class="task-detail-section task-detail-description">
+        <span>Descrizione</span>
+        <p id="taskDetailDescription">Nessuna descrizione disponibile.</p>
+      </section>
+      <div class="modal-actions">
+        <a class="ghost-button" id="taskDetailClickUpLink" href="#" target="_blank" rel="noreferrer">Apri in ClickUp</a>
+        <button class="primary-button" id="editTaskFromDetailButton" type="button">Modifica task</button>
+      </div>
+    </div>
+  </dialog>
+
+  <div class="task-status-popover is-hidden" id="taskStatusPopover" role="menu" aria-label="Cambia stato task"></div>
+
   <dialog class="modal wide-modal" id="aiAnalysisModal">
     <form method="dialog">
       <div class="modal-head">
