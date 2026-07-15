@@ -1,4 +1,5 @@
 import { jsonHeaders, readJson, requireUser, supabaseFetch } from "./_auth.js";
+import handleClientDrive from "../lib/client-drive-api.js";
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -46,6 +47,12 @@ async function createClickUpFolder(name) {
 }
 
 export default async function handler(request, response) {
+  const requestUrl = new URL(request.url, `https://${request.headers.host}`);
+  if (requestUrl.pathname === "/api/client-drive") {
+    await handleClientDrive(request, response);
+    return;
+  }
+
   if (request.method === "OPTIONS") {
     response.writeHead(204, headers());
     response.end();

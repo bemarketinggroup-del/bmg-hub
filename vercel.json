@@ -41,7 +41,7 @@
     },
     {
       "src": "/api/client-drive",
-      "dest": "/api/client-drive.js"
+      "dest": "/api/clients.js"
     },
     {
       "src": "/api/clients/sync-clickup",
