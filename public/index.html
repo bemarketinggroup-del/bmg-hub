@@ -217,6 +217,7 @@
           <button class="primary-button" id="newClientButton" type="button"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg>Nuovo cliente</button>
         </div>
         <div class="client-grid" id="clientGrid"></div>
+        <section class="client-detail is-hidden" id="clientDetail" aria-live="polite"></section>
       </section>
 
       <section class="view" id="teamView" data-view-panel="team">
@@ -449,9 +450,10 @@
   <dialog class="modal" id="clientModal">
     <form method="dialog" id="clientForm">
       <div class="modal-head">
-        <h2>Nuovo cliente</h2>
+        <h2 id="clientModalTitle">Nuovo cliente</h2>
         <button class="icon-button" value="cancel" type="submit" formnovalidate title="Chiudi"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
       </div>
+      <input name="id" type="hidden">
       <div class="form-grid">
         <label class="full">Nome cliente<input name="name" required autocomplete="organization"></label>
         <label>Stato<select name="status">
@@ -462,8 +464,9 @@
         </select></label>
         <label>Servizi<input name="services" placeholder="Sito, social, advertising"></label>
         <label class="full">Google Drive<input name="drive_url" type="url" placeholder="https://drive.google.com/..."></label>
+        <label class="full">ClickUp<input name="clickup_url" type="url" placeholder="https://app.clickup.com/..."></label>
         <label class="full">Note<textarea name="notes" rows="3"></textarea></label>
-        <label class="full checkbox-row">
+        <label class="full checkbox-row" id="clientCreateClickUpRow">
           <input name="create_clickup" type="checkbox" checked>
           <span>Crea anche cartella cliente su ClickUp</span>
         </label>

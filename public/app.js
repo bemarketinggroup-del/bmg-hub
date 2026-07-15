@@ -157,6 +157,7 @@ let contentOnline = false;
 let clientsOnline = false;
 let clickupOnline = false;
 let selectedTeamMemberId = ALL_TEAM_TASKS_ID;
+let selectedClientId = "";
 let selectedSmartWeek = mondayOf(new Date());
 let selectedContentSection = "all";
 let authConfig = null;
@@ -917,19 +918,117 @@ function labelStatus(status) {
 function renderClients() {
   const search = document.getElementById("clientSearch")?.value?.toLowerCase() || "";
   const clients = state.clients.filter((client) => `${client.name} ${client.status} ${client.services}`.toLowerCase().includes(search));
-  document.getElementById("clientGrid").innerHTML = clients.map((client) => `
-    <article class="client-card">
-      <div>
-        <strong>${client.name}</strong>
-        <span>${labelClientStatus(client.status)}${client.services ? ` · ${client.services}` : ""}</span>
-        ${client.notes ? `<p>${client.notes}</p>` : ""}
+  const grid = document.getElementById("clientGrid");
+  const detail = document.getElementById("clientDetail");
+  const selected = state.clients.find((client) => String(client.id) === String(selectedClientId));
+
+  if (selectedClientId && !selected) selectedClientId = "";
+  grid.classList.toggle("is-hidden", Boolean(selected));
+  detail.classList.toggle("is-hidden", !selected);
+
+  if (selected) {
+    detail.innerHTML = clientDetailMarkup(selected);
+    return;
+  }
+
+  grid.innerHTML = clients.map((client) => {
+    const status = labelClientStatus(client.status);
+    return `
+      <button class="client-folder" data-client-open="${client.id}" type="button" style="${clientColorStyle(client)}">
+        <span class="client-folder-icon" aria-hidden="true"><svg class="lc" viewBox="0 0 24 24"><path d="M3 7h6l2 2h10v10H3z"/><path d="M3 7V5h6l2 2"/></svg></span>
+        <span class="client-folder-copy">
+          <strong>${escapeHtml(client.name)}</strong>
+          <small>${escapeHtml(status)}</small>
+        </span>
+        <svg class="lc client-folder-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+      </button>
+    `;
+  }).join("") || emptyState("Nessun cliente trovato.");
+}
+
+const CLIENT_COLOR_PALETTE = [
+  ["#B9542C", "#F6E6DF"], ["#3F6670", "#E2EDF0"], ["#5C7850", "#E7EEE3"],
+  ["#9B6B8F", "#F2E7EF"], ["#B07D1F", "#F7EDDA"], ["#526D9A", "#E6EBF4"],
+  ["#A45A64", "#F5E5E8"], ["#397A70", "#E1F0ED"], ["#7565A8", "#ECE9F5"],
+  ["#8A6545", "#F0E8E0"], ["#B06A3C", "#F6E7DC"], ["#66763D", "#EAF0DD"]
+];
+
+function clientColorStyle(client) {
+  const value = String(client.id || client.name || "cliente");
+  let hash = 0;
+  for (const char of value) hash = ((hash << 5) - hash + char.charCodeAt(0)) | 0;
+  const [accent, tint] = CLIENT_COLOR_PALETTE[Math.abs(hash) % CLIENT_COLOR_PALETTE.length];
+  return `--client-accent:${accent};--client-tint:${tint}`;
+}
+
+function clientDetailMarkup(client) {
+  const drive = safeExternalUrl(client.drive);
+  const clickup = safeExternalUrl(client.clickup);
+  const services = String(client.services || "").split(",").map((service) => service.trim()).filter(Boolean);
+  return `
+    <div class="client-detail-head" style="${clientColorStyle(client)}">
+      <button class="icon-button client-back" data-client-back type="button" title="Torna ai clienti" aria-label="Torna ai clienti"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
+      <span class="client-detail-folder" aria-hidden="true"><svg class="lc" viewBox="0 0 24 24"><path d="M3 7h6l2 2h10v10H3z"/><path d="M3 7V5h6l2 2"/></svg></span>
+      <div class="client-detail-title">
+        <p class="eyebrow">Scheda cliente</p>
+        <h2>${escapeHtml(client.name)}</h2>
+        <span class="client-status is-${normalizeIdentity(client.status)}">${escapeHtml(labelClientStatus(client.status))}</span>
       </div>
-      <div class="links">
-        <a class="badge" href="${client.clickup}" target="_blank" rel="noreferrer">ClickUp</a>
-        <a class="badge" href="${client.drive}" target="_blank" rel="noreferrer">Drive</a>
+      <div class="client-detail-actions">
+        <button class="ghost-button" data-client-edit="${client.id}" type="button"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>Modifica</button>
+        ${clickup ? `<a class="ghost-button" href="${escapeHtml(clickup)}" target="_blank" rel="noreferrer"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>ClickUp</a>` : ""}
+        ${drive ? `<a class="primary-button client-drive-button" href="${escapeHtml(drive)}" target="_blank" rel="noreferrer"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h6l2 2h10v10H3z"/><path d="M3 7V5h6l2 2"/></svg>Apri Google Drive</a>` : `<button class="primary-button" data-client-edit="${client.id}" type="button">Aggiungi Drive</button>`}
       </div>
-    </article>
-  `).join("") || emptyState("Nessun cliente trovato.");
+    </div>
+    <div class="client-detail-body">
+      <section class="client-info-section">
+        <p class="eyebrow">Informazioni</p>
+        <dl class="client-info-list">
+          <div><dt>Stato</dt><dd>${escapeHtml(labelClientStatus(client.status))}</dd></div>
+          <div><dt>Servizi</dt><dd>${services.length ? services.map((service) => `<span class="client-service">${escapeHtml(service)}</span>`).join("") : "Nessun servizio indicato"}</dd></div>
+          <div><dt>Note</dt><dd>${client.notes ? escapeHtml(client.notes) : "Nessuna nota inserita"}</dd></div>
+        </dl>
+      </section>
+      <aside class="client-links-section">
+        <p class="eyebrow">Collegamenti</p>
+        <div class="client-link-row ${drive ? "" : "is-missing"}">
+          <span class="client-link-icon"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h6l2 2h10v10H3z"/><path d="M3 7V5h6l2 2"/></svg></span>
+          <div><strong>Google Drive</strong><small>${drive ? "Cartella cliente collegata" : "Collegamento da aggiungere"}</small></div>
+          ${drive ? `<a href="${escapeHtml(drive)}" target="_blank" rel="noreferrer" aria-label="Apri Google Drive"><svg class="lc" viewBox="0 0 24 24"><path d="M15 3h6v6"/><path d="M10 14 21 3"/></svg></a>` : ""}
+        </div>
+        <div class="client-link-row ${clickup ? "" : "is-missing"}">
+          <span class="client-link-icon"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 9h8M8 13h5M5 4h14v16H5z"/></svg></span>
+          <div><strong>ClickUp</strong><small>${clickup ? "Spazio cliente collegato" : "Collegamento da aggiungere"}</small></div>
+          ${clickup ? `<a href="${escapeHtml(clickup)}" target="_blank" rel="noreferrer" aria-label="Apri ClickUp"><svg class="lc" viewBox="0 0 24 24"><path d="M15 3h6v6"/><path d="M10 14 21 3"/></svg></a>` : ""}
+        </div>
+      </aside>
+    </div>
+  `;
+}
+
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (character) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#039;"
+  })[character]);
+}
+
+function safeExternalUrl(value) {
+  try {
+    const url = new URL(String(value || ""));
+    return ["https:", "http:"].includes(url.protocol) ? url.href : "";
+  } catch {
+    return "";
+  }
+}
+
+function openClientDetails(clientId) {
+  selectedClientId = String(clientId || "");
+  renderClients();
+}
+
+function closeClientDetails() {
+  selectedClientId = "";
+  renderClients();
 }
 
 function labelClientStatus(status) {
@@ -2206,12 +2305,29 @@ async function deleteContent() {
   }
 }
 
+function openClientModal(clientId = "") {
+  const form = document.getElementById("clientForm");
+  const client = state.clients.find((item) => String(item.id) === String(clientId));
+  form.reset();
+  form.elements.id.value = client?.id || "";
+  form.elements.name.value = client?.name || "";
+  form.elements.status.value = normalizeIdentity(client?.status) === "active" ? "attivo" : (normalizeIdentity(client?.status) || "onboarding");
+  form.elements.services.value = client?.services || "";
+  form.elements.drive_url.value = safeExternalUrl(client?.drive) || "";
+  form.elements.clickup_url.value = safeExternalUrl(client?.clickup) || "";
+  form.elements.notes.value = client?.notes || "";
+  document.getElementById("clientModalTitle").textContent = client ? `Modifica ${client.name}` : "Nuovo cliente";
+  document.getElementById("clientCreateClickUpRow").classList.toggle("is-hidden", Boolean(client));
+  document.getElementById("clientModal").showModal();
+}
+
 async function submitClient(form) {
   const data = Object.fromEntries(new FormData(form).entries());
+  const isUpdate = Boolean(data.id);
   data.create_clickup = data.create_clickup === "on";
   try {
     const response = await apiFetch("/api/clients", {
-      method: "POST",
+      method: isUpdate ? "PATCH" : "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data)
     });
@@ -2219,6 +2335,8 @@ async function submitClient(form) {
     clientsOnline = true;
     form.reset();
     await loadClientsFromBackend();
+    if (isUpdate) selectedClientId = data.id;
+    renderClients();
   } catch (error) {
     clientsOnline = false;
     renderBackendStatus(error.message);
@@ -2317,6 +2435,9 @@ document.body.addEventListener("click", (event) => {
   const teamMember = event.target.closest("[data-team-member]");
   const newTaskFor = event.target.closest("[data-new-task-for]");
   const editTask = event.target.closest("[data-edit-task]");
+  const openClient = event.target.closest("[data-client-open]");
+  const editClient = event.target.closest("[data-client-edit]");
+  const backClient = event.target.closest("[data-client-back]");
   const saveUser = event.target.closest("[data-save-user]");
   const applyAiClient = event.target.closest("[data-apply-ai-client]");
   const deleteAlias = event.target.closest("[data-delete-alias]");
@@ -2324,6 +2445,9 @@ document.body.addEventListener("click", (event) => {
   if (teamMember) return selectTeamMember(teamMember.dataset.teamMember);
   if (newTaskFor) return openTaskModal(newTaskFor.dataset.newTaskFor);
   if (editTask) return openTaskModal(selectedTeamMemberId, editTask.dataset.editTask);
+  if (openClient) return openClientDetails(openClient.dataset.clientOpen);
+  if (editClient) return openClientModal(editClient.dataset.clientEdit);
+  if (backClient) return closeClientDetails();
   if (taskRow && !event.target.closest("a, button, input, select, textarea")) return openTaskDetailModal(taskRow.dataset.taskDetail);
   if (saveUser) saveUserProfile(saveUser.closest("[data-user-id]"));
   if (applyAiClient) applyAiClientTag(applyAiClient);
@@ -2418,7 +2542,7 @@ document.getElementById("contentImageFile").addEventListener("change", (event) =
   uploadContentImage(event.target.files?.[0]);
   event.target.value = "";
 });
-document.getElementById("newClientButton").addEventListener("click", () => document.getElementById("clientModal").showModal());
+document.getElementById("newClientButton").addEventListener("click", () => openClientModal());
 document.getElementById("syncClickUpButton").addEventListener("click", syncClientsFromClickUp);
 document.getElementById("syncTasksButton").addEventListener("click", syncTasksFromClickUp);
 document.getElementById("refreshTaskLogsButton").addEventListener("click", loadClickUpTaskLogs);
