@@ -40,6 +40,10 @@
       "dest": "/api/clients.js"
     },
     {
+      "src": "/api/client-drive",
+      "dest": "/api/client-drive.js"
+    },
+    {
       "src": "/api/clients/sync-clickup",
       "dest": "/api/clients-sync-clickup.js"
     },

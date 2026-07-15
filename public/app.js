@@ -158,6 +158,7 @@ let clientsOnline = false;
 let clickupOnline = false;
 let selectedTeamMemberId = ALL_TEAM_TASKS_ID;
 let selectedClientId = "";
+let clientDriveState = { clientId: "", path: [], objectUrl: "" };
 let selectedSmartWeek = mondayOf(new Date());
 let selectedContentSection = "all";
 let authConfig = null;
@@ -977,7 +978,7 @@ function clientDetailMarkup(client) {
       <div class="client-detail-actions">
         <button class="ghost-button" data-client-edit="${client.id}" type="button"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>Modifica</button>
         ${clickup ? `<a class="ghost-button" href="${escapeHtml(clickup)}" target="_blank" rel="noreferrer"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>ClickUp</a>` : ""}
-        ${drive ? `<a class="primary-button client-drive-button" href="${escapeHtml(drive)}" target="_blank" rel="noreferrer"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h6l2 2h10v10H3z"/><path d="M3 7V5h6l2 2"/></svg>Apri Google Drive</a>` : `<button class="primary-button" data-client-edit="${client.id}" type="button">Aggiungi Drive</button>`}
+        ${drive ? `<button class="primary-button client-drive-button" data-client-drive="${client.id}" type="button"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h6l2 2h10v10H3z"/><path d="M3 7V5h6l2 2"/></svg>Apri Google Drive</button>` : `<button class="primary-button" data-client-edit="${client.id}" type="button">Aggiungi Drive</button>`}
       </div>
     </div>
     <div class="client-detail-body">
@@ -994,7 +995,7 @@ function clientDetailMarkup(client) {
         <div class="client-link-row ${drive ? "" : "is-missing"}">
           <span class="client-link-icon"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h6l2 2h10v10H3z"/><path d="M3 7V5h6l2 2"/></svg></span>
           <div><strong>Google Drive</strong><small>${drive ? "Cartella cliente collegata" : "Collegamento da aggiungere"}</small></div>
-          ${drive ? `<a href="${escapeHtml(drive)}" target="_blank" rel="noreferrer" aria-label="Apri Google Drive"><svg class="lc" viewBox="0 0 24 24"><path d="M15 3h6v6"/><path d="M10 14 21 3"/></svg></a>` : ""}
+          ${drive ? `<button class="client-link-open" data-client-drive="${client.id}" type="button" aria-label="Apri Google Drive integrato"><svg class="lc" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></button>` : ""}
         </div>
         <div class="client-link-row ${clickup ? "" : "is-missing"}">
           <span class="client-link-icon"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 9h8M8 13h5M5 4h14v16H5z"/></svg></span>
@@ -1003,6 +1004,7 @@ function clientDetailMarkup(client) {
         </div>
       </aside>
     </div>
+    ${drive ? `<section class="client-drive-panel is-hidden" data-client-drive-panel></section>` : ""}
   `;
 }
 
@@ -1028,7 +1030,152 @@ function openClientDetails(clientId) {
 
 function closeClientDetails() {
   selectedClientId = "";
+  resetDriveBrowser();
   renderClients();
+}
+
+function resetDriveBrowser() {
+  if (clientDriveState.objectUrl) URL.revokeObjectURL(clientDriveState.objectUrl);
+  clientDriveState = { clientId: "", path: [], objectUrl: "" };
+}
+
+async function openClientDrive(clientId) {
+  const client = state.clients.find((item) => String(item.id) === String(clientId));
+  if (!client) return;
+  clientDriveState = { clientId: String(clientId), path: [], objectUrl: "" };
+  await loadClientDriveFolder("", client.name);
+}
+
+async function loadClientDriveFolder(folderId = "", folderName = "") {
+  const panel = document.querySelector("[data-client-drive-panel]");
+  if (!panel) return;
+  panel.classList.remove("is-hidden");
+  panel.innerHTML = `<div class="drive-loading"><span class="drive-spinner" aria-hidden="true"></span>Caricamento Google Drive...</div>`;
+
+  try {
+    const params = new URLSearchParams({ client_id: clientDriveState.clientId });
+    if (folderId) params.set("folder_id", folderId);
+    const response = await apiFetch(`/api/client-drive?${params}`);
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "Google Drive non disponibile");
+
+    const existingIndex = clientDriveState.path.findIndex((item) => item.id === data.folder.id);
+    if (existingIndex >= 0) {
+      clientDriveState.path = clientDriveState.path.slice(0, existingIndex + 1);
+    } else {
+      clientDriveState.path.push({ id: data.folder.id, name: folderName || data.folder.name });
+    }
+    if (clientDriveState.path.length === 1) clientDriveState.path[0].name = data.client.name;
+    panel.innerHTML = driveBrowserMarkup(data.files || []);
+    panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  } catch (error) {
+    panel.innerHTML = `
+      <div class="drive-error">
+        <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 17h.01"/></svg>
+        <div><strong>Google Drive non disponibile</strong><p>${escapeHtml(error.message)}</p></div>
+      </div>`;
+  }
+}
+
+function driveBrowserMarkup(files) {
+  const breadcrumbs = clientDriveState.path.map((item, index) => {
+    const current = index === clientDriveState.path.length - 1;
+    return current
+      ? `<span>${escapeHtml(item.name)}</span>`
+      : `<button data-drive-breadcrumb="${index}" type="button">${escapeHtml(item.name)}</button>`;
+  }).join(`<svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>`);
+
+  return `
+    <div class="drive-browser-head">
+      <div>
+        <p class="eyebrow">Google Drive integrato</p>
+        <nav class="drive-breadcrumbs" aria-label="Percorso cartella">${breadcrumbs}</nav>
+      </div>
+      <span class="drive-item-count">${files.length} ${files.length === 1 ? "elemento" : "elementi"}</span>
+    </div>
+    <div class="drive-file-grid">
+      ${files.map(driveEntryMarkup).join("") || `<div class="drive-empty">Questa cartella è vuota.</div>`}
+    </div>`;
+}
+
+function driveEntryMarkup(file) {
+  const action = file.is_folder ? "data-drive-folder" : "data-drive-file";
+  const meta = file.is_folder
+    ? "Cartella"
+    : [formatFileSize(file.size), formatDriveDate(file.modified_at)].filter(Boolean).join(" · ") || "File";
+  return `
+    <button class="drive-entry ${file.is_folder ? "is-folder" : "is-file"}" ${action}="${escapeHtml(file.id)}" data-drive-name="${escapeHtml(file.name)}" data-drive-mime="${escapeHtml(file.mime_type || "")}" type="button">
+      <span class="drive-entry-icon" aria-hidden="true">${driveFileIcon(file)}</span>
+      <span class="drive-entry-copy"><strong>${escapeHtml(file.name)}</strong><small>${escapeHtml(meta)}</small></span>
+      <svg class="lc drive-entry-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+    </button>`;
+}
+
+function driveFileIcon(file) {
+  if (file.is_folder) return `<svg class="lc" viewBox="0 0 24 24"><path d="M3 7h6l2 2h10v10H3z"/><path d="M3 7V5h6l2 2"/></svg>`;
+  if (String(file.mime_type).startsWith("image/")) return `<svg class="lc" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 15-5-5L5 20"/></svg>`;
+  if (file.mime_type === "application/pdf") return `<svg class="lc" viewBox="0 0 24 24"><path d="M6 2h9l5 5v15H6z"/><path d="M14 2v6h6M9 14h6M9 18h4"/></svg>`;
+  return `<svg class="lc" viewBox="0 0 24 24"><path d="M6 2h9l5 5v15H6z"/><path d="M14 2v6h6"/></svg>`;
+}
+
+function formatFileSize(value) {
+  const bytes = Number(value || 0);
+  if (!bytes) return "";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function formatDriveDate(value) {
+  if (!value) return "";
+  return new Intl.DateTimeFormat("it-IT", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(value));
+}
+
+async function openDriveFile(fileId, fileName, mimeType) {
+  try {
+    const params = new URLSearchParams({
+      client_id: clientDriveState.clientId,
+      file_id: fileId,
+      action: "content"
+    });
+    const response = await apiFetch(`/api/client-drive?${params}`);
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.error || "File non disponibile");
+    }
+    const blob = await response.blob();
+    if (clientDriveState.objectUrl) URL.revokeObjectURL(clientDriveState.objectUrl);
+    clientDriveState.objectUrl = URL.createObjectURL(blob);
+
+    const previewable = blob.type === "application/pdf"
+      || blob.type.startsWith("image/")
+      || blob.type.startsWith("video/")
+      || blob.type.startsWith("audio/")
+      || blob.type.startsWith("text/")
+      || String(mimeType).startsWith("application/vnd.google-apps.");
+    if (!previewable) {
+      const link = document.createElement("a");
+      link.href = clientDriveState.objectUrl;
+      link.download = fileName || "file";
+      link.click();
+      return;
+    }
+
+    document.getElementById("drivePreviewTitle").textContent = fileName || "Anteprima file";
+    const body = document.getElementById("drivePreviewBody");
+    if (blob.type.startsWith("image/")) {
+      body.innerHTML = `<img src="${clientDriveState.objectUrl}" alt="${escapeHtml(fileName)}">`;
+    } else if (blob.type.startsWith("video/")) {
+      body.innerHTML = `<video src="${clientDriveState.objectUrl}" controls></video>`;
+    } else if (blob.type.startsWith("audio/")) {
+      body.innerHTML = `<audio src="${clientDriveState.objectUrl}" controls></audio>`;
+    } else {
+      body.innerHTML = `<iframe src="${clientDriveState.objectUrl}" title="${escapeHtml(fileName)}"></iframe>`;
+    }
+    document.getElementById("drivePreviewModal").showModal();
+  } catch (error) {
+    alert(error.message || "Non riesco ad aprire il file.");
+  }
 }
 
 function labelClientStatus(status) {
@@ -2438,6 +2585,10 @@ document.body.addEventListener("click", (event) => {
   const openClient = event.target.closest("[data-client-open]");
   const editClient = event.target.closest("[data-client-edit]");
   const backClient = event.target.closest("[data-client-back]");
+  const openClientDriveButton = event.target.closest("[data-client-drive]");
+  const driveFolder = event.target.closest("[data-drive-folder]");
+  const driveBreadcrumb = event.target.closest("[data-drive-breadcrumb]");
+  const driveFile = event.target.closest("[data-drive-file]");
   const saveUser = event.target.closest("[data-save-user]");
   const applyAiClient = event.target.closest("[data-apply-ai-client]");
   const deleteAlias = event.target.closest("[data-delete-alias]");
@@ -2448,6 +2599,14 @@ document.body.addEventListener("click", (event) => {
   if (openClient) return openClientDetails(openClient.dataset.clientOpen);
   if (editClient) return openClientModal(editClient.dataset.clientEdit);
   if (backClient) return closeClientDetails();
+  if (openClientDriveButton) return openClientDrive(openClientDriveButton.dataset.clientDrive);
+  if (driveFolder) return loadClientDriveFolder(driveFolder.dataset.driveFolder, driveFolder.dataset.driveName);
+  if (driveBreadcrumb) {
+    const index = Number(driveBreadcrumb.dataset.driveBreadcrumb);
+    const target = clientDriveState.path[index];
+    if (target) return loadClientDriveFolder(target.id, target.name);
+  }
+  if (driveFile) return openDriveFile(driveFile.dataset.driveFile, driveFile.dataset.driveName, driveFile.dataset.driveMime);
   if (taskRow && !event.target.closest("a, button, input, select, textarea")) return openTaskDetailModal(taskRow.dataset.taskDetail);
   if (saveUser) saveUserProfile(saveUser.closest("[data-user-id]"));
   if (applyAiClient) applyAiClientTag(applyAiClient);
@@ -2543,6 +2702,13 @@ document.getElementById("contentImageFile").addEventListener("change", (event) =
   event.target.value = "";
 });
 document.getElementById("newClientButton").addEventListener("click", () => openClientModal());
+document.getElementById("drivePreviewModal").addEventListener("close", () => {
+  document.getElementById("drivePreviewBody").replaceChildren();
+  if (clientDriveState.objectUrl) {
+    URL.revokeObjectURL(clientDriveState.objectUrl);
+    clientDriveState.objectUrl = "";
+  }
+});
 document.getElementById("syncClickUpButton").addEventListener("click", syncClientsFromClickUp);
 document.getElementById("syncTasksButton").addEventListener("click", syncTasksFromClickUp);
 document.getElementById("refreshTaskLogsButton").addEventListener("click", loadClickUpTaskLogs);
