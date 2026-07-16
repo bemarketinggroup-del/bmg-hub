@@ -1111,8 +1111,17 @@ function driveBrowserMarkup(files, uploadEnabled) {
       </div>
     </div>
     <div class="drive-upload-status is-hidden" data-drive-upload-status role="status"></div>
-    <div class="drive-file-grid">
-      ${files.map((file) => driveEntryMarkup(file, uploadEnabled)).join("") || `<div class="drive-empty">Questa cartella è vuota.</div>`}
+    <div class="drive-drop-zone${uploadEnabled ? "" : " is-disabled"}" data-drive-drop-zone data-drive-write-enabled="${uploadEnabled ? "1" : "0"}">
+      <div class="drive-drop-overlay" aria-hidden="true">
+        <span class="drive-drop-icon">
+          <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 15v5h16v-5"/></svg>
+        </span>
+        <strong>Rilascia qui i file</strong>
+        <span>Verranno caricati nella cartella aperta</span>
+      </div>
+      <div class="drive-file-grid">
+        ${files.map((file) => driveEntryMarkup(file, uploadEnabled)).join("") || `<div class="drive-empty">Questa cartella è vuota. Trascina qui i file da caricare.</div>`}
+      </div>
     </div>`;
 }
 
@@ -2871,6 +2880,45 @@ document.body.addEventListener("change", (event) => {
   const input = event.target.closest("[data-drive-upload-input]");
   if (!input) return;
   uploadDriveFiles(input.files).finally(() => { input.value = ""; });
+});
+
+function isDriveFileDrag(event) {
+  return Array.from(event.dataTransfer?.types || []).includes("Files");
+}
+
+function driveDropZoneFromEvent(event) {
+  const zone = event.target.closest?.("[data-drive-drop-zone]");
+  if (!zone || zone.dataset.driveWriteEnabled !== "1" || !isDriveFileDrag(event)) return null;
+  return zone;
+}
+
+document.body.addEventListener("dragenter", (event) => {
+  const zone = driveDropZoneFromEvent(event);
+  if (!zone) return;
+  event.preventDefault();
+  zone.classList.add("is-dragging");
+});
+
+document.body.addEventListener("dragover", (event) => {
+  const zone = driveDropZoneFromEvent(event);
+  if (!zone) return;
+  event.preventDefault();
+  event.dataTransfer.dropEffect = "copy";
+  zone.classList.add("is-dragging");
+});
+
+document.body.addEventListener("dragleave", (event) => {
+  const zone = event.target.closest?.("[data-drive-drop-zone]");
+  if (!zone || zone.contains(event.relatedTarget)) return;
+  zone.classList.remove("is-dragging");
+});
+
+document.body.addEventListener("drop", (event) => {
+  const zone = driveDropZoneFromEvent(event);
+  if (!zone) return;
+  event.preventDefault();
+  zone.classList.remove("is-dragging");
+  uploadDriveFiles(event.dataTransfer.files);
 });
 
 document.getElementById("driveManageForm").addEventListener("submit", (event) => {
