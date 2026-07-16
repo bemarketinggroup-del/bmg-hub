@@ -158,7 +158,7 @@ let clientsOnline = false;
 let clickupOnline = false;
 let selectedTeamMemberId = ALL_TEAM_TASKS_ID;
 let selectedClientId = "";
-let clientDriveState = { clientId: "", path: [], objectUrl: "" };
+let clientDriveState = { clientId: "", path: [], objectUrl: "", thumbnailUrls: new Set() };
 let selectedSmartWeek = mondayOf(new Date());
 let selectedContentSection = "all";
 let authConfig = null;
@@ -1036,19 +1036,22 @@ function closeClientDetails() {
 
 function resetDriveBrowser() {
   if (clientDriveState.objectUrl) URL.revokeObjectURL(clientDriveState.objectUrl);
-  clientDriveState = { clientId: "", path: [], objectUrl: "" };
+  clearDriveThumbnailUrls();
+  clientDriveState = { clientId: "", path: [], objectUrl: "", thumbnailUrls: new Set() };
 }
 
 async function openClientDrive(clientId) {
   const client = state.clients.find((item) => String(item.id) === String(clientId));
   if (!client) return;
-  clientDriveState = { clientId: String(clientId), path: [], objectUrl: "" };
+  clearDriveThumbnailUrls();
+  clientDriveState = { clientId: String(clientId), path: [], objectUrl: "", thumbnailUrls: new Set() };
   await loadClientDriveFolder("", client.name);
 }
 
 async function loadClientDriveFolder(folderId = "", folderName = "") {
   const panel = document.querySelector("[data-client-drive-panel]");
   if (!panel) return;
+  clearDriveThumbnailUrls();
   panel.classList.remove("is-hidden");
   panel.innerHTML = `<div class="drive-loading"><span class="drive-spinner" aria-hidden="true"></span>Caricamento Google Drive...</div>`;
 
@@ -1067,6 +1070,7 @@ async function loadClientDriveFolder(folderId = "", folderName = "") {
     }
     if (clientDriveState.path.length === 1) clientDriveState.path[0].name = data.client.name;
     panel.innerHTML = driveBrowserMarkup(data.files || []);
+    hydrateDriveThumbnails(panel);
     panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
   } catch (error) {
     panel.innerHTML = `
@@ -1100,19 +1104,67 @@ function driveBrowserMarkup(files) {
 
 function driveEntryMarkup(file) {
   const action = file.is_folder ? "data-drive-folder" : "data-drive-file";
+  const isImage = String(file.mime_type || "").startsWith("image/");
+  const isVideo = String(file.mime_type || "").startsWith("video/");
+  const hasThumbnail = !file.is_folder && file.has_thumbnail && (isImage || isVideo);
   const meta = file.is_folder
     ? "Cartella"
     : [formatFileSize(file.size), formatDriveDate(file.modified_at)].filter(Boolean).join(" · ") || "File";
   return `
-    <button class="drive-entry ${file.is_folder ? "is-folder" : "is-file"}" ${action}="${escapeHtml(file.id)}" data-drive-name="${escapeHtml(file.name)}" data-drive-mime="${escapeHtml(file.mime_type || "")}" type="button">
-      <span class="drive-entry-icon" aria-hidden="true">${driveFileIcon(file)}</span>
+    <button class="drive-entry ${file.is_folder ? "is-folder" : "is-file"} ${hasThumbnail ? "has-thumbnail" : ""}" ${action}="${escapeHtml(file.id)}" data-drive-name="${escapeHtml(file.name)}" data-drive-mime="${escapeHtml(file.mime_type || "")}" type="button">
+      ${hasThumbnail ? `
+        <span class="drive-entry-preview">
+          <span class="drive-entry-preview-placeholder" aria-hidden="true">${driveFileIcon(file)}</span>
+          <img data-drive-thumbnail="${escapeHtml(file.id)}" alt="Anteprima ${escapeHtml(file.name)}" loading="lazy">
+          ${isVideo ? `<span class="drive-video-badge" aria-hidden="true"><svg class="lc" viewBox="0 0 24 24"><path d="m9 7 8 5-8 5z"/></svg></span>` : ""}
+        </span>` : `<span class="drive-entry-icon" aria-hidden="true">${driveFileIcon(file)}</span>`}
       <span class="drive-entry-copy"><strong>${escapeHtml(file.name)}</strong><small>${escapeHtml(meta)}</small></span>
       <svg class="lc drive-entry-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
     </button>`;
 }
 
+function clearDriveThumbnailUrls() {
+  for (const url of clientDriveState.thumbnailUrls || []) URL.revokeObjectURL(url);
+  clientDriveState.thumbnailUrls = new Set();
+}
+
+function hydrateDriveThumbnails(panel) {
+  const images = [...panel.querySelectorAll("[data-drive-thumbnail]")];
+  if (!images.length) return;
+
+  const load = (image) => loadDriveThumbnail(image).catch(() => {});
+  if (!("IntersectionObserver" in window)) {
+    images.forEach(load);
+    return;
+  }
+
+  const observer = new IntersectionObserver((entries) => {
+    for (const entry of entries) {
+      if (!entry.isIntersecting) continue;
+      observer.unobserve(entry.target);
+      load(entry.target);
+    }
+  }, { rootMargin: "240px" });
+  images.forEach((image) => observer.observe(image));
+}
+
+async function loadDriveThumbnail(image) {
+  const params = new URLSearchParams({
+    client_id: clientDriveState.clientId,
+    file_id: image.dataset.driveThumbnail,
+    action: "thumbnail"
+  });
+  const response = await apiFetch(`/api/client-drive?${params}`);
+  if (!response.ok) throw new Error("Miniatura non disponibile");
+  const objectUrl = URL.createObjectURL(await response.blob());
+  clientDriveState.thumbnailUrls.add(objectUrl);
+  image.addEventListener("load", () => image.classList.add("is-loaded"), { once: true });
+  image.src = objectUrl;
+}
+
 function driveFileIcon(file) {
   if (file.is_folder) return `<svg class="lc" viewBox="0 0 24 24"><path d="M3 7h6l2 2h10v10H3z"/><path d="M3 7V5h6l2 2"/></svg>`;
+  if (String(file.mime_type).startsWith("video/")) return `<svg class="lc" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m10 9 5 3-5 3z"/></svg>`;
   if (String(file.mime_type).startsWith("image/")) return `<svg class="lc" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 15-5-5L5 20"/></svg>`;
   if (file.mime_type === "application/pdf") return `<svg class="lc" viewBox="0 0 24 24"><path d="M6 2h9l5 5v15H6z"/><path d="M14 2v6h6M9 14h6M9 18h4"/></svg>`;
   return `<svg class="lc" viewBox="0 0 24 24"><path d="M6 2h9l5 5v15H6z"/><path d="M14 2v6h6"/></svg>`;
