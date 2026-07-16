@@ -40,16 +40,36 @@ La combinazione cliente, data e file e univoca per impedire collegamenti duplica
 - la chiave service role e i token Google restano esclusivamente lato server;
 - la cancellazione disponibile nella sezione PED scollega il riferimento, senza operazioni distruttive sul Drive.
 
+## Condivisione con il cliente
+
+Un admin puo selezionare un cliente nella sezione `PED` e usare il pulsante `Condividi` per generare un calendario esterno in sola lettura.
+
+- il link e specifico per un solo cliente ed e revocabile in qualsiasi momento;
+- la scadenza e configurabile dall'admin;
+- il token completo viene mostrato solo subito dopo la creazione;
+- nel database viene salvato esclusivamente l'hash SHA-256 del token;
+- il token resta nel frammento `#` dell'URL e non viene inviato nei normali log HTTP;
+- la pagina condivisa non mostra menu interni, task, utenti, collegamenti Drive o dati di altri clienti;
+- foto e video usano URL firmati con durata massima di un'ora;
+- la pagina e marcata `noindex`, `nofollow` e usa una Content Security Policy restrittiva.
+
+Se il link viene rigenerato, quello precedente smette immediatamente di funzionare. La tabella `ped_share_links` conserva stato, scadenza e ultimo accesso, ma mai il token in chiaro.
+
 ## API
 
 - `GET /api/ped?client_id=<uuid>&month=YYYY-MM`: elementi del mese;
 - `POST /api/ped`: collega un file Drive a una data;
 - `PATCH /api/ped`: cambia data e/o formato editoriale di un elemento;
 - `DELETE /api/ped?id=<uuid>`: rimuove il collegamento dal PED.
+- `GET /api/ped-share?client_id=<uuid>`: stato del link, solo admin;
+- `POST /api/ped-share`: crea o rigenera il link, solo admin;
+- `DELETE /api/ped-share?client_id=<uuid>`: revoca il link, solo admin;
+- `GET /api/public-ped?month=YYYY-MM`: calendario cliente, richiede il token nell'header `X-PED-Share-Token`.
 
 ## Migrazione
 
 Applicare, in ordine:
 
 1. `supabase/20260716_ped_calendar.sql`;
-2. `supabase/20260716_ped_content_types.sql`.
+2. `supabase/20260716_ped_content_types.sql`;
+3. `supabase/20260716_ped_share_links.sql`.

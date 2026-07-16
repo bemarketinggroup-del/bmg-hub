@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <meta name="referrer" content="no-referrer">
+  <title>Piano editoriale | BMG</title>
+  <link rel="stylesheet" href="/ped-share.css">
+  <script defer src="/ped-share.js"></script>
+</head>
+<body>
+  <header class="share-header">
+    <a class="brand" aria-label="BMG - Be Marketing Group">
+      <span class="brand-mark">bmg</span>
+      <span><strong>Be Marketing Group</strong><small>Piano editoriale condiviso</small></span>
+    </a>
+    <span class="readonly-pill">Sola lettura</span>
+  </header>
+
+  <main class="share-main">
+    <section class="share-title">
+      <div>
+        <p class="eyebrow">Calendario contenuti</p>
+        <h1 id="shareClientName">Piano editoriale</h1>
+        <p>Contenuti pianificati e anteprime della programmazione social.</p>
+      </div>
+      <div class="month-controls" aria-label="Navigazione mesi">
+        <button id="sharePreviousMonth" type="button" title="Mese precedente" aria-label="Mese precedente">‹</button>
+        <strong id="shareMonthLabel">Mese</strong>
+        <button id="shareNextMonth" type="button" title="Mese successivo" aria-label="Mese successivo">›</button>
+      </div>
+    </section>
+
+    <section class="share-panel">
+      <div class="share-legend" aria-label="Legenda formati">
+        <span class="type-post"><i></i>Post</span>
+        <span class="type-story"><i></i>Storia</span>
+        <span class="type-reel"><i></i>Reel</span>
+        <span class="type-carousel"><i></i>Carosello</span>
+        <small id="shareSummary"></small>
+      </div>
+      <div class="calendar-scroll">
+        <div class="weekdays" aria-hidden="true"><span>Lun</span><span>Mar</span><span>Mer</span><span>Gio</span><span>Ven</span><span>Sab</span><span>Dom</span></div>
+        <div class="calendar-grid" id="shareCalendarGrid" aria-live="polite">
+          <div class="share-loading">Caricamento calendario...</div>
+        </div>
+      </div>
+    </section>
+
+    <p class="share-footnote">Questo calendario è condiviso in modo riservato da Be Marketing Group.</p>
+  </main>
+
+  <dialog id="sharePreviewModal" class="preview-modal">
+    <div class="preview-head">
+      <div><small id="sharePreviewType">Contenuto</small><strong id="sharePreviewTitle">Anteprima</strong></div>
+      <button id="sharePreviewClose" type="button" title="Chiudi" aria-label="Chiudi">×</button>
+    </div>
+    <div class="preview-body" id="sharePreviewBody"></div>
+    <p class="preview-caption" id="sharePreviewCaption"></p>
+  </dialog>
+</body>
+</html>

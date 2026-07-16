@@ -9,7 +9,9 @@ const env = await loadEnv(join(projectRoot, ".env.local"));
 Object.assign(process.env, env);
 const { handleSmartWorking } = await import("../lib/smart-working.js");
 const { default: handleClients } = await import("../api/clients.js");
+const { default: handleClientDrive } = await import("../lib/client-drive-api.js");
 const { default: handlePed } = await import("../lib/ped.js");
+const { handlePedShareAdmin, handlePublicPed } = await import("../lib/ped-share.js");
 const { default: handleClientsSyncClickUp } = await import("../api/clients-sync-clickup.js");
 const { default: handleClickUpTeam } = await import("../api/clickup-team.js");
 const { default: handleClickUpTasks } = await import("../api/clickup-tasks.js");
@@ -71,12 +73,22 @@ createServer(async (request, response) => {
     }
 
     if (url.pathname === "/api/client-drive") {
-      await handleClients(request, response);
+      await handleClientDrive(request, response);
       return;
     }
 
     if (url.pathname === "/api/ped") {
       await handlePed(request, response);
+      return;
+    }
+
+    if (url.pathname === "/api/ped-share") {
+      await handlePedShareAdmin(request, response);
+      return;
+    }
+
+    if (url.pathname === "/api/public-ped") {
+      await handlePublicPed(request, response);
       return;
     }
 
@@ -100,7 +112,7 @@ createServer(async (request, response) => {
       return;
     }
 
-    await serveStatic(url.pathname, response);
+    await serveStatic(url.pathname === "/ped-share" || url.pathname === "/ped-share/" ? "/ped-share.html" : url.pathname, response);
   } catch (error) {
     response.writeHead(500, { "Content-Type": "application/json" });
     response.end(JSON.stringify({ error: error.message }));
@@ -346,6 +358,17 @@ async function serveStatic(pathname, response) {
     return;
   }
 
-  response.writeHead(200, { "Content-Type": mimeTypes[extname(filePath)] || "application/octet-stream" });
+  const securityHeaders = cleanPath === "/ped-share.html" ? {
+    "Content-Security-Policy": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; media-src 'self' blob:; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+    "Referrer-Policy": "no-referrer",
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "X-Robots-Tag": "noindex, nofollow, noarchive"
+  } : {};
+  response.writeHead(200, {
+    "Content-Type": mimeTypes[extname(filePath)] || "application/octet-stream",
+    "Cache-Control": "private, no-store",
+    ...securityHeaders
+  });
   createReadStream(filePath).pipe(response);
 }

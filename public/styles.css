@@ -1871,6 +1871,8 @@ code { font-family: var(--font-mono); font-size: 12px; }
 .ped-workspace-head .eyebrow { margin: 0 0 5px; }
 .ped-workspace-head h2 { margin: 0 0 3px; color: var(--ink); font-size: 25px; line-height: 1.15; }
 .ped-workspace-head span { color: var(--muted); }
+.ped-workspace-actions { display: flex; align-items: center; gap: 8px; }
+.ped-workspace-actions .lc { width: 16px; height: 16px; }
 
 .ped-client-tabs {
   display: flex;
@@ -2211,6 +2213,33 @@ code { font-family: var(--font-mono); font-size: 12px; }
 .ped-picker-arrow { width: 16px; height: 16px; color: var(--subtle); }
 .ped-picker-loading, .ped-picker-error, .ped-picker-empty { grid-column: 1 / -1; min-height: 220px; display: flex; align-items: center; justify-content: center; gap: 10px; color: var(--muted); }
 .ped-picker-error { flex-direction: column; color: var(--red); }
+
+.ped-share-modal { width: min(620px, calc(100vw - 28px)); }
+.ped-share-intro { margin: 16px 0 18px; color: var(--muted); line-height: 1.55; }
+.ped-share-status {
+  min-height: 68px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-soft);
+  margin-bottom: 18px;
+  padding: 12px 14px;
+}
+.ped-share-status > span:last-child { min-width: 0; display: grid; gap: 3px; }
+.ped-share-status strong { color: var(--ink); font-size: 13px; }
+.ped-share-status small { color: var(--muted); font-size: 11px; line-height: 1.45; }
+.ped-share-status-dot { width: 10px; height: 10px; flex: 0 0 auto; border-radius: 50%; background: var(--subtle); box-shadow: 0 0 0 5px color-mix(in srgb, var(--subtle) 14%, transparent); }
+.ped-share-status-dot.is-active { background: #4d795f; box-shadow: 0 0 0 5px rgba(77, 121, 95, .14); }
+.ped-share-link-wrap { display: grid; gap: 7px; margin-top: 17px; }
+.ped-share-link-wrap > label { color: var(--ink); font-size: 12px; font-weight: 700; }
+.ped-share-link-wrap small { color: var(--muted); font-size: 10.5px; }
+.ped-share-link-row { display: grid; grid-template-columns: minmax(0, 1fr) 44px; gap: 7px; }
+.ped-share-link-row input { min-width: 0; font-family: var(--font-mono); font-size: 11px; }
+.ped-share-security { display: flex; align-items: flex-start; gap: 9px; border-top: 1px solid var(--line); margin: 18px 0 0; padding-top: 15px; color: var(--muted); font-size: 11px; line-height: 1.5; }
+.ped-share-security .lc { width: 16px; height: 16px; flex: 0 0 auto; color: #4d795f; }
+.ped-share-actions { justify-content: space-between; }
 .drive-preview-body {
   min-height: 520px;
   display: grid;
@@ -2512,6 +2541,9 @@ code { font-family: var(--font-mono); font-size: 12px; }
   .home-quick-grid { grid-template-columns: 1fr; }
   .client-grid { grid-template-columns: 1fr; }
   .ped-workspace-head { align-items: flex-start; padding: 20px; }
+  .ped-workspace-head { flex-direction: column; }
+  .ped-workspace-actions { width: 100%; }
+  .ped-workspace-actions > button { flex: 1 1 auto; }
   .ped-workspace-head h2 { font-size: 22px; }
   .ped-client-tabs { padding-right: 14px; padding-left: 14px; }
   .ped-calendar-toolbar { flex-wrap: wrap; padding-right: 14px; padding-left: 14px; }

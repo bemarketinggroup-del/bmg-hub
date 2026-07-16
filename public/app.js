@@ -163,6 +163,7 @@ let clientDriveState = { clientId: "", path: [], objectUrl: "", thumbnailUrls: n
 let selectedPedClientId = "";
 let selectedPedMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
 let pedPickerState = { date: "", path: [], files: [], contentType: "post" };
+let pedShareState = { active: false, shareUrl: "" };
 let pedLoadingKey = "";
 let selectedSmartWeek = mondayOf(new Date());
 let selectedContentSection = "all";
@@ -1455,6 +1456,146 @@ function renderPed() {
   renderPedClientTabs();
   renderPedCalendar();
   renderPedAgenda();
+  renderPedShareButton();
+}
+
+function selectedPedClient() {
+  return state.clients.find((client) => String(client.id) === String(selectedPedClientId)) || null;
+}
+
+function renderPedShareButton() {
+  const button = document.getElementById("pedShareButton");
+  if (!button) return;
+  const visible = currentProfile?.role === "admin";
+  button.classList.toggle("is-hidden", !visible);
+  button.disabled = !selectedPedClient();
+}
+
+function formatPedShareDate(value) {
+  if (!value) return "Nessuna";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Nessuna";
+  return new Intl.DateTimeFormat("it-IT", { dateStyle: "medium", timeStyle: "short" }).format(date);
+}
+
+function renderPedShareState() {
+  const status = document.getElementById("pedShareStatus");
+  const disable = document.getElementById("pedShareDisableButton");
+  const create = document.getElementById("pedShareCreateButton");
+  if (!status || !disable || !create) return;
+
+  if (pedShareState.loading) {
+    status.innerHTML = `<span class="drive-spinner" aria-hidden="true"></span><span>Verifica link in corso...</span>`;
+    disable.classList.add("is-hidden");
+    create.disabled = true;
+    return;
+  }
+
+  create.disabled = false;
+  if (pedShareState.active) {
+    status.innerHTML = `<span class="ped-share-status-dot is-active" aria-hidden="true"></span><span><strong>Link attivo</strong><small>Scadenza: ${escapeHtml(formatPedShareDate(pedShareState.expires_at))}${pedShareState.last_accessed_at ? ` · Ultimo accesso: ${escapeHtml(formatPedShareDate(pedShareState.last_accessed_at))}` : ""}</small></span>`;
+    disable.classList.remove("is-hidden");
+    create.textContent = "Rigenera link";
+  } else {
+    status.innerHTML = `<span class="ped-share-status-dot" aria-hidden="true"></span><span><strong>Nessun link attivo</strong><small>Crea un accesso in sola lettura per questo cliente.</small></span>`;
+    disable.classList.add("is-hidden");
+    create.textContent = "Crea link cliente";
+  }
+}
+
+async function loadPedShareStatus() {
+  const client = selectedPedClient();
+  if (!client) return;
+  pedShareState = { active: false, shareUrl: "", loading: true };
+  renderPedShareState();
+  try {
+    const response = await apiFetch(`/api/ped-share?client_id=${encodeURIComponent(client.id)}`);
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "Impossibile verificare il link");
+    pedShareState = { ...data, shareUrl: "", loading: false };
+    renderPedShareState();
+  } catch (error) {
+    pedShareState = { active: false, shareUrl: "", loading: false };
+    renderPedShareState();
+    document.getElementById("pedShareMessage").textContent = error.message;
+  }
+}
+
+function openPedShareModal() {
+  const client = selectedPedClient();
+  if (!client || currentProfile?.role !== "admin") return;
+  document.getElementById("pedShareTitle").textContent = `Condividi PED · ${client.name}`;
+  document.getElementById("pedShareIntro").textContent = `Il cliente vedra solo il calendario di ${client.name} e i contenuti pianificati.`;
+  document.getElementById("pedShareLink").value = "";
+  document.getElementById("pedShareLinkWrap").classList.add("is-hidden");
+  document.getElementById("pedShareMessage").textContent = "";
+  document.getElementById("pedShareModal").showModal();
+  loadPedShareStatus();
+}
+
+async function createPedShareLink() {
+  const client = selectedPedClient();
+  if (!client) return;
+  const button = document.getElementById("pedShareCreateButton");
+  const message = document.getElementById("pedShareMessage");
+  button.disabled = true;
+  message.textContent = "Creazione link protetto...";
+  try {
+    const response = await apiFetch("/api/ped-share", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        client_id: client.id,
+        expires_in_days: Number(document.getElementById("pedShareExpiry").value)
+      })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "Creazione link non riuscita");
+    const shareUrl = new URL(data.share_url);
+    shareUrl.searchParams.set("month", pedMonthKey());
+    pedShareState = { ...data, active: true, shareUrl: shareUrl.toString(), loading: false };
+    document.getElementById("pedShareLink").value = pedShareState.shareUrl;
+    document.getElementById("pedShareLinkWrap").classList.remove("is-hidden");
+    message.textContent = "Link creato. Copialo e invialo al cliente.";
+    renderPedShareState();
+  } catch (error) {
+    message.textContent = error.message;
+  } finally {
+    button.disabled = false;
+  }
+}
+
+async function copyPedShareLink() {
+  const input = document.getElementById("pedShareLink");
+  const message = document.getElementById("pedShareMessage");
+  if (!input.value) return;
+  try {
+    await navigator.clipboard.writeText(input.value);
+    message.textContent = "Link copiato negli appunti.";
+  } catch {
+    input.select();
+    document.execCommand("copy");
+    message.textContent = "Link copiato negli appunti.";
+  }
+}
+
+async function disablePedShareLink() {
+  const client = selectedPedClient();
+  if (!client || !confirm(`Disattivare il link PED di ${client.name}?`)) return;
+  const message = document.getElementById("pedShareMessage");
+  message.textContent = "Disattivazione in corso...";
+  try {
+    const response = await apiFetch(`/api/ped-share?client_id=${encodeURIComponent(client.id)}`, { method: "DELETE" });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "Disattivazione non riuscita");
+    pedShareState = { active: false, shareUrl: "", loading: false };
+    document.getElementById("pedShareLink").value = "";
+    document.getElementById("pedShareLinkWrap").classList.add("is-hidden");
+    message.textContent = "Link disattivato. Non e piu utilizzabile.";
+    renderPedShareState();
+  } catch (error) {
+    message.textContent = error.message;
+  }
 }
 
 function renderPedClientTabs() {
@@ -3254,6 +3395,7 @@ document.body.addEventListener("click", (event) => {
   if (pedClient) {
     selectedPedClientId = pedClient.dataset.pedClient;
     state.pedItems = [];
+    pedShareState = { active: false, shareUrl: "" };
     return loadPedCalendar();
   }
   if (pedAdd) return openPedDrivePicker(pedAdd.dataset.pedAdd);
@@ -3377,6 +3519,10 @@ document.getElementById("pedTodayButton").addEventListener("click", () => {
   selectedPedMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
   loadPedCalendar();
 });
+document.getElementById("pedShareButton").addEventListener("click", openPedShareModal);
+document.getElementById("pedShareCreateButton").addEventListener("click", createPedShareLink);
+document.getElementById("pedShareCopyButton").addEventListener("click", copyPedShareLink);
+document.getElementById("pedShareDisableButton").addEventListener("click", disablePedShareLink);
 document.getElementById("taskSearch").addEventListener("input", renderClickUpTasks);
 document.getElementById("taskAssigneeFilter").addEventListener("change", renderClickUpTasks);
 document.getElementById("taskStatusFilter").addEventListener("change", renderClickUpTasks);

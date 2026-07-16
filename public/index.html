@@ -232,7 +232,13 @@
               <h2>Calendario contenuti</h2>
               <span>Collega foto, video e grafiche dal Google Drive di ogni cliente.</span>
             </div>
-            <button class="ghost-button" id="pedTodayButton" type="button">Oggi</button>
+            <div class="ped-workspace-actions">
+              <button class="ghost-button is-hidden" id="pedShareButton" type="button" title="Crea un link protetto per il cliente">
+                <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 10.6 6.8-4.2M8.6 13.4l6.8 4.2"/></svg>
+                Condividi
+              </button>
+              <button class="ghost-button" id="pedTodayButton" type="button">Oggi</button>
+            </div>
           </div>
 
           <nav class="ped-client-tabs" id="pedClientTabs" aria-label="Calendari PED per cliente"></nav>
@@ -657,6 +663,44 @@
       <div class="ped-picker-grid" id="pedPickerGrid"></div>
       <p class="form-message" id="pedPickerMessage" role="status"></p>
     </div>
+  </dialog>
+
+  <dialog class="modal ped-share-modal" id="pedShareModal">
+    <form method="dialog" id="pedShareForm">
+      <div class="modal-head">
+        <div>
+          <p class="eyebrow">Condivisione protetta</p>
+          <h2 id="pedShareTitle">Condividi PED</h2>
+        </div>
+        <button class="icon-button" value="cancel" type="submit" formnovalidate title="Chiudi" aria-label="Chiudi"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+      </div>
+      <p class="ped-share-intro" id="pedShareIntro">Il link mostra al cliente solo il proprio calendario editoriale.</p>
+      <div class="ped-share-status" id="pedShareStatus" aria-live="polite"></div>
+      <label class="full">Scadenza del link
+        <select id="pedShareExpiry">
+          <option value="7">7 giorni</option>
+          <option value="30">30 giorni</option>
+          <option value="90" selected>90 giorni</option>
+          <option value="180">180 giorni</option>
+          <option value="365">1 anno</option>
+          <option value="0">Nessuna scadenza</option>
+        </select>
+      </label>
+      <div class="ped-share-link-wrap is-hidden" id="pedShareLinkWrap">
+        <label for="pedShareLink">Link cliente</label>
+        <div class="ped-share-link-row">
+          <input id="pedShareLink" type="text" readonly aria-label="Link PED cliente">
+          <button class="icon-button" id="pedShareCopyButton" type="button" title="Copia link" aria-label="Copia link"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
+        </div>
+        <small>Per sicurezza il link completo viene mostrato solo al momento della creazione.</small>
+      </div>
+      <p class="ped-share-security"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg><span>Il link è revocabile e non espone Drive, task o altre aree dell'Hub.</span></p>
+      <p class="form-message" id="pedShareMessage" role="status"></p>
+      <div class="modal-actions ped-share-actions">
+        <button class="danger-button is-hidden" id="pedShareDisableButton" type="button">Disattiva link</button>
+        <button class="primary-button" id="pedShareCreateButton" type="button">Crea link cliente</button>
+      </div>
+    </form>
   </dialog>
 
   <dialog class="modal drive-manage-modal" id="driveManageModal">
