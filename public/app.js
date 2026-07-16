@@ -158,7 +158,7 @@ let clientsOnline = false;
 let clickupOnline = false;
 let selectedTeamMemberId = ALL_TEAM_TASKS_ID;
 let selectedClientId = "";
-let clientDriveState = { clientId: "", path: [], objectUrl: "", thumbnailUrls: new Set() };
+let clientDriveState = { clientId: "", path: [], objectUrl: "", thumbnailUrls: new Set(), uploadEnabled: false };
 let selectedSmartWeek = mondayOf(new Date());
 let selectedContentSection = "all";
 let authConfig = null;
@@ -1037,14 +1037,14 @@ function closeClientDetails() {
 function resetDriveBrowser() {
   if (clientDriveState.objectUrl) URL.revokeObjectURL(clientDriveState.objectUrl);
   clearDriveThumbnailUrls();
-  clientDriveState = { clientId: "", path: [], objectUrl: "", thumbnailUrls: new Set() };
+  clientDriveState = { clientId: "", path: [], objectUrl: "", thumbnailUrls: new Set(), uploadEnabled: false };
 }
 
 async function openClientDrive(clientId) {
   const client = state.clients.find((item) => String(item.id) === String(clientId));
   if (!client) return;
   clearDriveThumbnailUrls();
-  clientDriveState = { clientId: String(clientId), path: [], objectUrl: "", thumbnailUrls: new Set() };
+  clientDriveState = { clientId: String(clientId), path: [], objectUrl: "", thumbnailUrls: new Set(), uploadEnabled: false };
   await loadClientDriveFolder("", client.name);
 }
 
@@ -1069,7 +1069,8 @@ async function loadClientDriveFolder(folderId = "", folderName = "") {
       clientDriveState.path.push({ id: data.folder.id, name: folderName || data.folder.name });
     }
     if (clientDriveState.path.length === 1) clientDriveState.path[0].name = data.client.name;
-    panel.innerHTML = driveBrowserMarkup(data.files || []);
+    clientDriveState.uploadEnabled = Boolean(data.upload_enabled);
+    panel.innerHTML = driveBrowserMarkup(data.files || [], clientDriveState.uploadEnabled);
     hydrateDriveThumbnails(panel);
     panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
   } catch (error) {
@@ -1081,7 +1082,7 @@ async function loadClientDriveFolder(folderId = "", folderName = "") {
   }
 }
 
-function driveBrowserMarkup(files) {
+function driveBrowserMarkup(files, uploadEnabled) {
   const breadcrumbs = clientDriveState.path.map((item, index) => {
     const current = index === clientDriveState.path.length - 1;
     return current
@@ -1095,8 +1096,16 @@ function driveBrowserMarkup(files) {
         <p class="eyebrow">Google Drive integrato</p>
         <nav class="drive-breadcrumbs" aria-label="Percorso cartella">${breadcrumbs}</nav>
       </div>
-      <span class="drive-item-count">${files.length} ${files.length === 1 ? "elemento" : "elementi"}</span>
+      <div class="drive-browser-actions">
+        <span class="drive-item-count">${files.length} ${files.length === 1 ? "elemento" : "elementi"}</span>
+        <input class="is-hidden" data-drive-upload-input type="file" multiple>
+        <button class="drive-upload-button" data-drive-upload type="button" ${uploadEnabled ? "" : "disabled"} title="${uploadEnabled ? "Carica file nella cartella aperta" : "Autorizzazione OAuth Google necessaria"}">
+          <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 15v5h16v-5"/></svg>
+          Carica file
+        </button>
+      </div>
     </div>
+    <div class="drive-upload-status is-hidden" data-drive-upload-status role="status"></div>
     <div class="drive-file-grid">
       ${files.map(driveEntryMarkup).join("") || `<div class="drive-empty">Questa cartella è vuota.</div>`}
     </div>`;
@@ -1107,11 +1116,13 @@ function driveEntryMarkup(file) {
   const isImage = String(file.mime_type || "").startsWith("image/");
   const isVideo = String(file.mime_type || "").startsWith("video/");
   const hasThumbnail = !file.is_folder && file.has_thumbnail && (isImage || isVideo);
+  const webUrl = safeExternalUrl(file.web_url);
   const meta = file.is_folder
     ? "Cartella"
     : [formatFileSize(file.size), formatDriveDate(file.modified_at)].filter(Boolean).join(" · ") || "File";
   return `
-    <button class="drive-entry ${file.is_folder ? "is-folder" : "is-file"} ${hasThumbnail ? "has-thumbnail" : ""}" ${action}="${escapeHtml(file.id)}" data-drive-name="${escapeHtml(file.name)}" data-drive-mime="${escapeHtml(file.mime_type || "")}" type="button">
+    <article class="drive-entry-card ${hasThumbnail ? "has-thumbnail" : ""}">
+      <button class="drive-entry ${file.is_folder ? "is-folder" : "is-file"} ${hasThumbnail ? "has-thumbnail" : ""}" ${action}="${escapeHtml(file.id)}" data-drive-name="${escapeHtml(file.name)}" data-drive-mime="${escapeHtml(file.mime_type || "")}" type="button">
       ${hasThumbnail ? `
         <span class="drive-entry-preview">
           <span class="drive-entry-preview-placeholder" aria-hidden="true">${driveFileIcon(file)}</span>
@@ -1120,7 +1131,97 @@ function driveEntryMarkup(file) {
         </span>` : `<span class="drive-entry-icon" aria-hidden="true">${driveFileIcon(file)}</span>`}
       <span class="drive-entry-copy"><strong>${escapeHtml(file.name)}</strong><small>${escapeHtml(meta)}</small></span>
       <svg class="lc drive-entry-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
-    </button>`;
+      </button>
+      ${!file.is_folder && webUrl ? `
+        <div class="drive-content-link">
+          <input value="${escapeHtml(webUrl)}" readonly aria-label="Link Google Drive di ${escapeHtml(file.name)}">
+          <button data-copy-drive-link="${escapeHtml(webUrl)}" type="button" title="Copia link" aria-label="Copia link di ${escapeHtml(file.name)}">
+            <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M15 9V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h3"/></svg>
+          </button>
+        </div>` : ""}
+    </article>`;
+}
+
+async function copyDriveLink(button) {
+  const link = button.dataset.copyDriveLink || "";
+  if (!link) return;
+  try {
+    await navigator.clipboard.writeText(link);
+  } catch {
+    const input = button.parentElement?.querySelector("input");
+    if (!input) return;
+    input.select();
+    document.execCommand("copy");
+    input.setSelectionRange(0, 0);
+  }
+  button.classList.add("is-copied");
+  button.title = "Link copiato";
+  window.setTimeout(() => {
+    button.classList.remove("is-copied");
+    button.title = "Copia link";
+  }, 1600);
+}
+
+async function uploadDriveFiles(files) {
+  const selectedFiles = [...files];
+  if (!selectedFiles.length || !clientDriveState.uploadEnabled) return;
+  const panel = document.querySelector("[data-client-drive-panel]");
+  const status = panel?.querySelector("[data-drive-upload-status]");
+  const folder = clientDriveState.path[clientDriveState.path.length - 1];
+  if (!folder) return;
+
+  const showProgress = (message, percent = 0, failed = false) => {
+    if (!status) return;
+    status.classList.remove("is-hidden", "is-error");
+    if (failed) status.classList.add("is-error");
+    status.innerHTML = `<div><strong>${escapeHtml(message)}</strong><span>${Math.round(percent)}%</span></div><progress max="100" value="${Math.round(percent)}"></progress>`;
+  };
+
+  try {
+    for (let index = 0; index < selectedFiles.length; index += 1) {
+      const file = selectedFiles[index];
+      const baseProgress = (index / selectedFiles.length) * 100;
+      showProgress(`Caricamento ${file.name}`, baseProgress);
+      const response = await apiFetch(`/api/client-drive?client_id=${encodeURIComponent(clientDriveState.clientId)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          folder_id: folder.id,
+          name: file.name,
+          mime_type: file.type || "application/octet-stream",
+          size: file.size
+        })
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data.upload_url) throw new Error(data.error || "Sessione di caricamento non disponibile");
+
+      await uploadFileToDrive(data.upload_url, file, (fileProgress) => {
+        const totalProgress = ((index + fileProgress / 100) / selectedFiles.length) * 100;
+        showProgress(`Caricamento ${file.name}`, totalProgress);
+      });
+    }
+    showProgress(`${selectedFiles.length} ${selectedFiles.length === 1 ? "file caricato" : "file caricati"}`, 100);
+    await loadClientDriveFolder(folder.id, folder.name);
+  } catch (error) {
+    showProgress(error.message || "Caricamento non riuscito", 0, true);
+  }
+}
+
+function uploadFileToDrive(uploadUrl, file, onProgress) {
+  return new Promise((resolve, reject) => {
+    const request = new XMLHttpRequest();
+    request.open("PUT", uploadUrl);
+    request.setRequestHeader("Content-Type", file.type || "application/octet-stream");
+    request.upload.addEventListener("progress", (event) => {
+      if (event.lengthComputable) onProgress((event.loaded / event.total) * 100);
+    });
+    request.addEventListener("load", () => {
+      if (request.status >= 200 && request.status < 300) resolve();
+      else reject(new Error(`Google Drive ha rifiutato il file (${request.status || "rete"})`));
+    });
+    request.addEventListener("error", () => reject(new Error("Connessione a Google Drive interrotta")));
+    request.send(file);
+  });
 }
 
 function clearDriveThumbnailUrls() {
@@ -2641,6 +2742,8 @@ document.body.addEventListener("click", (event) => {
   const driveFolder = event.target.closest("[data-drive-folder]");
   const driveBreadcrumb = event.target.closest("[data-drive-breadcrumb]");
   const driveFile = event.target.closest("[data-drive-file]");
+  const driveUpload = event.target.closest("[data-drive-upload]");
+  const copyDriveLinkButton = event.target.closest("[data-copy-drive-link]");
   const saveUser = event.target.closest("[data-save-user]");
   const applyAiClient = event.target.closest("[data-apply-ai-client]");
   const deleteAlias = event.target.closest("[data-delete-alias]");
@@ -2659,10 +2762,18 @@ document.body.addEventListener("click", (event) => {
     if (target) return loadClientDriveFolder(target.id, target.name);
   }
   if (driveFile) return openDriveFile(driveFile.dataset.driveFile, driveFile.dataset.driveName, driveFile.dataset.driveMime);
+  if (driveUpload) return document.querySelector("[data-drive-upload-input]")?.click();
+  if (copyDriveLinkButton) return copyDriveLink(copyDriveLinkButton);
   if (taskRow && !event.target.closest("a, button, input, select, textarea")) return openTaskDetailModal(taskRow.dataset.taskDetail);
   if (saveUser) saveUserProfile(saveUser.closest("[data-user-id]"));
   if (applyAiClient) applyAiClientTag(applyAiClient);
   if (deleteAlias) deleteClientAlias(deleteAlias.dataset.deleteAlias);
+});
+
+document.body.addEventListener("change", (event) => {
+  const input = event.target.closest("[data-drive-upload-input]");
+  if (!input) return;
+  uploadDriveFiles(input.files).finally(() => { input.value = ""; });
 });
 
 document.body.addEventListener("keydown", (event) => {
