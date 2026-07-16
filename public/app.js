@@ -162,7 +162,7 @@ let selectedClientId = "";
 let clientDriveState = { clientId: "", path: [], objectUrl: "", thumbnailUrls: new Set(), uploadEnabled: false };
 let selectedPedClientId = "";
 let selectedPedMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-let pedPickerState = { date: "", path: [], files: [] };
+let pedPickerState = { date: "", path: [], files: [], contentType: "post" };
 let pedLoadingKey = "";
 let selectedSmartWeek = mondayOf(new Date());
 let selectedContentSection = "all";
@@ -1416,6 +1416,30 @@ function pedMonthKey(value = selectedPedMonth) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
 }
 
+const PED_CONTENT_TYPES = Object.freeze({
+  post: { label: "Post", description: "Post singolo" },
+  story: { label: "Storia", description: "Storia" },
+  reel: { label: "Reel", description: "Reel" },
+  carousel: { label: "Carosello", description: "Carosello / multipost" }
+});
+
+function pedContentType(value) {
+  const type = String(value || "post").toLowerCase();
+  return PED_CONTENT_TYPES[type] ? type : "post";
+}
+
+function pedTypeMeta(value) {
+  const type = pedContentType(value);
+  return { type, ...PED_CONTENT_TYPES[type] };
+}
+
+function pedTypeOptions(selected) {
+  const current = pedContentType(selected);
+  return Object.entries(PED_CONTENT_TYPES).map(([value, meta]) =>
+    `<option value="${value}"${value === current ? " selected" : ""}>${meta.label}</option>`
+  ).join("");
+}
+
 function clientHasDrive(client) {
   return Boolean(client && /^https:\/\/drive\.google\.com\//i.test(String(client.drive || "")));
 }
@@ -1430,6 +1454,7 @@ function renderPed() {
   ensurePedClientSelection();
   renderPedClientTabs();
   renderPedCalendar();
+  renderPedAgenda();
 }
 
 function renderPedClientTabs() {
@@ -1491,6 +1516,7 @@ function renderPedCalendar() {
 }
 
 function pedItemMarkup(item) {
+  const format = pedTypeMeta(item.content_type);
   const mime = String(item.drive_mime_type || "");
   const isImage = mime.startsWith("image/");
   const isVideo = mime.startsWith("video/");
@@ -1505,15 +1531,79 @@ function pedItemMarkup(item) {
       : `<div class="ped-preview-file">${driveFileIcon({ is_folder: false, mime_type: mime })}<strong>${escapeHtml(item.drive_file_name)}</strong></div>`;
   const typeLabel = isVideo ? "Video" : isImage ? "Immagine" : mime === "application/pdf" ? "PDF" : "File";
 
-  return `<article class="ped-content-card" data-ped-content="${escapeHtml(item.id)}" tabindex="0">
+  return `<article class="ped-content-card ped-type-${format.type}" data-ped-content="${escapeHtml(item.id)}" tabindex="0">
     <button class="ped-content-main" data-ped-open="${escapeHtml(item.drive_file_id)}" data-ped-name="${escapeHtml(item.drive_file_name)}" data-ped-mime="${escapeHtml(mime)}" data-ped-content-url="${escapeHtml(item.content_url || "")}" type="button" title="Apri l'anteprima nell'Hub">
       <span class="ped-content-thumb">${media}${isVideo ? `<span class="ped-video-mini"><svg class="lc" viewBox="0 0 24 24"><path d="m9 7 8 5-8 5z"/></svg></span>` : ""}</span>
-      <span class="ped-content-copy"><strong>${escapeHtml(item.drive_file_name)}</strong><small>${typeLabel}</small></span>
+      <span class="ped-content-copy"><strong>${escapeHtml(item.drive_file_name)}</strong><small><span class="ped-type-dot" aria-hidden="true"></span>${format.label} · ${typeLabel}</small></span>
     </button>
     <button class="ped-content-remove" data-ped-remove="${escapeHtml(item.id)}" type="button" title="Rimuovi dal PED" aria-label="Rimuovi ${escapeHtml(item.drive_file_name)} dal PED">
       <svg class="lc" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
     </button>
-    <div class="ped-hover-preview" aria-hidden="true">${hoverMedia}<span>${escapeHtml(item.drive_file_name)}</span></div>
+    <div class="ped-hover-preview" aria-hidden="true">${hoverMedia}<span><b>${format.label}</b>${escapeHtml(item.drive_file_name)}</span></div>
+  </article>`;
+}
+
+function renderPedAgenda() {
+  const list = document.getElementById("pedAgendaList");
+  const summary = document.getElementById("pedAgendaSummary");
+  if (!list || !summary) return;
+
+  const monthStart = new Date(selectedPedMonth.getFullYear(), selectedPedMonth.getMonth(), 1, 12);
+  const dayCount = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0).getDate();
+  const grouped = state.pedItems.reduce((map, item) => {
+    const key = String(item.scheduled_date || "");
+    if (!map.has(key)) map.set(key, []);
+    map.get(key).push(item);
+    return map;
+  }, new Map());
+
+  list.innerHTML = Array.from({ length: dayCount }, (_, index) => {
+    const date = new Date(monthStart.getFullYear(), monthStart.getMonth(), index + 1, 12);
+    const dateKey = localDateKey(date);
+    const items = grouped.get(dateKey) || [];
+    const dayName = new Intl.DateTimeFormat("it-IT", { weekday: "short" }).format(date).replace(".", "");
+    const monthName = new Intl.DateTimeFormat("it-IT", { month: "short" }).format(date).replace(".", "");
+    return `<section class="ped-agenda-day${items.length ? " has-content" : ""}" data-ped-agenda-day="${dateKey}">
+      <div class="ped-agenda-date">
+        <span>${escapeHtml(dayName)}</span>
+        <strong>${date.getDate()}</strong>
+        <small>${escapeHtml(monthName)}</small>
+      </div>
+      <div class="ped-agenda-entries">${items.length
+        ? items.map(pedAgendaItemMarkup).join("")
+        : `<span class="ped-agenda-empty">Nessun contenuto programmato</span>`}
+      </div>
+    </section>`;
+  }).join("");
+
+  summary.textContent = `${state.pedItems.length} ${state.pedItems.length === 1 ? "uscita" : "uscite"} nel mese`;
+}
+
+function pedAgendaItemMarkup(item) {
+  const format = pedTypeMeta(item.content_type);
+  const mime = String(item.drive_mime_type || "");
+  const isImage = mime.startsWith("image/");
+  const isVideo = mime.startsWith("video/");
+  const previewUrl = item.thumbnail_url || (isImage ? item.content_url : "");
+  const media = previewUrl
+    ? `<img src="${escapeHtml(previewUrl)}" alt="" loading="lazy" decoding="async">`
+    : driveFileIcon({ is_folder: false, mime_type: mime });
+  return `<article class="ped-agenda-item ped-type-${format.type}">
+    <button class="ped-agenda-preview" data-ped-open="${escapeHtml(item.drive_file_id)}" data-ped-name="${escapeHtml(item.drive_file_name)}" data-ped-mime="${escapeHtml(mime)}" data-ped-content-url="${escapeHtml(item.content_url || "")}" type="button" title="Apri anteprima">
+      ${media}${isVideo ? `<span class="ped-video-mini"><svg class="lc" viewBox="0 0 24 24"><path d="m9 7 8 5-8 5z"/></svg></span>` : ""}
+    </button>
+    <div class="ped-agenda-copy">
+      <strong>${escapeHtml(item.drive_file_name)}</strong>
+      <span><i class="ped-type-dot" aria-hidden="true"></i>${format.description}</span>
+    </div>
+    <label class="ped-agenda-format">
+      <span class="sr-only">Formato di ${escapeHtml(item.drive_file_name)}</span>
+      <select data-ped-type-change="${escapeHtml(item.id)}" aria-label="Formato di ${escapeHtml(item.drive_file_name)}">${pedTypeOptions(format.type)}</select>
+    </label>
+    <a class="ped-agenda-download" href="${escapeHtml(item.download_url || "#")}" download title="Scarica ${escapeHtml(item.drive_file_name)}">
+      <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+      <span>Scarica</span>
+    </a>
   </article>`;
 }
 
@@ -1555,12 +1645,23 @@ async function openPedDrivePicker(date) {
     alert("Collega prima la cartella Google Drive del cliente.");
     return;
   }
-  pedPickerState = { date, path: [], files: [] };
+  pedPickerState = { date, path: [], files: [], contentType: "post" };
   document.getElementById("pedPickerTitle").textContent = `Contenuto per ${new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "long" }).format(new Date(`${date}T12:00:00`))}`;
   document.getElementById("pedPickerSubtitle").textContent = `${client.name} · scegli una foto, un video o una grafica dal Drive`;
   document.getElementById("pedPickerMessage").textContent = "";
   document.getElementById("pedDrivePickerModal").showModal();
+  renderPedPickerFormat();
   await loadPedPickerFolder("", client.name);
+}
+
+function renderPedPickerFormat() {
+  const picker = document.getElementById("pedFormatPicker");
+  if (!picker) return;
+  picker.querySelectorAll("[data-ped-picker-type]").forEach((button) => {
+    const active = button.dataset.pedPickerType === pedContentType(pedPickerState.contentType);
+    button.classList.toggle("is-active", active);
+    button.setAttribute("aria-pressed", String(active));
+  });
 }
 
 async function loadPedPickerFolder(folderId = "", folderName = "") {
@@ -1613,7 +1714,12 @@ async function attachPedDriveFile(fileId) {
     const response = await apiFetch("/api/ped", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ client_id: selectedPedClientId, scheduled_date: pedPickerState.date, drive_file_id: fileId })
+      body: JSON.stringify({
+        client_id: selectedPedClientId,
+        scheduled_date: pedPickerState.date,
+        drive_file_id: fileId,
+        content_type: pedContentType(pedPickerState.contentType)
+      })
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || "Impossibile collegare il contenuto");
@@ -1621,6 +1727,28 @@ async function attachPedDriveFile(fileId) {
     await loadPedCalendar();
   } catch (error) {
     message.textContent = error.message;
+  }
+}
+
+async function updatePedItemType(id, nextType) {
+  const item = state.pedItems.find((entry) => String(entry.id) === String(id));
+  if (!item) return;
+  const previousType = pedContentType(item.content_type);
+  const contentType = pedContentType(nextType);
+  item.content_type = contentType;
+  renderPed();
+  try {
+    const response = await apiFetch("/api/ped", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, content_type: contentType })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "Impossibile aggiornare il formato");
+  } catch (error) {
+    item.content_type = previousType;
+    renderPed();
+    alert(error.message);
   }
 }
 
@@ -3097,6 +3225,7 @@ document.body.addEventListener("click", (event) => {
   const pedRemove = event.target.closest("[data-ped-remove]");
   const pedPickerFolder = event.target.closest("[data-ped-picker-folder]");
   const pedPickerFile = event.target.closest("[data-ped-picker-file]");
+  const pedPickerType = event.target.closest("[data-ped-picker-type]");
   const pedPickerBreadcrumb = event.target.closest("[data-ped-picker-breadcrumb]");
   const pedPickerClose = event.target.closest("[data-ped-picker-close]");
   const saveUser = event.target.closest("[data-save-user]");
@@ -3130,6 +3259,10 @@ document.body.addEventListener("click", (event) => {
   if (pedAdd) return openPedDrivePicker(pedAdd.dataset.pedAdd);
   if (pedRemove) return removePedItem(pedRemove.dataset.pedRemove);
   if (pedOpen) return openDriveFile(pedOpen.dataset.pedOpen, pedOpen.dataset.pedName, pedOpen.dataset.pedMime, pedOpen.dataset.pedContentUrl);
+  if (pedPickerType) {
+    pedPickerState.contentType = pedContentType(pedPickerType.dataset.pedPickerType);
+    return renderPedPickerFormat();
+  }
   if (pedPickerFolder) return loadPedPickerFolder(pedPickerFolder.dataset.pedPickerFolder, pedPickerFolder.dataset.pedPickerName);
   if (pedPickerFile) return attachPedDriveFile(pedPickerFile.dataset.pedPickerFile);
   if (pedPickerBreadcrumb) {
@@ -3145,6 +3278,11 @@ document.body.addEventListener("click", (event) => {
 });
 
 document.body.addEventListener("change", (event) => {
+  const pedType = event.target.closest("[data-ped-type-change]");
+  if (pedType) {
+    updatePedItemType(pedType.dataset.pedTypeChange, pedType.value);
+    return;
+  }
   const input = event.target.closest("[data-drive-upload-input]");
   if (!input) return;
   uploadDriveFiles(input.files).finally(() => { input.value = ""; });

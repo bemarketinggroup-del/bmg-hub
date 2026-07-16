@@ -250,6 +250,17 @@
             </div>
             <div class="ped-calendar-grid" id="pedCalendarGrid" aria-live="polite"></div>
           </div>
+
+          <section class="ped-agenda" aria-labelledby="pedAgendaTitle">
+            <div class="ped-agenda-head">
+              <div>
+                <p class="eyebrow">Programmazione SMM</p>
+                <h3 id="pedAgendaTitle">Agenda giorno per giorno</h3>
+              </div>
+              <span id="pedAgendaSummary"></span>
+            </div>
+            <div class="ped-agenda-list" id="pedAgendaList" aria-live="polite"></div>
+          </section>
         </section>
       </section>
 
@@ -634,6 +645,13 @@
           <span id="pedPickerSubtitle">Il file restera nel Drive originale.</span>
         </div>
         <button class="icon-button" data-ped-picker-close type="button" title="Chiudi" aria-label="Chiudi"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+      </div>
+      <div class="ped-format-picker" id="pedFormatPicker" role="group" aria-label="Formato del contenuto">
+        <span>Formato</span>
+        <button class="is-active" data-ped-picker-type="post" type="button">Post</button>
+        <button data-ped-picker-type="story" type="button">Storia</button>
+        <button data-ped-picker-type="reel" type="button">Reel</button>
+        <button data-ped-picker-type="carousel" type="button">Carosello</button>
       </div>
       <nav class="ped-picker-breadcrumbs" id="pedPickerBreadcrumbs" aria-label="Percorso Google Drive"></nav>
       <div class="ped-picker-grid" id="pedPickerGrid"></div>
