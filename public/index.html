@@ -50,6 +50,10 @@
           <span class="icon"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg></span>
           <span>Clienti</span>
         </button>
+        <button class="nav-item" data-view="ped" type="button">
+          <span class="icon"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></svg></span>
+          <span>PED</span>
+        </button>
         <button class="nav-item" data-view="team" type="button">
           <span class="icon"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M8 7v7"/><path d="M12 7v4"/><path d="M16 7v9"/></svg></span>
           <span>Task del team</span>
@@ -218,6 +222,35 @@
         </div>
         <div class="client-grid" id="clientGrid"></div>
         <section class="client-detail is-hidden" id="clientDetail" aria-live="polite"></section>
+      </section>
+
+      <section class="view" id="pedView" data-view-panel="ped">
+        <section class="panel ped-workspace">
+          <div class="ped-workspace-head">
+            <div>
+              <p class="eyebrow">Piano editoriale</p>
+              <h2>Calendario contenuti</h2>
+              <span>Collega foto, video e grafiche dal Google Drive di ogni cliente.</span>
+            </div>
+            <button class="ghost-button" id="pedTodayButton" type="button">Oggi</button>
+          </div>
+
+          <nav class="ped-client-tabs" id="pedClientTabs" aria-label="Calendari PED per cliente"></nav>
+
+          <div class="ped-calendar-toolbar">
+            <button class="icon-button" id="pedPreviousMonth" type="button" title="Mese precedente" aria-label="Mese precedente"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
+            <h3 id="pedMonthLabel">Mese</h3>
+            <button class="icon-button" id="pedNextMonth" type="button" title="Mese successivo" aria-label="Mese successivo"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>
+            <span class="ped-calendar-summary" id="pedCalendarSummary"></span>
+          </div>
+
+          <div class="ped-calendar-shell">
+            <div class="ped-weekdays" aria-hidden="true">
+              <span>Lun</span><span>Mar</span><span>Mer</span><span>Gio</span><span>Ven</span><span>Sab</span><span>Dom</span>
+            </div>
+            <div class="ped-calendar-grid" id="pedCalendarGrid" aria-live="polite"></div>
+          </div>
+        </section>
       </section>
 
       <section class="view" id="teamView" data-view-panel="team">
@@ -590,6 +623,22 @@
       </div>
       <div class="drive-preview-body" id="drivePreviewBody"></div>
     </form>
+  </dialog>
+
+  <dialog class="modal wide-modal ped-picker-modal" id="pedDrivePickerModal">
+    <div class="ped-picker-shell">
+      <div class="modal-head">
+        <div>
+          <p class="eyebrow">Google Drive cliente</p>
+          <h2 id="pedPickerTitle">Scegli un contenuto</h2>
+          <span id="pedPickerSubtitle">Il file restera nel Drive originale.</span>
+        </div>
+        <button class="icon-button" data-ped-picker-close type="button" title="Chiudi" aria-label="Chiudi"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+      </div>
+      <nav class="ped-picker-breadcrumbs" id="pedPickerBreadcrumbs" aria-label="Percorso Google Drive"></nav>
+      <div class="ped-picker-grid" id="pedPickerGrid"></div>
+      <p class="form-message" id="pedPickerMessage" role="status"></p>
+    </div>
   </dialog>
 
   <dialog class="modal drive-manage-modal" id="driveManageModal">

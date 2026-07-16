@@ -137,6 +137,7 @@ const seed = {
   clientAliases: [],
   clickupTasks: [],
   clickupTaskLogs: [],
+  pedItems: [],
   smartWorking: {
     week_start_date: "",
     week_dates: [],
@@ -159,6 +160,10 @@ let clickupOnline = false;
 let selectedTeamMemberId = ALL_TEAM_TASKS_ID;
 let selectedClientId = "";
 let clientDriveState = { clientId: "", path: [], objectUrl: "", thumbnailUrls: new Set(), uploadEnabled: false };
+let selectedPedClientId = "";
+let selectedPedMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+let pedPickerState = { date: "", path: [], files: [] };
+let pedLoadingKey = "";
 let selectedSmartWeek = mondayOf(new Date());
 let selectedContentSection = "all";
 let authConfig = null;
@@ -444,6 +449,7 @@ function setView(view) {
     dashboard: ["BMG Internal OS", "Home"],
     content: ["CMS leggero", "Backend sito"],
     clients: ["Gestionale interno", "Clienti"],
+    ped: ["Piano editoriale", "PED"],
     team: ["ClickUp operativo", "Task del team"],
     smart: ["Turni interni", "Turni / Smart Working"],
     users: ["Accessi interni", "Utenti"],
@@ -451,6 +457,10 @@ function setView(view) {
   };
   document.getElementById("viewKicker").textContent = titles[view][0];
   document.getElementById("viewTitle").textContent = titles[view][1];
+  if (view === "ped") {
+    ensurePedClientSelection();
+    loadPedCalendar();
+  }
 }
 
 function mondayOf(value = new Date()) {
@@ -536,6 +546,7 @@ async function loadClientsFromBackend() {
     if (!response.ok) throw new Error(`Clients backend error ${response.status}`);
     const rows = await response.json();
     state.clients = rows.map(normalizeClient);
+    ensurePedClientSelection();
     clientsOnline = true;
     renderBackendStatus();
     renderAll();
@@ -1390,6 +1401,238 @@ function formatFileSize(value) {
 function formatDriveDate(value) {
   if (!value) return "";
   return new Intl.DateTimeFormat("it-IT", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(value));
+}
+
+function localDateKey(value) {
+  const date = new Date(value);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function pedMonthKey(value = selectedPedMonth) {
+  const date = new Date(value);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function clientHasDrive(client) {
+  return Boolean(client && /^https:\/\/drive\.google\.com\//i.test(String(client.drive || "")));
+}
+
+function ensurePedClientSelection() {
+  const available = [...state.clients].sort((a, b) => String(a.name).localeCompare(String(b.name), "it"));
+  if (available.some((client) => String(client.id) === String(selectedPedClientId))) return;
+  selectedPedClientId = String(available.find(clientHasDrive)?.id || available[0]?.id || "");
+}
+
+function renderPed() {
+  ensurePedClientSelection();
+  renderPedClientTabs();
+  renderPedCalendar();
+}
+
+function renderPedClientTabs() {
+  const tabs = document.getElementById("pedClientTabs");
+  if (!tabs) return;
+  const clients = [...state.clients].sort((a, b) => String(a.name).localeCompare(String(b.name), "it"));
+  tabs.innerHTML = clients.map((client) => {
+    const active = String(client.id) === String(selectedPedClientId);
+    return `<button class="ped-client-tab${active ? " is-active" : ""}" data-ped-client="${escapeHtml(client.id)}" style="${clientColorStyle(client)}" type="button" title="Apri il PED di ${escapeHtml(client.name)}">
+      <span class="ped-client-dot" aria-hidden="true"></span>
+      <span>${escapeHtml(client.name)}</span>
+      ${clientHasDrive(client) ? "" : `<svg class="lc" viewBox="0 0 24 24" aria-label="Drive non collegato"><path d="M12 9v4M12 17h.01"/><circle cx="12" cy="12" r="9"/></svg>`}
+    </button>`;
+  }).join("") || `<p class="ped-empty-state">Aggiungi almeno un cliente per creare il PED.</p>`;
+}
+
+function renderPedCalendar() {
+  const grid = document.getElementById("pedCalendarGrid");
+  const label = document.getElementById("pedMonthLabel");
+  const summary = document.getElementById("pedCalendarSummary");
+  if (!grid || !label || !summary) return;
+
+  const monthStart = new Date(selectedPedMonth.getFullYear(), selectedPedMonth.getMonth(), 1, 12);
+  label.textContent = new Intl.DateTimeFormat("it-IT", { month: "long", year: "numeric" }).format(monthStart);
+  const selectedClient = state.clients.find((client) => String(client.id) === String(selectedPedClientId));
+  const grouped = state.pedItems.reduce((map, item) => {
+    const key = String(item.scheduled_date || "");
+    if (!map.has(key)) map.set(key, []);
+    map.get(key).push(item);
+    return map;
+  }, new Map());
+  const offset = (monthStart.getDay() + 6) % 7;
+  const gridStart = new Date(monthStart);
+  gridStart.setDate(monthStart.getDate() - offset);
+  const todayKey = localDateKey(new Date());
+  const canAdd = clientHasDrive(selectedClient);
+
+  grid.innerHTML = Array.from({ length: 42 }, (_, index) => {
+    const date = new Date(gridStart);
+    date.setDate(gridStart.getDate() + index);
+    const dateKey = localDateKey(date);
+    const items = grouped.get(dateKey) || [];
+    const outside = date.getMonth() !== monthStart.getMonth();
+    const weekend = date.getDay() === 0 || date.getDay() === 6;
+    return `<article class="ped-day${outside ? " is-outside" : ""}${weekend ? " is-weekend" : ""}${dateKey === todayKey ? " is-today" : ""}" data-ped-day="${dateKey}">
+      <header class="ped-day-head">
+        <span class="ped-day-number">${date.getDate()}</span>
+        <button class="ped-day-add" data-ped-add="${dateKey}" type="button" ${canAdd && !outside ? "" : "disabled"} title="${outside ? "Seleziona il mese corrispondente" : canAdd ? "Collega un contenuto Drive" : "Collega prima il Drive del cliente"}" aria-label="Aggiungi contenuto al ${dateKey}">
+          <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
+      </header>
+      <div class="ped-day-items">${items.map(pedItemMarkup).join("")}</div>
+    </article>`;
+  }).join("");
+
+  if (!selectedClient) summary.textContent = "Seleziona un cliente";
+  else if (!canAdd) summary.textContent = `${selectedClient.name}: Drive non collegato`;
+  else summary.textContent = `${state.pedItems.length} ${state.pedItems.length === 1 ? "contenuto pianificato" : "contenuti pianificati"}`;
+}
+
+function pedItemMarkup(item) {
+  const mime = String(item.drive_mime_type || "");
+  const isImage = mime.startsWith("image/");
+  const isVideo = mime.startsWith("video/");
+  const previewUrl = item.thumbnail_url || (isImage ? item.content_url : "");
+  const media = previewUrl
+    ? `<img src="${escapeHtml(previewUrl)}" alt="" loading="lazy" decoding="async">`
+    : `<span class="ped-content-icon">${driveFileIcon({ is_folder: false, mime_type: mime })}</span>`;
+  const hoverMedia = isVideo
+    ? `<video muted loop playsinline preload="none" poster="${escapeHtml(item.thumbnail_url || "")}" data-ped-video-src="${escapeHtml(item.content_url || "")}"></video><span class="ped-preview-play"><svg class="lc" viewBox="0 0 24 24"><path d="m9 7 8 5-8 5z"/></svg></span>`
+    : previewUrl
+      ? `<img src="${escapeHtml(previewUrl)}" alt="Anteprima ${escapeHtml(item.drive_file_name)}" loading="lazy">`
+      : `<div class="ped-preview-file">${driveFileIcon({ is_folder: false, mime_type: mime })}<strong>${escapeHtml(item.drive_file_name)}</strong></div>`;
+  const typeLabel = isVideo ? "Video" : isImage ? "Immagine" : mime === "application/pdf" ? "PDF" : "File";
+
+  return `<article class="ped-content-card" data-ped-content="${escapeHtml(item.id)}" tabindex="0">
+    <button class="ped-content-main" data-ped-open="${escapeHtml(item.drive_file_id)}" data-ped-name="${escapeHtml(item.drive_file_name)}" data-ped-mime="${escapeHtml(mime)}" data-ped-content-url="${escapeHtml(item.content_url || "")}" type="button" title="Apri l'anteprima nell'Hub">
+      <span class="ped-content-thumb">${media}${isVideo ? `<span class="ped-video-mini"><svg class="lc" viewBox="0 0 24 24"><path d="m9 7 8 5-8 5z"/></svg></span>` : ""}</span>
+      <span class="ped-content-copy"><strong>${escapeHtml(item.drive_file_name)}</strong><small>${typeLabel}</small></span>
+    </button>
+    <button class="ped-content-remove" data-ped-remove="${escapeHtml(item.id)}" type="button" title="Rimuovi dal PED" aria-label="Rimuovi ${escapeHtml(item.drive_file_name)} dal PED">
+      <svg class="lc" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+    <div class="ped-hover-preview" aria-hidden="true">${hoverMedia}<span>${escapeHtml(item.drive_file_name)}</span></div>
+  </article>`;
+}
+
+async function loadPedCalendar() {
+  ensurePedClientSelection();
+  if (!selectedPedClientId) {
+    state.pedItems = [];
+    renderPed();
+    return;
+  }
+  const key = `${selectedPedClientId}:${pedMonthKey()}`;
+  pedLoadingKey = key;
+  const grid = document.getElementById("pedCalendarGrid");
+  if (grid) grid.innerHTML = `<div class="ped-loading"><span class="drive-spinner" aria-hidden="true"></span>Caricamento calendario...</div>`;
+  try {
+    const params = new URLSearchParams({ client_id: selectedPedClientId, month: pedMonthKey() });
+    const response = await apiFetch(`/api/ped?${params}`);
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "PED non disponibile");
+    if (pedLoadingKey !== key) return;
+    state.pedItems = Array.isArray(data.items) ? data.items : [];
+    renderPed();
+  } catch (error) {
+    if (pedLoadingKey !== key) return;
+    state.pedItems = [];
+    renderPed();
+    if (grid) grid.innerHTML = `<div class="ped-error"><strong>Calendario non disponibile</strong><span>${escapeHtml(error.message)}</span></div>`;
+  }
+}
+
+function shiftPedMonth(delta) {
+  selectedPedMonth = new Date(selectedPedMonth.getFullYear(), selectedPedMonth.getMonth() + delta, 1);
+  loadPedCalendar();
+}
+
+async function openPedDrivePicker(date) {
+  const client = state.clients.find((item) => String(item.id) === String(selectedPedClientId));
+  if (!clientHasDrive(client)) {
+    alert("Collega prima la cartella Google Drive del cliente.");
+    return;
+  }
+  pedPickerState = { date, path: [], files: [] };
+  document.getElementById("pedPickerTitle").textContent = `Contenuto per ${new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "long" }).format(new Date(`${date}T12:00:00`))}`;
+  document.getElementById("pedPickerSubtitle").textContent = `${client.name} · scegli una foto, un video o una grafica dal Drive`;
+  document.getElementById("pedPickerMessage").textContent = "";
+  document.getElementById("pedDrivePickerModal").showModal();
+  await loadPedPickerFolder("", client.name);
+}
+
+async function loadPedPickerFolder(folderId = "", folderName = "") {
+  const grid = document.getElementById("pedPickerGrid");
+  grid.innerHTML = `<div class="ped-picker-loading"><span class="drive-spinner" aria-hidden="true"></span>Caricamento Drive...</div>`;
+  try {
+    const params = new URLSearchParams({ client_id: selectedPedClientId });
+    if (folderId) params.set("folder_id", folderId);
+    const response = await apiFetch(`/api/client-drive?${params}`);
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "Google Drive non disponibile");
+    const existingIndex = pedPickerState.path.findIndex((item) => item.id === data.folder.id);
+    if (existingIndex >= 0) pedPickerState.path = pedPickerState.path.slice(0, existingIndex + 1);
+    else pedPickerState.path.push({ id: data.folder.id, name: folderName || data.folder.name });
+    if (pedPickerState.path.length === 1) pedPickerState.path[0].name = data.client.name;
+    pedPickerState.files = data.files || [];
+    renderPedPicker();
+  } catch (error) {
+    grid.innerHTML = `<div class="ped-picker-error"><strong>Drive non disponibile</strong><span>${escapeHtml(error.message)}</span></div>`;
+  }
+}
+
+function renderPedPicker() {
+  const breadcrumbs = document.getElementById("pedPickerBreadcrumbs");
+  const grid = document.getElementById("pedPickerGrid");
+  breadcrumbs.innerHTML = pedPickerState.path.map((item, index) => {
+    const current = index === pedPickerState.path.length - 1;
+    return `${index ? `<svg class="lc" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>` : ""}${current
+      ? `<span>${escapeHtml(item.name)}</span>`
+      : `<button data-ped-picker-breadcrumb="${index}" type="button">${escapeHtml(item.name)}</button>`}`;
+  }).join("");
+  grid.innerHTML = pedPickerState.files.map((file) => {
+    const isImage = String(file.mime_type || "").startsWith("image/");
+    const isVideo = String(file.mime_type || "").startsWith("video/");
+    const hasPreview = file.has_thumbnail && (isImage || isVideo);
+    return `<button class="ped-picker-entry${file.is_folder ? " is-folder" : ""}" ${file.is_folder ? "data-ped-picker-folder" : "data-ped-picker-file"}="${escapeHtml(file.id)}" data-ped-picker-name="${escapeHtml(file.name)}" type="button">
+      <span class="ped-picker-media">${hasPreview
+        ? `<img src="${escapeHtml(file.thumbnail_url || "")}" alt="" loading="lazy">${isVideo ? `<span class="ped-video-mini"><svg class="lc" viewBox="0 0 24 24"><path d="m9 7 8 5-8 5z"/></svg></span>` : ""}`
+        : driveFileIcon(file)}</span>
+      <span><strong>${escapeHtml(file.name)}</strong><small>${file.is_folder ? "Cartella" : [formatFileSize(file.size), formatDriveDate(file.modified_at)].filter(Boolean).join(" · ") || "File"}</small></span>
+      <svg class="lc ped-picker-arrow" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>
+    </button>`;
+  }).join("") || `<p class="ped-picker-empty">Questa cartella è vuota.</p>`;
+}
+
+async function attachPedDriveFile(fileId) {
+  const message = document.getElementById("pedPickerMessage");
+  message.textContent = "Collegamento in corso...";
+  try {
+    const response = await apiFetch("/api/ped", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ client_id: selectedPedClientId, scheduled_date: pedPickerState.date, drive_file_id: fileId })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "Impossibile collegare il contenuto");
+    document.getElementById("pedDrivePickerModal").close();
+    await loadPedCalendar();
+  } catch (error) {
+    message.textContent = error.message;
+  }
+}
+
+async function removePedItem(id) {
+  if (!confirm("Rimuovere questo contenuto dal PED? Il file restera su Google Drive.")) return;
+  const response = await apiFetch(`/api/ped?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    alert(data.error || "Impossibile rimuovere il contenuto dal PED.");
+    return;
+  }
+  await loadPedCalendar();
 }
 
 async function openDriveFile(fileId, fileName, mimeType, contentUrl = "") {
@@ -2804,6 +3047,7 @@ function renderAll() {
   renderHome();
   renderContent();
   renderClients();
+  renderPed();
   renderTeam();
   renderSmartWorking();
   renderUsers();
@@ -2847,6 +3091,14 @@ document.body.addEventListener("click", (event) => {
   const driveRename = event.target.closest("[data-drive-rename]");
   const driveTrash = event.target.closest("[data-drive-trash]");
   const copyDriveLinkButton = event.target.closest("[data-copy-drive-link]");
+  const pedClient = event.target.closest("[data-ped-client]");
+  const pedAdd = event.target.closest("[data-ped-add]");
+  const pedOpen = event.target.closest("[data-ped-open]");
+  const pedRemove = event.target.closest("[data-ped-remove]");
+  const pedPickerFolder = event.target.closest("[data-ped-picker-folder]");
+  const pedPickerFile = event.target.closest("[data-ped-picker-file]");
+  const pedPickerBreadcrumb = event.target.closest("[data-ped-picker-breadcrumb]");
+  const pedPickerClose = event.target.closest("[data-ped-picker-close]");
   const saveUser = event.target.closest("[data-save-user]");
   const applyAiClient = event.target.closest("[data-apply-ai-client]");
   const deleteAlias = event.target.closest("[data-delete-alias]");
@@ -2870,6 +3122,22 @@ document.body.addEventListener("click", (event) => {
   if (driveRename) return openDriveManageModal("rename", driveRename.dataset.driveRename, driveRename.dataset.driveName, driveRename.dataset.driveIsFolder === "1");
   if (driveTrash) return openDriveManageModal("trash", driveTrash.dataset.driveTrash, driveTrash.dataset.driveName, driveTrash.dataset.driveIsFolder === "1");
   if (copyDriveLinkButton) return copyDriveLink(copyDriveLinkButton);
+  if (pedClient) {
+    selectedPedClientId = pedClient.dataset.pedClient;
+    state.pedItems = [];
+    return loadPedCalendar();
+  }
+  if (pedAdd) return openPedDrivePicker(pedAdd.dataset.pedAdd);
+  if (pedRemove) return removePedItem(pedRemove.dataset.pedRemove);
+  if (pedOpen) return openDriveFile(pedOpen.dataset.pedOpen, pedOpen.dataset.pedName, pedOpen.dataset.pedMime, pedOpen.dataset.pedContentUrl);
+  if (pedPickerFolder) return loadPedPickerFolder(pedPickerFolder.dataset.pedPickerFolder, pedPickerFolder.dataset.pedPickerName);
+  if (pedPickerFile) return attachPedDriveFile(pedPickerFile.dataset.pedPickerFile);
+  if (pedPickerBreadcrumb) {
+    const index = Number(pedPickerBreadcrumb.dataset.pedPickerBreadcrumb);
+    const target = pedPickerState.path[index];
+    if (target) return loadPedPickerFolder(target.id, target.name);
+  }
+  if (pedPickerClose) return document.getElementById("pedDrivePickerModal").close();
   if (taskRow && !event.target.closest("a, button, input, select, textarea")) return openTaskDetailModal(taskRow.dataset.taskDetail);
   if (saveUser) saveUserProfile(saveUser.closest("[data-user-id]"));
   if (applyAiClient) applyAiClientTag(applyAiClient);
@@ -2939,6 +3207,22 @@ document.body.addEventListener("keydown", (event) => {
   }
 });
 
+document.body.addEventListener("pointerover", (event) => {
+  const card = event.target.closest?.("[data-ped-content]");
+  if (!card || card.contains(event.relatedTarget)) return;
+  const video = card.querySelector("video[data-ped-video-src]");
+  if (!video) return;
+  if (!video.src) video.src = video.dataset.pedVideoSrc;
+  video.play().catch(() => {});
+});
+
+document.body.addEventListener("pointerout", (event) => {
+  const card = event.target.closest?.("[data-ped-content]");
+  if (!card || card.contains(event.relatedTarget)) return;
+  const video = card.querySelector("video[data-ped-video-src]");
+  if (video) video.pause();
+});
+
 document.getElementById("profileButton").addEventListener("click", openProfileModal);
 document.getElementById("logoutButton").addEventListener("click", logout);
 document.getElementById("exportButton").addEventListener("click", exportData);
@@ -2949,6 +3233,12 @@ document.getElementById("contentPageFilter").addEventListener("change", () => {
 document.getElementById("contentStatusFilter").addEventListener("change", renderContent);
 document.getElementById("contentSearch").addEventListener("input", renderContent);
 document.getElementById("clientSearch").addEventListener("input", renderClients);
+document.getElementById("pedPreviousMonth").addEventListener("click", () => shiftPedMonth(-1));
+document.getElementById("pedNextMonth").addEventListener("click", () => shiftPedMonth(1));
+document.getElementById("pedTodayButton").addEventListener("click", () => {
+  selectedPedMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+  loadPedCalendar();
+});
 document.getElementById("taskSearch").addEventListener("input", renderClickUpTasks);
 document.getElementById("taskAssigneeFilter").addEventListener("change", renderClickUpTasks);
 document.getElementById("taskStatusFilter").addEventListener("change", renderClickUpTasks);
