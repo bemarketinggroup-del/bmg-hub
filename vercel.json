@@ -45,7 +45,7 @@
     },
     {
       "src": "/api/ped",
-      "dest": "/api/ped.js"
+      "dest": "/api/app.js"
     },
     {
       "src": "/api/clients/sync-clickup",

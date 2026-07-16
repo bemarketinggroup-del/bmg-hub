@@ -1,5 +1,6 @@
 import { createReadStream, existsSync } from "node:fs";
 import { extname, join, normalize } from "node:path";
+import handlePed from "../lib/ped.js";
 import { handleSmartWorking } from "../lib/smart-working.js";
 
 const publicRoot = join(process.cwd(), "public");
@@ -20,6 +21,10 @@ export default async function handler(request, response) {
   const requestUrl = new URL(request.url, `https://${request.headers.host}`);
   if (requestUrl.pathname === "/api/smart-working") {
     await handleSmartWorking(request, response);
+    return;
+  }
+  if (requestUrl.pathname === "/api/ped") {
+    await handlePed(request, response);
     return;
   }
 
