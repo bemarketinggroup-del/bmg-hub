@@ -592,6 +592,25 @@
     </form>
   </dialog>
 
+  <dialog class="modal drive-manage-modal" id="driveManageModal">
+    <form method="dialog" id="driveManageForm">
+      <div class="modal-head">
+        <div>
+          <p class="eyebrow">Google Drive</p>
+          <h2 id="driveManageTitle">Gestisci elemento</h2>
+        </div>
+        <button class="icon-button" value="cancel" type="submit" formnovalidate title="Chiudi"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+      </div>
+      <p class="drive-manage-description" id="driveManageDescription"></p>
+      <label class="full" id="driveManageNameField">Nome<input id="driveManageName" name="drive_name" maxlength="240" autocomplete="off"></label>
+      <p class="form-message" id="driveManageMessage" role="status"></p>
+      <div class="modal-actions">
+        <button class="ghost-button" value="cancel" type="submit" formnovalidate>Annulla</button>
+        <button class="primary-button" id="driveManageSubmit" value="default" type="submit">Salva</button>
+      </div>
+    </form>
+  </dialog>
+
   <dialog class="modal" id="profileModal">
     <form method="dialog" id="passwordForm">
       <div class="modal-head">

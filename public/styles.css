@@ -1569,7 +1569,8 @@ code { font-family: var(--font-mono); font-size: 12px; }
 .drive-breadcrumbs span { color: var(--ink); }
 .drive-item-count { color: var(--muted); font-size: 11px; white-space: nowrap; }
 .drive-browser-actions { display: flex; align-items: center; gap: 10px; }
-.drive-upload-button {
+.drive-upload-button,
+.drive-create-folder-button {
   height: 36px;
   display: inline-flex;
   align-items: center;
@@ -1582,13 +1583,15 @@ code { font-family: var(--font-mono); font-size: 12px; }
   font-size: 11px;
   font-weight: 700;
 }
-.drive-upload-button:hover:not(:disabled) {
+.drive-create-folder-button { background: var(--surface); border-color: var(--line-strong); color: var(--ink); }
+.drive-upload-button:hover:not(:disabled),
+.drive-create-folder-button:hover:not(:disabled) {
   border-color: var(--terracotta);
   background: rgba(185, 84, 44, .16);
   color: var(--terra-deep);
 }
-.drive-upload-button .lc { width: 15px; height: 15px; }
-.drive-upload-button:disabled { cursor: not-allowed; opacity: .62; }
+.drive-upload-button .lc, .drive-create-folder-button .lc { width: 15px; height: 15px; }
+.drive-upload-button:disabled, .drive-create-folder-button:disabled { cursor: not-allowed; opacity: .62; }
 .drive-upload-status {
   display: grid;
   gap: 7px;
@@ -1653,11 +1656,29 @@ code { font-family: var(--font-mono); font-size: 12px; }
   background: var(--surface);
 }
 .drive-content-actions {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 30px 30px;
+  gap: 5px;
+  align-items: center;
   border-top: 1px solid var(--line);
   padding: 7px 8px 0;
   background: var(--surface);
 }
+.drive-folder-actions-label { color: var(--muted); padding-left: 3px; font-size: 10px; font-weight: 700; }
+.drive-manage-button {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--surface-soft);
+  color: var(--stone);
+}
+.drive-manage-button:hover { border-color: var(--client-accent); background: var(--client-tint); color: var(--client-accent); }
+.drive-manage-button.is-danger:hover { border-color: var(--red-line); background: var(--red-tint); color: var(--red); }
+.drive-manage-button:disabled { cursor: not-allowed; opacity: .45; }
+.drive-manage-button .lc { width: 14px; height: 14px; }
 .drive-download-button {
   width: 100%;
   min-height: 30px;
@@ -1810,6 +1831,8 @@ code { font-family: var(--font-mono); font-size: 12px; }
   background: var(--surface);
 }
 .drive-preview-body audio { width: min(560px, calc(100% - 32px)); }
+.drive-manage-modal { width: min(540px, calc(100vw - 28px)); }
+.drive-manage-description { margin: 0 0 18px; color: var(--muted); line-height: 1.55; }
 
 /* ============================================================
    UTENTI

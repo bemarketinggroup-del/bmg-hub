@@ -1100,6 +1100,10 @@ function driveBrowserMarkup(files, uploadEnabled) {
       <div class="drive-browser-actions">
         <span class="drive-item-count">${files.length} ${files.length === 1 ? "elemento" : "elementi"}</span>
         <input class="is-hidden" data-drive-upload-input type="file" multiple>
+        <button class="drive-create-folder-button" data-drive-create-folder type="button" ${uploadEnabled ? "" : "disabled"} title="Crea una nuova cartella">
+          <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h6l2 2h10v10H3z"/><path d="M3 7V5h6l2 2M12 12v5M9.5 14.5h5"/></svg>
+          Nuova cartella
+        </button>
         <button class="drive-upload-button" data-drive-upload type="button" ${uploadEnabled ? "" : "disabled"} title="${uploadEnabled ? "Carica file nella cartella aperta" : "Autorizzazione OAuth Google necessaria"}">
           <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 15v5h16v-5"/></svg>
           Carica file
@@ -1108,11 +1112,11 @@ function driveBrowserMarkup(files, uploadEnabled) {
     </div>
     <div class="drive-upload-status is-hidden" data-drive-upload-status role="status"></div>
     <div class="drive-file-grid">
-      ${files.map(driveEntryMarkup).join("") || `<div class="drive-empty">Questa cartella è vuota.</div>`}
+      ${files.map((file) => driveEntryMarkup(file, uploadEnabled)).join("") || `<div class="drive-empty">Questa cartella è vuota.</div>`}
     </div>`;
 }
 
-function driveEntryMarkup(file) {
+function driveEntryMarkup(file, writeEnabled) {
   const action = file.is_folder ? "data-drive-folder" : "data-drive-file";
   const isImage = String(file.mime_type || "").startsWith("image/");
   const isVideo = String(file.mime_type || "").startsWith("video/");
@@ -1134,13 +1138,20 @@ function driveEntryMarkup(file) {
       <span class="drive-entry-copy"><strong>${escapeHtml(file.name)}</strong><small>${escapeHtml(meta)}</small></span>
       <svg class="lc drive-entry-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
       </button>
-      ${!file.is_folder ? `
-        <div class="drive-content-actions">
+      <div class="drive-content-actions">
+        ${!file.is_folder ? `
           <a class="drive-download-button" href="${escapeHtml(downloadUrl)}" download="${escapeHtml(file.name)}" aria-label="Scarica ${escapeHtml(file.name)}">
             <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5"/><path d="M5 20h14"/></svg>
             Scarica
-          </a>
-        </div>
+          </a>` : `<span class="drive-folder-actions-label">Gestisci cartella</span>`}
+        <button class="drive-manage-button" data-drive-rename="${escapeHtml(file.id)}" data-drive-name="${escapeHtml(file.name)}" data-drive-is-folder="${file.is_folder ? "1" : "0"}" type="button" title="Rinomina" aria-label="Rinomina ${escapeHtml(file.name)}" ${writeEnabled ? "" : "disabled"}>
+          <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4z"/></svg>
+        </button>
+        <button class="drive-manage-button is-danger" data-drive-trash="${escapeHtml(file.id)}" data-drive-name="${escapeHtml(file.name)}" data-drive-is-folder="${file.is_folder ? "1" : "0"}" type="button" title="Sposta nel cestino" aria-label="Sposta ${escapeHtml(file.name)} nel cestino" ${writeEnabled ? "" : "disabled"}>
+          <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v5M14 11v5"/></svg>
+        </button>
+      </div>
+      ${!file.is_folder ? `
         ${webUrl ? `
         <div class="drive-content-link">
           <input value="${escapeHtml(webUrl)}" readonly aria-label="Link Google Drive di ${escapeHtml(file.name)}">
@@ -1149,6 +1160,92 @@ function driveEntryMarkup(file) {
           </button>
         </div>` : ""}` : ""}
     </article>`;
+}
+
+function openDriveManageModal(action, fileId = "", name = "", isFolder = false) {
+  const modal = document.getElementById("driveManageModal");
+  const form = document.getElementById("driveManageForm");
+  const title = document.getElementById("driveManageTitle");
+  const description = document.getElementById("driveManageDescription");
+  const nameField = document.getElementById("driveManageNameField");
+  const nameInput = document.getElementById("driveManageName");
+  const submit = document.getElementById("driveManageSubmit");
+  const message = document.getElementById("driveManageMessage");
+  if (!modal || !form || !title || !description || !nameField || !nameInput || !submit || !message) return;
+
+  form.dataset.action = action;
+  form.dataset.fileId = fileId;
+  form.dataset.isFolder = isFolder ? "1" : "0";
+  message.textContent = "";
+  submit.disabled = false;
+  submit.classList.toggle("danger-button", action === "trash");
+  submit.classList.toggle("primary-button", action !== "trash");
+
+  if (action === "create-folder") {
+    title.textContent = "Nuova cartella";
+    description.textContent = "La cartella sarà creata nel percorso attualmente aperto.";
+    nameField.classList.remove("is-hidden");
+    nameInput.required = true;
+    nameInput.value = "";
+    submit.textContent = "Crea cartella";
+  } else if (action === "rename") {
+    title.textContent = isFolder ? "Rinomina cartella" : "Rinomina file";
+    description.textContent = `Modifica il nome di “${name}”.`;
+    nameField.classList.remove("is-hidden");
+    nameInput.required = true;
+    nameInput.value = name;
+    submit.textContent = "Salva nome";
+  } else {
+    title.textContent = "Sposta nel cestino";
+    description.textContent = `“${name}” sarà spostato nel Cestino di Google Drive e potrà essere ripristinato.`;
+    nameField.classList.add("is-hidden");
+    nameInput.required = false;
+    nameInput.value = "";
+    submit.textContent = "Sposta nel cestino";
+  }
+
+  modal.showModal();
+  if (action !== "trash") window.setTimeout(() => nameInput.focus(), 50);
+}
+
+async function submitDriveManageAction(form) {
+  const action = form.dataset.action || "";
+  const fileId = form.dataset.fileId || "";
+  const nameInput = document.getElementById("driveManageName");
+  const submit = document.getElementById("driveManageSubmit");
+  const message = document.getElementById("driveManageMessage");
+  const modal = document.getElementById("driveManageModal");
+  const folder = clientDriveState.path[clientDriveState.path.length - 1];
+  if (!folder || !submit || !message || !modal) return;
+
+  const name = String(nameInput?.value || "").trim();
+  if (action !== "trash" && !name) {
+    message.textContent = "Inserisci un nome.";
+    return;
+  }
+
+  const requestConfig = action === "create-folder"
+    ? { method: "POST", body: { parent_id: folder.id, name } }
+    : action === "rename"
+      ? { method: "PATCH", body: { file_id: fileId, name } }
+      : { method: "DELETE", body: { file_id: fileId } };
+
+  submit.disabled = true;
+  message.textContent = action === "trash" ? "Spostamento in corso..." : "Salvataggio in corso...";
+  try {
+    const response = await apiFetch(`/api/client-drive?client_id=${encodeURIComponent(clientDriveState.clientId)}&action=${encodeURIComponent(action)}`, {
+      method: requestConfig.method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(requestConfig.body)
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "Operazione Google Drive non riuscita");
+    modal.close();
+    await loadClientDriveFolder(folder.id, folder.name, { fresh: true });
+  } catch (error) {
+    message.textContent = error.message || "Operazione non riuscita";
+    submit.disabled = false;
+  }
 }
 
 async function copyDriveLink(button) {
@@ -2737,6 +2834,9 @@ document.body.addEventListener("click", (event) => {
   const driveBreadcrumb = event.target.closest("[data-drive-breadcrumb]");
   const driveFile = event.target.closest("[data-drive-file]");
   const driveUpload = event.target.closest("[data-drive-upload]");
+  const driveCreateFolder = event.target.closest("[data-drive-create-folder]");
+  const driveRename = event.target.closest("[data-drive-rename]");
+  const driveTrash = event.target.closest("[data-drive-trash]");
   const copyDriveLinkButton = event.target.closest("[data-copy-drive-link]");
   const saveUser = event.target.closest("[data-save-user]");
   const applyAiClient = event.target.closest("[data-apply-ai-client]");
@@ -2757,6 +2857,9 @@ document.body.addEventListener("click", (event) => {
   }
   if (driveFile) return openDriveFile(driveFile.dataset.driveFile, driveFile.dataset.driveName, driveFile.dataset.driveMime, driveFile.dataset.driveContentUrl);
   if (driveUpload) return document.querySelector("[data-drive-upload-input]")?.click();
+  if (driveCreateFolder) return openDriveManageModal("create-folder");
+  if (driveRename) return openDriveManageModal("rename", driveRename.dataset.driveRename, driveRename.dataset.driveName, driveRename.dataset.driveIsFolder === "1");
+  if (driveTrash) return openDriveManageModal("trash", driveTrash.dataset.driveTrash, driveTrash.dataset.driveName, driveTrash.dataset.driveIsFolder === "1");
   if (copyDriveLinkButton) return copyDriveLink(copyDriveLinkButton);
   if (taskRow && !event.target.closest("a, button, input, select, textarea")) return openTaskDetailModal(taskRow.dataset.taskDetail);
   if (saveUser) saveUserProfile(saveUser.closest("[data-user-id]"));
@@ -2768,6 +2871,15 @@ document.body.addEventListener("change", (event) => {
   const input = event.target.closest("[data-drive-upload-input]");
   if (!input) return;
   uploadDriveFiles(input.files).finally(() => { input.value = ""; });
+});
+
+document.getElementById("driveManageForm").addEventListener("submit", (event) => {
+  event.preventDefault();
+  if (event.submitter?.value === "cancel") {
+    document.getElementById("driveManageModal").close();
+    return;
+  }
+  submitDriveManageAction(event.currentTarget);
 });
 
 document.body.addEventListener("keydown", (event) => {
