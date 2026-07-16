@@ -1647,11 +1647,34 @@ code { font-family: var(--font-mono); font-size: 12px; }
   border-bottom: 1px solid var(--line);
   background: var(--surface-tint);
 }
+.drive-content-actions {
+  display: flex;
+  border-top: 1px solid var(--line);
+  padding: 7px 8px 0;
+  background: var(--surface);
+}
+.drive-download-button {
+  width: 100%;
+  min-height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid var(--client-accent);
+  border-radius: 5px;
+  background: var(--client-tint);
+  color: var(--client-accent);
+  font-size: 10px;
+  font-weight: 700;
+  text-decoration: none;
+}
+.drive-download-button:hover { background: var(--client-accent); color: #fff; }
+.drive-download-button .lc { width: 14px; height: 14px; }
 .drive-content-link {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 30px;
   gap: 5px;
-  border-top: 1px solid var(--line);
+  border-top: 0;
   padding: 7px 8px 8px;
   background: var(--surface);
 }

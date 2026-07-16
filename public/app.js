@@ -1118,6 +1118,7 @@ function driveEntryMarkup(file) {
   const isVideo = String(file.mime_type || "").startsWith("video/");
   const hasThumbnail = !file.is_folder && file.has_thumbnail && (isImage || isVideo);
   const webUrl = safeExternalUrl(file.web_url);
+  const downloadUrl = String(file.download_url || "");
   const meta = file.is_folder
     ? "Cartella"
     : [formatFileSize(file.size), formatDriveDate(file.modified_at)].filter(Boolean).join(" · ") || "File";
@@ -1133,13 +1134,20 @@ function driveEntryMarkup(file) {
       <span class="drive-entry-copy"><strong>${escapeHtml(file.name)}</strong><small>${escapeHtml(meta)}</small></span>
       <svg class="lc drive-entry-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
       </button>
-      ${!file.is_folder && webUrl ? `
+      ${!file.is_folder ? `
+        <div class="drive-content-actions">
+          <a class="drive-download-button" href="${escapeHtml(downloadUrl)}" download="${escapeHtml(file.name)}" aria-label="Scarica ${escapeHtml(file.name)}">
+            <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5"/><path d="M5 20h14"/></svg>
+            Scarica
+          </a>
+        </div>
+        ${webUrl ? `
         <div class="drive-content-link">
           <input value="${escapeHtml(webUrl)}" readonly aria-label="Link Google Drive di ${escapeHtml(file.name)}">
           <button data-copy-drive-link="${escapeHtml(webUrl)}" type="button" title="Copia link" aria-label="Copia link di ${escapeHtml(file.name)}">
             <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M15 9V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h3"/></svg>
           </button>
-        </div>` : ""}
+        </div>` : ""}` : ""}
     </article>`;
 }
 
