@@ -1586,7 +1586,7 @@ function failMediaProgress(container, message) {
   root.querySelector("[data-media-percent]").textContent = "";
 }
 
-function bindStreamProgress(media, container, { autoplay = false } = {}) {
+function bindStreamProgress(media, container, { autoplay = false, onUnsupported = null } = {}) {
   const startedAt = performance.now();
   const elapsedLabel = () => `${formatTransferDuration((performance.now() - startedAt) / 1000)} trascorsi`;
   let currentPercent = 0;
@@ -1636,11 +1636,35 @@ function bindStreamProgress(media, container, { autoplay = false } = {}) {
   media.addEventListener("error", () => {
     stopTimer();
     const code = media.error?.code;
+    if (code === 4 && typeof onUnsupported === "function") {
+      onUnsupported();
+      return;
+    }
     const explanation = code === 4
       ? "Il codec di questo video MOV non è supportato dal browser. Il file resta scaricabile e apribile da Drive."
       : "Google Drive non ha consegnato il video o la connessione è stata interrotta.";
     failMediaProgress(container, explanation);
   });
+}
+
+function showEmbeddedDriveVideo(container, fileId, name = "Video") {
+  if (!container || !fileId) return false;
+  container.innerHTML = `<iframe title="Player Google Drive per ${escapeHtml(name)}" allow="autoplay; fullscreen" referrerpolicy="strict-origin-when-cross-origin"></iframe>${mediaProgressMarkup("Conversione video Google Drive")}<span class="ped-picker-preview-kind"><svg class="lc" viewBox="0 0 24 24"><path d="m9 7 8 5-8 5z"/></svg> Player Drive</span>`;
+  const frame = container.querySelector("iframe");
+  const startedAt = performance.now();
+  let percent = 12;
+  const timer = window.setInterval(() => {
+    if (!frame.isConnected) return window.clearInterval(timer);
+    percent = Math.min(90, percent + Math.max(2, (92 - percent) * 0.08));
+    updateMediaProgress(container, percent, "Conversione video Google Drive", `${formatTransferDuration((performance.now() - startedAt) / 1000)} trascorsi`);
+  }, 350);
+  frame.addEventListener("load", () => {
+    window.clearInterval(timer);
+    updateMediaProgress(container, 100, "Player Drive pronto", `${formatTransferDuration((performance.now() - startedAt) / 1000)} trascorsi`);
+    window.setTimeout(() => container.querySelector("[data-media-progress]")?.classList.add("is-hidden"), 650);
+  }, { once: true });
+  frame.src = `https://drive.google.com/file/d/${encodeURIComponent(fileId)}/preview?autoplay=1`;
+  return true;
 }
 
 function localDateKey(value) {
@@ -2244,7 +2268,10 @@ function showPedPickerPreview(entry) {
       if (loadId !== pedPickerPreviewLoadId || preview.dataset.owner !== (entry.dataset.pedPickerFile || "") || !preview.classList.contains("is-visible")) return;
       const video = preview.querySelector("video");
       if (!video) return;
-      bindStreamProgress(video, preview, { autoplay: true });
+      bindStreamProgress(video, preview, {
+        autoplay: true,
+        onUnsupported: () => showEmbeddedDriveVideo(preview, entry.dataset.pedPickerFile, name)
+      });
       video.src = source;
       video.load();
       video.play().catch(() => {});

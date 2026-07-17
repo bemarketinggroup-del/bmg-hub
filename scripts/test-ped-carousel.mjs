@@ -50,8 +50,9 @@ assert.match(appSource, /data-ped-picker-preview-type/, "il selettore Drive deve
 assert.match(appSource, /showPedPickerPreview\(entry\)/, "il selettore Drive deve attivare l'anteprima al passaggio");
 assert.match(appSource, /preview\.setAttribute\("popover", "manual"\)/, "l'anteprima deve apparire sopra al modal PED");
 assert.match(appSource, /autoplay preload="metadata"/, "il video hover deve tentare la riproduzione automatica silenziosa");
-assert.match(appSource, /bindStreamProgress\(video, preview, \{ autoplay: true \}\)/, "il video hover deve mostrare il buffering reale");
+assert.match(appSource, /bindStreamProgress\(video, preview, \{/, "il video hover deve mostrare il buffering reale");
 assert.match(appSource, /Il codec di questo video MOV non è supportato/, "i video incompatibili devono mostrare una spiegazione chiara");
+assert.match(appSource, /showEmbeddedDriveVideo/, "i codec video non supportati devono usare il player incorporato di Drive");
 assert.match(appSource, /createTransferProgress/, "upload e download devono esporre una barra di avanzamento");
 assert.match(appSource, /readResponseBlobWithProgress/, "i download devono misurare i byte trasferiti");
 assert.match(appSource, /data-drive-download-url/, "i download Drive devono passare dal gestore tracciato");
