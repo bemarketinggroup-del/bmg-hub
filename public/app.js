@@ -162,7 +162,7 @@ let selectedClientId = "";
 let clientDriveState = { clientId: "", path: [], objectUrl: "", thumbnailUrls: new Set(), uploadEnabled: false };
 let selectedPedClientId = "";
 let selectedPedMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-let pedPickerState = { date: "", path: [], files: [], contentType: "post", caption: "" };
+let pedPickerState = { date: "", path: [], files: [], contentType: "post", caption: "", selectedFiles: [] };
 let pedShareState = { active: false, shareUrl: "" };
 let pedLoadingKey = "";
 let editingPedCaptionId = "";
@@ -1435,11 +1435,34 @@ function pedTypeMeta(value) {
   return { type, ...PED_CONTENT_TYPES[type] };
 }
 
-function pedTypeOptions(selected) {
+function pedTypeOptions(selected, { carouselOnly = false } = {}) {
   const current = pedContentType(selected);
-  return Object.entries(PED_CONTENT_TYPES).map(([value, meta]) =>
+  const entries = carouselOnly
+    ? [["carousel", PED_CONTENT_TYPES.carousel]]
+    : Object.entries(PED_CONTENT_TYPES).filter(([value]) => value !== "carousel");
+  return entries.map(([value, meta]) =>
     `<option value="${value}"${value === current ? " selected" : ""}>${meta.label}</option>`
   ).join("");
+}
+
+function pedItemFiles(item) {
+  if (Array.isArray(item.files) && item.files.length) return item.files;
+  return [{
+    id: item.database_id || item.id,
+    drive_file_id: item.drive_file_id,
+    drive_file_name: item.drive_file_name,
+    drive_mime_type: item.drive_mime_type,
+    thumbnail_url: item.thumbnail_url,
+    content_url: item.content_url,
+    download_url: item.download_url
+  }];
+}
+
+function pedItemTitle(item) {
+  const files = pedItemFiles(item);
+  return item.content_type === "carousel" && files.length > 1
+    ? `Carosello · ${files.length} contenuti`
+    : item.drive_file_name;
 }
 
 function clientHasDrive(client) {
@@ -1659,29 +1682,32 @@ function renderPedCalendar() {
 
 function pedItemMarkup(item) {
   const format = pedTypeMeta(item.content_type);
-  const mime = String(item.drive_mime_type || "");
+  const files = pedItemFiles(item);
+  const primary = files[0];
+  const title = pedItemTitle(item);
+  const mime = String(primary.drive_mime_type || "");
   const isImage = mime.startsWith("image/");
   const isVideo = mime.startsWith("video/");
-  const previewUrl = item.thumbnail_url || (isImage ? item.content_url : "");
+  const previewUrl = primary.thumbnail_url || (isImage ? primary.content_url : "");
   const media = previewUrl
     ? `<img src="${escapeHtml(previewUrl)}" alt="" loading="lazy" decoding="async">`
     : `<span class="ped-content-icon">${driveFileIcon({ is_folder: false, mime_type: mime })}</span>`;
   const hoverMedia = isVideo
-    ? `<video muted loop playsinline preload="none" poster="${escapeHtml(item.thumbnail_url || "")}" data-ped-video-src="${escapeHtml(item.content_url || "")}"></video><span class="ped-preview-play"><svg class="lc" viewBox="0 0 24 24"><path d="m9 7 8 5-8 5z"/></svg></span>`
+    ? `<video muted loop playsinline preload="none" poster="${escapeHtml(primary.thumbnail_url || "")}" data-ped-video-src="${escapeHtml(primary.content_url || "")}"></video><span class="ped-preview-play"><svg class="lc" viewBox="0 0 24 24"><path d="m9 7 8 5-8 5z"/></svg></span>`
     : previewUrl
-      ? `<img src="${escapeHtml(previewUrl)}" alt="Anteprima ${escapeHtml(item.drive_file_name)}" loading="lazy">`
-      : `<div class="ped-preview-file">${driveFileIcon({ is_folder: false, mime_type: mime })}<strong>${escapeHtml(item.drive_file_name)}</strong></div>`;
-  const typeLabel = isVideo ? "Video" : isImage ? "Immagine" : mime === "application/pdf" ? "PDF" : "File";
+      ? `<img src="${escapeHtml(previewUrl)}" alt="Anteprima ${escapeHtml(title)}" loading="lazy">`
+      : `<div class="ped-preview-file">${driveFileIcon({ is_folder: false, mime_type: mime })}<strong>${escapeHtml(title)}</strong></div>`;
+  const typeLabel = files.length > 1 ? `${files.length} file` : isVideo ? "Video" : isImage ? "Immagine" : mime === "application/pdf" ? "PDF" : "File";
 
-  return `<article class="ped-content-card ped-type-${format.type}" data-ped-content="${escapeHtml(item.id)}" tabindex="0">
-    <button class="ped-content-main" data-ped-open="${escapeHtml(item.drive_file_id)}" data-ped-name="${escapeHtml(item.drive_file_name)}" data-ped-mime="${escapeHtml(mime)}" data-ped-content-url="${escapeHtml(item.content_url || "")}" type="button" title="Apri l'anteprima nell'Hub">
-      <span class="ped-content-thumb">${media}${isVideo ? `<span class="ped-video-mini"><svg class="lc" viewBox="0 0 24 24"><path d="m9 7 8 5-8 5z"/></svg></span>` : ""}</span>
-      <span class="ped-content-copy"><strong>${escapeHtml(item.drive_file_name)}</strong><small><span class="ped-type-dot" aria-hidden="true"></span>${format.label} · ${typeLabel}${item.caption ? " · Copy pronto" : ""}</small></span>
+  return `<article class="ped-content-card ped-type-${format.type}${files.length > 1 ? " is-carousel" : ""}" data-ped-content="${escapeHtml(item.id)}" tabindex="0">
+    <button class="ped-content-main" data-ped-open="${escapeHtml(primary.drive_file_id)}" data-ped-name="${escapeHtml(primary.drive_file_name)}" data-ped-mime="${escapeHtml(mime)}" data-ped-content-url="${escapeHtml(primary.content_url || "")}" type="button" title="Apri la prima anteprima nell'Hub">
+      <span class="ped-content-thumb">${media}${isVideo ? `<span class="ped-video-mini"><svg class="lc" viewBox="0 0 24 24"><path d="m9 7 8 5-8 5z"/></svg></span>` : ""}${files.length > 1 ? `<b class="ped-carousel-count">${files.length}</b>` : ""}</span>
+      <span class="ped-content-copy"><strong>${escapeHtml(title)}</strong><small><span class="ped-type-dot" aria-hidden="true"></span>${format.label} · ${typeLabel}${format.type !== "story" && item.caption ? " · Copy pronto" : ""}</small></span>
     </button>
-    <button class="ped-content-remove" data-ped-remove="${escapeHtml(item.id)}" type="button" title="Rimuovi dal PED" aria-label="Rimuovi ${escapeHtml(item.drive_file_name)} dal PED">
+    <button class="ped-content-remove" data-ped-remove="${escapeHtml(item.id)}" type="button" title="Rimuovi dal PED" aria-label="Rimuovi ${escapeHtml(title)} dal PED">
       <svg class="lc" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
     </button>
-    <div class="ped-hover-preview" aria-hidden="true">${hoverMedia}<span><b>${format.label}</b>${escapeHtml(item.drive_file_name)}</span></div>
+    <div class="ped-hover-preview" aria-hidden="true">${hoverMedia}<span><b>${format.label}</b>${escapeHtml(title)}</span></div>
   </article>`;
 }
 
@@ -1723,35 +1749,67 @@ function renderPedAgenda() {
 
 function pedAgendaItemMarkup(item) {
   const format = pedTypeMeta(item.content_type);
-  const mime = String(item.drive_mime_type || "");
+  const files = pedItemFiles(item);
+  const primary = files[0];
+  const title = pedItemTitle(item);
+  const mime = String(primary.drive_mime_type || "");
   const isImage = mime.startsWith("image/");
   const isVideo = mime.startsWith("video/");
-  const previewUrl = item.thumbnail_url || (isImage ? item.content_url : "");
+  const previewUrl = primary.thumbnail_url || (isImage ? primary.content_url : "");
   const media = previewUrl
     ? `<img src="${escapeHtml(previewUrl)}" alt="" loading="lazy" decoding="async">`
     : driveFileIcon({ is_folder: false, mime_type: mime });
   return `<article class="ped-agenda-item ped-type-${format.type}">
-    <button class="ped-agenda-preview" data-ped-open="${escapeHtml(item.drive_file_id)}" data-ped-name="${escapeHtml(item.drive_file_name)}" data-ped-mime="${escapeHtml(mime)}" data-ped-content-url="${escapeHtml(item.content_url || "")}" type="button" title="Apri anteprima">
-      ${media}${isVideo ? `<span class="ped-video-mini"><svg class="lc" viewBox="0 0 24 24"><path d="m9 7 8 5-8 5z"/></svg></span>` : ""}
+    <button class="ped-agenda-preview" data-ped-open="${escapeHtml(primary.drive_file_id)}" data-ped-name="${escapeHtml(primary.drive_file_name)}" data-ped-mime="${escapeHtml(mime)}" data-ped-content-url="${escapeHtml(primary.content_url || "")}" type="button" title="Apri anteprima">
+      ${media}${isVideo ? `<span class="ped-video-mini"><svg class="lc" viewBox="0 0 24 24"><path d="m9 7 8 5-8 5z"/></svg></span>` : ""}${files.length > 1 ? `<b class="ped-carousel-count">${files.length}</b>` : ""}
     </button>
     <div class="ped-agenda-copy">
-      <strong>${escapeHtml(item.drive_file_name)}</strong>
-      <span><i class="ped-type-dot" aria-hidden="true"></i>${format.description}</span>
-      ${item.caption ? `<p title="${escapeHtml(item.caption)}">${escapeHtml(item.caption)}</p>` : `<p class="is-empty">Copy Instagram da inserire</p>`}
+      <strong>${escapeHtml(title)}</strong>
+      <span><i class="ped-type-dot" aria-hidden="true"></i>${files.length > 1 ? `${format.description} · ${files.length} contenuti` : format.description}</span>
+      ${format.type === "story" ? `<p class="is-empty">Le stories non prevedono copy</p>` : item.caption ? `<p title="${escapeHtml(item.caption)}">${escapeHtml(item.caption)}</p>` : `<p class="is-empty">Copy Instagram da inserire</p>`}
     </div>
     <label class="ped-agenda-format">
-      <span class="sr-only">Formato di ${escapeHtml(item.drive_file_name)}</span>
-      <select data-ped-type-change="${escapeHtml(item.id)}" aria-label="Formato di ${escapeHtml(item.drive_file_name)}">${pedTypeOptions(format.type)}</select>
+      <span class="sr-only">Formato di ${escapeHtml(title)}</span>
+      <select data-ped-type-change="${escapeHtml(item.id)}" aria-label="Formato di ${escapeHtml(title)}">${pedTypeOptions(format.type, { carouselOnly: format.type === "carousel" })}</select>
     </label>
-    <button class="ped-agenda-caption${item.caption ? " has-copy" : ""}" data-ped-caption="${escapeHtml(item.id)}" type="button" title="${item.caption ? "Apri e copia il copy Instagram" : "Aggiungi il copy Instagram"}">
+    ${format.type === "story" ? `<span class="ped-agenda-caption-placeholder" aria-hidden="true"></span>` : `<button class="ped-agenda-caption${item.caption ? " has-copy" : ""}" data-ped-caption="${escapeHtml(item.id)}" type="button" title="${item.caption ? "Apri e copia il copy Instagram" : "Aggiungi il copy Instagram"}">
       <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
       <span>${item.caption ? "Copy" : "Scrivi copy"}</span>
-    </button>
-    <a class="ped-agenda-download" href="${escapeHtml(item.download_url || "#")}" download title="Scarica ${escapeHtml(item.drive_file_name)}">
+    </button>`}
+    ${files.length > 1 ? `<button class="ped-agenda-download" data-ped-carousel-download="${escapeHtml(item.id)}" data-ped-download-name="${escapeHtml(title)}" type="button" title="Scarica tutti i contenuti in un unico ZIP">` : `<a class="ped-agenda-download" href="${escapeHtml(primary.download_url || "#")}" download title="Scarica ${escapeHtml(primary.drive_file_name)}">`}
       <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
-      <span>Scarica</span>
-    </a>
+      <span>${files.length > 1 ? "Scarica ZIP" : "Scarica"}</span>
+    ${files.length > 1 ? `</button>` : `</a>`}
   </article>`;
+}
+
+async function downloadPedCarousel(groupId, button) {
+  const original = button.innerHTML;
+  button.disabled = true;
+  button.textContent = "Preparo ZIP...";
+  try {
+    const response = await apiFetch(`/api/ped-carousel-download?group_id=${encodeURIComponent(groupId)}`);
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.error || "Download del carosello non riuscito");
+    }
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const disposition = response.headers.get("Content-Disposition") || "";
+    const filename = disposition.match(/filename="?([^";]+)"?/i)?.[1];
+    link.href = url;
+    link.download = filename || `carosello-${groupId}.zip`;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 30000);
+  } catch (error) {
+    alert(error.message);
+  } finally {
+    button.disabled = false;
+    button.innerHTML = original;
+  }
 }
 
 async function loadPedCalendar() {
@@ -1792,7 +1850,7 @@ async function openPedDrivePicker(date) {
     alert("Collega prima la cartella Google Drive del cliente.");
     return;
   }
-  pedPickerState = { date, path: [], files: [], contentType: "post", caption: "" };
+  pedPickerState = { date, path: [], files: [], contentType: "post", caption: "", selectedFiles: [] };
   document.getElementById("pedPickerTitle").textContent = `Contenuto per ${new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "long" }).format(new Date(`${date}T12:00:00`))}`;
   document.getElementById("pedPickerSubtitle").textContent = `${client.name} · scegli una foto, un video o una grafica dal Drive`;
   document.getElementById("pedPickerMessage").textContent = "";
@@ -1805,11 +1863,36 @@ async function openPedDrivePicker(date) {
 function renderPedPickerFormat() {
   const picker = document.getElementById("pedFormatPicker");
   if (!picker) return;
+  const type = pedContentType(pedPickerState.contentType);
   picker.querySelectorAll("[data-ped-picker-type]").forEach((button) => {
-    const active = button.dataset.pedPickerType === pedContentType(pedPickerState.contentType);
+    const active = button.dataset.pedPickerType === type;
     button.classList.toggle("is-active", active);
     button.setAttribute("aria-pressed", String(active));
   });
+  const captionField = document.getElementById("pedPickerCaptionField");
+  const captionInput = document.getElementById("pedPickerCaption");
+  const isStory = type === "story";
+  captionField.classList.toggle("is-hidden", isStory);
+  if (isStory) {
+    pedPickerState.caption = "";
+    captionInput.value = "";
+  }
+  document.getElementById("pedPickerCaptionLabel").textContent = type === "carousel" ? "Copy unico del carosello" : "Copy Instagram";
+  document.getElementById("pedPickerCaptionHint").textContent = type === "carousel"
+    ? "Un solo copy condiviso da tutti i contenuti selezionati."
+    : "Facoltativo, potrai modificarlo anche in seguito.";
+  document.getElementById("pedCarouselSelection").classList.toggle("is-hidden", type !== "carousel");
+  renderPedCarouselSelection();
+}
+
+function renderPedCarouselSelection() {
+  const count = pedPickerState.selectedFiles.length;
+  const countLabel = document.getElementById("pedCarouselSelectionCount");
+  const button = document.getElementById("pedCreateCarouselButton");
+  if (!countLabel || !button) return;
+  countLabel.textContent = `${count} ${count === 1 ? "contenuto selezionato" : "contenuti selezionati"}`;
+  button.disabled = count < 2 || count > 20;
+  button.textContent = count >= 2 ? `Crea carosello (${count})` : "Crea carosello";
 }
 
 async function loadPedPickerFolder(folderId = "", folderName = "") {
@@ -1845,19 +1928,41 @@ function renderPedPicker() {
     const isImage = String(file.mime_type || "").startsWith("image/");
     const isVideo = String(file.mime_type || "").startsWith("video/");
     const hasPreview = file.has_thumbnail && (isImage || isVideo);
-    return `<button class="ped-picker-entry${file.is_folder ? " is-folder" : ""}" ${file.is_folder ? "data-ped-picker-folder" : "data-ped-picker-file"}="${escapeHtml(file.id)}" data-ped-picker-name="${escapeHtml(file.name)}" type="button">
+    const selected = !file.is_folder && pedPickerState.selectedFiles.some((item) => String(item.id) === String(file.id));
+    return `<button class="ped-picker-entry${file.is_folder ? " is-folder" : ""}${selected ? " is-selected" : ""}" ${file.is_folder ? "data-ped-picker-folder" : "data-ped-picker-file"}="${escapeHtml(file.id)}" data-ped-picker-name="${escapeHtml(file.name)}" type="button"${file.is_folder ? "" : ` aria-pressed="${selected}"`}>
       <span class="ped-picker-media">${hasPreview
         ? `<img src="${escapeHtml(file.thumbnail_url || "")}" alt="" loading="lazy">${isVideo ? `<span class="ped-video-mini"><svg class="lc" viewBox="0 0 24 24"><path d="m9 7 8 5-8 5z"/></svg></span>` : ""}`
         : driveFileIcon(file)}</span>
       <span><strong>${escapeHtml(file.name)}</strong><small>${file.is_folder ? "Cartella" : [formatFileSize(file.size), formatDriveDate(file.modified_at)].filter(Boolean).join(" · ") || "File"}</small></span>
-      <svg class="lc ped-picker-arrow" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>
+      ${file.is_folder ? `<svg class="lc ped-picker-arrow" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>` : `<span class="ped-picker-check" aria-hidden="true"><svg class="lc" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg></span>`}
     </button>`;
   }).join("") || `<p class="ped-picker-empty">Questa cartella è vuota.</p>`;
 }
 
-async function attachPedDriveFile(fileId) {
+function togglePedCarouselFile(fileId) {
+  const index = pedPickerState.selectedFiles.findIndex((file) => String(file.id) === String(fileId));
+  if (index >= 0) pedPickerState.selectedFiles.splice(index, 1);
+  else {
+    if (pedPickerState.selectedFiles.length >= 20) {
+      document.getElementById("pedPickerMessage").textContent = "Puoi selezionare al massimo 20 contenuti per carosello.";
+      return;
+    }
+    const file = pedPickerState.files.find((item) => String(item.id) === String(fileId));
+    if (file) pedPickerState.selectedFiles.push(file);
+  }
+  document.getElementById("pedPickerMessage").textContent = "";
+  renderPedPicker();
+  renderPedCarouselSelection();
+}
+
+async function attachPedDriveFiles(fileIds) {
   const message = document.getElementById("pedPickerMessage");
-  message.textContent = "Collegamento in corso...";
+  const format = pedContentType(pedPickerState.contentType);
+  if (format === "carousel" && fileIds.length < 2) {
+    message.textContent = "Seleziona almeno due contenuti per creare il carosello.";
+    return;
+  }
+  message.textContent = format === "carousel" ? "Creazione carosello in corso..." : "Collegamento in corso...";
   try {
     const response = await apiFetch("/api/ped", {
       method: "POST",
@@ -1865,9 +1970,10 @@ async function attachPedDriveFile(fileId) {
       body: JSON.stringify({
         client_id: selectedPedClientId,
         scheduled_date: pedPickerState.date,
-        drive_file_id: fileId,
-        content_type: pedContentType(pedPickerState.contentType),
-        caption: document.getElementById("pedPickerCaption").value
+        drive_file_id: fileIds[0],
+        drive_file_ids: fileIds,
+        content_type: format,
+        caption: format === "story" ? "" : document.getElementById("pedPickerCaption").value
       })
     });
     const data = await response.json().catch(() => ({}));
@@ -1879,12 +1985,18 @@ async function attachPedDriveFile(fileId) {
   }
 }
 
+function attachPedDriveFile(fileId) {
+  return attachPedDriveFiles([fileId]);
+}
+
 async function updatePedItemType(id, nextType) {
   const item = state.pedItems.find((entry) => String(entry.id) === String(id));
   if (!item) return;
   const previousType = pedContentType(item.content_type);
+  const previousCaption = item.caption;
   const contentType = pedContentType(nextType);
   item.content_type = contentType;
+  if (contentType === "story") item.caption = null;
   renderPed();
   try {
     const response = await apiFetch("/api/ped", {
@@ -1896,6 +2008,7 @@ async function updatePedItemType(id, nextType) {
     if (!response.ok) throw new Error(data.error || "Impossibile aggiornare il formato");
   } catch (error) {
     item.content_type = previousType;
+    item.caption = previousCaption;
     renderPed();
     alert(error.message);
   }
@@ -1903,7 +2016,7 @@ async function updatePedItemType(id, nextType) {
 
 function openPedCaptionModal(id) {
   const item = state.pedItems.find((entry) => String(entry.id) === String(id));
-  if (!item) return;
+  if (!item || pedContentType(item.content_type) === "story") return;
   editingPedCaptionId = String(item.id);
   const format = pedTypeMeta(item.content_type);
   const textarea = document.getElementById("pedCaptionText");
@@ -1970,7 +2083,9 @@ async function savePedCaption(event) {
 }
 
 async function removePedItem(id) {
-  if (!confirm("Rimuovere questo contenuto dal PED? Il file restera su Google Drive.")) return;
+  const item = state.pedItems.find((entry) => String(entry.id) === String(id));
+  const subject = item?.is_group ? "questo carosello e tutti i suoi collegamenti" : "questo contenuto";
+  if (!confirm(`Rimuovere ${subject} dal PED? I file resteranno su Google Drive.`)) return;
   const response = await apiFetch(`/api/ped?id=${encodeURIComponent(id)}`, { method: "DELETE" });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
@@ -3445,6 +3560,8 @@ document.body.addEventListener("click", (event) => {
   const pedPickerType = event.target.closest("[data-ped-picker-type]");
   const pedPickerBreadcrumb = event.target.closest("[data-ped-picker-breadcrumb]");
   const pedPickerClose = event.target.closest("[data-ped-picker-close]");
+  const pedCreateCarousel = event.target.closest("[data-ped-create-carousel]");
+  const pedCarouselDownload = event.target.closest("[data-ped-carousel-download]");
   const pedCaption = event.target.closest("[data-ped-caption]");
   const saveUser = event.target.closest("[data-save-user]");
   const applyAiClient = event.target.closest("[data-apply-ai-client]");
@@ -3478,12 +3595,19 @@ document.body.addEventListener("click", (event) => {
   if (pedAdd) return openPedDrivePicker(pedAdd.dataset.pedAdd);
   if (pedRemove) return removePedItem(pedRemove.dataset.pedRemove);
   if (pedOpen) return openDriveFile(pedOpen.dataset.pedOpen, pedOpen.dataset.pedName, pedOpen.dataset.pedMime, pedOpen.dataset.pedContentUrl);
+  if (pedCarouselDownload) return downloadPedCarousel(pedCarouselDownload.dataset.pedCarouselDownload, pedCarouselDownload);
   if (pedPickerType) {
+    pedPickerState.caption = document.getElementById("pedPickerCaption").value;
     pedPickerState.contentType = pedContentType(pedPickerType.dataset.pedPickerType);
-    return renderPedPickerFormat();
+    if (pedPickerState.contentType !== "carousel") pedPickerState.selectedFiles = [];
+    renderPedPickerFormat();
+    return renderPedPicker();
   }
   if (pedPickerFolder) return loadPedPickerFolder(pedPickerFolder.dataset.pedPickerFolder, pedPickerFolder.dataset.pedPickerName);
-  if (pedPickerFile) return attachPedDriveFile(pedPickerFile.dataset.pedPickerFile);
+  if (pedPickerFile) return pedContentType(pedPickerState.contentType) === "carousel"
+    ? togglePedCarouselFile(pedPickerFile.dataset.pedPickerFile)
+    : attachPedDriveFile(pedPickerFile.dataset.pedPickerFile);
+  if (pedCreateCarousel) return attachPedDriveFiles(pedPickerState.selectedFiles.map((file) => file.id));
   if (pedPickerBreadcrumb) {
     const index = Number(pedPickerBreadcrumb.dataset.pedPickerBreadcrumb);
     const target = pedPickerState.path[index];

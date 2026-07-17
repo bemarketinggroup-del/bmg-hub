@@ -659,12 +659,16 @@
         <button data-ped-picker-type="reel" type="button">Reel</button>
         <button data-ped-picker-type="carousel" type="button">Carosello</button>
       </div>
-      <label class="ped-picker-caption-field" for="pedPickerCaption">
-        <span><strong>Copy Instagram</strong><small>Facoltativo, potrai modificarlo anche in seguito.</small></span>
+      <label class="ped-picker-caption-field" id="pedPickerCaptionField" for="pedPickerCaption">
+        <span><strong id="pedPickerCaptionLabel">Copy Instagram</strong><small id="pedPickerCaptionHint">Facoltativo, potrai modificarlo anche in seguito.</small></span>
         <textarea id="pedPickerCaption" maxlength="10000" rows="3" placeholder="Scrivi la descrizione del contenuto, gli hashtag e le eventuali call to action..."></textarea>
       </label>
       <nav class="ped-picker-breadcrumbs" id="pedPickerBreadcrumbs" aria-label="Percorso Google Drive"></nav>
       <div class="ped-picker-grid" id="pedPickerGrid"></div>
+      <div class="ped-carousel-selection is-hidden" id="pedCarouselSelection">
+        <span><strong id="pedCarouselSelectionCount">0 contenuti selezionati</strong><small>Seleziona da 2 a 20 file, anche in cartelle diverse.</small></span>
+        <button class="primary-button" id="pedCreateCarouselButton" data-ped-create-carousel type="button" disabled>Crea carosello</button>
+      </div>
       <p class="form-message" id="pedPickerMessage" role="status"></p>
     </div>
   </dialog>

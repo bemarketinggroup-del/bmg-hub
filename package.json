@@ -8,6 +8,10 @@
     "build": "node --check public/app.js && node --check public/ped-share.js && node --check api/_auth.js && node --check api/app.js && node --check api/auth-config.js && node --check api/me.js && node --check api/users.js && node --check api/leads.js && node --check api/site-content.js && node --check api/public-site-content.js && node --check api/clients.js && node --check api/clients-sync-clickup.js && node --check api/clickup-team.js && node --check api/clickup-tasks.js && node --check lib/client-drive-api.js && node --check lib/drive-media-token.js && node --check lib/google-drive.js && node --check lib/ped.js && node --check lib/ped-share.js && node --check lib/site-media.js && node --check lib/ai-task-assist.js && node --check lib/smart-working.js",
     "check": "node --check public/app.js && node --check public/ped-share.js && node --check api/_auth.js && node --check api/app.js && node --check api/auth-config.js && node --check api/me.js && node --check api/users.js && node --check api/leads.js && node --check api/site-content.js && node --check api/public-site-content.js && node --check api/clients.js && node --check api/clients-sync-clickup.js && node --check api/clickup-team.js && node --check api/clickup-tasks.js && node --check lib/client-drive-api.js && node --check lib/drive-media-token.js && node --check lib/google-drive.js && node --check lib/ped.js && node --check lib/ped-share.js && node --check lib/site-media.js && node --check lib/ai-task-assist.js && node --check lib/smart-working.js",
     "test:clickup-sync": "node scripts/test-clickup-task-sync.mjs",
-    "test:ai-task-assist": "node scripts/test-ai-task-assist.mjs"
+    "test:ai-task-assist": "node scripts/test-ai-task-assist.mjs",
+    "test:ped-carousel": "node scripts/test-ped-carousel.mjs"
+  },
+  "dependencies": {
+    "archiver": "^7.0.1"
   }
 }

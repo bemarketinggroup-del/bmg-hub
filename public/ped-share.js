@@ -49,14 +49,20 @@ function isVideo(item) {
   return String(item.mime_type || "").startsWith("video/");
 }
 
+function itemFiles(item) {
+  return Array.isArray(item.files) && item.files.length ? item.files : [item];
+}
+
 function renderItem(item) {
   const type = contentType(item.content_type);
-  const media = item.thumbnail_url
-    ? `<img src="${escapeHtml(item.thumbnail_url)}" alt="" loading="lazy" decoding="async">`
-    : `<b>${isVideo(item) ? "VIDEO" : isImage(item) ? "IMG" : "FILE"}</b>`;
+  const files = itemFiles(item);
+  const primary = files[0];
+  const media = primary.thumbnail_url
+    ? `<img src="${escapeHtml(primary.thumbnail_url)}" alt="" loading="lazy" decoding="async">`
+    : `<b>${isVideo(primary) ? "VIDEO" : isImage(primary) ? "IMG" : "FILE"}</b>`;
   return `<button class="share-item type-${type}" data-share-item="${escapeHtml(item.id)}" type="button" title="Apri anteprima di ${escapeHtml(item.file_name)}">
-    <span class="share-item-media">${media}</span>
-    <span class="share-item-copy"><strong>${escapeHtml(item.file_name)}</strong><small>${PED_TYPES[type].label}${item.caption ? " · Copy pronto" : ""}</small></span>
+    <span class="share-item-media">${media}${files.length > 1 ? `<i class="share-carousel-count">${files.length}</i>` : ""}</span>
+    <span class="share-item-copy"><strong>${escapeHtml(item.file_name)}</strong><small>${PED_TYPES[type].label}${files.length > 1 ? ` · ${files.length} file` : ""}${type !== "story" && item.caption ? " · Copy pronto" : ""}</small></span>
   </button>`;
 }
 
@@ -135,12 +141,19 @@ function openPreview(id) {
   const body = document.getElementById("sharePreviewBody");
   document.getElementById("sharePreviewType").textContent = PED_TYPES[type].label;
   document.getElementById("sharePreviewTitle").textContent = item.file_name || "Anteprima";
-  document.getElementById("sharePreviewCaption").textContent = item.caption || "";
-  document.getElementById("sharePreviewCopy").classList.toggle("is-hidden", !item.caption);
-  if (isImage(item)) body.innerHTML = `<img src="${escapeHtml(item.content_url)}" alt="${escapeHtml(item.file_name)}">`;
-  else if (isVideo(item)) body.innerHTML = `<video src="${escapeHtml(item.content_url)}" controls playsinline preload="metadata"></video>`;
-  else if (item.mime_type === "application/pdf") body.innerHTML = `<iframe src="${escapeHtml(item.content_url)}" title="${escapeHtml(item.file_name)}"></iframe>`;
-  else body.innerHTML = `<div class="unsupported">Anteprima non disponibile per questo formato.</div>`;
+  const caption = type === "story" ? "" : item.caption || "";
+  document.getElementById("sharePreviewCaption").textContent = caption;
+  document.getElementById("sharePreviewCopy").classList.toggle("is-hidden", !caption);
+  const files = itemFiles(item);
+  const mediaMarkup = (file) => {
+    if (isImage(file)) return `<figure><img src="${escapeHtml(file.content_url)}" alt="${escapeHtml(file.file_name)}"><figcaption>${escapeHtml(file.file_name)}</figcaption></figure>`;
+    if (isVideo(file)) return `<figure><video src="${escapeHtml(file.content_url)}" controls playsinline preload="metadata"></video><figcaption>${escapeHtml(file.file_name)}</figcaption></figure>`;
+    if (file.mime_type === "application/pdf") return `<figure><iframe src="${escapeHtml(file.content_url)}" title="${escapeHtml(file.file_name)}"></iframe><figcaption>${escapeHtml(file.file_name)}</figcaption></figure>`;
+    return `<figure><div class="unsupported">Anteprima non disponibile per ${escapeHtml(file.file_name)}.</div></figure>`;
+  };
+  body.innerHTML = files.length > 1
+    ? `<div class="share-carousel-gallery">${files.map(mediaMarkup).join("")}</div>`
+    : mediaMarkup(files[0]);
   document.getElementById("sharePreviewModal").showModal();
 }
 

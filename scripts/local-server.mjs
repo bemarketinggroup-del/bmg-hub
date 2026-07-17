@@ -10,7 +10,7 @@ Object.assign(process.env, env);
 const { handleSmartWorking } = await import("../lib/smart-working.js");
 const { default: handleClients } = await import("../api/clients.js");
 const { default: handleClientDrive } = await import("../lib/client-drive-api.js");
-const { default: handlePed } = await import("../lib/ped.js");
+const { default: handlePed, handlePedCarouselDownload } = await import("../lib/ped.js");
 const { handlePedShareAdmin, handlePublicPed } = await import("../lib/ped-share.js");
 const { default: handleClientsSyncClickUp } = await import("../api/clients-sync-clickup.js");
 const { default: handleClickUpTeam } = await import("../api/clickup-team.js");
@@ -79,6 +79,11 @@ createServer(async (request, response) => {
 
     if (url.pathname === "/api/ped") {
       await handlePed(request, response);
+      return;
+    }
+
+    if (url.pathname === "/api/ped-carousel-download") {
+      await handlePedCarouselDownload(request, response);
       return;
     }
 

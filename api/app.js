@@ -1,6 +1,6 @@
 import { createReadStream, existsSync } from "node:fs";
 import { extname, join, normalize } from "node:path";
-import handlePed from "../lib/ped.js";
+import handlePed, { handlePedCarouselDownload } from "../lib/ped.js";
 import { handlePedShareAdmin, handlePublicPed } from "../lib/ped-share.js";
 import { handleSmartWorking } from "../lib/smart-working.js";
 
@@ -26,6 +26,10 @@ export default async function handler(request, response) {
   }
   if (requestUrl.pathname === "/api/ped") {
     await handlePed(request, response);
+    return;
+  }
+  if (requestUrl.pathname === "/api/ped-carousel-download") {
+    await handlePedCarouselDownload(request, response);
     return;
   }
   if (requestUrl.pathname === "/api/ped-share") {
