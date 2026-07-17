@@ -86,6 +86,7 @@ assert.match(appSource, /\.filter\(\(item\) => pedContentType\(item\.content_typ
 assert.match(appSource, /class="ped-instagram-grid-type"/, "reel e caroselli devono essere riconoscibili nella griglia");
 assert.match(styleSource, /\.ped-instagram-scroll[^}]*overflow-y: auto/s, "il feed dentro l'iPhone deve essere scorribile verticalmente");
 assert.match(styleSource, /\.ped-instagram-grid[^}]*grid-template-columns: repeat\(3,/s, "la griglia profilo deve usare tre colonne");
-assert.match(styleSource, /\.ped-instagram-grid-item img[^}]*object-fit: cover/s, "la griglia deve riprodurre il ritaglio quadrato di Instagram");
+assert.match(styleSource, /\.ped-instagram-grid-item[^}]*aspect-ratio: 4 \/ 5/s, "i contenuti del profilo devono usare il formato verticale 4:5");
+assert.match(styleSource, /\.ped-instagram-grid-item img[^}]*object-fit: cover/s, "le immagini devono riempire correttamente le celle verticali 4:5");
 
 console.log("PED carousel tests passed");
