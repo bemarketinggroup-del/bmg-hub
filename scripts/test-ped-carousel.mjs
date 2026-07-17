@@ -16,6 +16,7 @@ function row(overrides = {}) {
     caption: "Copy dedicato",
     content_group_id: null,
     group_position: 0,
+    instagram_position: null,
     ...overrides
   };
 }
@@ -48,6 +49,7 @@ const appSource = await readFile(new URL("../public/app.js", import.meta.url), "
 const styleSource = await readFile(new URL("../public/styles.css", import.meta.url), "utf8");
 const htmlSource = await readFile(new URL("../public/index.html", import.meta.url), "utf8");
 const pedSource = await readFile(new URL("../lib/ped.js", import.meta.url), "utf8");
+const instagramOrderMigration = await readFile(new URL("../supabase/20260717_ped_instagram_order.sql", import.meta.url), "utf8");
 assert.match(appSource, /data-ped-picker-preview-type/, "il selettore Drive deve esporre il tipo di anteprima");
 assert.match(appSource, /showPedPickerPreview\(entry\)/, "il selettore Drive deve attivare l'anteprima al passaggio");
 assert.match(appSource, /preview\.setAttribute\("popover", "manual"\)/, "l'anteprima deve apparire sopra al modal PED");
@@ -82,8 +84,18 @@ assert.match(htmlSource, /id="pedInstagramProfileAvatar"/, "il mockup deve mostr
 assert.match(htmlSource, /class="ped-instagram-grid"/, "il mockup deve includere la griglia del profilo");
 assert.match(appSource, /function renderPedInstagramPreview\(\)/, "l'anteprima deve derivare i contenuti dallo stato PED corrente");
 assert.match(appSource, /pedContentType\(item\.content_type\) !== "story"/, "le stories devono restare separate dal feed principale");
-assert.match(appSource, /\.filter\(\(item\) => pedContentType\(item\.content_type\) !== "story"\)\.reverse\(\)/, "la griglia profilo deve mostrare prima le pubblicazioni piu recenti");
+assert.match(appSource, /function pedInstagramDefaultFeedItems\(\)/, "la griglia profilo deve avere un ordinamento predefinito stabile");
+assert.match(appSource, /instagram_order: pedInstagramDraftOrder/, "l'ordine manuale del profilo deve essere salvato tramite API");
+assert.match(appSource, /function movePedInstagramDraftItem\(sourceId, targetId\)/, "i post devono essere riordinabili tramite trascinamento");
+assert.match(htmlSource, /id="pedInstagramOrderEdit"/, "il mockup deve offrire il comando Riordina");
+assert.match(htmlSource, /id="pedInstagramOrderSave"/, "il mockup deve offrire il salvataggio dell'ordine");
+assert.match(pedSource, /Array\.isArray\(body\.instagram_order\)/, "l'API PED deve gestire un ordine Instagram completo");
+assert.match(instagramOrderMigration, /add column if not exists instagram_position integer/, "il database deve conservare l'ordine Instagram");
 assert.match(appSource, /class="ped-instagram-grid-type"/, "reel e caroselli devono essere riconoscibili nella griglia");
+assert.match(appSource, /function pedCarouselHoverPreview\(files, title\)/, "i caroselli devono generare un'anteprima multipla");
+assert.match(appSource, /data-ped-hover-slide/, "ogni contenuto del carosello deve avere una slide dedicata");
+assert.match(appSource, /window\.setInterval\(\(\) => \{[\s\S]*?1500\)/, "l'anteprima carosello deve scorrere automaticamente");
+assert.match(styleSource, /\.ped-hover-carousel-thumbs/, "l'anteprima carosello deve mostrare tutte le miniature");
 assert.match(styleSource, /\.ped-instagram-scroll[^}]*overflow-y: auto/s, "il feed dentro l'iPhone deve essere scorribile verticalmente");
 assert.match(styleSource, /\.ped-instagram-grid[^}]*grid-template-columns: repeat\(3,/s, "la griglia profilo deve usare tre colonne");
 assert.match(styleSource, /\.ped-instagram-grid-item[^}]*aspect-ratio: 4 \/ 5/s, "i contenuti del profilo devono usare il formato verticale 4:5");

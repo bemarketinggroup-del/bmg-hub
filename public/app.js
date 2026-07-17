@@ -178,6 +178,9 @@ let editingPedCaptionId = "";
 let pedDraggedItemId = "";
 let pedDragTarget = null;
 let pedDragSuppressClickUntil = 0;
+let pedInstagramOrderEditing = false;
+let pedInstagramDraftOrder = [];
+let pedInstagramDraggedId = "";
 let pedPointerDrag = { pointerId: null, card: null, itemId: "", timer: 0, active: false, startX: 0, startY: 0, ghost: null };
 const pedMoveRequests = new Set();
 let selectedSmartWeek = mondayOf(new Date());
@@ -1900,7 +1903,40 @@ function pedInstagramHandle(name) {
     .replace(/^_+|_+$/g, "") || "profilo_cliente";
 }
 
-function pedInstagramGridItemMarkup(item) {
+function pedInstagramDefaultFeedItems() {
+  return [...state.pedItems]
+    .filter((item) => pedContentType(item.content_type) !== "story")
+    .sort((left, right) => {
+      const dateOrder = String(right.scheduled_date || "").localeCompare(String(left.scheduled_date || ""));
+      return dateOrder || String(right.created_at || right.id || "").localeCompare(String(left.created_at || left.id || ""));
+    });
+}
+
+function pedInstagramOrderedFeedItems() {
+  const defaults = pedInstagramDefaultFeedItems();
+  const defaultIndex = new Map(defaults.map((item, index) => [String(item.id), index]));
+  const persisted = [...defaults].sort((left, right) => {
+    const leftPosition = left.instagram_position !== null && left.instagram_position !== undefined && left.instagram_position !== "" && Number.isInteger(Number(left.instagram_position))
+      ? Number(left.instagram_position)
+      : null;
+    const rightPosition = right.instagram_position !== null && right.instagram_position !== undefined && right.instagram_position !== "" && Number.isInteger(Number(right.instagram_position))
+      ? Number(right.instagram_position)
+      : null;
+    if (leftPosition !== null && rightPosition !== null && leftPosition !== rightPosition) return leftPosition - rightPosition;
+    if (leftPosition !== null && rightPosition === null) return -1;
+    if (leftPosition === null && rightPosition !== null) return 1;
+    return defaultIndex.get(String(left.id)) - defaultIndex.get(String(right.id));
+  });
+  if (!pedInstagramOrderEditing || !pedInstagramDraftOrder.length) return persisted;
+  const byId = new Map(persisted.map((item) => [String(item.id), item]));
+  const ordered = pedInstagramDraftOrder.map((id) => byId.get(String(id))).filter(Boolean);
+  persisted.forEach((item) => {
+    if (!pedInstagramDraftOrder.includes(String(item.id))) ordered.push(item);
+  });
+  return ordered;
+}
+
+function pedInstagramGridItemMarkup(item, index) {
   const file = pedItemFiles(item)[0];
   const title = pedItemTitle(item);
   const type = pedContentType(item.content_type);
@@ -1915,9 +1951,10 @@ function pedInstagramGridItemMarkup(item) {
     : type === "reel"
       ? `<span class="ped-instagram-grid-type"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="m10 8 6 4-6 4z"/></svg></span>`
       : "";
-  return `<button class="ped-instagram-grid-item ped-type-${escapeHtml(type)}" data-ped-open="${escapeHtml(file.drive_file_id)}" data-ped-name="${escapeHtml(file.drive_file_name)}" data-ped-mime="${escapeHtml(mime)}" data-ped-content-url="${escapeHtml(file.content_url || "")}" type="button" title="${escapeHtml(formatPedInstagramDate(item.scheduled_date))} · ${escapeHtml(title)}">
+  return `<button class="ped-instagram-grid-item ped-type-${escapeHtml(type)}${pedInstagramOrderEditing ? " is-ordering" : ""}" data-ped-instagram-item="${escapeHtml(item.id)}" data-ped-open="${escapeHtml(file.drive_file_id)}" data-ped-name="${escapeHtml(file.drive_file_name)}" data-ped-mime="${escapeHtml(mime)}" data-ped-content-url="${escapeHtml(file.content_url || "")}" type="button" draggable="${pedInstagramOrderEditing ? "true" : "false"}" title="${pedInstagramOrderEditing ? `Posizione ${index + 1}: trascina per riordinare` : `${escapeHtml(formatPedInstagramDate(item.scheduled_date))} · ${escapeHtml(title)}`}">
     ${media}
     ${badge}
+    ${pedInstagramOrderEditing ? `<span class="ped-instagram-order-number">${index + 1}</span>` : ""}
   </button>`;
 }
 
@@ -1938,9 +1975,10 @@ function renderPedInstagramPreview() {
   if (!client || !title || !subtitle || !stories || !feed || !summary || !stage || !tabAvatar || !profileAvatar || !profileName || !profileBio || !profileHandle || !postCount) return;
 
   const monthLabel = new Intl.DateTimeFormat("it-IT", { month: "long", year: "numeric" }).format(selectedPedMonth);
-  const ordered = [...state.pedItems].sort((left, right) => String(left.scheduled_date).localeCompare(String(right.scheduled_date)));
-  const storyItems = ordered.filter((item) => pedContentType(item.content_type) === "story");
-  const feedItems = ordered.filter((item) => pedContentType(item.content_type) !== "story").reverse();
+  const storyItems = [...state.pedItems]
+    .filter((item) => pedContentType(item.content_type) === "story")
+    .sort((left, right) => String(left.scheduled_date).localeCompare(String(right.scheduled_date)));
+  const feedItems = pedInstagramOrderedFeedItems();
   title.textContent = `Profilo di ${client.name}`;
   subtitle.textContent = `Anteprima griglia ${monthLabel}`;
   stage.style.cssText = clientColorStyle(client);
@@ -1963,17 +2001,81 @@ function renderPedInstagramPreview() {
     : `<div class="ped-instagram-no-stories"><span>${escapeHtml(initials(client.name))}</span><small>Nessuna storia</small></div>`;
 
   feed.innerHTML = feedItems.length
-    ? feedItems.map((item) => pedInstagramGridItemMarkup(item)).join("")
+    ? feedItems.map((item, index) => pedInstagramGridItemMarkup(item, index)).join("")
     : `<div class="ped-instagram-empty"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1"/></svg><strong>Profilo ancora vuoto</strong><span>Aggiungi post, reel o caroselli al calendario per comporre la griglia.</span></div>`;
   summary.textContent = `${feedItems.length} ${feedItems.length === 1 ? "pubblicazione" : "pubblicazioni"} · ${storyItems.length} ${storyItems.length === 1 ? "storia" : "storie"}`;
+  const edit = document.getElementById("pedInstagramOrderEdit");
+  const cancel = document.getElementById("pedInstagramOrderCancel");
+  const save = document.getElementById("pedInstagramOrderSave");
+  const hint = document.getElementById("pedInstagramOrderHint");
+  edit?.classList.toggle("is-hidden", pedInstagramOrderEditing || !feedItems.length);
+  cancel?.classList.toggle("is-hidden", !pedInstagramOrderEditing);
+  save?.classList.toggle("is-hidden", !pedInstagramOrderEditing);
+  if (hint) hint.textContent = pedInstagramOrderEditing
+    ? "Trascina i contenuti nella griglia. Il numero indica la posizione che verra salvata."
+    : "La griglia simula il profilo Instagram. Usa Riordina per scegliere la posizione dei post.";
 }
 
 function openPedInstagramPreview() {
   if (!selectedPedClient()) return;
+  pedInstagramOrderEditing = false;
+  pedInstagramDraftOrder = pedInstagramOrderedFeedItems().map((item) => String(item.id));
   renderPedInstagramPreview();
   const modal = document.getElementById("pedInstagramModal");
   modal.showModal();
   modal.querySelector(".ped-instagram-scroll")?.scrollTo({ top: 0 });
+}
+
+function beginPedInstagramOrdering() {
+  pedInstagramOrderEditing = true;
+  pedInstagramDraftOrder = pedInstagramOrderedFeedItems().map((item) => String(item.id));
+  renderPedInstagramPreview();
+}
+
+function cancelPedInstagramOrdering() {
+  pedInstagramOrderEditing = false;
+  pedInstagramDraggedId = "";
+  pedInstagramDraftOrder = [];
+  renderPedInstagramPreview();
+}
+
+function movePedInstagramDraftItem(sourceId, targetId) {
+  const sourceIndex = pedInstagramDraftOrder.indexOf(String(sourceId));
+  const targetIndex = pedInstagramDraftOrder.indexOf(String(targetId));
+  if (sourceIndex < 0 || targetIndex < 0 || sourceIndex === targetIndex) return;
+  const [moved] = pedInstagramDraftOrder.splice(sourceIndex, 1);
+  pedInstagramDraftOrder.splice(targetIndex, 0, moved);
+  renderPedInstagramPreview();
+}
+
+async function savePedInstagramOrder() {
+  const client = selectedPedClient();
+  const save = document.getElementById("pedInstagramOrderSave");
+  if (!client || !pedInstagramDraftOrder.length || !save) return;
+  save.disabled = true;
+  save.textContent = "Salvataggio...";
+  try {
+    const response = await apiFetch("/api/ped", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ client_id: String(client.id), instagram_order: pedInstagramDraftOrder })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "Impossibile salvare l'ordine del profilo");
+    const positions = new Map(pedInstagramDraftOrder.map((id, index) => [String(id), index]));
+    state.pedItems.forEach((item) => {
+      if (positions.has(String(item.id))) item.instagram_position = positions.get(String(item.id));
+    });
+    pedInstagramOrderEditing = false;
+    pedInstagramDraftOrder = [];
+    renderPedInstagramPreview();
+    showPedMoveNotice("Ordine del profilo Instagram salvato", "success");
+  } catch (error) {
+    showPedMoveNotice(error.message || "Salvataggio ordine non riuscito", "error");
+  } finally {
+    save.disabled = false;
+    save.textContent = "Salva ordine";
+  }
 }
 
 function formatPedShareDate(value) {
@@ -2161,6 +2263,29 @@ function renderPedCalendar() {
   else summary.textContent = `${state.pedItems.length} ${state.pedItems.length === 1 ? "contenuto pianificato" : "contenuti pianificati"}`;
 }
 
+function pedCarouselHoverPreview(files, title) {
+  const slides = files.map((file, index) => {
+    const mime = String(file.drive_mime_type || "");
+    const isImage = mime.startsWith("image/");
+    const isVideo = mime.startsWith("video/");
+    const previewUrl = file.thumbnail_url || (isImage ? file.content_url : "");
+    const media = previewUrl
+      ? `<img src="${escapeHtml(previewUrl)}" alt="${escapeHtml(file.drive_file_name || `${title} ${index + 1}`)}" loading="lazy" decoding="async">`
+      : `<div class="ped-preview-file">${driveFileIcon({ is_folder: false, mime_type: mime })}<strong>${escapeHtml(file.drive_file_name || title)}</strong></div>`;
+    return `<div class="ped-hover-carousel-slide${index === 0 ? " is-active" : ""}" data-ped-hover-slide="${index}">${media}${isVideo ? `<span class="ped-hover-video-badge"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 7 8 5-8 5z"/></svg>Video</span>` : ""}</div>`;
+  }).join("");
+  const thumbnails = files.map((file, index) => {
+    const mime = String(file.drive_mime_type || "");
+    const isImage = mime.startsWith("image/");
+    const previewUrl = file.thumbnail_url || (isImage ? file.content_url : "");
+    return `<span class="ped-hover-carousel-thumb${index === 0 ? " is-active" : ""}" data-ped-hover-thumb="${index}">${previewUrl ? `<img src="${escapeHtml(previewUrl)}" alt="" loading="lazy" decoding="async">` : driveFileIcon({ is_folder: false, mime_type: mime })}</span>`;
+  }).join("");
+  return `<div class="ped-hover-carousel" data-ped-hover-carousel>
+    <div class="ped-hover-carousel-stage">${slides}<span class="ped-hover-carousel-position"><b data-ped-hover-current>1</b>/${files.length}</span></div>
+    <div class="ped-hover-carousel-thumbs" aria-hidden="true">${thumbnails}</div>
+  </div>`;
+}
+
 function pedItemMarkup(item) {
   const format = pedTypeMeta(item.content_type);
   const files = pedItemFiles(item);
@@ -2173,11 +2298,13 @@ function pedItemMarkup(item) {
   const media = previewUrl
     ? `<img src="${escapeHtml(previewUrl)}" alt="" loading="lazy" decoding="async">`
     : `<span class="ped-content-icon">${driveFileIcon({ is_folder: false, mime_type: mime })}</span>`;
-  const hoverMedia = isVideo
-    ? `<video muted loop playsinline preload="none" poster="${escapeHtml(primary.thumbnail_url || "")}" data-ped-video-src="${escapeHtml(primary.content_url || "")}"></video><span class="ped-preview-play"><svg class="lc" viewBox="0 0 24 24"><path d="m9 7 8 5-8 5z"/></svg></span>`
-    : previewUrl
-      ? `<img src="${escapeHtml(previewUrl)}" alt="Anteprima ${escapeHtml(title)}" loading="lazy">`
-      : `<div class="ped-preview-file">${driveFileIcon({ is_folder: false, mime_type: mime })}<strong>${escapeHtml(title)}</strong></div>`;
+  const hoverMedia = files.length > 1
+    ? pedCarouselHoverPreview(files, title)
+    : isVideo
+      ? `<video muted loop playsinline preload="none" poster="${escapeHtml(primary.thumbnail_url || "")}" data-ped-video-src="${escapeHtml(primary.content_url || "")}"></video><span class="ped-preview-play"><svg class="lc" viewBox="0 0 24 24"><path d="m9 7 8 5-8 5z"/></svg></span>`
+      : previewUrl
+        ? `<img src="${escapeHtml(previewUrl)}" alt="Anteprima ${escapeHtml(title)}" loading="lazy">`
+        : `<div class="ped-preview-file">${driveFileIcon({ is_folder: false, mime_type: mime })}<strong>${escapeHtml(title)}</strong></div>`;
   const typeLabel = files.length > 1 ? `${files.length} file` : isVideo ? "Video" : isImage ? "Immagine" : mime === "application/pdf" ? "PDF" : "File";
 
   return `<article class="ped-content-card ped-type-${format.type}${files.length > 1 ? " is-carousel" : ""}" data-ped-content="${escapeHtml(item.id)}" draggable="true" aria-grabbed="false" tabindex="0" title="Trascina su un altro giorno per riprogrammare">
@@ -4265,6 +4392,7 @@ document.body.addEventListener("click", (event) => {
   const pedClient = event.target.closest("[data-ped-client]");
   const pedAdd = event.target.closest("[data-ped-add]");
   const pedOpen = event.target.closest("[data-ped-open]");
+  const pedInstagramOrderItem = event.target.closest("[data-ped-instagram-item]");
   const pedRemove = event.target.closest("[data-ped-remove]");
   const pedPickerFolder = event.target.closest("[data-ped-picker-folder]");
   const pedPickerFile = event.target.closest("[data-ped-picker-file]");
@@ -4313,6 +4441,7 @@ document.body.addEventListener("click", (event) => {
   }
   if (pedAdd) return openPedDrivePicker(pedAdd.dataset.pedAdd);
   if (pedRemove) return removePedItem(pedRemove.dataset.pedRemove);
+  if (pedInstagramOrderItem && pedInstagramOrderEditing) return;
   if (pedOpen) return openDriveFile(pedOpen.dataset.pedOpen, pedOpen.dataset.pedName, pedOpen.dataset.pedMime, pedOpen.dataset.pedContentUrl);
   if (pedCarouselDownload) return downloadPedCarousel(pedCarouselDownload.dataset.pedCarouselDownload, pedCarouselDownload);
   if (pedPickerType) {
@@ -4362,6 +4491,16 @@ function driveDropZoneFromEvent(event) {
 }
 
 document.body.addEventListener("dragstart", (event) => {
+  const instagramItem = event.target.closest?.("[data-ped-instagram-item]");
+  if (instagramItem && pedInstagramOrderEditing) {
+    pedInstagramDraggedId = String(instagramItem.dataset.pedInstagramItem || "");
+    if (!pedInstagramDraggedId) return;
+    instagramItem.classList.add("is-dragging");
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("application/x-bmg-ped-instagram", pedInstagramDraggedId);
+    event.dataTransfer.setData("text/plain", pedInstagramDraggedId);
+    return;
+  }
   const card = event.target.closest?.("[data-ped-content]");
   if (!card || event.target.closest("[data-ped-remove]")) return;
   pedDraggedItemId = String(card.dataset.pedContent || "");
@@ -4375,6 +4514,15 @@ document.body.addEventListener("dragstart", (event) => {
 });
 
 document.body.addEventListener("dragover", (event) => {
+  if (pedInstagramDraggedId) {
+    const target = event.target.closest?.("[data-ped-instagram-item]");
+    if (!target || String(target.dataset.pedInstagramItem || "") === pedInstagramDraggedId) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+    document.querySelectorAll("[data-ped-instagram-item].is-order-target").forEach((item) => item.classList.remove("is-order-target"));
+    target.classList.add("is-order-target");
+    return;
+  }
   if (!pedDraggedItemId || isDriveFileDrag(event)) return;
   const day = event.target.closest?.(".ped-day[data-ped-day]");
   if (!day || day.classList.contains("is-outside")) {
@@ -4392,6 +4540,17 @@ document.body.addEventListener("dragleave", (event) => {
 });
 
 document.body.addEventListener("drop", (event) => {
+  if (pedInstagramDraggedId) {
+    const target = event.target.closest?.("[data-ped-instagram-item]");
+    if (!target) return;
+    event.preventDefault();
+    const sourceId = pedInstagramDraggedId;
+    const targetId = String(target.dataset.pedInstagramItem || "");
+    pedInstagramDraggedId = "";
+    document.querySelectorAll("[data-ped-instagram-item].is-dragging, [data-ped-instagram-item].is-order-target").forEach((item) => item.classList.remove("is-dragging", "is-order-target"));
+    movePedInstagramDraftItem(sourceId, targetId);
+    return;
+  }
   if (!pedDraggedItemId || isDriveFileDrag(event)) return;
   const day = event.target.closest?.(".ped-day[data-ped-day]");
   if (!day || day.classList.contains("is-outside")) return;
@@ -4405,6 +4564,8 @@ document.body.addEventListener("drop", (event) => {
 });
 
 document.body.addEventListener("dragend", () => {
+  pedInstagramDraggedId = "";
+  document.querySelectorAll("[data-ped-instagram-item].is-dragging, [data-ped-instagram-item].is-order-target").forEach((item) => item.classList.remove("is-dragging", "is-order-target"));
   pedDraggedItemId = "";
   clearPedDragVisuals();
 });
@@ -4504,6 +4665,19 @@ document.body.addEventListener("keydown", (event) => {
 document.body.addEventListener("pointerover", (event) => {
   const card = event.target.closest?.("[data-ped-content]");
   if (!card || card.contains(event.relatedTarget)) return;
+  const slides = [...card.querySelectorAll("[data-ped-hover-slide]")];
+  if (slides.length > 1) {
+    let activeIndex = 0;
+    window.clearInterval(card._pedCarouselTimer);
+    card._pedCarouselTimer = window.setInterval(() => {
+      activeIndex = (activeIndex + 1) % slides.length;
+      slides.forEach((slide, index) => slide.classList.toggle("is-active", index === activeIndex));
+      card.querySelectorAll("[data-ped-hover-thumb]").forEach((thumb, index) => thumb.classList.toggle("is-active", index === activeIndex));
+      const current = card.querySelector("[data-ped-hover-current]");
+      if (current) current.textContent = String(activeIndex + 1);
+    }, 1500);
+    return;
+  }
   const video = card.querySelector("video[data-ped-video-src]");
   if (!video) return;
   if (!video.src) video.src = video.dataset.pedVideoSrc;
@@ -4513,6 +4687,8 @@ document.body.addEventListener("pointerover", (event) => {
 document.body.addEventListener("pointerout", (event) => {
   const card = event.target.closest?.("[data-ped-content]");
   if (!card || card.contains(event.relatedTarget)) return;
+  window.clearInterval(card._pedCarouselTimer);
+  card._pedCarouselTimer = null;
   const video = card.querySelector("video[data-ped-video-src]");
   if (video) video.pause();
 });
@@ -4567,7 +4743,15 @@ document.getElementById("pedTodayButton").addEventListener("click", () => {
   loadPedCalendar();
 });
 document.getElementById("pedFeedPreviewButton").addEventListener("click", openPedInstagramPreview);
-document.getElementById("pedInstagramClose").addEventListener("click", () => document.getElementById("pedInstagramModal").close());
+document.getElementById("pedInstagramOrderEdit").addEventListener("click", beginPedInstagramOrdering);
+document.getElementById("pedInstagramOrderCancel").addEventListener("click", cancelPedInstagramOrdering);
+document.getElementById("pedInstagramOrderSave").addEventListener("click", savePedInstagramOrder);
+document.getElementById("pedInstagramClose").addEventListener("click", () => {
+  pedInstagramOrderEditing = false;
+  pedInstagramDraftOrder = [];
+  pedInstagramDraggedId = "";
+  document.getElementById("pedInstagramModal").close();
+});
 document.getElementById("pedShareButton").addEventListener("click", openPedShareModal);
 document.getElementById("pedShareCreateButton").addEventListener("click", createPedShareLink);
 document.getElementById("pedShareCopyButton").addEventListener("click", copyPedShareLink);
