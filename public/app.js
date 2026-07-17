@@ -1957,8 +1957,9 @@ function pedPickerPreviewElement() {
   preview = document.createElement("div");
   preview.id = "pedPickerHoverPreview";
   preview.className = "ped-picker-hover-preview";
+  preview.setAttribute("popover", "manual");
   preview.setAttribute("aria-hidden", "true");
-  document.body.appendChild(preview);
+  (document.getElementById("pedDrivePickerModal") || document.body).appendChild(preview);
   return preview;
 }
 
@@ -1976,6 +1977,11 @@ function showPedPickerPreview(entry) {
     : `<img src="${escapeHtml(source)}" alt="Anteprima ${escapeHtml(name)}" decoding="async">`;
   preview.dataset.owner = entry.dataset.pedPickerFile || "";
   preview.classList.add("is-visible");
+  if (typeof preview.showPopover === "function") {
+    if (!preview.matches(":popover-open")) preview.showPopover();
+  } else {
+    document.getElementById("pedDrivePickerModal")?.appendChild(preview);
+  }
 
   const entryRect = entry.getBoundingClientRect();
   const previewRect = preview.getBoundingClientRect();
@@ -2006,6 +2012,7 @@ function hidePedPickerPreview(entry = null) {
   const preview = document.getElementById("pedPickerHoverPreview");
   if (!preview || (entry && preview.dataset.owner !== (entry.dataset.pedPickerFile || ""))) return;
   preview.querySelector("video")?.pause();
+  if (typeof preview.hidePopover === "function" && preview.matches(":popover-open")) preview.hidePopover();
   preview.classList.remove("is-visible");
   preview.removeAttribute("data-owner");
   preview.innerHTML = "";

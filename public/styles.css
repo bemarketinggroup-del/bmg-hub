@@ -2293,6 +2293,7 @@ code { font-family: var(--font-mono); font-size: 12px; }
 .ped-picker-entry.is-selected .ped-picker-check { border-color: #4d795f; background: #4d795f; color: white; }
 .ped-picker-hover-preview {
   position: fixed;
+  inset: auto;
   z-index: 150;
   width: min(286px, calc(100vw - 24px));
   min-height: 230px;
@@ -2304,6 +2305,7 @@ code { font-family: var(--font-mono); font-size: 12px; }
   border-radius: 10px;
   background: #15120f;
   box-shadow: 0 22px 54px rgba(27, 22, 17, .3);
+  margin: 0;
   pointer-events: none;
 }
 .ped-picker-hover-preview.is-visible { display: grid; }
