@@ -2365,6 +2365,7 @@ function pedAgendaItemMarkup(item) {
   const media = previewUrl
     ? `<img src="${escapeHtml(previewUrl)}" alt="" loading="lazy" decoding="async">`
     : driveFileIcon({ is_folder: false, mime_type: mime });
+  const publishingStatus = pedPublishingStatus(item.publishing_status);
   return `<article class="ped-agenda-item ped-type-${format.type}">
     <button class="ped-agenda-preview" data-ped-open="${escapeHtml(primary.drive_file_id)}" data-ped-name="${escapeHtml(primary.drive_file_name)}" data-ped-mime="${escapeHtml(mime)}" data-ped-content-url="${escapeHtml(primary.content_url || "")}" type="button" title="Apri anteprima">
       ${media}${isVideo ? `<span class="ped-video-mini"><svg class="lc" viewBox="0 0 24 24"><path d="m9 7 8 5-8 5z"/></svg></span>` : ""}${files.length > 1 ? `<b class="ped-carousel-count">${files.length}</b>` : ""}
@@ -2378,6 +2379,10 @@ function pedAgendaItemMarkup(item) {
       <span class="sr-only">Formato di ${escapeHtml(title)}</span>
       <select data-ped-type-change="${escapeHtml(item.id)}" aria-label="Formato di ${escapeHtml(title)}">${pedTypeOptions(format.type, { carouselOnly: format.type === "carousel" })}</select>
     </label>
+    <label class="ped-agenda-publishing" data-ped-publishing-tone="${escapeHtml(publishingStatus)}">
+      <span class="sr-only">Stato programmazione di ${escapeHtml(title)}</span>
+      <select data-ped-publishing-status-change="${escapeHtml(item.id)}" aria-label="Stato programmazione di ${escapeHtml(title)}">${pedPublishingStatusOptions(publishingStatus)}</select>
+    </label>
     ${format.type === "story" ? `<span class="ped-agenda-caption-placeholder" aria-hidden="true"></span>` : `<button class="ped-agenda-caption${item.caption ? " has-copy" : ""}" data-ped-caption="${escapeHtml(item.id)}" type="button" title="${item.caption ? "Apri e copia il copy Instagram" : "Aggiungi il copy Instagram"}">
       <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
       <span>${item.caption ? "Copy" : "Scrivi copy"}</span>
@@ -2387,6 +2392,20 @@ function pedAgendaItemMarkup(item) {
       <span>${files.length > 1 ? "Scarica ZIP" : "Scarica"}</span>
     </button>
   </article>`;
+}
+
+function pedPublishingStatus(value) {
+  const normalized = String(value || "").trim().toLowerCase();
+  return ["ped_only", "meta", "phone"].includes(normalized) ? normalized : "ped_only";
+}
+
+function pedPublishingStatusOptions(selectedStatus) {
+  const selected = pedPublishingStatus(selectedStatus);
+  return [
+    ["ped_only", "Solo PED"],
+    ["meta", "Programmato Meta"],
+    ["phone", "Programmato telefono"]
+  ].map(([value, label]) => `<option value="${value}"${value === selected ? " selected" : ""}>${label}</option>`).join("");
 }
 
 async function downloadPedCarousel(groupId, button) {
@@ -2708,6 +2727,30 @@ async function updatePedItemType(id, nextType) {
   } catch (error) {
     item.content_type = previousType;
     item.caption = previousCaption;
+    renderPed();
+    alert(error.message);
+  }
+}
+
+async function updatePedPublishingStatus(id, nextStatus) {
+  const item = state.pedItems.find((entry) => String(entry.id) === String(id));
+  if (!item) return;
+  const previousStatus = pedPublishingStatus(item.publishing_status);
+  const publishingStatus = pedPublishingStatus(nextStatus);
+  if (publishingStatus === previousStatus) return;
+  item.publishing_status = publishingStatus;
+  renderPed();
+  try {
+    const response = await apiFetch("/api/ped", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, publishing_status: publishingStatus })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "Impossibile aggiornare lo stato di programmazione");
+    showPedMoveNotice("Stato programmazione aggiornato", "success");
+  } catch (error) {
+    item.publishing_status = previousStatus;
     renderPed();
     alert(error.message);
   }
@@ -4466,6 +4509,11 @@ document.body.addEventListener("change", (event) => {
   const pedType = event.target.closest("[data-ped-type-change]");
   if (pedType) {
     updatePedItemType(pedType.dataset.pedTypeChange, pedType.value);
+    return;
+  }
+  const pedPublishingStatus = event.target.closest("[data-ped-publishing-status-change]");
+  if (pedPublishingStatus) {
+    updatePedPublishingStatus(pedPublishingStatus.dataset.pedPublishingStatusChange, pedPublishingStatus.value);
     return;
   }
   const input = event.target.closest("[data-drive-upload-input]");

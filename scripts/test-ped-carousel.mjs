@@ -51,6 +51,7 @@ const htmlSource = await readFile(new URL("../public/index.html", import.meta.ur
 const pedSource = await readFile(new URL("../lib/ped.js", import.meta.url), "utf8");
 const instagramOrderMigration = await readFile(new URL("../supabase/20260717_ped_instagram_order.sql", import.meta.url), "utf8");
 const feedCalendarSyncMigration = await readFile(new URL("../supabase/20260717_ped_feed_calendar_sync.sql", import.meta.url), "utf8");
+const publishingStatusMigration = await readFile(new URL("../supabase/20260718_ped_publishing_status.sql", import.meta.url), "utf8");
 assert.match(appSource, /data-ped-picker-preview-type/, "il selettore Drive deve esporre il tipo di anteprima");
 assert.match(appSource, /showPedPickerPreview\(entry\)/, "il selettore Drive deve attivare l'anteprima al passaggio");
 assert.match(appSource, /preview\.setAttribute\("popover", "manual"\)/, "l'anteprima deve apparire sopra al modal PED");
@@ -107,5 +108,13 @@ assert.match(styleSource, /\.ped-instagram-scroll[^}]*overflow-y: auto/s, "il fe
 assert.match(styleSource, /\.ped-instagram-grid[^}]*grid-template-columns: repeat\(3,/s, "la griglia profilo deve usare tre colonne");
 assert.match(styleSource, /\.ped-instagram-grid-item[^}]*aspect-ratio: 4 \/ 5/s, "i contenuti del profilo devono usare il formato verticale 4:5");
 assert.match(styleSource, /\.ped-instagram-grid-item img[^}]*object-fit: cover/s, "le immagini devono riempire correttamente le celle verticali 4:5");
+assert.match(appSource, /Solo PED/, "l'agenda deve offrire lo stato Solo PED");
+assert.match(appSource, /Programmato Meta/, "l'agenda deve offrire lo stato Programmato Meta");
+assert.match(appSource, /Programmato telefono/, "l'agenda deve offrire lo stato Programmato telefono");
+assert.match(appSource, /data-ped-publishing-status-change/, "ogni contenuto in agenda deve avere un selettore di programmazione");
+assert.match(appSource, /body: JSON\.stringify\(\{ id, publishing_status: publishingStatus \}\)/, "lo stato di programmazione deve essere salvato tramite API");
+assert.match(pedSource, /body\.publishing_status !== undefined/, "l'API PED deve accettare lo stato di programmazione");
+assert.match(publishingStatusMigration, /publishing_status text not null default 'ped_only'/, "il database deve usare Solo PED come stato iniziale");
+assert.match(publishingStatusMigration, /publishing_status in \('ped_only', 'meta', 'phone'\)/, "il database deve accettare solo i tre stati previsti");
 
 console.log("PED carousel tests passed");
