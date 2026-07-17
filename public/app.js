@@ -1908,29 +1908,17 @@ function pedInstagramDefaultFeedItems() {
     .filter((item) => pedContentType(item.content_type) !== "story")
     .sort((left, right) => {
       const dateOrder = String(right.scheduled_date || "").localeCompare(String(left.scheduled_date || ""));
-      return dateOrder || String(right.created_at || right.id || "").localeCompare(String(left.created_at || left.id || ""));
+      const positionOrder = Number(right.position || 0) - Number(left.position || 0);
+      return dateOrder || positionOrder || String(right.created_at || right.id || "").localeCompare(String(left.created_at || left.id || ""));
     });
 }
 
 function pedInstagramOrderedFeedItems() {
-  const defaults = pedInstagramDefaultFeedItems();
-  const defaultIndex = new Map(defaults.map((item, index) => [String(item.id), index]));
-  const persisted = [...defaults].sort((left, right) => {
-    const leftPosition = left.instagram_position !== null && left.instagram_position !== undefined && left.instagram_position !== "" && Number.isInteger(Number(left.instagram_position))
-      ? Number(left.instagram_position)
-      : null;
-    const rightPosition = right.instagram_position !== null && right.instagram_position !== undefined && right.instagram_position !== "" && Number.isInteger(Number(right.instagram_position))
-      ? Number(right.instagram_position)
-      : null;
-    if (leftPosition !== null && rightPosition !== null && leftPosition !== rightPosition) return leftPosition - rightPosition;
-    if (leftPosition !== null && rightPosition === null) return -1;
-    if (leftPosition === null && rightPosition !== null) return 1;
-    return defaultIndex.get(String(left.id)) - defaultIndex.get(String(right.id));
-  });
-  if (!pedInstagramOrderEditing || !pedInstagramDraftOrder.length) return persisted;
-  const byId = new Map(persisted.map((item) => [String(item.id), item]));
+  const scheduled = pedInstagramDefaultFeedItems();
+  if (!pedInstagramOrderEditing || !pedInstagramDraftOrder.length) return scheduled;
+  const byId = new Map(scheduled.map((item) => [String(item.id), item]));
   const ordered = pedInstagramDraftOrder.map((id) => byId.get(String(id))).filter(Boolean);
-  persisted.forEach((item) => {
+  scheduled.forEach((item) => {
     if (!pedInstagramDraftOrder.includes(String(item.id))) ordered.push(item);
   });
   return ordered;
@@ -2012,8 +2000,8 @@ function renderPedInstagramPreview() {
   cancel?.classList.toggle("is-hidden", !pedInstagramOrderEditing);
   save?.classList.toggle("is-hidden", !pedInstagramOrderEditing);
   if (hint) hint.textContent = pedInstagramOrderEditing
-    ? "Trascina i contenuti nella griglia. Il numero indica la posizione che verra salvata."
-    : "La griglia simula il profilo Instagram. Usa Riordina per scegliere la posizione dei post.";
+    ? "Trascina i contenuti: salvando, il calendario usera lo stesso ordine di pubblicazione."
+    : "La griglia segue le date del calendario. Riordina per aggiornare insieme feed e programmazione.";
 }
 
 function openPedInstagramPreview() {
@@ -2062,14 +2050,19 @@ async function savePedInstagramOrder() {
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || "Impossibile salvare l'ordine del profilo");
-    const positions = new Map(pedInstagramDraftOrder.map((id, index) => [String(id), index]));
+    const assignments = new Map((data.assignments || []).map((assignment) => [String(assignment.id), assignment]));
     state.pedItems.forEach((item) => {
-      if (positions.has(String(item.id))) item.instagram_position = positions.get(String(item.id));
+      const assignment = assignments.get(String(item.id));
+      if (!assignment) return;
+      item.scheduled_date = assignment.scheduled_date;
+      item.position = assignment.position;
+      item.instagram_position = assignment.instagram_position;
     });
     pedInstagramOrderEditing = false;
     pedInstagramDraftOrder = [];
+    renderPed();
     renderPedInstagramPreview();
-    showPedMoveNotice("Ordine del profilo Instagram salvato", "success");
+    showPedMoveNotice("Feed Instagram e calendario allineati", "success");
   } catch (error) {
     showPedMoveNotice(error.message || "Salvataggio ordine non riuscito", "error");
   } finally {
@@ -2244,7 +2237,7 @@ function renderPedCalendar() {
     const date = new Date(gridStart);
     date.setDate(gridStart.getDate() + index);
     const dateKey = localDateKey(date);
-    const items = grouped.get(dateKey) || [];
+    const items = [...(grouped.get(dateKey) || [])].sort((left, right) => Number(left.position || 0) - Number(right.position || 0));
     const outside = date.getMonth() !== monthStart.getMonth();
     const weekend = date.getDay() === 0 || date.getDay() === 6;
     return `<article class="ped-day${outside ? " is-outside" : ""}${weekend ? " is-weekend" : ""}${dateKey === todayKey ? " is-today" : ""}" data-ped-day="${dateKey}">
@@ -2347,7 +2340,7 @@ function renderPedAgenda() {
         <strong>${date.getDate()}</strong>
         <small>${escapeHtml(monthName)}</small>
       </div>
-      <div class="ped-agenda-entries">${items.map(pedAgendaItemMarkup).join("")}</div>
+      <div class="ped-agenda-entries">${[...items].sort((left, right) => Number(left.position || 0) - Number(right.position || 0)).map(pedAgendaItemMarkup).join("")}</div>
     </section>`;
   }).join("") || `<div class="ped-agenda-month-empty">
     <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg>

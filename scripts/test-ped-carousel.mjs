@@ -50,6 +50,7 @@ const styleSource = await readFile(new URL("../public/styles.css", import.meta.u
 const htmlSource = await readFile(new URL("../public/index.html", import.meta.url), "utf8");
 const pedSource = await readFile(new URL("../lib/ped.js", import.meta.url), "utf8");
 const instagramOrderMigration = await readFile(new URL("../supabase/20260717_ped_instagram_order.sql", import.meta.url), "utf8");
+const feedCalendarSyncMigration = await readFile(new URL("../supabase/20260717_ped_feed_calendar_sync.sql", import.meta.url), "utf8");
 assert.match(appSource, /data-ped-picker-preview-type/, "il selettore Drive deve esporre il tipo di anteprima");
 assert.match(appSource, /showPedPickerPreview\(entry\)/, "il selettore Drive deve attivare l'anteprima al passaggio");
 assert.match(appSource, /preview\.setAttribute\("popover", "manual"\)/, "l'anteprima deve apparire sopra al modal PED");
@@ -86,11 +87,17 @@ assert.match(appSource, /function renderPedInstagramPreview\(\)/, "l'anteprima d
 assert.match(appSource, /pedContentType\(item\.content_type\) !== "story"/, "le stories devono restare separate dal feed principale");
 assert.match(appSource, /function pedInstagramDefaultFeedItems\(\)/, "la griglia profilo deve avere un ordinamento predefinito stabile");
 assert.match(appSource, /instagram_order: pedInstagramDraftOrder/, "l'ordine manuale del profilo deve essere salvato tramite API");
+assert.match(appSource, /item\.scheduled_date = assignment\.scheduled_date/, "il calendario locale deve ricevere le date allineate al feed");
+assert.match(appSource, /Feed Instagram e calendario allineati/, "l'interfaccia deve confermare l'allineamento dei due ordinamenti");
 assert.match(appSource, /function movePedInstagramDraftItem\(sourceId, targetId\)/, "i post devono essere riordinabili tramite trascinamento");
 assert.match(htmlSource, /id="pedInstagramOrderEdit"/, "il mockup deve offrire il comando Riordina");
 assert.match(htmlSource, /id="pedInstagramOrderSave"/, "il mockup deve offrire il salvataggio dell'ordine");
 assert.match(pedSource, /Array\.isArray\(body\.instagram_order\)/, "l'API PED deve gestire un ordine Instagram completo");
+assert.match(pedSource, /\/rpc\/sync_ped_publication_order/, "l'ordine deve essere applicato atomicamente dal database");
 assert.match(instagramOrderMigration, /add column if not exists instagram_position integer/, "il database deve conservare l'ordine Instagram");
+assert.match(feedCalendarSyncMigration, /scheduled_date = assignment\.scheduled_date/, "il salvataggio del feed deve aggiornare le date del calendario");
+assert.match(feedCalendarSyncMigration, /set constraints ped_items_client_id_scheduled_date_drive_file_id_key deferred/, "gli scambi di data devono essere transazionali");
+assert.match(feedCalendarSyncMigration, /content_type <> 'story'/, "le stories devono restare fuori dall'ordine del feed");
 assert.match(appSource, /class="ped-instagram-grid-type"/, "reel e caroselli devono essere riconoscibili nella griglia");
 assert.match(appSource, /function pedCarouselHoverPreview\(files, title\)/, "i caroselli devono generare un'anteprima multipla");
 assert.match(appSource, /data-ped-hover-slide/, "ogni contenuto del carosello deve avere una slide dedicata");
