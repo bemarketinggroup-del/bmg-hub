@@ -260,7 +260,7 @@
           <div class="ped-feed-preview-action">
             <button class="ghost-button ped-feed-preview-button" id="pedFeedPreviewButton" type="button">
               <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M9 6h6M11 18h2"/></svg>
-              Anteprima feed Instagram
+              Anteprima profilo Instagram
             </button>
             <span id="pedFeedPreviewHint">Visualizza il piano editoriale nel mockup mobile.</span>
           </div>
@@ -708,26 +708,48 @@
       <div class="modal-head ped-instagram-modal-head">
         <div>
           <p class="eyebrow">Anteprima social</p>
-          <h2 id="pedInstagramTitle">Feed Instagram</h2>
-          <span id="pedInstagramSubtitle">Ordine di pubblicazione del mese selezionato.</span>
+          <h2 id="pedInstagramTitle">Profilo Instagram</h2>
+          <span id="pedInstagramSubtitle">Griglia del mese selezionato.</span>
         </div>
         <button class="icon-button" id="pedInstagramClose" type="button" title="Chiudi" aria-label="Chiudi"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
       </div>
       <div class="ped-instagram-stage" id="pedInstagramStage">
-        <div class="ped-iphone" aria-label="Mockup iPhone con anteprima del feed Instagram">
+        <div class="ped-iphone" aria-label="Mockup iPhone con anteprima del profilo Instagram">
           <div class="ped-iphone-speaker" aria-hidden="true"></div>
           <div class="ped-iphone-screen">
             <div class="ped-instagram-status" aria-hidden="true">
               <span>9:41</span>
               <span><svg class="lc" viewBox="0 0 24 24"><path d="M5 12.55a11 11 0 0 1 14.08 0M8.5 16a6 6 0 0 1 7 0M12 20h.01"/></svg><svg class="lc" viewBox="0 0 24 24"><rect x="2" y="7" width="18" height="10" rx="2"/><path d="M22 11v2"/></svg></span>
             </div>
-            <div class="ped-instagram-appbar">
-              <strong>Instagram</strong>
-              <span aria-hidden="true"><svg class="lc" viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.8-7.5 1.1-1.1a5.5 5.5 0 0 0-.1-7.8Z"/></svg><svg class="lc" viewBox="0 0 24 24"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg></span>
+            <div class="ped-instagram-profilebar">
+              <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+              <strong id="pedInstagramHandle">profilo_cliente</strong>
+              <span aria-hidden="true"><svg class="lc" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></span>
             </div>
             <div class="ped-instagram-scroll">
-              <div class="ped-instagram-stories" id="pedInstagramStories"></div>
-              <div class="ped-instagram-feed" id="pedInstagramFeed" aria-live="polite"></div>
+              <section class="ped-instagram-profile">
+                <div class="ped-instagram-profile-main">
+                  <span class="ped-instagram-profile-avatar" id="pedInstagramProfileAvatar">B</span>
+                  <div class="ped-instagram-profile-stat"><strong id="pedInstagramPostCount">0</strong><small>post</small></div>
+                  <div class="ped-instagram-profile-stat"><strong>-</strong><small>follower</small></div>
+                  <div class="ped-instagram-profile-stat"><strong>-</strong><small>seguiti</small></div>
+                </div>
+                <div class="ped-instagram-profile-bio">
+                  <strong id="pedInstagramProfileName">Cliente</strong>
+                  <small>Anteprima piano editoriale</small>
+                  <p id="pedInstagramProfileBio">Contenuti programmati nel PED.</p>
+                </div>
+                <div class="ped-instagram-profile-actions" aria-hidden="true">
+                  <span>Modifica profilo</span><span>Condividi profilo</span>
+                </div>
+                <div class="ped-instagram-highlights" id="pedInstagramStories"></div>
+              </section>
+              <div class="ped-instagram-profile-tabs" aria-hidden="true">
+                <span class="is-active"><svg class="lc" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></span>
+                <span><svg class="lc" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="m10 8 6 4-6 4z"/></svg></span>
+                <span><svg class="lc" viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="16" rx="2"/><circle cx="12" cy="10" r="3"/><path d="M8 18c.8-2.2 2.1-3 4-3s3.2.8 4 3"/></svg></span>
+              </div>
+              <div class="ped-instagram-grid" id="pedInstagramFeed" aria-live="polite"></div>
             </div>
             <div class="ped-instagram-tabbar" aria-hidden="true">
               <svg class="lc" viewBox="0 0 24 24"><path d="m3 11 9-8 9 8v9H3Z"/><path d="M9 20v-6h6v6"/></svg>
@@ -741,7 +763,7 @@
         <div class="ped-instagram-notes">
           <p class="eyebrow">Riepilogo</p>
           <strong id="pedInstagramSummary">Nessun contenuto</strong>
-          <span>Il feed segue l'ordine cronologico del PED. Scorri dentro l'iPhone per controllare la sequenza dei contenuti.</span>
+          <span>La griglia simula il profilo Instagram: i contenuti piu recenti appaiono per primi, da sinistra a destra.</span>
           <div class="ped-instagram-legend"><i class="ped-type-post"></i>Post <i class="ped-type-reel"></i>Reel <i class="ped-type-carousel"></i>Caroselli</div>
         </div>
       </div>

@@ -76,13 +76,16 @@ assert.match(appSource, /body: JSON\.stringify\(\{ id, scheduled_date: scheduled
 assert.match(appSource, /window\.setTimeout\(beginPedPointerDrag, 340\)/, "il trascinamento touch deve partire con una pressione prolungata");
 assert.match(styleSource, /\.ped-day\.is-ped-drop-target/, "il giorno di destinazione deve avere un feedback visivo");
 assert.match(styleSource, /\.ped-drag-ghost/, "il trascinamento touch deve mostrare una card mobile");
-assert.match(htmlSource, /id="pedFeedPreviewButton"/, "il PED deve offrire il pulsante di anteprima feed sotto al calendario");
+assert.match(htmlSource, /id="pedFeedPreviewButton"/, "il PED deve offrire il pulsante di anteprima profilo sotto al calendario");
 assert.match(htmlSource, /id="pedInstagramModal"/, "il mockup iPhone deve essere disponibile in un modal dedicato");
+assert.match(htmlSource, /id="pedInstagramProfileAvatar"/, "il mockup deve mostrare l'intestazione del profilo Instagram");
+assert.match(htmlSource, /class="ped-instagram-grid"/, "il mockup deve includere la griglia del profilo");
 assert.match(appSource, /function renderPedInstagramPreview\(\)/, "l'anteprima deve derivare i contenuti dallo stato PED corrente");
 assert.match(appSource, /pedContentType\(item\.content_type\) !== "story"/, "le stories devono restare separate dal feed principale");
-assert.match(appSource, /class="ped-instagram-carousel"/, "i caroselli devono essere scorribili nel mockup");
+assert.match(appSource, /\.filter\(\(item\) => pedContentType\(item\.content_type\) !== "story"\)\.reverse\(\)/, "la griglia profilo deve mostrare prima le pubblicazioni piu recenti");
+assert.match(appSource, /class="ped-instagram-grid-type"/, "reel e caroselli devono essere riconoscibili nella griglia");
 assert.match(styleSource, /\.ped-instagram-scroll[^}]*overflow-y: auto/s, "il feed dentro l'iPhone deve essere scorribile verticalmente");
-assert.match(styleSource, /\.ped-instagram-carousel[^}]*scroll-snap-type: x mandatory/s, "i contenuti multipli devono scorrere orizzontalmente");
-assert.match(styleSource, /\.ped-instagram-media img[^}]*object-fit: contain/s, "le anteprime feed non devono ritagliare i contenuti");
+assert.match(styleSource, /\.ped-instagram-grid[^}]*grid-template-columns: repeat\(3,/s, "la griglia profilo deve usare tre colonne");
+assert.match(styleSource, /\.ped-instagram-grid-item img[^}]*object-fit: cover/s, "la griglia deve riprodurre il ritaglio quadrato di Instagram");
 
 console.log("PED carousel tests passed");

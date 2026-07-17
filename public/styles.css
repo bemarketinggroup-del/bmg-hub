@@ -2255,6 +2255,115 @@ code { font-family: var(--font-mono); font-size: 12px; }
 }
 .ped-instagram-status > span:last-child { display: flex; align-items: center; gap: 4px; }
 .ped-instagram-status .lc { width: 13px; height: 13px; stroke-width: 1.8; }
+.ped-instagram-profilebar {
+  min-height: 43px;
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) 24px;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid #ece9e5;
+  padding: 0 13px;
+}
+.ped-instagram-profilebar > strong { overflow: hidden; font-size: 14px; text-align: center; text-overflow: ellipsis; white-space: nowrap; }
+.ped-instagram-profilebar > span { display: grid; place-items: center; }
+.ped-instagram-profilebar .lc { width: 20px; height: 20px; stroke-width: 1.8; }
+.ped-instagram-profile { padding: 14px 13px 10px; }
+.ped-instagram-profile-main {
+  display: grid;
+  grid-template-columns: 74px repeat(3, minmax(0, 1fr));
+  align-items: center;
+  gap: 8px;
+}
+.ped-instagram-profile-avatar {
+  width: 68px;
+  height: 68px;
+  display: grid;
+  place-items: center;
+  border: 3px solid var(--client-tint, var(--terra-tint));
+  border-radius: 50%;
+  background: var(--client-accent, var(--terracotta));
+  color: #fff;
+  font-size: 18px;
+  font-weight: 800;
+  box-shadow: inset 0 0 0 2px #fff;
+}
+.ped-instagram-profile-stat { min-width: 0; display: grid; justify-items: center; gap: 1px; }
+.ped-instagram-profile-stat strong { font-size: 13px; }
+.ped-instagram-profile-stat small { color: #655f59; font-size: 8.5px; }
+.ped-instagram-profile-bio { display: grid; gap: 2px; margin-top: 10px; }
+.ped-instagram-profile-bio strong { font-size: 10.5px; }
+.ped-instagram-profile-bio small { color: #817a74; font-size: 9px; }
+.ped-instagram-profile-bio p { margin: 2px 0 0; font-size: 9px; line-height: 1.4; }
+.ped-instagram-profile-actions { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin-top: 10px; }
+.ped-instagram-profile-actions span {
+  min-height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  background: #efefef;
+  color: #25211e;
+  font-size: 9px;
+  font-weight: 700;
+}
+.ped-instagram-highlights {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  margin: 12px -13px -3px;
+  padding: 0 13px 4px;
+  scrollbar-width: none;
+}
+.ped-instagram-highlights::-webkit-scrollbar { display: none; }
+.ped-instagram-highlights button, .ped-instagram-no-stories {
+  width: 55px;
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+  border: 0;
+  background: transparent;
+  color: #5e5751;
+  padding: 0;
+}
+.ped-instagram-highlights button > span, .ped-instagram-highlights .ped-instagram-no-stories > span {
+  width: 47px;
+  height: 47px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 2px solid var(--client-accent, var(--terracotta));
+  border-radius: 50%;
+  background: var(--client-tint, var(--terra-tint));
+  color: var(--client-accent, var(--terracotta));
+  font-size: 11px;
+  font-weight: 800;
+  box-shadow: inset 0 0 0 2px #fff;
+}
+.ped-instagram-highlights img { width: 100%; height: 100%; object-fit: cover; }
+.ped-instagram-highlights small { max-width: 55px; overflow: hidden; font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
+.ped-instagram-profile-tabs { min-height: 39px; display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid #ece9e5; border-bottom: 1px solid #ece9e5; }
+.ped-instagram-profile-tabs span { position: relative; display: grid; place-items: center; color: #938d87; }
+.ped-instagram-profile-tabs span.is-active { color: #191715; }
+.ped-instagram-profile-tabs span.is-active::after { position: absolute; right: 0; bottom: -1px; left: 0; height: 1px; background: currentColor; content: ""; }
+.ped-instagram-profile-tabs .lc { width: 18px; height: 18px; stroke-width: 1.65; }
+.ped-instagram-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; background: #fff; }
+.ped-instagram-grid-item {
+  position: relative;
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 0;
+  background: #eeeae5;
+  color: #655f59;
+  padding: 0;
+}
+.ped-instagram-grid-item img { width: 100%; height: 100%; object-fit: cover; }
+.ped-instagram-grid-item .ped-instagram-file-fallback { width: 100%; height: 100%; gap: 3px; padding: 8px; }
+.ped-instagram-grid-item .ped-instagram-file-fallback .lc { width: 22px; height: 22px; }
+.ped-instagram-grid-item .ped-instagram-file-fallback b { max-width: 90px; font-size: 6.5px; }
+.ped-instagram-grid-type { position: absolute; top: 6px; right: 6px; display: grid; place-items: center; color: #fff; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .55)); pointer-events: none; }
+.ped-instagram-grid-type .lc { width: 17px; height: 17px; stroke-width: 2.2; }
 .ped-instagram-appbar {
   min-height: 45px;
   display: flex;
