@@ -1586,7 +1586,7 @@ function failMediaProgress(container, message) {
   root.querySelector("[data-media-percent]").textContent = "";
 }
 
-function bindStreamProgress(media, container, { autoplay = false, onUnsupported = null } = {}) {
+function bindStreamProgress(media, container, { autoplay = false, onUnsupported = null, isCurrent = () => true } = {}) {
   const startedAt = performance.now();
   const elapsedLabel = () => `${formatTransferDuration((performance.now() - startedAt) / 1000)} trascorsi`;
   let currentPercent = 0;
@@ -1597,14 +1597,19 @@ function bindStreamProgress(media, container, { autoplay = false, onUnsupported 
     if (timer) window.clearInterval(timer);
     timer = null;
   };
+  const isActive = () => media.isConnected && isCurrent();
   const setStatus = (percent, message, detail = "") => {
+    if (!isActive()) {
+      stopTimer();
+      return;
+    }
     currentPercent = percent;
     currentMessage = message;
     currentDetail = detail;
     updateMediaProgress(container, percent, message, [detail, elapsedLabel()].filter(Boolean).join(" · "));
   };
   timer = window.setInterval(() => {
-    if (!media.isConnected) return stopTimer();
+    if (!isActive()) return stopTimer();
     setStatus(currentPercent, currentMessage, currentDetail);
   }, 500);
   media.addEventListener("loadstart", () => setStatus(3, "Connessione a Google Drive"));
@@ -1615,26 +1620,34 @@ function bindStreamProgress(media, container, { autoplay = false, onUnsupported 
     setStatus(Math.min(99, (buffered / media.duration) * 100), "Buffering video", `${formatTransferDuration(buffered)} disponibili`);
   });
   media.addEventListener("canplay", () => {
+    if (!isActive()) return stopTimer();
     setStatus(100, "Anteprima pronta");
     if (autoplay) {
       media.play().catch(() => {
+        if (!isActive()) return;
         stopTimer();
         failMediaProgress(container, "Il browser ha bloccato la riproduzione automatica. Clicca il file per aprirlo.");
       });
     } else {
       stopTimer();
-      window.setTimeout(() => container.querySelector("[data-media-progress]")?.classList.add("is-hidden"), 450);
+      window.setTimeout(() => {
+        if (isActive()) container.querySelector("[data-media-progress]")?.classList.add("is-hidden");
+      }, 450);
     }
   });
   media.addEventListener("playing", () => {
+    if (!isActive()) return stopTimer();
     stopTimer();
     setStatus(100, "Riproduzione");
-    window.setTimeout(() => container.querySelector("[data-media-progress]")?.classList.add("is-hidden"), 450);
+    window.setTimeout(() => {
+      if (isActive()) container.querySelector("[data-media-progress]")?.classList.add("is-hidden");
+    }, 450);
   });
   media.addEventListener("waiting", () => setStatus(Math.max(35, currentPercent), "Buffering video"));
   media.addEventListener("stalled", () => setStatus(Math.max(25, currentPercent), "Connessione lenta"));
   media.addEventListener("error", () => {
     stopTimer();
+    if (!isActive()) return;
     const code = media.error?.code;
     if (code === 4 && typeof onUnsupported === "function") {
       onUnsupported();
@@ -2242,7 +2255,7 @@ function showPedPickerPreview(entry) {
   const poster = entry.dataset.pedPickerPreviewPoster || "";
   preview.innerHTML = type === "video"
     ? `<video muted loop playsinline autoplay preload="metadata" poster="${escapeHtml(poster)}" aria-label="Anteprima ${escapeHtml(name)}"></video>${mediaProgressMarkup("Preparazione video")}<span class="ped-picker-preview-kind"><svg class="lc" viewBox="0 0 24 24"><path d="m9 7 8 5-8 5z"/></svg> Video</span>`
-    : `<img alt="Anteprima ${escapeHtml(name)}" decoding="async">${mediaProgressMarkup("Caricamento foto")}`;
+    : `<img alt="Anteprima ${escapeHtml(name)}" decoding="async">`;
   preview.dataset.owner = entry.dataset.pedPickerFile || "";
   preview.classList.add("is-visible");
   if (typeof preview.showPopover === "function") {
@@ -2270,7 +2283,10 @@ function showPedPickerPreview(entry) {
       if (!video) return;
       bindStreamProgress(video, preview, {
         autoplay: true,
-        onUnsupported: () => showEmbeddedDriveVideo(preview, entry.dataset.pedPickerFile, name)
+        onUnsupported: () => showEmbeddedDriveVideo(preview, entry.dataset.pedPickerFile, name),
+        isCurrent: () => loadId === pedPickerPreviewLoadId
+          && preview.dataset.owner === (entry.dataset.pedPickerFile || "")
+          && preview.classList.contains("is-visible")
       });
       video.src = source;
       video.load();
@@ -2278,21 +2294,9 @@ function showPedPickerPreview(entry) {
     }, 120);
   } else {
     const image = preview.querySelector("img");
-    const startedAt = performance.now();
-    let percent = 8;
-    const timer = window.setInterval(() => {
-      if (loadId !== pedPickerPreviewLoadId) return window.clearInterval(timer);
-      percent = Math.min(90, percent + 7);
-      updateMediaProgress(preview, percent, "Caricamento foto", `${formatTransferDuration((performance.now() - startedAt) / 1000)} trascorsi`);
-    }, 120);
-    image.addEventListener("load", () => {
-      window.clearInterval(timer);
-      updateMediaProgress(preview, 100, "Anteprima pronta", `${formatTransferDuration((performance.now() - startedAt) / 1000)} trascorsi`);
-      window.setTimeout(() => preview.querySelector("[data-media-progress]")?.classList.add("is-hidden"), 350);
-    }, { once: true });
     image.addEventListener("error", () => {
-      window.clearInterval(timer);
-      failMediaProgress(preview, "La miniatura non è disponibile. Clicca il file per aprirlo.");
+      if (loadId !== pedPickerPreviewLoadId || !image.isConnected) return;
+      preview.innerHTML = `<p class="ped-picker-preview-error">Anteprima foto non disponibile</p>`;
     }, { once: true });
     image.src = source;
   }
