@@ -13,9 +13,11 @@ Prima di scegliere il file si seleziona il formato editoriale:
 - `Reel`;
 - `Carosello`, usato anche per i multipost.
 
+Per `Post`, `Reel` e `Carosello` si puo inserire il copy Instagram direttamente prima di collegare il file. Il copy resta facoltativo anche per le storie, puo essere modificato in seguito dall'agenda e dispone di un comando di copia rapida per la programmazione social.
+
 Ogni formato ha un colore stabile, visibile sia nel calendario mensile sia nell'agenda operativa. Il formato puo essere corretto dall'agenda senza scollegare il file.
 
-Sotto al calendario mensile e presente l'agenda giorno per giorno. Per ogni data mostra i contenuti pianificati, l'anteprima, il formato di pubblicazione e il download diretto destinato alla programmazione SMM.
+Sotto al calendario mensile e presente l'agenda giorno per giorno. Per ogni data mostra i contenuti pianificati, l'anteprima, il formato di pubblicazione, il copy Instagram e il download diretto destinato alla programmazione SMM.
 
 Il file originale non viene copiato ne spostato: `ped_items` salva esclusivamente il riferimento Drive e la data del piano editoriale. La rimozione dal PED non elimina il file da Google Drive.
 
@@ -27,7 +29,7 @@ La tabella `public.ped_items` contiene:
 - ID, nome, tipo MIME e URL del file Drive;
 - disponibilita della miniatura;
 - formato editoriale (`post`, `story`, `reel`, `carousel`);
-- posizione e didascalia, predisposte per evoluzioni successive;
+- posizione e copy Instagram (`caption`);
 - autore e date di creazione/aggiornamento.
 
 La combinazione cliente, data e file e univoca per impedire collegamenti duplicati nello stesso giorno.
@@ -50,6 +52,7 @@ Un admin puo selezionare un cliente nella sezione `PED` e usare il pulsante `Con
 - nel database viene salvato esclusivamente l'hash SHA-256 del token;
 - il token resta nel frammento `#` dell'URL e non viene inviato nei normali log HTTP;
 - la pagina condivisa non mostra menu interni, task, utenti, collegamenti Drive o dati di altri clienti;
+- il cliente puo aprire un contenuto, leggere il copy Instagram approvato e copiarlo con un solo comando;
 - foto e video usano URL firmati con durata massima di un'ora;
 - la pagina e marcata `noindex`, `nofollow` e usa una Content Security Policy restrittiva.
 
@@ -59,7 +62,7 @@ Se il link viene rigenerato, quello precedente smette immediatamente di funziona
 
 - `GET /api/ped?client_id=<uuid>&month=YYYY-MM`: elementi del mese;
 - `POST /api/ped`: collega un file Drive a una data;
-- `PATCH /api/ped`: cambia data e/o formato editoriale di un elemento;
+- `PATCH /api/ped`: cambia data, formato editoriale e/o copy Instagram di un elemento;
 - `DELETE /api/ped?id=<uuid>`: rimuove il collegamento dal PED.
 - `GET /api/ped-share?client_id=<uuid>`: stato del link, solo admin;
 - `POST /api/ped-share`: crea o rigenera il link, solo admin;

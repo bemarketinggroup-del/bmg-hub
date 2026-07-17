@@ -2124,7 +2124,7 @@ code { font-family: var(--font-mono); font-size: 12px; }
 .ped-agenda-item {
   min-width: 0;
   display: grid;
-  grid-template-columns: 48px minmax(180px, 1fr) 132px 104px;
+  grid-template-columns: 48px minmax(180px, 1fr) 132px 112px 104px;
   align-items: center;
   gap: 10px;
   border: 1px solid var(--ped-type-line);
@@ -2151,6 +2151,8 @@ code { font-family: var(--font-mono); font-size: 12px; }
 .ped-agenda-copy { min-width: 0; display: grid; gap: 4px; }
 .ped-agenda-copy strong { overflow: hidden; color: var(--ink); font-size: 12.5px; text-overflow: ellipsis; white-space: nowrap; }
 .ped-agenda-copy span { display: flex; align-items: center; gap: 6px; color: var(--ped-type-color); font-size: 10.5px; font-weight: 700; }
+.ped-agenda-copy p { overflow: hidden; margin: 0; color: var(--muted); font-size: 10.5px; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
+.ped-agenda-copy p.is-empty { color: var(--subtle); font-style: italic; }
 .ped-agenda-format select {
   width: 100%;
   min-height: 36px;
@@ -2160,6 +2162,23 @@ code { font-family: var(--font-mono); font-size: 12px; }
   font-size: 11.5px;
   font-weight: 700;
 }
+.ped-agenda-caption {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid var(--ped-type-line);
+  border-radius: var(--pill);
+  background: var(--surface);
+  color: var(--ped-type-color);
+  padding: 0 11px;
+  font-size: 11px;
+  font-weight: 700;
+}
+.ped-agenda-caption.has-copy { background: var(--ped-type-tint); }
+.ped-agenda-caption:hover { border-color: var(--ped-type-color); background: var(--ped-type-color); color: white; }
+.ped-agenda-caption .lc { width: 14px; height: 14px; }
 .ped-agenda-download {
   min-height: 36px;
   display: inline-flex;
@@ -2197,6 +2216,23 @@ code { font-family: var(--font-mono); font-size: 12px; }
 .ped-format-picker button[data-ped-picker-type="story"].is-active { border-color: rgba(155,79,124,.38); background: rgba(155,79,124,.11); color: #9b4f7c; }
 .ped-format-picker button[data-ped-picker-type="reel"].is-active { border-color: rgba(198,87,49,.38); background: rgba(198,87,49,.11); color: #c65731; }
 .ped-format-picker button[data-ped-picker-type="carousel"].is-active { border-color: rgba(77,121,95,.38); background: rgba(77,121,95,.11); color: #4d795f; }
+.ped-picker-caption-field { display: grid; grid-template-columns: 190px minmax(0, 1fr); align-items: start; gap: 16px; margin: 16px 0 0; }
+.ped-picker-caption-field > span { display: grid; gap: 3px; padding-top: 9px; }
+.ped-picker-caption-field strong { color: var(--ink); font-size: 12px; }
+.ped-picker-caption-field small { color: var(--muted); font-size: 10px; line-height: 1.4; }
+.ped-picker-caption-field textarea {
+  width: 100%;
+  min-height: 76px;
+  resize: vertical;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--ink);
+  padding: 10px 12px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.ped-picker-caption-field textarea:focus { outline: 2px solid var(--terra-line); border-color: var(--terracotta); }
 .ped-picker-breadcrumbs { min-height: 42px; display: flex; align-items: center; gap: 5px; overflow-x: auto; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); margin: 18px 0; padding: 8px 0; }
 .ped-picker-breadcrumbs button { border: 0; background: transparent; color: var(--terracotta); padding: 4px; font-weight: 600; }
 .ped-picker-breadcrumbs span { color: var(--ink); font-weight: 700; }
@@ -2213,6 +2249,25 @@ code { font-family: var(--font-mono); font-size: 12px; }
 .ped-picker-arrow { width: 16px; height: 16px; color: var(--subtle); }
 .ped-picker-loading, .ped-picker-error, .ped-picker-empty { grid-column: 1 / -1; min-height: 220px; display: flex; align-items: center; justify-content: center; gap: 10px; color: var(--muted); }
 .ped-picker-error { flex-direction: column; color: var(--red); }
+
+.ped-caption-modal { width: min(720px, calc(100vw - 28px)); }
+.ped-caption-editor { display: grid; gap: 8px; margin-top: 20px; }
+.ped-caption-editor > span { color: var(--ink); font-size: 12px; font-weight: 700; }
+.ped-caption-editor textarea {
+  width: 100%;
+  min-height: 260px;
+  resize: vertical;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface-soft);
+  color: var(--ink);
+  padding: 14px;
+  font-size: 13px;
+  line-height: 1.65;
+}
+.ped-caption-editor textarea:focus { outline: 2px solid var(--terra-line); border-color: var(--terracotta); background: var(--surface); }
+.ped-caption-editor small { justify-self: end; color: var(--muted); font-size: 10px; }
+.ped-caption-actions { justify-content: space-between; }
 
 .ped-share-modal { width: min(620px, calc(100vw - 28px)); }
 .ped-share-intro { margin: 16px 0 18px; color: var(--muted); line-height: 1.55; }
@@ -2470,8 +2525,10 @@ code { font-family: var(--font-mono); font-size: 12px; }
 @media (max-width: 980px) {
   .ped-picker-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .ped-hover-preview { left: auto; right: calc(100% + 9px); }
-  .ped-agenda-item { grid-template-columns: 48px minmax(150px, 1fr) 118px 44px; }
+  .ped-agenda-item { grid-template-columns: 48px minmax(150px, 1fr) 118px 44px 44px; }
+  .ped-agenda-caption,
   .ped-agenda-download { width: 40px; padding: 0; }
+  .ped-agenda-caption span,
   .ped-agenda-download span { display: none; }
   .app-shell { grid-template-columns: 1fr; }
   .sidebar {
@@ -2554,10 +2611,12 @@ code { font-family: var(--font-mono); font-size: 12px; }
   .ped-picker-grid { grid-template-columns: 1fr; }
   .ped-agenda-head { align-items: flex-start; flex-direction: column; gap: 5px; padding: 16px; }
   .ped-agenda-day { grid-template-columns: 64px minmax(0, 1fr); }
-  .ped-agenda-item { grid-template-columns: 42px minmax(0, 1fr) 40px; }
+  .ped-agenda-item { grid-template-columns: 42px minmax(0, 1fr) 40px 40px; }
   .ped-agenda-preview { width: 42px; height: 48px; }
   .ped-agenda-format { grid-column: 2; }
-  .ped-agenda-download { grid-column: 3; grid-row: 1 / span 2; }
+  .ped-agenda-caption { grid-column: 3; grid-row: 1 / span 2; }
+  .ped-agenda-download { grid-column: 4; grid-row: 1 / span 2; }
+  .ped-picker-caption-field { grid-template-columns: 1fr; gap: 7px; }
   .client-detail-head { grid-template-columns: auto minmax(0, 1fr); gap: 12px; padding: 18px; }
   .client-detail-folder { display: none; }
   .client-detail-title h2 { font-size: 23px; }

@@ -659,10 +659,36 @@
         <button data-ped-picker-type="reel" type="button">Reel</button>
         <button data-ped-picker-type="carousel" type="button">Carosello</button>
       </div>
+      <label class="ped-picker-caption-field" for="pedPickerCaption">
+        <span><strong>Copy Instagram</strong><small>Facoltativo, potrai modificarlo anche in seguito.</small></span>
+        <textarea id="pedPickerCaption" maxlength="10000" rows="3" placeholder="Scrivi la descrizione del contenuto, gli hashtag e le eventuali call to action..."></textarea>
+      </label>
       <nav class="ped-picker-breadcrumbs" id="pedPickerBreadcrumbs" aria-label="Percorso Google Drive"></nav>
       <div class="ped-picker-grid" id="pedPickerGrid"></div>
       <p class="form-message" id="pedPickerMessage" role="status"></p>
     </div>
+  </dialog>
+
+  <dialog class="modal ped-caption-modal" id="pedCaptionModal">
+    <form id="pedCaptionForm">
+      <div class="modal-head">
+        <div>
+          <p class="eyebrow" id="pedCaptionEyebrow">Copy Instagram</p>
+          <h2 id="pedCaptionTitle">Copy del contenuto</h2>
+        </div>
+        <button class="icon-button" value="cancel" type="submit" formnovalidate title="Chiudi" aria-label="Chiudi"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+      </div>
+      <label class="ped-caption-editor" for="pedCaptionText">
+        <span>Descrizione del post</span>
+        <textarea id="pedCaptionText" maxlength="10000" rows="12" placeholder="Scrivi il copy Instagram, gli hashtag e le eventuali call to action..."></textarea>
+        <small><span id="pedCaptionCount">0</span>/10000 caratteri</small>
+      </label>
+      <p class="form-message" id="pedCaptionMessage" role="status"></p>
+      <div class="modal-actions ped-caption-actions">
+        <button class="ghost-button" id="pedCaptionCopyButton" type="button">Copia copy</button>
+        <button class="primary-button" id="pedCaptionSaveButton" type="submit">Salva copy</button>
+      </div>
+    </form>
   </dialog>
 
   <dialog class="modal ped-share-modal" id="pedShareModal">

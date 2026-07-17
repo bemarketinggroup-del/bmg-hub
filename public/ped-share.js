@@ -56,7 +56,7 @@ function renderItem(item) {
     : `<b>${isVideo(item) ? "VIDEO" : isImage(item) ? "IMG" : "FILE"}</b>`;
   return `<button class="share-item type-${type}" data-share-item="${escapeHtml(item.id)}" type="button" title="Apri anteprima di ${escapeHtml(item.file_name)}">
     <span class="share-item-media">${media}</span>
-    <span class="share-item-copy"><strong>${escapeHtml(item.file_name)}</strong><small>${PED_TYPES[type].label}</small></span>
+    <span class="share-item-copy"><strong>${escapeHtml(item.file_name)}</strong><small>${PED_TYPES[type].label}${item.caption ? " · Copy pronto" : ""}</small></span>
   </button>`;
 }
 
@@ -136,11 +136,33 @@ function openPreview(id) {
   document.getElementById("sharePreviewType").textContent = PED_TYPES[type].label;
   document.getElementById("sharePreviewTitle").textContent = item.file_name || "Anteprima";
   document.getElementById("sharePreviewCaption").textContent = item.caption || "";
+  document.getElementById("sharePreviewCopy").classList.toggle("is-hidden", !item.caption);
   if (isImage(item)) body.innerHTML = `<img src="${escapeHtml(item.content_url)}" alt="${escapeHtml(item.file_name)}">`;
   else if (isVideo(item)) body.innerHTML = `<video src="${escapeHtml(item.content_url)}" controls playsinline preload="metadata"></video>`;
   else if (item.mime_type === "application/pdf") body.innerHTML = `<iframe src="${escapeHtml(item.content_url)}" title="${escapeHtml(item.file_name)}"></iframe>`;
   else body.innerHTML = `<div class="unsupported">Anteprima non disponibile per questo formato.</div>`;
   document.getElementById("sharePreviewModal").showModal();
+}
+
+async function copyPreviewCaption() {
+  const text = document.getElementById("sharePreviewCaption").textContent.trim();
+  if (!text) return;
+  const button = document.getElementById("sharePreviewCopyButton");
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.setAttribute("readonly", "");
+    textarea.style.position = "fixed";
+    textarea.style.opacity = "0";
+    document.body.append(textarea);
+    textarea.select();
+    document.execCommand("copy");
+    textarea.remove();
+  }
+  button.textContent = "Copiato";
+  window.setTimeout(() => { button.textContent = "Copia copy"; }, 1600);
 }
 
 document.getElementById("sharePreviousMonth").addEventListener("click", () => shiftMonth(-1));
@@ -150,10 +172,14 @@ document.getElementById("shareCalendarGrid").addEventListener("click", (event) =
   if (item) openPreview(item.dataset.shareItem);
 });
 document.getElementById("sharePreviewClose").addEventListener("click", () => document.getElementById("sharePreviewModal").close());
+document.getElementById("sharePreviewCopyButton").addEventListener("click", copyPreviewCaption);
 document.getElementById("sharePreviewModal").addEventListener("close", () => {
   const video = document.querySelector("#sharePreviewBody video");
   if (video) video.pause();
   document.getElementById("sharePreviewBody").replaceChildren();
+  document.getElementById("sharePreviewCopy").classList.add("is-hidden");
+  document.getElementById("sharePreviewCaption").textContent = "";
+  document.getElementById("sharePreviewCopyButton").textContent = "Copia copy";
 });
 
 shareToken = decodeURIComponent(location.hash.slice(1));

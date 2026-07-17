@@ -162,9 +162,10 @@ let selectedClientId = "";
 let clientDriveState = { clientId: "", path: [], objectUrl: "", thumbnailUrls: new Set(), uploadEnabled: false };
 let selectedPedClientId = "";
 let selectedPedMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-let pedPickerState = { date: "", path: [], files: [], contentType: "post" };
+let pedPickerState = { date: "", path: [], files: [], contentType: "post", caption: "" };
 let pedShareState = { active: false, shareUrl: "" };
 let pedLoadingKey = "";
+let editingPedCaptionId = "";
 let selectedSmartWeek = mondayOf(new Date());
 let selectedContentSection = "all";
 let authConfig = null;
@@ -1675,7 +1676,7 @@ function pedItemMarkup(item) {
   return `<article class="ped-content-card ped-type-${format.type}" data-ped-content="${escapeHtml(item.id)}" tabindex="0">
     <button class="ped-content-main" data-ped-open="${escapeHtml(item.drive_file_id)}" data-ped-name="${escapeHtml(item.drive_file_name)}" data-ped-mime="${escapeHtml(mime)}" data-ped-content-url="${escapeHtml(item.content_url || "")}" type="button" title="Apri l'anteprima nell'Hub">
       <span class="ped-content-thumb">${media}${isVideo ? `<span class="ped-video-mini"><svg class="lc" viewBox="0 0 24 24"><path d="m9 7 8 5-8 5z"/></svg></span>` : ""}</span>
-      <span class="ped-content-copy"><strong>${escapeHtml(item.drive_file_name)}</strong><small><span class="ped-type-dot" aria-hidden="true"></span>${format.label} · ${typeLabel}</small></span>
+      <span class="ped-content-copy"><strong>${escapeHtml(item.drive_file_name)}</strong><small><span class="ped-type-dot" aria-hidden="true"></span>${format.label} · ${typeLabel}${item.caption ? " · Copy pronto" : ""}</small></span>
     </button>
     <button class="ped-content-remove" data-ped-remove="${escapeHtml(item.id)}" type="button" title="Rimuovi dal PED" aria-label="Rimuovi ${escapeHtml(item.drive_file_name)} dal PED">
       <svg class="lc" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
@@ -1736,11 +1737,16 @@ function pedAgendaItemMarkup(item) {
     <div class="ped-agenda-copy">
       <strong>${escapeHtml(item.drive_file_name)}</strong>
       <span><i class="ped-type-dot" aria-hidden="true"></i>${format.description}</span>
+      ${item.caption ? `<p title="${escapeHtml(item.caption)}">${escapeHtml(item.caption)}</p>` : `<p class="is-empty">Copy Instagram da inserire</p>`}
     </div>
     <label class="ped-agenda-format">
       <span class="sr-only">Formato di ${escapeHtml(item.drive_file_name)}</span>
       <select data-ped-type-change="${escapeHtml(item.id)}" aria-label="Formato di ${escapeHtml(item.drive_file_name)}">${pedTypeOptions(format.type)}</select>
     </label>
+    <button class="ped-agenda-caption${item.caption ? " has-copy" : ""}" data-ped-caption="${escapeHtml(item.id)}" type="button" title="${item.caption ? "Apri e copia il copy Instagram" : "Aggiungi il copy Instagram"}">
+      <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+      <span>${item.caption ? "Copy" : "Scrivi copy"}</span>
+    </button>
     <a class="ped-agenda-download" href="${escapeHtml(item.download_url || "#")}" download title="Scarica ${escapeHtml(item.drive_file_name)}">
       <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
       <span>Scarica</span>
@@ -1786,10 +1792,11 @@ async function openPedDrivePicker(date) {
     alert("Collega prima la cartella Google Drive del cliente.");
     return;
   }
-  pedPickerState = { date, path: [], files: [], contentType: "post" };
+  pedPickerState = { date, path: [], files: [], contentType: "post", caption: "" };
   document.getElementById("pedPickerTitle").textContent = `Contenuto per ${new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "long" }).format(new Date(`${date}T12:00:00`))}`;
   document.getElementById("pedPickerSubtitle").textContent = `${client.name} · scegli una foto, un video o una grafica dal Drive`;
   document.getElementById("pedPickerMessage").textContent = "";
+  document.getElementById("pedPickerCaption").value = "";
   document.getElementById("pedDrivePickerModal").showModal();
   renderPedPickerFormat();
   await loadPedPickerFolder("", client.name);
@@ -1859,7 +1866,8 @@ async function attachPedDriveFile(fileId) {
         client_id: selectedPedClientId,
         scheduled_date: pedPickerState.date,
         drive_file_id: fileId,
-        content_type: pedContentType(pedPickerState.contentType)
+        content_type: pedContentType(pedPickerState.contentType),
+        caption: document.getElementById("pedPickerCaption").value
       })
     });
     const data = await response.json().catch(() => ({}));
@@ -1890,6 +1898,74 @@ async function updatePedItemType(id, nextType) {
     item.content_type = previousType;
     renderPed();
     alert(error.message);
+  }
+}
+
+function openPedCaptionModal(id) {
+  const item = state.pedItems.find((entry) => String(entry.id) === String(id));
+  if (!item) return;
+  editingPedCaptionId = String(item.id);
+  const format = pedTypeMeta(item.content_type);
+  const textarea = document.getElementById("pedCaptionText");
+  textarea.value = item.caption || "";
+  document.getElementById("pedCaptionEyebrow").textContent = `Copy Instagram · ${format.label}`;
+  document.getElementById("pedCaptionTitle").textContent = item.drive_file_name || "Copy del contenuto";
+  document.getElementById("pedCaptionMessage").textContent = "";
+  updatePedCaptionCount();
+  document.getElementById("pedCaptionModal").showModal();
+  requestAnimationFrame(() => textarea.focus());
+}
+
+function updatePedCaptionCount() {
+  const textarea = document.getElementById("pedCaptionText");
+  document.getElementById("pedCaptionCount").textContent = String(textarea.value.length);
+}
+
+async function copyPedCaption() {
+  const textarea = document.getElementById("pedCaptionText");
+  const message = document.getElementById("pedCaptionMessage");
+  if (!textarea.value.trim()) {
+    message.textContent = "Inserisci prima il copy da copiare.";
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(textarea.value);
+  } catch {
+    textarea.select();
+    document.execCommand("copy");
+  }
+  message.textContent = "Copy copiato negli appunti.";
+}
+
+async function savePedCaption(event) {
+  event.preventDefault();
+  if (event.submitter?.value === "cancel") {
+    document.getElementById("pedCaptionModal").close();
+    return;
+  }
+  const item = state.pedItems.find((entry) => String(entry.id) === editingPedCaptionId);
+  if (!item) return;
+  const textarea = document.getElementById("pedCaptionText");
+  const message = document.getElementById("pedCaptionMessage");
+  const button = document.getElementById("pedCaptionSaveButton");
+  const caption = textarea.value.trim();
+  button.disabled = true;
+  message.textContent = "Salvataggio copy...";
+  try {
+    const response = await apiFetch("/api/ped", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: item.id, caption })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "Impossibile salvare il copy");
+    item.caption = caption;
+    renderPed();
+    document.getElementById("pedCaptionModal").close();
+  } catch (error) {
+    message.textContent = error.message;
+  } finally {
+    button.disabled = false;
   }
 }
 
@@ -3369,6 +3445,7 @@ document.body.addEventListener("click", (event) => {
   const pedPickerType = event.target.closest("[data-ped-picker-type]");
   const pedPickerBreadcrumb = event.target.closest("[data-ped-picker-breadcrumb]");
   const pedPickerClose = event.target.closest("[data-ped-picker-close]");
+  const pedCaption = event.target.closest("[data-ped-caption]");
   const saveUser = event.target.closest("[data-save-user]");
   const applyAiClient = event.target.closest("[data-apply-ai-client]");
   const deleteAlias = event.target.closest("[data-delete-alias]");
@@ -3413,6 +3490,7 @@ document.body.addEventListener("click", (event) => {
     if (target) return loadPedPickerFolder(target.id, target.name);
   }
   if (pedPickerClose) return document.getElementById("pedDrivePickerModal").close();
+  if (pedCaption) return openPedCaptionModal(pedCaption.dataset.pedCaption);
   if (taskRow && !event.target.closest("a, button, input, select, textarea")) return openTaskDetailModal(taskRow.dataset.taskDetail);
   if (saveUser) saveUserProfile(saveUser.closest("[data-user-id]"));
   if (applyAiClient) applyAiClientTag(applyAiClient);
@@ -3523,6 +3601,9 @@ document.getElementById("pedShareButton").addEventListener("click", openPedShare
 document.getElementById("pedShareCreateButton").addEventListener("click", createPedShareLink);
 document.getElementById("pedShareCopyButton").addEventListener("click", copyPedShareLink);
 document.getElementById("pedShareDisableButton").addEventListener("click", disablePedShareLink);
+document.getElementById("pedCaptionForm").addEventListener("submit", savePedCaption);
+document.getElementById("pedCaptionText").addEventListener("input", updatePedCaptionCount);
+document.getElementById("pedCaptionCopyButton").addEventListener("click", copyPedCaption);
 document.getElementById("taskSearch").addEventListener("input", renderClickUpTasks);
 document.getElementById("taskAssigneeFilter").addEventListener("change", renderClickUpTasks);
 document.getElementById("taskStatusFilter").addEventListener("change", renderClickUpTasks);
