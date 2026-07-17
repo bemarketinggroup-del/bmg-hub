@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import { groupPedItems } from "../lib/ped.js";
 
 function row(overrides = {}) {
@@ -42,5 +43,11 @@ assert.equal(singles.length, 3, "gli altri formati devono restare contenuti sing
 assert.equal(singles.find((item) => item.content_type === "post").caption, "Copy post");
 assert.equal(singles.find((item) => item.content_type === "reel").caption, "Copy reel");
 assert.equal(singles.find((item) => item.content_type === "story").caption, null, "le stories non devono avere copy");
+
+const appSource = await readFile(new URL("../public/app.js", import.meta.url), "utf8");
+const styleSource = await readFile(new URL("../public/styles.css", import.meta.url), "utf8");
+assert.match(appSource, /data-ped-picker-preview-type/, "il selettore Drive deve esporre il tipo di anteprima");
+assert.match(appSource, /showPedPickerPreview\(entry\)/, "il selettore Drive deve attivare l'anteprima al passaggio");
+assert.match(styleSource, /\.ped-picker-hover-preview\.is-visible/, "l'anteprima hover deve avere uno stato visibile");
 
 console.log("PED carousel tests passed");

@@ -163,6 +163,7 @@ let clientDriveState = { clientId: "", path: [], objectUrl: "", thumbnailUrls: n
 let selectedPedClientId = "";
 let selectedPedMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
 let pedPickerState = { date: "", path: [], files: [], contentType: "post", caption: "", selectedFiles: [] };
+let pedPickerPreviewTimer = null;
 let pedShareState = { active: false, shareUrl: "" };
 let pedLoadingKey = "";
 let editingPedCaptionId = "";
@@ -1916,6 +1917,7 @@ async function loadPedPickerFolder(folderId = "", folderName = "") {
 }
 
 function renderPedPicker() {
+  hidePedPickerPreview();
   const breadcrumbs = document.getElementById("pedPickerBreadcrumbs");
   const grid = document.getElementById("pedPickerGrid");
   breadcrumbs.innerHTML = pedPickerState.path.map((item, index) => {
@@ -1928,8 +1930,13 @@ function renderPedPicker() {
     const isImage = String(file.mime_type || "").startsWith("image/");
     const isVideo = String(file.mime_type || "").startsWith("video/");
     const hasPreview = file.has_thumbnail && (isImage || isVideo);
+    const previewType = !file.is_folder && isVideo ? "video" : (!file.is_folder && isImage ? "image" : "");
+    const previewSource = previewType === "video" ? file.content_url : (file.thumbnail_url || file.content_url);
     const selected = !file.is_folder && pedPickerState.selectedFiles.some((item) => String(item.id) === String(file.id));
-    return `<button class="ped-picker-entry${file.is_folder ? " is-folder" : ""}${selected ? " is-selected" : ""}" ${file.is_folder ? "data-ped-picker-folder" : "data-ped-picker-file"}="${escapeHtml(file.id)}" data-ped-picker-name="${escapeHtml(file.name)}" type="button"${file.is_folder ? "" : ` aria-pressed="${selected}"`}>
+    const previewAttributes = previewType && previewSource
+      ? ` data-ped-picker-preview-type="${previewType}" data-ped-picker-preview-src="${escapeHtml(previewSource)}" data-ped-picker-preview-poster="${escapeHtml(file.thumbnail_url || "")}"`
+      : "";
+    return `<button class="ped-picker-entry${file.is_folder ? " is-folder" : ""}${selected ? " is-selected" : ""}" ${file.is_folder ? "data-ped-picker-folder" : "data-ped-picker-file"}="${escapeHtml(file.id)}" data-ped-picker-name="${escapeHtml(file.name)}"${previewAttributes} type="button"${file.is_folder ? "" : ` aria-pressed="${selected}"`}>
       <span class="ped-picker-media">${hasPreview
         ? `<img src="${escapeHtml(file.thumbnail_url || "")}" alt="" loading="lazy">${isVideo ? `<span class="ped-video-mini"><svg class="lc" viewBox="0 0 24 24"><path d="m9 7 8 5-8 5z"/></svg></span>` : ""}`
         : driveFileIcon(file)}</span>
@@ -1937,6 +1944,66 @@ function renderPedPicker() {
       ${file.is_folder ? `<svg class="lc ped-picker-arrow" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>` : `<span class="ped-picker-check" aria-hidden="true"><svg class="lc" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg></span>`}
     </button>`;
   }).join("") || `<p class="ped-picker-empty">Questa cartella è vuota.</p>`;
+}
+
+function pedPickerPreviewElement() {
+  let preview = document.getElementById("pedPickerHoverPreview");
+  if (preview) return preview;
+  preview = document.createElement("div");
+  preview.id = "pedPickerHoverPreview";
+  preview.className = "ped-picker-hover-preview";
+  preview.setAttribute("aria-hidden", "true");
+  document.body.appendChild(preview);
+  return preview;
+}
+
+function showPedPickerPreview(entry) {
+  const type = entry?.dataset.pedPickerPreviewType;
+  const source = entry?.dataset.pedPickerPreviewSrc;
+  if (!type || !source) return;
+
+  clearTimeout(pedPickerPreviewTimer);
+  const preview = pedPickerPreviewElement();
+  const name = entry.dataset.pedPickerName || "Anteprima contenuto";
+  const poster = entry.dataset.pedPickerPreviewPoster || "";
+  preview.innerHTML = type === "video"
+    ? `<video muted loop playsinline preload="none" poster="${escapeHtml(poster)}" aria-label="Anteprima ${escapeHtml(name)}"></video><span class="ped-picker-preview-kind"><svg class="lc" viewBox="0 0 24 24"><path d="m9 7 8 5-8 5z"/></svg> Video</span>`
+    : `<img src="${escapeHtml(source)}" alt="Anteprima ${escapeHtml(name)}" decoding="async">`;
+  preview.dataset.owner = entry.dataset.pedPickerFile || "";
+  preview.classList.add("is-visible");
+
+  const entryRect = entry.getBoundingClientRect();
+  const previewRect = preview.getBoundingClientRect();
+  const gap = 12;
+  const fitsRight = entryRect.right + gap + previewRect.width <= window.innerWidth - 12;
+  const left = fitsRight ? entryRect.right + gap : Math.max(12, entryRect.left - gap - previewRect.width);
+  const top = Math.min(
+    Math.max(12, entryRect.top + (entryRect.height - previewRect.height) / 2),
+    Math.max(12, window.innerHeight - previewRect.height - 12)
+  );
+  preview.style.left = `${Math.round(left)}px`;
+  preview.style.top = `${Math.round(top)}px`;
+
+  if (type === "video") {
+    pedPickerPreviewTimer = window.setTimeout(() => {
+      if (preview.dataset.owner !== (entry.dataset.pedPickerFile || "") || !preview.classList.contains("is-visible")) return;
+      const video = preview.querySelector("video");
+      if (!video) return;
+      video.src = source;
+      video.play().catch(() => {});
+    }, 220);
+  }
+}
+
+function hidePedPickerPreview(entry = null) {
+  clearTimeout(pedPickerPreviewTimer);
+  pedPickerPreviewTimer = null;
+  const preview = document.getElementById("pedPickerHoverPreview");
+  if (!preview || (entry && preview.dataset.owner !== (entry.dataset.pedPickerFile || ""))) return;
+  preview.querySelector("video")?.pause();
+  preview.classList.remove("is-visible");
+  preview.removeAttribute("data-owner");
+  preview.innerHTML = "";
 }
 
 function togglePedCarouselFile(fileId) {
@@ -3703,6 +3770,28 @@ document.body.addEventListener("pointerout", (event) => {
   if (!card || card.contains(event.relatedTarget)) return;
   const video = card.querySelector("video[data-ped-video-src]");
   if (video) video.pause();
+});
+
+document.body.addEventListener("pointerover", (event) => {
+  const entry = event.target.closest?.("[data-ped-picker-preview-type]");
+  if (!entry || entry.contains(event.relatedTarget)) return;
+  showPedPickerPreview(entry);
+});
+
+document.body.addEventListener("pointerout", (event) => {
+  const entry = event.target.closest?.("[data-ped-picker-preview-type]");
+  if (!entry || entry.contains(event.relatedTarget)) return;
+  hidePedPickerPreview(entry);
+});
+
+document.body.addEventListener("focusin", (event) => {
+  const entry = event.target.closest?.("[data-ped-picker-preview-type]");
+  if (entry) showPedPickerPreview(entry);
+});
+
+document.body.addEventListener("focusout", (event) => {
+  const entry = event.target.closest?.("[data-ped-picker-preview-type]");
+  if (entry) hidePedPickerPreview(entry);
 });
 
 document.getElementById("profileButton").addEventListener("click", openProfileModal);
