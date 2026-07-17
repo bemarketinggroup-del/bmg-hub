@@ -69,5 +69,11 @@ assert.match(styleSource, /height: max-content !important/, "Safari non deve est
 assert.match(styleSource, /\.media-load-progress/, "le anteprime devono avere una barra di caricamento");
 assert.match(appSource, /const scheduledDays = \[\.\.\.grouped\.entries\(\)\]/, "l'agenda deve derivare i giorni dai contenuti programmati");
 assert.doesNotMatch(appSource, /ped-agenda-empty">Nessun contenuto programmato/, "l'agenda non deve creare righe per i giorni vuoti");
+assert.match(appSource, /draggable="true" aria-grabbed="false"/, "le card PED devono essere trascinabili");
+assert.match(appSource, /movePedItemToDate\(itemId, targetDate\)/, "il rilascio deve aggiornare la data del contenuto");
+assert.match(appSource, /body: JSON\.stringify\(\{ id, scheduled_date: scheduledDate \}\)/, "la nuova data deve essere salvata tramite API");
+assert.match(appSource, /window\.setTimeout\(beginPedPointerDrag, 340\)/, "il trascinamento touch deve partire con una pressione prolungata");
+assert.match(styleSource, /\.ped-day\.is-ped-drop-target/, "il giorno di destinazione deve avere un feedback visivo");
+assert.match(styleSource, /\.ped-drag-ghost/, "il trascinamento touch deve mostrare una card mobile");
 
 console.log("PED carousel tests passed");

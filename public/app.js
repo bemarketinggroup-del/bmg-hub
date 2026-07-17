@@ -175,6 +175,11 @@ let pedPickerPreviewLoadId = 0;
 let pedShareState = { active: false, shareUrl: "" };
 let pedLoadingKey = "";
 let editingPedCaptionId = "";
+let pedDraggedItemId = "";
+let pedDragTarget = null;
+let pedDragSuppressClickUntil = 0;
+let pedPointerDrag = { pointerId: null, card: null, itemId: "", timer: 0, active: false, startX: 0, startY: 0, ghost: null };
+const pedMoveRequests = new Set();
 let selectedSmartWeek = mondayOf(new Date());
 let selectedContentSection = "all";
 let authConfig = null;
@@ -2068,7 +2073,7 @@ function pedItemMarkup(item) {
       : `<div class="ped-preview-file">${driveFileIcon({ is_folder: false, mime_type: mime })}<strong>${escapeHtml(title)}</strong></div>`;
   const typeLabel = files.length > 1 ? `${files.length} file` : isVideo ? "Video" : isImage ? "Immagine" : mime === "application/pdf" ? "PDF" : "File";
 
-  return `<article class="ped-content-card ped-type-${format.type}${files.length > 1 ? " is-carousel" : ""}" data-ped-content="${escapeHtml(item.id)}" tabindex="0">
+  return `<article class="ped-content-card ped-type-${format.type}${files.length > 1 ? " is-carousel" : ""}" data-ped-content="${escapeHtml(item.id)}" draggable="true" aria-grabbed="false" tabindex="0" title="Trascina su un altro giorno per riprogrammare">
     <button class="ped-content-main" data-ped-open="${escapeHtml(primary.drive_file_id)}" data-ped-name="${escapeHtml(primary.drive_file_name)}" data-ped-mime="${escapeHtml(mime)}" data-ped-content-url="${escapeHtml(primary.content_url || "")}" type="button" title="Apri la prima anteprima nell'Hub">
       <span class="ped-content-thumb">${media}${isVideo ? `<span class="ped-video-mini"><svg class="lc" viewBox="0 0 24 24"><path d="m9 7 8 5-8 5z"/></svg></span>` : ""}${files.length > 1 ? `<b class="ped-carousel-count">${files.length}</b>` : ""}</span>
       <span class="ped-content-copy"><strong>${escapeHtml(title)}</strong><small><span class="ped-type-dot" aria-hidden="true"></span>${format.label} · ${typeLabel}${format.type !== "story" && item.caption ? " · Copy pronto" : ""}</small></span>
@@ -2479,6 +2484,104 @@ async function updatePedItemType(id, nextType) {
     renderPed();
     alert(error.message);
   }
+}
+
+function showPedMoveNotice(message, tone = "success") {
+  let notice = document.getElementById("pedMoveNotice");
+  if (!notice) {
+    notice = document.createElement("div");
+    notice.id = "pedMoveNotice";
+    notice.className = "ped-move-notice";
+    notice.setAttribute("role", "status");
+    notice.setAttribute("aria-live", "polite");
+    document.body.appendChild(notice);
+  }
+  notice.className = `ped-move-notice is-visible is-${tone}`;
+  notice.textContent = message;
+  window.clearTimeout(notice._hideTimer);
+  notice._hideTimer = window.setTimeout(() => notice.classList.remove("is-visible"), 2600);
+}
+
+async function movePedItemToDate(id, scheduledDate) {
+  const item = state.pedItems.find((entry) => String(entry.id) === String(id));
+  if (!item || !scheduledDate || String(item.scheduled_date) === String(scheduledDate) || pedMoveRequests.has(String(id))) return;
+  const previousDate = item.scheduled_date;
+  pedMoveRequests.add(String(id));
+  item.scheduled_date = scheduledDate;
+  renderPed();
+  showPedMoveNotice("Spostamento in corso...", "pending");
+  try {
+    const response = await apiFetch("/api/ped", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, scheduled_date: scheduledDate })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "Impossibile spostare il contenuto");
+    const formatted = new Intl.DateTimeFormat("it-IT", { weekday: "long", day: "numeric", month: "long" })
+      .format(new Date(`${scheduledDate}T12:00:00`));
+    showPedMoveNotice(`Contenuto spostato a ${formatted}`, "success");
+  } catch (error) {
+    item.scheduled_date = previousDate;
+    renderPed();
+    showPedMoveNotice(error.message || "Spostamento non riuscito", "error");
+  } finally {
+    pedMoveRequests.delete(String(id));
+  }
+}
+
+function setPedDragTarget(day) {
+  if (pedDragTarget === day) return;
+  pedDragTarget?.classList.remove("is-ped-drop-target");
+  pedDragTarget = day || null;
+  pedDragTarget?.classList.add("is-ped-drop-target");
+}
+
+function pedDayAtPoint(x, y) {
+  const day = document.elementFromPoint(x, y)?.closest?.(".ped-day[data-ped-day]");
+  return day && !day.classList.contains("is-outside") ? day : null;
+}
+
+function clearPedDragVisuals() {
+  setPedDragTarget(null);
+  document.querySelectorAll(".ped-content-card.is-ped-dragging").forEach((card) => {
+    card.classList.remove("is-ped-dragging");
+    card.setAttribute("aria-grabbed", "false");
+  });
+  document.querySelectorAll(".ped-day.is-ped-drop-ready").forEach((day) => day.classList.remove("is-ped-drop-ready"));
+}
+
+function resetPedPointerDrag() {
+  window.clearTimeout(pedPointerDrag.timer);
+  pedPointerDrag.ghost?.remove();
+  if (pedPointerDrag.card && pedPointerDrag.pointerId !== null && pedPointerDrag.card.hasPointerCapture?.(pedPointerDrag.pointerId)) {
+    pedPointerDrag.card.releasePointerCapture(pedPointerDrag.pointerId);
+  }
+  pedPointerDrag = { pointerId: null, card: null, itemId: "", timer: 0, active: false, startX: 0, startY: 0, ghost: null };
+  clearPedDragVisuals();
+}
+
+function beginPedPointerDrag() {
+  if (!pedPointerDrag.card || !pedPointerDrag.itemId) return;
+  pedPointerDrag.active = true;
+  pedDraggedItemId = pedPointerDrag.itemId;
+  pedPointerDrag.card.classList.add("is-ped-dragging");
+  pedPointerDrag.card.setAttribute("aria-grabbed", "true");
+  document.querySelectorAll(".ped-day:not(.is-outside)").forEach((day) => day.classList.add("is-ped-drop-ready"));
+  const ghost = pedPointerDrag.card.cloneNode(true);
+  ghost.removeAttribute("data-ped-content");
+  ghost.removeAttribute("draggable");
+  ghost.querySelector(".ped-hover-preview")?.remove();
+  ghost.className += " ped-drag-ghost";
+  document.body.appendChild(ghost);
+  pedPointerDrag.ghost = ghost;
+  positionPedPointerGhost(pedPointerDrag.startX, pedPointerDrag.startY);
+  if (navigator.vibrate) navigator.vibrate(20);
+}
+
+function positionPedPointerGhost(x, y) {
+  if (!pedPointerDrag.ghost) return;
+  pedPointerDrag.ghost.style.transform = `translate3d(${Math.round(x + 14)}px, ${Math.round(y + 14)}px, 0)`;
 }
 
 function openPedCaptionModal(id) {
@@ -4017,6 +4120,11 @@ document.getElementById("navList").addEventListener("click", (event) => {
 });
 
 document.body.addEventListener("click", (event) => {
+  if (Date.now() < pedDragSuppressClickUntil && event.target.closest("[data-ped-content]")) {
+    event.preventDefault();
+    event.stopPropagation();
+    return;
+  }
   const quickStatusOption = event.target.closest("[data-quick-task-status]");
   const statusTrigger = event.target.closest("[data-task-status-trigger]");
   const taskRow = event.target.closest("[data-task-detail]");
@@ -4145,6 +4253,99 @@ function driveDropZoneFromEvent(event) {
   if (!zone || zone.dataset.driveWriteEnabled !== "1" || !isDriveFileDrag(event)) return null;
   return zone;
 }
+
+document.body.addEventListener("dragstart", (event) => {
+  const card = event.target.closest?.("[data-ped-content]");
+  if (!card || event.target.closest("[data-ped-remove]")) return;
+  pedDraggedItemId = String(card.dataset.pedContent || "");
+  if (!pedDraggedItemId) return;
+  card.classList.add("is-ped-dragging");
+  card.setAttribute("aria-grabbed", "true");
+  document.querySelectorAll(".ped-day:not(.is-outside)").forEach((day) => day.classList.add("is-ped-drop-ready"));
+  event.dataTransfer.effectAllowed = "move";
+  event.dataTransfer.setData("application/x-bmg-ped-item", pedDraggedItemId);
+  event.dataTransfer.setData("text/plain", pedDraggedItemId);
+});
+
+document.body.addEventListener("dragover", (event) => {
+  if (!pedDraggedItemId || isDriveFileDrag(event)) return;
+  const day = event.target.closest?.(".ped-day[data-ped-day]");
+  if (!day || day.classList.contains("is-outside")) {
+    setPedDragTarget(null);
+    return;
+  }
+  event.preventDefault();
+  event.dataTransfer.dropEffect = "move";
+  setPedDragTarget(day);
+});
+
+document.body.addEventListener("dragleave", (event) => {
+  if (!pedDraggedItemId || !pedDragTarget || pedDragTarget.contains(event.relatedTarget)) return;
+  setPedDragTarget(null);
+});
+
+document.body.addEventListener("drop", (event) => {
+  if (!pedDraggedItemId || isDriveFileDrag(event)) return;
+  const day = event.target.closest?.(".ped-day[data-ped-day]");
+  if (!day || day.classList.contains("is-outside")) return;
+  event.preventDefault();
+  const itemId = pedDraggedItemId;
+  const targetDate = day.dataset.pedDay;
+  pedDragSuppressClickUntil = Date.now() + 500;
+  pedDraggedItemId = "";
+  clearPedDragVisuals();
+  movePedItemToDate(itemId, targetDate);
+});
+
+document.body.addEventListener("dragend", () => {
+  pedDraggedItemId = "";
+  clearPedDragVisuals();
+});
+
+document.body.addEventListener("pointerdown", (event) => {
+  if (event.pointerType === "mouse" || event.button !== 0) return;
+  const card = event.target.closest?.("[data-ped-content]");
+  if (!card || event.target.closest("[data-ped-remove]")) return;
+  resetPedPointerDrag();
+  pedPointerDrag.pointerId = event.pointerId;
+  pedPointerDrag.card = card;
+  pedPointerDrag.itemId = String(card.dataset.pedContent || "");
+  pedPointerDrag.startX = event.clientX;
+  pedPointerDrag.startY = event.clientY;
+  card.setPointerCapture?.(event.pointerId);
+  pedPointerDrag.timer = window.setTimeout(beginPedPointerDrag, 340);
+});
+
+document.body.addEventListener("pointermove", (event) => {
+  if (pedPointerDrag.pointerId !== event.pointerId) return;
+  const distance = Math.hypot(event.clientX - pedPointerDrag.startX, event.clientY - pedPointerDrag.startY);
+  if (!pedPointerDrag.active) {
+    if (distance > 10) resetPedPointerDrag();
+    return;
+  }
+  event.preventDefault();
+  positionPedPointerGhost(event.clientX, event.clientY);
+  setPedDragTarget(pedDayAtPoint(event.clientX, event.clientY));
+});
+
+document.body.addEventListener("pointerup", (event) => {
+  if (pedPointerDrag.pointerId !== event.pointerId) return;
+  const active = pedPointerDrag.active;
+  const itemId = pedPointerDrag.itemId;
+  const day = active ? pedDayAtPoint(event.clientX, event.clientY) : null;
+  resetPedPointerDrag();
+  pedDraggedItemId = "";
+  if (!active) return;
+  event.preventDefault();
+  pedDragSuppressClickUntil = Date.now() + 650;
+  if (day) movePedItemToDate(itemId, day.dataset.pedDay);
+});
+
+document.body.addEventListener("pointercancel", (event) => {
+  if (pedPointerDrag.pointerId !== event.pointerId) return;
+  resetPedPointerDrag();
+  pedDraggedItemId = "";
+});
 
 document.body.addEventListener("dragenter", (event) => {
   const zone = driveDropZoneFromEvent(event);
