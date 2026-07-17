@@ -2077,8 +2077,10 @@ async function downloadPedCarousel(groupId, button) {
     }
     const disposition = response.headers.get("Content-Disposition") || "";
     const filename = disposition.match(/filename="?([^";]+)"?/i)?.[1];
-    transfer.update({ percent: 8, message: `Download ${filename || "carosello ZIP"}` });
-    const blob = await readResponseBlobWithProgress(response, transfer);
+    const sourceBytes = Number(response.headers.get("X-Archive-Source-Bytes") || 0);
+    const fileCount = Number(response.headers.get("X-Archive-File-Count") || 0);
+    transfer.update({ percent: 8, message: `${fileCount || ""} file pronti, download ZIP`.trim() });
+    const blob = await readResponseBlobWithProgress(response, transfer, sourceBytes);
     saveDownloadedBlob(blob, filename || `carosello-${groupId}.zip`);
     transfer.complete("ZIP scaricato");
   } catch (error) {

@@ -46,6 +46,7 @@ assert.equal(singles.find((item) => item.content_type === "story").caption, null
 
 const appSource = await readFile(new URL("../public/app.js", import.meta.url), "utf8");
 const styleSource = await readFile(new URL("../public/styles.css", import.meta.url), "utf8");
+const pedSource = await readFile(new URL("../lib/ped.js", import.meta.url), "utf8");
 assert.match(appSource, /data-ped-picker-preview-type/, "il selettore Drive deve esporre il tipo di anteprima");
 assert.match(appSource, /showPedPickerPreview\(entry\)/, "il selettore Drive deve attivare l'anteprima al passaggio");
 assert.match(appSource, /preview\.setAttribute\("popover", "manual"\)/, "l'anteprima deve apparire sopra al modal PED");
@@ -57,6 +58,9 @@ assert.match(appSource, /Il codec di questo video MOV non è supportato/, "i vid
 assert.match(appSource, /showEmbeddedDriveVideo/, "i codec video non supportati devono usare il player incorporato di Drive");
 assert.match(appSource, /createTransferProgress/, "upload e download devono esporre una barra di avanzamento");
 assert.match(appSource, /readResponseBlobWithProgress/, "i download devono misurare i byte trasferiti");
+assert.match(appSource, /X-Archive-Source-Bytes/, "il download ZIP deve usare la dimensione sorgente per il progresso");
+assert.match(pedSource, /mapWithConcurrency\(rows, CAROUSEL_DOWNLOAD_CONCURRENCY/, "i file del carosello devono essere preparati in parallelo");
+assert.match(pedSource, /X-Archive-File-Count/, "lo ZIP deve comunicare quanti file contiene");
 assert.match(appSource, /data-drive-download-url/, "i download Drive devono passare dal gestore tracciato");
 assert.match(styleSource, /\.ped-picker-hover-preview\.is-visible/, "l'anteprima hover deve avere uno stato visibile");
 assert.match(styleSource, /\.drive-transfer-center/, "il centro trasferimenti deve essere visibile sopra ai modal");
