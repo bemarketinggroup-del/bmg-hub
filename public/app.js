@@ -1853,6 +1853,7 @@ function renderPed() {
   ensurePedClientSelection();
   renderPedClientTabs();
   renderPedCalendar();
+  renderPedInstagramPreviewAction();
   renderPedAgenda();
   renderPedShareButton();
 }
@@ -1867,6 +1868,109 @@ function renderPedShareButton() {
   const visible = currentProfile?.role === "admin";
   button.classList.toggle("is-hidden", !visible);
   button.disabled = !selectedPedClient();
+}
+
+function renderPedInstagramPreviewAction() {
+  const button = document.getElementById("pedFeedPreviewButton");
+  const hint = document.getElementById("pedFeedPreviewHint");
+  if (!button || !hint) return;
+  const client = selectedPedClient();
+  const feedCount = state.pedItems.filter((item) => pedContentType(item.content_type) !== "story").length;
+  const storyCount = state.pedItems.filter((item) => pedContentType(item.content_type) === "story").length;
+  button.disabled = !client;
+  hint.textContent = !client
+    ? "Seleziona un cliente per vedere l'anteprima."
+    : `${feedCount} ${feedCount === 1 ? "contenuto nel feed" : "contenuti nel feed"}${storyCount ? ` · ${storyCount} ${storyCount === 1 ? "storia" : "storie"}` : ""}`;
+}
+
+function formatPedInstagramDate(value) {
+  const date = new Date(`${value}T12:00:00`);
+  if (Number.isNaN(date.getTime())) return "Data non disponibile";
+  return new Intl.DateTimeFormat("it-IT", { weekday: "short", day: "numeric", month: "long" })
+    .format(date)
+    .replace(".", "");
+}
+
+function pedInstagramMediaMarkup(file, title, { carousel = false } = {}) {
+  const mime = String(file.drive_mime_type || "");
+  const isImage = mime.startsWith("image/");
+  const isVideo = mime.startsWith("video/");
+  const previewUrl = file.thumbnail_url || (isImage ? file.content_url : "");
+  const media = previewUrl
+    ? `<img src="${escapeHtml(previewUrl)}" alt="${escapeHtml(title)}" loading="lazy" decoding="async">`
+    : `<span class="ped-instagram-file-fallback">${driveFileIcon({ is_folder: false, mime_type: mime })}<b>${escapeHtml(file.drive_file_name || title)}</b></span>`;
+  return `<button class="ped-instagram-media${carousel ? " is-carousel-slide" : ""}" data-ped-open="${escapeHtml(file.drive_file_id)}" data-ped-name="${escapeHtml(file.drive_file_name)}" data-ped-mime="${escapeHtml(mime)}" data-ped-content-url="${escapeHtml(file.content_url || "")}" type="button" title="Apri ${escapeHtml(file.drive_file_name || title)}">
+    ${media}
+    ${isVideo ? `<span class="ped-instagram-reel-play"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 7 8 5-8 5z"/></svg></span>` : ""}
+  </button>`;
+}
+
+function pedInstagramPostMarkup(item, client) {
+  const format = pedTypeMeta(item.content_type);
+  const files = pedItemFiles(item);
+  const title = pedItemTitle(item);
+  const media = files.length > 1
+    ? `<div class="ped-instagram-carousel" aria-label="Carosello di ${files.length} contenuti">${files.map((file) => pedInstagramMediaMarkup(file, title, { carousel: true })).join("")}</div><span class="ped-instagram-carousel-badge"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>${files.length}</span>`
+    : pedInstagramMediaMarkup(files[0], title);
+  return `<article class="ped-instagram-post ped-type-${format.type}">
+    <header>
+      <span class="ped-instagram-avatar">${escapeHtml(initials(client.name))}</span>
+      <span><strong>${escapeHtml(client.name)}</strong><small>${escapeHtml(formatPedInstagramDate(item.scheduled_date))} · ${escapeHtml(format.label)}</small></span>
+      <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg>
+    </header>
+    <div class="ped-instagram-media-wrap">${media}</div>
+    ${files.length > 1 ? `<div class="ped-instagram-carousel-dots" aria-hidden="true">${files.map((_, index) => `<i${index === 0 ? " class=\"is-active\"" : ""}></i>`).join("")}</div>` : ""}
+    <div class="ped-instagram-actions" aria-hidden="true">
+      <span><svg class="lc" viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.8-7.5 1.1-1.1a5.5 5.5 0 0 0-.1-7.8Z"/></svg><svg class="lc" viewBox="0 0 24 24"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4Z"/></svg><svg class="lc" viewBox="0 0 24 24"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg></span>
+      <svg class="lc" viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4-6 4Z"/></svg>
+    </div>
+    <div class="ped-instagram-caption"><p><strong>${escapeHtml(client.name)}</strong> ${item.caption ? escapeHtml(item.caption) : `<em>Copy Instagram da inserire</em>`}</p><small>${escapeHtml(formatPedInstagramDate(item.scheduled_date))}</small></div>
+  </article>`;
+}
+
+function renderPedInstagramPreview() {
+  const client = selectedPedClient();
+  const title = document.getElementById("pedInstagramTitle");
+  const subtitle = document.getElementById("pedInstagramSubtitle");
+  const stories = document.getElementById("pedInstagramStories");
+  const feed = document.getElementById("pedInstagramFeed");
+  const summary = document.getElementById("pedInstagramSummary");
+  const stage = document.getElementById("pedInstagramStage");
+  const tabAvatar = document.getElementById("pedInstagramTabAvatar");
+  if (!client || !title || !subtitle || !stories || !feed || !summary || !stage || !tabAvatar) return;
+
+  const monthLabel = new Intl.DateTimeFormat("it-IT", { month: "long", year: "numeric" }).format(selectedPedMonth);
+  const ordered = [...state.pedItems].sort((left, right) => String(left.scheduled_date).localeCompare(String(right.scheduled_date)));
+  const storyItems = ordered.filter((item) => pedContentType(item.content_type) === "story");
+  const feedItems = ordered.filter((item) => pedContentType(item.content_type) !== "story");
+  title.textContent = `Feed di ${client.name}`;
+  subtitle.textContent = `Anteprima ${monthLabel} · ordine di pubblicazione`;
+  stage.style.cssText = clientColorStyle(client);
+  tabAvatar.textContent = initials(client.name);
+
+  stories.innerHTML = storyItems.length
+    ? storyItems.map((item) => {
+      const primary = pedItemFiles(item)[0];
+      const previewUrl = primary.thumbnail_url || (String(primary.drive_mime_type || "").startsWith("image/") ? primary.content_url : "");
+      return `<button data-ped-open="${escapeHtml(primary.drive_file_id)}" data-ped-name="${escapeHtml(primary.drive_file_name)}" data-ped-mime="${escapeHtml(primary.drive_mime_type || "")}" data-ped-content-url="${escapeHtml(primary.content_url || "")}" type="button" title="Apri storia del ${escapeHtml(formatPedInstagramDate(item.scheduled_date))}">
+        <span>${previewUrl ? `<img src="${escapeHtml(previewUrl)}" alt="" loading="lazy" decoding="async">` : escapeHtml(initials(client.name))}</span>
+        <small>${escapeHtml(formatPedInstagramDate(item.scheduled_date).split(" ").slice(0, 2).join(" "))}</small>
+      </button>`;
+    }).join("")
+    : `<div class="ped-instagram-no-stories"><span>${escapeHtml(initials(client.name))}</span><small>Nessuna storia</small></div>`;
+
+  feed.innerHTML = feedItems.length
+    ? feedItems.map((item) => pedInstagramPostMarkup(item, client)).join("")
+    : `<div class="ped-instagram-empty"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1"/></svg><strong>Feed ancora vuoto</strong><span>Aggiungi post, reel o caroselli al calendario per visualizzarli qui.</span></div>`;
+  summary.textContent = `${feedItems.length} ${feedItems.length === 1 ? "pubblicazione" : "pubblicazioni"} · ${storyItems.length} ${storyItems.length === 1 ? "storia" : "storie"}`;
+}
+
+function openPedInstagramPreview() {
+  if (!selectedPedClient()) return;
+  renderPedInstagramPreview();
+  const modal = document.getElementById("pedInstagramModal");
+  modal.showModal();
+  modal.querySelector(".ped-instagram-scroll")?.scrollTo({ top: 0 });
 }
 
 function formatPedShareDate(value) {
@@ -4459,6 +4563,8 @@ document.getElementById("pedTodayButton").addEventListener("click", () => {
   selectedPedMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
   loadPedCalendar();
 });
+document.getElementById("pedFeedPreviewButton").addEventListener("click", openPedInstagramPreview);
+document.getElementById("pedInstagramClose").addEventListener("click", () => document.getElementById("pedInstagramModal").close());
 document.getElementById("pedShareButton").addEventListener("click", openPedShareModal);
 document.getElementById("pedShareCreateButton").addEventListener("click", createPedShareLink);
 document.getElementById("pedShareCopyButton").addEventListener("click", copyPedShareLink);

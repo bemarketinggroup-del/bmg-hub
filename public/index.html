@@ -257,6 +257,14 @@
             <div class="ped-calendar-grid" id="pedCalendarGrid" aria-live="polite"></div>
           </div>
 
+          <div class="ped-feed-preview-action">
+            <button class="ghost-button ped-feed-preview-button" id="pedFeedPreviewButton" type="button">
+              <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M9 6h6M11 18h2"/></svg>
+              Anteprima feed Instagram
+            </button>
+            <span id="pedFeedPreviewHint">Visualizza il piano editoriale nel mockup mobile.</span>
+          </div>
+
           <section class="ped-agenda" aria-labelledby="pedAgendaTitle">
             <div class="ped-agenda-head">
               <div>
@@ -693,6 +701,51 @@
         <button class="primary-button" id="pedCaptionSaveButton" type="submit">Salva copy</button>
       </div>
     </form>
+  </dialog>
+
+  <dialog class="modal ped-instagram-modal" id="pedInstagramModal">
+    <div class="ped-instagram-shell">
+      <div class="modal-head ped-instagram-modal-head">
+        <div>
+          <p class="eyebrow">Anteprima social</p>
+          <h2 id="pedInstagramTitle">Feed Instagram</h2>
+          <span id="pedInstagramSubtitle">Ordine di pubblicazione del mese selezionato.</span>
+        </div>
+        <button class="icon-button" id="pedInstagramClose" type="button" title="Chiudi" aria-label="Chiudi"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+      </div>
+      <div class="ped-instagram-stage" id="pedInstagramStage">
+        <div class="ped-iphone" aria-label="Mockup iPhone con anteprima del feed Instagram">
+          <div class="ped-iphone-speaker" aria-hidden="true"></div>
+          <div class="ped-iphone-screen">
+            <div class="ped-instagram-status" aria-hidden="true">
+              <span>9:41</span>
+              <span><svg class="lc" viewBox="0 0 24 24"><path d="M5 12.55a11 11 0 0 1 14.08 0M8.5 16a6 6 0 0 1 7 0M12 20h.01"/></svg><svg class="lc" viewBox="0 0 24 24"><rect x="2" y="7" width="18" height="10" rx="2"/><path d="M22 11v2"/></svg></span>
+            </div>
+            <div class="ped-instagram-appbar">
+              <strong>Instagram</strong>
+              <span aria-hidden="true"><svg class="lc" viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.8-7.5 1.1-1.1a5.5 5.5 0 0 0-.1-7.8Z"/></svg><svg class="lc" viewBox="0 0 24 24"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg></span>
+            </div>
+            <div class="ped-instagram-scroll">
+              <div class="ped-instagram-stories" id="pedInstagramStories"></div>
+              <div class="ped-instagram-feed" id="pedInstagramFeed" aria-live="polite"></div>
+            </div>
+            <div class="ped-instagram-tabbar" aria-hidden="true">
+              <svg class="lc" viewBox="0 0 24 24"><path d="m3 11 9-8 9 8v9H3Z"/><path d="M9 20v-6h6v6"/></svg>
+              <svg class="lc" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+              <svg class="lc" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="5"/><path d="M12 8v8M8 12h8"/></svg>
+              <svg class="lc" viewBox="0 0 24 24"><path d="M6 3h12l3 5-9 13L3 8Z"/><path d="m3 8 9 5 9-5"/></svg>
+              <span class="ped-instagram-tab-avatar" id="pedInstagramTabAvatar">B</span>
+            </div>
+          </div>
+        </div>
+        <div class="ped-instagram-notes">
+          <p class="eyebrow">Riepilogo</p>
+          <strong id="pedInstagramSummary">Nessun contenuto</strong>
+          <span>Il feed segue l'ordine cronologico del PED. Scorri dentro l'iPhone per controllare la sequenza dei contenuti.</span>
+          <div class="ped-instagram-legend"><i class="ped-type-post"></i>Post <i class="ped-type-reel"></i>Reel <i class="ped-type-carousel"></i>Caroselli</div>
+        </div>
+      </div>
+    </div>
   </dialog>
 
   <dialog class="modal ped-share-modal" id="pedShareModal">

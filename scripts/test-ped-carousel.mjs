@@ -46,6 +46,7 @@ assert.equal(singles.find((item) => item.content_type === "story").caption, null
 
 const appSource = await readFile(new URL("../public/app.js", import.meta.url), "utf8");
 const styleSource = await readFile(new URL("../public/styles.css", import.meta.url), "utf8");
+const htmlSource = await readFile(new URL("../public/index.html", import.meta.url), "utf8");
 const pedSource = await readFile(new URL("../lib/ped.js", import.meta.url), "utf8");
 assert.match(appSource, /data-ped-picker-preview-type/, "il selettore Drive deve esporre il tipo di anteprima");
 assert.match(appSource, /showPedPickerPreview\(entry\)/, "il selettore Drive deve attivare l'anteprima al passaggio");
@@ -75,5 +76,13 @@ assert.match(appSource, /body: JSON\.stringify\(\{ id, scheduled_date: scheduled
 assert.match(appSource, /window\.setTimeout\(beginPedPointerDrag, 340\)/, "il trascinamento touch deve partire con una pressione prolungata");
 assert.match(styleSource, /\.ped-day\.is-ped-drop-target/, "il giorno di destinazione deve avere un feedback visivo");
 assert.match(styleSource, /\.ped-drag-ghost/, "il trascinamento touch deve mostrare una card mobile");
+assert.match(htmlSource, /id="pedFeedPreviewButton"/, "il PED deve offrire il pulsante di anteprima feed sotto al calendario");
+assert.match(htmlSource, /id="pedInstagramModal"/, "il mockup iPhone deve essere disponibile in un modal dedicato");
+assert.match(appSource, /function renderPedInstagramPreview\(\)/, "l'anteprima deve derivare i contenuti dallo stato PED corrente");
+assert.match(appSource, /pedContentType\(item\.content_type\) !== "story"/, "le stories devono restare separate dal feed principale");
+assert.match(appSource, /class="ped-instagram-carousel"/, "i caroselli devono essere scorribili nel mockup");
+assert.match(styleSource, /\.ped-instagram-scroll[^}]*overflow-y: auto/s, "il feed dentro l'iPhone deve essere scorribile verticalmente");
+assert.match(styleSource, /\.ped-instagram-carousel[^}]*scroll-snap-type: x mandatory/s, "i contenuti multipli devono scorrere orizzontalmente");
+assert.match(styleSource, /\.ped-instagram-media img[^}]*object-fit: contain/s, "le anteprime feed non devono ritagliare i contenuti");
 
 console.log("PED carousel tests passed");
