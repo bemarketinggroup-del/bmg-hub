@@ -2138,6 +2138,19 @@ code { font-family: var(--font-mono); font-size: 12px; }
 .ped-agenda-date small { align-self: end; padding-bottom: 2px; font-size: 10px; text-transform: uppercase; }
 .ped-agenda-entries { min-width: 0; display: grid; gap: 7px; align-content: center; padding: 10px 14px; }
 .ped-agenda-empty { color: var(--subtle); font-size: 12px; }
+.ped-agenda-month-empty {
+  min-height: 180px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 7px;
+  padding: 28px;
+  color: var(--muted);
+  text-align: center;
+}
+.ped-agenda-month-empty .lc { width: 28px; height: 28px; margin-bottom: 3px; color: var(--terracotta); }
+.ped-agenda-month-empty strong { color: var(--ink); font-size: 14px; }
+.ped-agenda-month-empty span { font-size: 11px; }
 .ped-agenda-item {
   min-width: 0;
   display: grid;

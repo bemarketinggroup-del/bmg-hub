@@ -1718,34 +1718,39 @@ function renderPedAgenda() {
   if (!list || !summary) return;
 
   const monthStart = new Date(selectedPedMonth.getFullYear(), selectedPedMonth.getMonth(), 1, 12);
-  const dayCount = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0).getDate();
+  const monthKey = pedMonthKey(monthStart);
   const grouped = state.pedItems.reduce((map, item) => {
     const key = String(item.scheduled_date || "");
     if (!map.has(key)) map.set(key, []);
     map.get(key).push(item);
     return map;
   }, new Map());
+  const scheduledDays = [...grouped.entries()]
+    .filter(([dateKey, items]) => dateKey.startsWith(`${monthKey}-`) && items.length)
+    .sort(([left], [right]) => left.localeCompare(right));
 
-  list.innerHTML = Array.from({ length: dayCount }, (_, index) => {
-    const date = new Date(monthStart.getFullYear(), monthStart.getMonth(), index + 1, 12);
-    const dateKey = localDateKey(date);
-    const items = grouped.get(dateKey) || [];
+  list.innerHTML = scheduledDays.map(([dateKey, items]) => {
+    const [year, month, day] = dateKey.split("-").map(Number);
+    const date = new Date(year, month - 1, day, 12);
     const dayName = new Intl.DateTimeFormat("it-IT", { weekday: "short" }).format(date).replace(".", "");
     const monthName = new Intl.DateTimeFormat("it-IT", { month: "short" }).format(date).replace(".", "");
-    return `<section class="ped-agenda-day${items.length ? " has-content" : ""}" data-ped-agenda-day="${dateKey}">
+    return `<section class="ped-agenda-day has-content" data-ped-agenda-day="${dateKey}">
       <div class="ped-agenda-date">
         <span>${escapeHtml(dayName)}</span>
         <strong>${date.getDate()}</strong>
         <small>${escapeHtml(monthName)}</small>
       </div>
-      <div class="ped-agenda-entries">${items.length
-        ? items.map(pedAgendaItemMarkup).join("")
-        : `<span class="ped-agenda-empty">Nessun contenuto programmato</span>`}
-      </div>
+      <div class="ped-agenda-entries">${items.map(pedAgendaItemMarkup).join("")}</div>
     </section>`;
-  }).join("");
+  }).join("") || `<div class="ped-agenda-month-empty">
+    <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg>
+    <strong>Nessun contenuto programmato</strong>
+    <span>Quando aggiungi un contenuto al calendario, comparirà qui.</span>
+  </div>`;
 
-  summary.textContent = `${state.pedItems.length} ${state.pedItems.length === 1 ? "uscita" : "uscite"} nel mese`;
+  summary.textContent = state.pedItems.length
+    ? `${state.pedItems.length} ${state.pedItems.length === 1 ? "uscita" : "uscite"} in ${scheduledDays.length} ${scheduledDays.length === 1 ? "giorno" : "giorni"}`
+    : "Nessuna uscita nel mese";
 }
 
 function pedAgendaItemMarkup(item) {
