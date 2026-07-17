@@ -1651,6 +1651,8 @@ code { font-family: var(--font-mono); font-size: 12px; }
 .drive-transfer-card.is-error small, .drive-transfer-card.is-error .drive-transfer-head b { color: #a53b29; }
 
 .drive-loading-progress { width: min(460px, 100%); margin: 0 auto; }
+.client-drive-panel { position: relative; }
+.client-drive-panel.is-folder-loading { min-height: 160px; }
 .media-load-progress {
   display: grid;
   gap: 7px;
@@ -2334,7 +2336,28 @@ code { font-family: var(--font-mono); font-size: 12px; }
 .ped-picker-breadcrumbs button { border: 0; background: transparent; color: var(--terracotta); padding: 4px; font-weight: 600; }
 .ped-picker-breadcrumbs span { color: var(--ink); font-weight: 700; }
 .ped-picker-breadcrumbs .lc { width: 14px; height: 14px; color: var(--subtle); }
-.ped-picker-grid { min-height: 260px; max-height: min(560px, 60vh); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-content: start; gap: 8px; overflow-y: auto; padding: 2px; }
+.ped-picker-grid { position: relative; min-height: 260px; max-height: min(560px, 60vh); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-content: start; gap: 8px; overflow-y: auto; padding: 2px; }
+.drive-folder-loading {
+  position: absolute;
+  z-index: 12;
+  right: 12px;
+  bottom: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: rgba(255, 253, 249, .96);
+  box-shadow: 0 8px 24px rgba(34, 28, 22, .12);
+  color: var(--ink);
+  padding: 8px 10px;
+  pointer-events: none;
+}
+.drive-folder-loading strong { font-size: 10px; }
+.drive-folder-spinner { width: 14px; height: 14px; border: 2px solid rgba(193, 79, 43, .2); border-top-color: var(--terracotta); border-radius: 50%; animation: drive-folder-spin .7s linear infinite; }
+.is-folder-loading .ped-picker-entry,
+.is-folder-loading .drive-entry-card { opacity: .58; pointer-events: none; }
+@keyframes drive-folder-spin { to { transform: rotate(360deg); } }
 .ped-picker-entry { min-width: 0; min-height: 68px; display: grid; grid-template-columns: 52px minmax(0, 1fr) 18px; align-items: center; gap: 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-soft); padding: 7px; text-align: left; }
 .ped-picker-entry:hover { border-color: var(--terra-line); background: var(--terra-tint); }
 .ped-picker-entry.is-selected { border-color: #4d795f; background: rgba(77, 121, 95, .1); box-shadow: inset 0 0 0 1px rgba(77, 121, 95, .15); }

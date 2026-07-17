@@ -163,6 +163,13 @@ let clientDriveState = { clientId: "", path: [], objectUrl: "", thumbnailUrls: n
 let selectedPedClientId = "";
 let selectedPedMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
 let pedPickerState = { date: "", path: [], files: [], contentType: "post", caption: "", selectedFiles: [] };
+const DRIVE_FOLDER_BROWSER_CACHE_TTL = 2 * 60 * 1000;
+const driveFolderBrowserCache = new Map();
+const driveFolderBrowserRequests = new Map();
+const driveFolderBrowserVersions = new Map();
+let clientDriveFolderLoadId = 0;
+let pedPickerFolderLoadId = 0;
+let driveFolderPrefetchTimer = null;
 let pedPickerPreviewTimer = null;
 let pedPickerPreviewLoadId = 0;
 let pedShareState = { active: false, shareUrl: "" };
@@ -307,6 +314,100 @@ async function apiFetch(url, options = {}) {
     showLogin();
   }
   return response;
+}
+
+function driveFolderBrowserCacheKey(clientId, folderId = "") {
+  return `${String(clientId || "")}:${String(folderId || "root")}`;
+}
+
+function cachedDriveFolder(clientId, folderId = "") {
+  const key = driveFolderBrowserCacheKey(clientId, folderId);
+  const cached = driveFolderBrowserCache.get(key);
+  if (!cached) return null;
+  if (cached.expiresAt <= Date.now()) {
+    driveFolderBrowserCache.delete(key);
+    return null;
+  }
+  return cached.data;
+}
+
+function cacheDriveFolder(clientId, requestedFolderId, data) {
+  const entry = { data, expiresAt: Date.now() + DRIVE_FOLDER_BROWSER_CACHE_TTL };
+  driveFolderBrowserCache.set(driveFolderBrowserCacheKey(clientId, requestedFolderId), entry);
+  if (data?.folder?.id) {
+    driveFolderBrowserCache.set(driveFolderBrowserCacheKey(clientId, data.folder.id), entry);
+  }
+  return data;
+}
+
+function clearDriveFolderBrowserCache(clientId = "") {
+  const prefix = `${String(clientId || "")}:`;
+  for (const key of driveFolderBrowserCache.keys()) {
+    if (!clientId || key.startsWith(prefix)) driveFolderBrowserCache.delete(key);
+  }
+  if (clientId) {
+    const normalizedClientId = String(clientId);
+    driveFolderBrowserVersions.set(normalizedClientId, (driveFolderBrowserVersions.get(normalizedClientId) || 0) + 1);
+  } else {
+    driveFolderBrowserVersions.clear();
+  }
+}
+
+async function fetchDriveFolder(clientId, folderId = "", { fresh = false } = {}) {
+  const cacheKey = driveFolderBrowserCacheKey(clientId, folderId);
+  if (!fresh) {
+    const cached = cachedDriveFolder(clientId, folderId);
+    if (cached) return { data: cached, cached: true };
+    const pending = driveFolderBrowserRequests.get(cacheKey);
+    if (pending) return { data: await pending, cached: false };
+  } else {
+    clearDriveFolderBrowserCache(clientId);
+  }
+  const normalizedClientId = String(clientId || "");
+  const cacheVersion = driveFolderBrowserVersions.get(normalizedClientId) || 0;
+
+  const request = (async () => {
+    const params = new URLSearchParams({ client_id: clientId });
+    if (folderId) params.set("folder_id", folderId);
+    if (fresh) params.set("refresh", "1");
+    const response = await apiFetch(`/api/client-drive?${params}`);
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "Google Drive non disponibile");
+    if ((driveFolderBrowserVersions.get(normalizedClientId) || 0) === cacheVersion) {
+      cacheDriveFolder(clientId, folderId, data);
+    }
+    return data;
+  })();
+
+  driveFolderBrowserRequests.set(cacheKey, request);
+  try {
+    return { data: await request, cached: false };
+  } finally {
+    if (driveFolderBrowserRequests.get(cacheKey) === request) driveFolderBrowserRequests.delete(cacheKey);
+  }
+}
+
+function showDriveFolderLoading(container, label) {
+  container.querySelector("[data-drive-folder-loading]")?.remove();
+  container.classList.add("is-folder-loading");
+  container.insertAdjacentHTML("beforeend", `
+    <div class="drive-folder-loading" data-drive-folder-loading role="status">
+      <span class="drive-folder-spinner" aria-hidden="true"></span>
+      <strong>${escapeHtml(label)}</strong>
+    </div>`);
+}
+
+function hideDriveFolderLoading(container) {
+  container.classList.remove("is-folder-loading");
+  container.querySelector("[data-drive-folder-loading]")?.remove();
+}
+
+function scheduleDriveFolderPrefetch(clientId, folderId) {
+  window.clearTimeout(driveFolderPrefetchTimer);
+  if (!clientId || !folderId || cachedDriveFolder(clientId, folderId)) return;
+  driveFolderPrefetchTimer = window.setTimeout(() => {
+    fetchDriveFolder(clientId, folderId).catch(() => {});
+  }, 140);
 }
 
 async function loadCurrentUser() {
@@ -1066,23 +1167,15 @@ async function openClientDrive(clientId) {
 async function loadClientDriveFolder(folderId = "", folderName = "", { fresh = false } = {}) {
   const panel = document.querySelector("[data-client-drive-panel]");
   if (!panel) return;
-  clearDriveThumbnailUrls();
+  const loadId = ++clientDriveFolderLoadId;
+  const instantlyAvailable = !fresh && cachedDriveFolder(clientDriveState.clientId, folderId);
   panel.classList.remove("is-hidden");
-  panel.innerHTML = `<div class="drive-loading drive-loading-progress">${mediaProgressMarkup("Apertura cartella Google Drive")}</div>`;
-  const loadingStartedAt = performance.now();
-  let estimated = 6;
-  const loadingTimer = window.setInterval(() => {
-    estimated = Math.min(88, estimated + Math.max(1, (90 - estimated) * 0.08));
-    updateMediaProgress(panel, estimated, "Apertura cartella Google Drive", `Lettura elenco e autorizzazioni · ${formatTransferDuration((performance.now() - loadingStartedAt) / 1000)} trascorsi`);
-  }, 180);
+  if (instantlyAvailable) hideDriveFolderLoading(panel);
+  else showDriveFolderLoading(panel, fresh ? "Aggiornamento cartella" : "Apertura cartella");
 
   try {
-    const params = new URLSearchParams({ client_id: clientDriveState.clientId });
-    if (folderId) params.set("folder_id", folderId);
-    if (fresh) params.set("refresh", "1");
-    const response = await apiFetch(`/api/client-drive?${params}`);
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.error || "Google Drive non disponibile");
+    const { data } = await fetchDriveFolder(clientDriveState.clientId, folderId, { fresh });
+    if (loadId !== clientDriveFolderLoadId) return;
 
     const existingIndex = clientDriveState.path.findIndex((item) => item.id === data.folder.id);
     if (existingIndex >= 0) {
@@ -1092,13 +1185,14 @@ async function loadClientDriveFolder(folderId = "", folderName = "", { fresh = f
     }
     if (clientDriveState.path.length === 1) clientDriveState.path[0].name = data.client.name;
     clientDriveState.uploadEnabled = Boolean(data.upload_enabled);
-    window.clearInterval(loadingTimer);
-    updateMediaProgress(panel, 100, "Cartella pronta", `${(data.files || []).length} elementi`);
+    clearDriveThumbnailUrls();
+    hideDriveFolderLoading(panel);
     panel.innerHTML = driveBrowserMarkup(data.files || [], clientDriveState.uploadEnabled);
     hydrateDriveThumbnails(panel);
     panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
   } catch (error) {
-    window.clearInterval(loadingTimer);
+    if (loadId !== clientDriveFolderLoadId) return;
+    hideDriveFolderLoading(panel);
     panel.innerHTML = `
       <div class="drive-error">
         <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 17h.01"/></svg>
@@ -2177,28 +2271,23 @@ function renderPedCarouselSelection() {
 
 async function loadPedPickerFolder(folderId = "", folderName = "") {
   const grid = document.getElementById("pedPickerGrid");
-  grid.innerHTML = `<div class="ped-picker-loading drive-loading-progress">${mediaProgressMarkup("Caricamento contenuti Drive")}</div>`;
-  const loadingStartedAt = performance.now();
-  let estimated = 5;
-  const loadingTimer = window.setInterval(() => {
-    estimated = Math.min(88, estimated + Math.max(1, (90 - estimated) * 0.08));
-    updateMediaProgress(grid, estimated, "Caricamento contenuti Drive", `Preparazione miniature e permessi · ${formatTransferDuration((performance.now() - loadingStartedAt) / 1000)} trascorsi`);
-  }, 180);
+  const loadId = ++pedPickerFolderLoadId;
+  const instantlyAvailable = cachedDriveFolder(selectedPedClientId, folderId);
+  if (instantlyAvailable) hideDriveFolderLoading(grid);
+  else showDriveFolderLoading(grid, "Apertura cartella");
   try {
-    const params = new URLSearchParams({ client_id: selectedPedClientId });
-    if (folderId) params.set("folder_id", folderId);
-    const response = await apiFetch(`/api/client-drive?${params}`);
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.error || "Google Drive non disponibile");
+    const { data } = await fetchDriveFolder(selectedPedClientId, folderId);
+    if (loadId !== pedPickerFolderLoadId) return;
     const existingIndex = pedPickerState.path.findIndex((item) => item.id === data.folder.id);
     if (existingIndex >= 0) pedPickerState.path = pedPickerState.path.slice(0, existingIndex + 1);
     else pedPickerState.path.push({ id: data.folder.id, name: folderName || data.folder.name });
     if (pedPickerState.path.length === 1) pedPickerState.path[0].name = data.client.name;
     pedPickerState.files = data.files || [];
-    window.clearInterval(loadingTimer);
+    hideDriveFolderLoading(grid);
     renderPedPicker();
   } catch (error) {
-    window.clearInterval(loadingTimer);
+    if (loadId !== pedPickerFolderLoadId) return;
+    hideDriveFolderLoading(grid);
     grid.innerHTML = `<div class="ped-picker-error"><strong>Drive non disponibile</strong><span>${escapeHtml(error.message)}</span></div>`;
   }
 }
@@ -4121,12 +4210,23 @@ document.body.addEventListener("pointerout", (event) => {
 });
 
 document.body.addEventListener("pointerover", (event) => {
+  const pedFolder = event.target.closest?.("[data-ped-picker-folder]");
+  const clientFolder = event.target.closest?.("[data-drive-folder]");
+  if (pedFolder && !pedFolder.contains(event.relatedTarget)) {
+    scheduleDriveFolderPrefetch(selectedPedClientId, pedFolder.dataset.pedPickerFolder);
+  } else if (clientFolder && !clientFolder.contains(event.relatedTarget)) {
+    scheduleDriveFolderPrefetch(clientDriveState.clientId, clientFolder.dataset.driveFolder);
+  }
+
   const entry = event.target.closest?.("[data-ped-picker-preview-type]");
   if (!entry || entry.contains(event.relatedTarget)) return;
   showPedPickerPreview(entry);
 });
 
 document.body.addEventListener("pointerout", (event) => {
+  const folder = event.target.closest?.("[data-ped-picker-folder], [data-drive-folder]");
+  if (folder && !folder.contains(event.relatedTarget)) window.clearTimeout(driveFolderPrefetchTimer);
+
   const entry = event.target.closest?.("[data-ped-picker-preview-type]");
   if (!entry || entry.contains(event.relatedTarget)) return;
   hidePedPickerPreview(entry);
