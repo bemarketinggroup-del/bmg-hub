@@ -164,6 +164,7 @@ let selectedPedClientId = "";
 let selectedPedMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
 let pedPickerState = { date: "", path: [], files: [], contentType: "post", caption: "", selectedFiles: [] };
 let pedPickerPreviewTimer = null;
+let pedPickerPreviewLoadId = 0;
 let pedShareState = { active: false, shareUrl: "" };
 let pedLoadingKey = "";
 let editingPedCaptionId = "";
@@ -1067,7 +1068,13 @@ async function loadClientDriveFolder(folderId = "", folderName = "", { fresh = f
   if (!panel) return;
   clearDriveThumbnailUrls();
   panel.classList.remove("is-hidden");
-  panel.innerHTML = `<div class="drive-loading"><span class="drive-spinner" aria-hidden="true"></span>Caricamento Google Drive...</div>`;
+  panel.innerHTML = `<div class="drive-loading drive-loading-progress">${mediaProgressMarkup("Apertura cartella Google Drive")}</div>`;
+  const loadingStartedAt = performance.now();
+  let estimated = 6;
+  const loadingTimer = window.setInterval(() => {
+    estimated = Math.min(88, estimated + Math.max(1, (90 - estimated) * 0.08));
+    updateMediaProgress(panel, estimated, "Apertura cartella Google Drive", `Lettura elenco e autorizzazioni · ${formatTransferDuration((performance.now() - loadingStartedAt) / 1000)} trascorsi`);
+  }, 180);
 
   try {
     const params = new URLSearchParams({ client_id: clientDriveState.clientId });
@@ -1085,10 +1092,13 @@ async function loadClientDriveFolder(folderId = "", folderName = "", { fresh = f
     }
     if (clientDriveState.path.length === 1) clientDriveState.path[0].name = data.client.name;
     clientDriveState.uploadEnabled = Boolean(data.upload_enabled);
+    window.clearInterval(loadingTimer);
+    updateMediaProgress(panel, 100, "Cartella pronta", `${(data.files || []).length} elementi`);
     panel.innerHTML = driveBrowserMarkup(data.files || [], clientDriveState.uploadEnabled);
     hydrateDriveThumbnails(panel);
     panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
   } catch (error) {
+    window.clearInterval(loadingTimer);
     panel.innerHTML = `
       <div class="drive-error">
         <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 17h.01"/></svg>
@@ -1163,10 +1173,10 @@ function driveEntryMarkup(file, writeEnabled) {
       </button>
       <div class="drive-content-actions">
         ${!file.is_folder ? `
-          <a class="drive-download-button" href="${escapeHtml(downloadUrl)}" download="${escapeHtml(file.name)}" aria-label="Scarica ${escapeHtml(file.name)}">
+          <button class="drive-download-button" data-drive-download-url="${escapeHtml(downloadUrl)}" data-drive-download-name="${escapeHtml(file.name)}" data-drive-download-size="${escapeHtml(file.size || "")}" type="button" aria-label="Scarica ${escapeHtml(file.name)}">
             <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5"/><path d="M5 20h14"/></svg>
             Scarica
-          </a>` : `<span class="drive-folder-actions-label">Gestisci cartella</span>`}
+          </button>` : `<span class="drive-folder-actions-label">Gestisci cartella</span>`}
         <button class="drive-manage-button" data-drive-rename="${escapeHtml(file.id)}" data-drive-name="${escapeHtml(file.name)}" data-drive-is-folder="${file.is_folder ? "1" : "0"}" type="button" title="Rinomina" aria-label="Rinomina ${escapeHtml(file.name)}" ${writeEnabled ? "" : "disabled"}>
           <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4z"/></svg>
         </button>
@@ -1298,19 +1308,27 @@ async function uploadDriveFiles(files) {
   const status = panel?.querySelector("[data-drive-upload-status]");
   const folder = clientDriveState.path[clientDriveState.path.length - 1];
   if (!folder) return;
+  const totalBytes = selectedFiles.reduce((sum, file) => sum + Number(file.size || 0), 0);
+  const transfer = createTransferProgress(`Upload ${selectedFiles.length === 1 ? selectedFiles[0].name : `${selectedFiles.length} file`}`, { total: totalBytes });
+  let completedBytes = 0;
+  const startedAt = performance.now();
 
-  const showProgress = (message, percent = 0, failed = false) => {
+  const showProgress = (message, loaded = completedBytes, failed = false) => {
     if (!status) return;
+    const percent = totalBytes ? (loaded / totalBytes) * 100 : 0;
+    const elapsed = Math.max(0.001, (performance.now() - startedAt) / 1000);
+    const speed = loaded / elapsed;
+    const eta = speed > 0 && totalBytes > loaded ? (totalBytes - loaded) / speed : 0;
     status.classList.remove("is-hidden", "is-error");
     if (failed) status.classList.add("is-error");
-    status.innerHTML = `<div><strong>${escapeHtml(message)}</strong><span>${Math.round(percent)}%</span></div><progress max="100" value="${Math.round(percent)}"></progress>`;
+    status.innerHTML = `<div><strong>${escapeHtml(message)}</strong><span>${Math.round(percent)}%</span></div><progress max="100" value="${Math.round(percent)}"></progress><small>${formatFileSize(loaded)} / ${formatFileSize(totalBytes)}${speed > 0 ? ` · ${formatFileSize(speed)}/s` : ""}${eta > 0 ? ` · circa ${formatTransferDuration(eta)} rimanenti` : ""}</small>`;
+    transfer.update({ loaded, totalBytes, message });
   };
 
   try {
     for (let index = 0; index < selectedFiles.length; index += 1) {
       const file = selectedFiles[index];
-      const baseProgress = (index / selectedFiles.length) * 100;
-      showProgress(`Caricamento ${file.name}`, baseProgress);
+      showProgress(`Preparazione ${file.name}`, completedBytes);
       const response = await apiFetch(`/api/client-drive?client_id=${encodeURIComponent(clientDriveState.clientId)}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1324,15 +1342,17 @@ async function uploadDriveFiles(files) {
       const data = await response.json().catch(() => ({}));
       if (!response.ok || !data.upload_url) throw new Error(data.error || "Sessione di caricamento non disponibile");
 
-      await uploadFileToDrive(data.upload_url, file, (fileProgress) => {
-        const totalProgress = ((index + fileProgress / 100) / selectedFiles.length) * 100;
-        showProgress(`Caricamento ${file.name}`, totalProgress);
+      await uploadFileToDrive(data.upload_url, file, (fileProgress, loaded) => {
+        showProgress(`Caricamento ${file.name}`, completedBytes + loaded);
       });
+      completedBytes += Number(file.size || 0);
     }
-    showProgress(`${selectedFiles.length} ${selectedFiles.length === 1 ? "file caricato" : "file caricati"}`, 100);
+    showProgress(`${selectedFiles.length} ${selectedFiles.length === 1 ? "file caricato" : "file caricati"}`, totalBytes);
+    transfer.complete("Upload completato");
     await loadClientDriveFolder(folder.id, folder.name, { fresh: true });
   } catch (error) {
-    showProgress(error.message || "Caricamento non riuscito", 0, true);
+    showProgress(error.message || "Caricamento non riuscito", completedBytes, true);
+    transfer.fail(error.message || "Caricamento non riuscito");
   }
 }
 
@@ -1342,7 +1362,7 @@ function uploadFileToDrive(uploadUrl, file, onProgress) {
     request.open("PUT", uploadUrl);
     request.setRequestHeader("Content-Type", file.type || "application/octet-stream");
     request.upload.addEventListener("progress", (event) => {
-      if (event.lengthComputable) onProgress((event.loaded / event.total) * 100);
+      if (event.lengthComputable) onProgress((event.loaded / event.total) * 100, event.loaded, event.total);
     });
     request.addEventListener("load", () => {
       if (request.status >= 200 && request.status < 300) resolve();
@@ -1404,6 +1424,223 @@ function formatFileSize(value) {
 function formatDriveDate(value) {
   if (!value) return "";
   return new Intl.DateTimeFormat("it-IT", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(value));
+}
+
+function formatTransferDuration(value) {
+  const seconds = Math.max(0, Math.round(Number(value || 0)));
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.floor(seconds / 60);
+  const remainder = seconds % 60;
+  return `${minutes}m ${String(remainder).padStart(2, "0")}s`;
+}
+
+function transferCenterElement() {
+  let center = document.getElementById("driveTransferCenter");
+  if (center) {
+    if (typeof center.showPopover === "function" && !center.matches(":popover-open")) center.showPopover();
+    return center;
+  }
+  center = document.createElement("div");
+  center.id = "driveTransferCenter";
+  center.className = "drive-transfer-center";
+  center.setAttribute("popover", "manual");
+  center.setAttribute("aria-live", "polite");
+  document.body.append(center);
+  if (typeof center.showPopover === "function") center.showPopover();
+  return center;
+}
+
+function createTransferProgress(label, { total = 0, estimated = false } = {}) {
+  const center = transferCenterElement();
+  const card = document.createElement("section");
+  const startedAt = performance.now();
+  card.className = "drive-transfer-card";
+  card.innerHTML = `
+    <div class="drive-transfer-head"><strong>${escapeHtml(label)}</strong><b data-transfer-percent>0%</b></div>
+    <progress max="100" value="0"></progress>
+    <small data-transfer-detail>${estimated ? "Preparazione in corso" : "Avvio trasferimento"}</small>`;
+  center.prepend(card);
+  const progress = card.querySelector("progress");
+  const percentLabel = card.querySelector("[data-transfer-percent]");
+  const detail = card.querySelector("[data-transfer-detail]");
+  let lastLoaded = 0;
+  let lastUpdateAt = startedAt;
+  let smoothedSpeed = 0;
+
+  const api = {
+    update({ loaded = lastLoaded, totalBytes = total, percent = null, message = "" } = {}) {
+      const now = performance.now();
+      const elapsed = Math.max(0.001, (now - startedAt) / 1000);
+      const deltaSeconds = Math.max(0.001, (now - lastUpdateAt) / 1000);
+      const instantSpeed = Math.max(0, Number(loaded || 0) - lastLoaded) / deltaSeconds;
+      if (instantSpeed > 0) smoothedSpeed = smoothedSpeed ? (smoothedSpeed * 0.72) + (instantSpeed * 0.28) : instantSpeed;
+      lastLoaded = Number(loaded || 0);
+      lastUpdateAt = now;
+      const calculated = totalBytes > 0 ? (lastLoaded / totalBytes) * 100 : 0;
+      const value = Math.max(0, Math.min(100, Number(percent ?? calculated) || 0));
+      progress.value = value;
+      percentLabel.textContent = `${Math.round(value)}%`;
+      const pieces = [];
+      if (message) pieces.push(message);
+      if (totalBytes > 0) pieces.push(`${formatFileSize(lastLoaded)} / ${formatFileSize(totalBytes)}`);
+      if (smoothedSpeed > 0) pieces.push(`${formatFileSize(smoothedSpeed)}/s`);
+      if (totalBytes > lastLoaded && smoothedSpeed > 0) pieces.push(`circa ${formatTransferDuration((totalBytes - lastLoaded) / smoothedSpeed)} rimanenti`);
+      pieces.push(`${formatTransferDuration(elapsed)} trascorsi`);
+      detail.textContent = pieces.join(" · ");
+    },
+    complete(message = "Completato") {
+      progress.value = 100;
+      percentLabel.textContent = "100%";
+      detail.textContent = `${message} · ${formatTransferDuration((performance.now() - startedAt) / 1000)}`;
+      card.classList.add("is-complete");
+      window.setTimeout(() => {
+        card.remove();
+        if (!center.children.length && typeof center.hidePopover === "function" && center.matches(":popover-open")) center.hidePopover();
+      }, 3500);
+    },
+    fail(message = "Operazione non riuscita") {
+      card.classList.add("is-error");
+      detail.textContent = message;
+    }
+  };
+  return api;
+}
+
+async function readResponseBlobWithProgress(response, transfer, sizeHint = 0) {
+  const total = Number(response.headers.get("content-length") || sizeHint || 0);
+  if (!response.body?.getReader) {
+    const blob = await response.blob();
+    transfer?.update({ loaded: blob.size, totalBytes: blob.size || total, percent: 100 });
+    return blob;
+  }
+  const reader = response.body.getReader();
+  const chunks = [];
+  let loaded = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+    loaded += value.byteLength;
+    transfer?.update({ loaded, totalBytes: total });
+  }
+  return new Blob(chunks, { type: response.headers.get("content-type") || "application/octet-stream" });
+}
+
+function saveDownloadedBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename || "download";
+  document.body.append(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 30000);
+}
+
+async function downloadDriveResource(url, filename, button = null, sizeHint = 0, { authenticated = false } = {}) {
+  if (!url) return;
+  const transfer = createTransferProgress(`Download ${filename || "contenuto"}`, { total: Number(sizeHint || 0) });
+  if (button) button.disabled = true;
+  try {
+    const response = authenticated ? await apiFetch(url) : await fetch(url);
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.error || `Download non riuscito (${response.status})`);
+    }
+    const blob = await readResponseBlobWithProgress(response, transfer, sizeHint);
+    saveDownloadedBlob(blob, filename);
+    transfer.complete("Download completato");
+  } catch (error) {
+    transfer.fail(error.message || "Download non riuscito");
+    throw error;
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
+
+function mediaProgressMarkup(message = "Caricamento anteprima") {
+  return `<div class="media-load-progress" data-media-progress>
+    <div><span data-media-message>${escapeHtml(message)}</span><b data-media-percent>0%</b></div>
+    <progress max="100" value="0"></progress>
+    <small data-media-detail>Preparazione...</small>
+  </div>`;
+}
+
+function updateMediaProgress(container, percent, message, detail = "") {
+  const root = container?.querySelector?.("[data-media-progress]");
+  if (!root) return;
+  const value = Math.max(0, Math.min(100, Number(percent || 0)));
+  root.classList.remove("is-hidden", "is-error");
+  root.querySelector("progress").value = value;
+  root.querySelector("[data-media-percent]").textContent = `${Math.round(value)}%`;
+  root.querySelector("[data-media-message]").textContent = message;
+  root.querySelector("[data-media-detail]").textContent = detail;
+}
+
+function failMediaProgress(container, message) {
+  const root = container?.querySelector?.("[data-media-progress]");
+  if (!root) return;
+  root.classList.add("is-error");
+  root.querySelector("[data-media-message]").textContent = "Anteprima non riproducibile";
+  root.querySelector("[data-media-detail]").textContent = message;
+  root.querySelector("[data-media-percent]").textContent = "";
+}
+
+function bindStreamProgress(media, container, { autoplay = false } = {}) {
+  const startedAt = performance.now();
+  const elapsedLabel = () => `${formatTransferDuration((performance.now() - startedAt) / 1000)} trascorsi`;
+  let currentPercent = 0;
+  let currentMessage = "Preparazione anteprima";
+  let currentDetail = "";
+  let timer = null;
+  const stopTimer = () => {
+    if (timer) window.clearInterval(timer);
+    timer = null;
+  };
+  const setStatus = (percent, message, detail = "") => {
+    currentPercent = percent;
+    currentMessage = message;
+    currentDetail = detail;
+    updateMediaProgress(container, percent, message, [detail, elapsedLabel()].filter(Boolean).join(" · "));
+  };
+  timer = window.setInterval(() => {
+    if (!media.isConnected) return stopTimer();
+    setStatus(currentPercent, currentMessage, currentDetail);
+  }, 500);
+  media.addEventListener("loadstart", () => setStatus(3, "Connessione a Google Drive"));
+  media.addEventListener("loadedmetadata", () => setStatus(15, "Metadati caricati"));
+  media.addEventListener("progress", () => {
+    if (!Number.isFinite(media.duration) || !media.duration || !media.buffered.length) return;
+    const buffered = media.buffered.end(media.buffered.length - 1);
+    setStatus(Math.min(99, (buffered / media.duration) * 100), "Buffering video", `${formatTransferDuration(buffered)} disponibili`);
+  });
+  media.addEventListener("canplay", () => {
+    setStatus(100, "Anteprima pronta");
+    if (autoplay) {
+      media.play().catch(() => {
+        stopTimer();
+        failMediaProgress(container, "Il browser ha bloccato la riproduzione automatica. Clicca il file per aprirlo.");
+      });
+    } else {
+      stopTimer();
+      window.setTimeout(() => container.querySelector("[data-media-progress]")?.classList.add("is-hidden"), 450);
+    }
+  });
+  media.addEventListener("playing", () => {
+    stopTimer();
+    setStatus(100, "Riproduzione");
+    window.setTimeout(() => container.querySelector("[data-media-progress]")?.classList.add("is-hidden"), 450);
+  });
+  media.addEventListener("waiting", () => setStatus(Math.max(35, currentPercent), "Buffering video"));
+  media.addEventListener("stalled", () => setStatus(Math.max(25, currentPercent), "Connessione lenta"));
+  media.addEventListener("error", () => {
+    stopTimer();
+    const code = media.error?.code;
+    const explanation = code === 4
+      ? "Il codec di questo video MOV non è supportato dal browser. Il file resta scaricabile e apribile da Drive."
+      : "Google Drive non ha consegnato il video o la connessione è stata interrotta.";
+    failMediaProgress(container, explanation);
+  });
 }
 
 function localDateKey(value) {
@@ -1782,35 +2019,33 @@ function pedAgendaItemMarkup(item) {
       <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
       <span>${item.caption ? "Copy" : "Scrivi copy"}</span>
     </button>`}
-    ${files.length > 1 ? `<button class="ped-agenda-download" data-ped-carousel-download="${escapeHtml(item.id)}" data-ped-download-name="${escapeHtml(title)}" type="button" title="Scarica tutti i contenuti in un unico ZIP">` : `<a class="ped-agenda-download" href="${escapeHtml(primary.download_url || "#")}" download title="Scarica ${escapeHtml(primary.drive_file_name)}">`}
+    ${files.length > 1 ? `<button class="ped-agenda-download" data-ped-carousel-download="${escapeHtml(item.id)}" data-ped-download-name="${escapeHtml(title)}" type="button" title="Scarica tutti i contenuti in un unico ZIP">` : `<button class="ped-agenda-download" data-drive-download-url="${escapeHtml(primary.download_url || "")}" data-drive-download-name="${escapeHtml(primary.drive_file_name || title)}" type="button" title="Scarica ${escapeHtml(primary.drive_file_name)}">`}
       <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
       <span>${files.length > 1 ? "Scarica ZIP" : "Scarica"}</span>
-    ${files.length > 1 ? `</button>` : `</a>`}
+    </button>
   </article>`;
 }
 
 async function downloadPedCarousel(groupId, button) {
   const original = button.innerHTML;
+  const transfer = createTransferProgress("Preparazione carosello ZIP", { estimated: true });
   button.disabled = true;
   button.textContent = "Preparo ZIP...";
   try {
+    transfer.update({ percent: 5, message: "Creazione archivio sul server" });
     const response = await apiFetch(`/api/ped-carousel-download?group_id=${encodeURIComponent(groupId)}`);
     if (!response.ok) {
       const data = await response.json().catch(() => ({}));
       throw new Error(data.error || "Download del carosello non riuscito");
     }
-    const blob = await response.blob();
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
     const disposition = response.headers.get("Content-Disposition") || "";
     const filename = disposition.match(/filename="?([^";]+)"?/i)?.[1];
-    link.href = url;
-    link.download = filename || `carosello-${groupId}.zip`;
-    document.body.append(link);
-    link.click();
-    link.remove();
-    window.setTimeout(() => URL.revokeObjectURL(url), 30000);
+    transfer.update({ percent: 8, message: `Download ${filename || "carosello ZIP"}` });
+    const blob = await readResponseBlobWithProgress(response, transfer);
+    saveDownloadedBlob(blob, filename || `carosello-${groupId}.zip`);
+    transfer.complete("ZIP scaricato");
   } catch (error) {
+    transfer.fail(error.message || "Download del carosello non riuscito");
     alert(error.message);
   } finally {
     button.disabled = false;
@@ -1903,7 +2138,13 @@ function renderPedCarouselSelection() {
 
 async function loadPedPickerFolder(folderId = "", folderName = "") {
   const grid = document.getElementById("pedPickerGrid");
-  grid.innerHTML = `<div class="ped-picker-loading"><span class="drive-spinner" aria-hidden="true"></span>Caricamento Drive...</div>`;
+  grid.innerHTML = `<div class="ped-picker-loading drive-loading-progress">${mediaProgressMarkup("Caricamento contenuti Drive")}</div>`;
+  const loadingStartedAt = performance.now();
+  let estimated = 5;
+  const loadingTimer = window.setInterval(() => {
+    estimated = Math.min(88, estimated + Math.max(1, (90 - estimated) * 0.08));
+    updateMediaProgress(grid, estimated, "Caricamento contenuti Drive", `Preparazione miniature e permessi · ${formatTransferDuration((performance.now() - loadingStartedAt) / 1000)} trascorsi`);
+  }, 180);
   try {
     const params = new URLSearchParams({ client_id: selectedPedClientId });
     if (folderId) params.set("folder_id", folderId);
@@ -1915,8 +2156,10 @@ async function loadPedPickerFolder(folderId = "", folderName = "") {
     else pedPickerState.path.push({ id: data.folder.id, name: folderName || data.folder.name });
     if (pedPickerState.path.length === 1) pedPickerState.path[0].name = data.client.name;
     pedPickerState.files = data.files || [];
+    window.clearInterval(loadingTimer);
     renderPedPicker();
   } catch (error) {
+    window.clearInterval(loadingTimer);
     grid.innerHTML = `<div class="ped-picker-error"><strong>Drive non disponibile</strong><span>${escapeHtml(error.message)}</span></div>`;
   }
 }
@@ -1939,7 +2182,7 @@ function renderPedPicker() {
     const previewSource = previewType === "video" ? file.content_url : (file.thumbnail_url || file.content_url);
     const selected = !file.is_folder && pedPickerState.selectedFiles.some((item) => String(item.id) === String(file.id));
     const previewAttributes = previewType && previewSource
-      ? ` data-ped-picker-preview-type="${previewType}" data-ped-picker-preview-src="${escapeHtml(previewSource)}" data-ped-picker-preview-poster="${escapeHtml(file.thumbnail_url || "")}"`
+      ? ` data-ped-picker-preview-type="${previewType}" data-ped-picker-preview-src="${escapeHtml(previewSource)}" data-ped-picker-preview-poster="${escapeHtml(file.thumbnail_url || "")}" data-ped-picker-preview-mime="${escapeHtml(file.mime_type || "")}" data-ped-picker-size="${escapeHtml(file.size || "")}"`
       : "";
     return `<button class="ped-picker-entry${file.is_folder ? " is-folder" : ""}${selected ? " is-selected" : ""}" ${file.is_folder ? "data-ped-picker-folder" : "data-ped-picker-file"}="${escapeHtml(file.id)}" data-ped-picker-name="${escapeHtml(file.name)}"${previewAttributes} type="button"${file.is_folder ? "" : ` aria-pressed="${selected}"`}>
       <span class="ped-picker-media">${hasPreview
@@ -1969,12 +2212,13 @@ function showPedPickerPreview(entry) {
   if (!type || !source) return;
 
   clearTimeout(pedPickerPreviewTimer);
+  const loadId = ++pedPickerPreviewLoadId;
   const preview = pedPickerPreviewElement();
   const name = entry.dataset.pedPickerName || "Anteprima contenuto";
   const poster = entry.dataset.pedPickerPreviewPoster || "";
   preview.innerHTML = type === "video"
-    ? `<video muted loop playsinline preload="none" poster="${escapeHtml(poster)}" aria-label="Anteprima ${escapeHtml(name)}"></video><span class="ped-picker-preview-kind"><svg class="lc" viewBox="0 0 24 24"><path d="m9 7 8 5-8 5z"/></svg> Video</span>`
-    : `<img src="${escapeHtml(source)}" alt="Anteprima ${escapeHtml(name)}" decoding="async">`;
+    ? `<video muted loop playsinline autoplay preload="metadata" poster="${escapeHtml(poster)}" aria-label="Anteprima ${escapeHtml(name)}"></video>${mediaProgressMarkup("Preparazione video")}<span class="ped-picker-preview-kind"><svg class="lc" viewBox="0 0 24 24"><path d="m9 7 8 5-8 5z"/></svg> Video</span>`
+    : `<img alt="Anteprima ${escapeHtml(name)}" decoding="async">${mediaProgressMarkup("Caricamento foto")}`;
   preview.dataset.owner = entry.dataset.pedPickerFile || "";
   preview.classList.add("is-visible");
   if (typeof preview.showPopover === "function") {
@@ -1997,18 +2241,40 @@ function showPedPickerPreview(entry) {
 
   if (type === "video") {
     pedPickerPreviewTimer = window.setTimeout(() => {
-      if (preview.dataset.owner !== (entry.dataset.pedPickerFile || "") || !preview.classList.contains("is-visible")) return;
+      if (loadId !== pedPickerPreviewLoadId || preview.dataset.owner !== (entry.dataset.pedPickerFile || "") || !preview.classList.contains("is-visible")) return;
       const video = preview.querySelector("video");
       if (!video) return;
+      bindStreamProgress(video, preview, { autoplay: true });
       video.src = source;
+      video.load();
       video.play().catch(() => {});
-    }, 220);
+    }, 120);
+  } else {
+    const image = preview.querySelector("img");
+    const startedAt = performance.now();
+    let percent = 8;
+    const timer = window.setInterval(() => {
+      if (loadId !== pedPickerPreviewLoadId) return window.clearInterval(timer);
+      percent = Math.min(90, percent + 7);
+      updateMediaProgress(preview, percent, "Caricamento foto", `${formatTransferDuration((performance.now() - startedAt) / 1000)} trascorsi`);
+    }, 120);
+    image.addEventListener("load", () => {
+      window.clearInterval(timer);
+      updateMediaProgress(preview, 100, "Anteprima pronta", `${formatTransferDuration((performance.now() - startedAt) / 1000)} trascorsi`);
+      window.setTimeout(() => preview.querySelector("[data-media-progress]")?.classList.add("is-hidden"), 350);
+    }, { once: true });
+    image.addEventListener("error", () => {
+      window.clearInterval(timer);
+      failMediaProgress(preview, "La miniatura non è disponibile. Clicca il file per aprirlo.");
+    }, { once: true });
+    image.src = source;
   }
 }
 
 function hidePedPickerPreview(entry = null) {
   clearTimeout(pedPickerPreviewTimer);
   pedPickerPreviewTimer = null;
+  pedPickerPreviewLoadId += 1;
   const preview = document.getElementById("pedPickerHoverPreview");
   if (!preview || (entry && preview.dataset.owner !== (entry.dataset.pedPickerFile || ""))) return;
   preview.querySelector("video")?.pause();
@@ -2189,25 +2455,53 @@ async function openDriveFile(fileId, fileName, mimeType, contentUrl = "") {
       || type.startsWith("text/")
       || type.startsWith("application/vnd.google-apps.");
     if (!previewable) {
-      const link = document.createElement("a");
-      link.href = sourceUrl;
-      link.download = fileName || "file";
-      link.click();
-      return;
+      return downloadDriveResource(sourceUrl, fileName || "file").catch((error) => alert(error.message));
     }
 
     document.getElementById("drivePreviewTitle").textContent = fileName || "Anteprima file";
     const body = document.getElementById("drivePreviewBody");
-    if (type.startsWith("image/")) {
-      body.innerHTML = `<img src="${escapeHtml(sourceUrl)}" alt="${escapeHtml(fileName)}">`;
-    } else if (type.startsWith("video/")) {
-      body.innerHTML = `<video src="${escapeHtml(sourceUrl)}" controls preload="metadata" playsinline></video>`;
-    } else if (type.startsWith("audio/")) {
-      body.innerHTML = `<audio src="${escapeHtml(sourceUrl)}" controls preload="metadata"></audio>`;
-    } else {
-      body.innerHTML = `<iframe src="${escapeHtml(sourceUrl)}" title="${escapeHtml(fileName)}"></iframe>`;
-    }
+    body.innerHTML = `${mediaProgressMarkup("Caricamento anteprima")}<div data-drive-preview-media></div>`;
     document.getElementById("drivePreviewModal").showModal();
+    const mediaRoot = body.querySelector("[data-drive-preview-media]");
+    if (type.startsWith("image/")) {
+      const image = new Image();
+      image.alt = fileName || "Anteprima file";
+      image.addEventListener("load", () => {
+        updateMediaProgress(body, 100, "Anteprima pronta");
+        window.setTimeout(() => body.querySelector("[data-media-progress]")?.classList.add("is-hidden"), 400);
+      }, { once: true });
+      image.addEventListener("error", () => failMediaProgress(body, "Immagine non disponibile o formato non supportato."), { once: true });
+      mediaRoot.append(image);
+      updateMediaProgress(body, 8, "Caricamento immagine", "Lettura da Google Drive...");
+      image.src = sourceUrl;
+    } else if (type.startsWith("video/")) {
+      const video = document.createElement("video");
+      video.controls = true;
+      video.preload = "metadata";
+      video.playsInline = true;
+      bindStreamProgress(video, body);
+      mediaRoot.append(video);
+      video.src = sourceUrl;
+      video.load();
+    } else if (type.startsWith("audio/")) {
+      const audio = document.createElement("audio");
+      audio.controls = true;
+      audio.preload = "metadata";
+      bindStreamProgress(audio, body);
+      mediaRoot.append(audio);
+      audio.src = sourceUrl;
+      audio.load();
+    } else {
+      const frame = document.createElement("iframe");
+      frame.title = fileName || "Anteprima file";
+      frame.addEventListener("load", () => {
+        updateMediaProgress(body, 100, "Documento pronto");
+        window.setTimeout(() => body.querySelector("[data-media-progress]")?.classList.add("is-hidden"), 400);
+      }, { once: true });
+      mediaRoot.append(frame);
+      updateMediaProgress(body, 10, "Caricamento documento", "Lettura da Google Drive...");
+      frame.src = sourceUrl;
+    }
   } catch (error) {
     alert(error.message || "Non riesco ad aprire il file.");
   }
@@ -3625,6 +3919,7 @@ document.body.addEventListener("click", (event) => {
   const driveFolder = event.target.closest("[data-drive-folder]");
   const driveBreadcrumb = event.target.closest("[data-drive-breadcrumb]");
   const driveFile = event.target.closest("[data-drive-file]");
+  const driveDownload = event.target.closest("[data-drive-download-url]");
   const driveUpload = event.target.closest("[data-drive-upload]");
   const driveCreateFolder = event.target.closest("[data-drive-create-folder]");
   const driveRename = event.target.closest("[data-drive-rename]");
@@ -3658,6 +3953,14 @@ document.body.addEventListener("click", (event) => {
     const index = Number(driveBreadcrumb.dataset.driveBreadcrumb);
     const target = clientDriveState.path[index];
     if (target) return loadClientDriveFolder(target.id, target.name);
+  }
+  if (driveDownload) {
+    return downloadDriveResource(
+      driveDownload.dataset.driveDownloadUrl,
+      driveDownload.dataset.driveDownloadName || "contenuto",
+      driveDownload,
+      Number(driveDownload.dataset.driveDownloadSize || 0)
+    ).catch((error) => alert(error.message || "Download non riuscito"));
   }
   if (driveFile) return openDriveFile(driveFile.dataset.driveFile, driveFile.dataset.driveName, driveFile.dataset.driveMime, driveFile.dataset.driveContentUrl);
   if (driveUpload) return document.querySelector("[data-drive-upload-input]")?.click();
