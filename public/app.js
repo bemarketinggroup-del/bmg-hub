@@ -2905,7 +2905,6 @@ function selectPedCaptionItem(id, { focus = false } = {}) {
   const format = pedTypeMeta(item.content_type);
   const editor = document.getElementById("pedCaptionText");
   const isStory = format.type === "story";
-  const primary = pedItemFiles(item)[0];
   editor.innerHTML = item.caption_html || pedPlainCaptionHtml(item.caption || "");
   editor.contentEditable = isStory ? "false" : "true";
   document.getElementById("pedCaptionEditorBlock").hidden = isStory;
@@ -2913,8 +2912,9 @@ function selectPedCaptionItem(id, { focus = false } = {}) {
   document.getElementById("pedCaptionCopyButton").hidden = isStory;
   document.getElementById("pedCaptionPublishingStatus").value = pedPublishingStatus(item.publishing_status);
   const previewLink = document.getElementById("pedCaptionPreviewLink");
-  previewLink.href = primary.content_url || primary.drive_web_url || "#";
-  previewLink.hidden = !primary.content_url && !primary.drive_web_url;
+  previewLink.dataset.pedCaptionPreview = String(item.id);
+  previewLink.hidden = !pedItemFiles(item).some((file) => file.content_url || file.drive_web_url || file.drive_file_id);
+  previewLink.textContent = pedItemFiles(item).length > 1 ? `Apri ${pedItemFiles(item).length} contenuti` : "Apri contenuto";
   document.getElementById("pedCaptionEyebrow").textContent = `Programmazione · ${pedCaptionDateLabel(item.scheduled_date)}`;
   document.getElementById("pedCaptionTitle").textContent = pedItemTitle(item);
   document.getElementById("pedCaptionMessage").textContent = "";
@@ -3033,6 +3033,7 @@ async function openDriveFile(fileId, fileName, mimeType, contentUrl = "") {
 
     document.getElementById("drivePreviewTitle").textContent = fileName || "Anteprima file";
     const body = document.getElementById("drivePreviewBody");
+    body.classList.remove("is-ped-carousel");
     body.innerHTML = `${mediaProgressMarkup("Caricamento anteprima")}<div data-drive-preview-media></div>`;
     document.getElementById("drivePreviewModal").showModal();
     const mediaRoot = body.querySelector("[data-drive-preview-media]");
@@ -3078,6 +3079,152 @@ async function openDriveFile(fileId, fileName, mimeType, contentUrl = "") {
   } catch (error) {
     alert(error.message || "Non riesco ad aprire il file.");
   }
+}
+
+function pedFileContentUrl(file) {
+  if (file.content_url) return file.content_url;
+  if (!file.drive_file_id) return file.drive_web_url || "";
+  return `/api/client-drive?${new URLSearchParams({
+    client_id: String(selectedPedClientId || ""),
+    file_id: String(file.drive_file_id),
+    action: "content"
+  })}`;
+}
+
+function pedCarouselMedia(file) {
+  const type = String(file.drive_mime_type || "");
+  const sourceUrl = pedFileContentUrl(file);
+  if (!sourceUrl) {
+    const message = document.createElement("p");
+    message.className = "ped-carousel-preview-error";
+    message.textContent = "Anteprima non disponibile per questo contenuto.";
+    return message;
+  }
+  if (type.startsWith("image/")) {
+    const image = new Image();
+    image.alt = file.drive_file_name || "Contenuto del carosello";
+    image.decoding = "async";
+    image.src = sourceUrl;
+    image.addEventListener("error", () => {
+      if (file.thumbnail_url && image.src !== file.thumbnail_url) image.src = file.thumbnail_url;
+    }, { once: true });
+    return image;
+  }
+  if (type.startsWith("video/")) {
+    const video = document.createElement("video");
+    video.controls = true;
+    video.playsInline = true;
+    video.preload = "metadata";
+    video.src = sourceUrl;
+    return video;
+  }
+  if (type.startsWith("audio/")) {
+    const audio = document.createElement("audio");
+    audio.controls = true;
+    audio.preload = "metadata";
+    audio.src = sourceUrl;
+    return audio;
+  }
+  const frame = document.createElement("iframe");
+  frame.title = file.drive_file_name || "Contenuto del carosello";
+  frame.src = sourceUrl;
+  return frame;
+}
+
+function openPedCarouselPreview(item) {
+  const files = pedItemFiles(item);
+  if (files.length < 2) {
+    const file = files[0];
+    return openDriveFile(file.drive_file_id, file.drive_file_name, file.drive_mime_type, file.content_url || "");
+  }
+
+  const modal = document.getElementById("drivePreviewModal");
+  const title = document.getElementById("drivePreviewTitle");
+  const body = document.getElementById("drivePreviewBody");
+  title.textContent = `Carosello · ${files.length} contenuti`;
+  body.replaceChildren();
+  body.classList.add("is-ped-carousel");
+
+  const viewer = document.createElement("div");
+  viewer.className = "ped-carousel-preview";
+  const stage = document.createElement("div");
+  stage.className = "ped-carousel-preview-stage";
+  const media = document.createElement("div");
+  media.className = "ped-carousel-preview-media";
+  const previous = document.createElement("button");
+  previous.className = "ped-carousel-preview-arrow is-previous";
+  previous.type = "button";
+  previous.title = "Contenuto precedente";
+  previous.setAttribute("aria-label", "Contenuto precedente");
+  previous.textContent = "‹";
+  const next = document.createElement("button");
+  next.className = "ped-carousel-preview-arrow is-next";
+  next.type = "button";
+  next.title = "Contenuto successivo";
+  next.setAttribute("aria-label", "Contenuto successivo");
+  next.textContent = "›";
+  const position = document.createElement("span");
+  position.className = "ped-carousel-preview-position";
+  stage.append(media, previous, next, position);
+
+  const footer = document.createElement("div");
+  footer.className = "ped-carousel-preview-footer";
+  const fileName = document.createElement("strong");
+  const thumbnails = document.createElement("div");
+  thumbnails.className = "ped-carousel-preview-thumbs";
+  footer.append(fileName, thumbnails);
+  viewer.append(stage, footer);
+  body.append(viewer);
+
+  let activeIndex = 0;
+  const thumbButtons = files.map((file, index) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "ped-carousel-preview-thumb";
+    button.title = file.drive_file_name || `Contenuto ${index + 1}`;
+    button.setAttribute("aria-label", `Apri contenuto ${index + 1} di ${files.length}`);
+    if (file.thumbnail_url) {
+      const image = new Image();
+      image.alt = "";
+      image.loading = "lazy";
+      image.src = file.thumbnail_url;
+      button.append(image);
+    } else {
+      const label = document.createElement("span");
+      label.textContent = String(index + 1);
+      button.append(label);
+    }
+    button.addEventListener("click", () => renderSlide(index));
+    thumbnails.append(button);
+    return button;
+  });
+
+  function renderSlide(index) {
+    activeIndex = (index + files.length) % files.length;
+    const file = files[activeIndex];
+    media.replaceChildren(pedCarouselMedia(file));
+    fileName.textContent = file.drive_file_name || `Contenuto ${activeIndex + 1}`;
+    position.textContent = `${activeIndex + 1} / ${files.length}`;
+    thumbButtons.forEach((button, buttonIndex) => {
+      button.classList.toggle("is-active", buttonIndex === activeIndex);
+      button.setAttribute("aria-current", buttonIndex === activeIndex ? "true" : "false");
+    });
+    thumbButtons[activeIndex]?.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "smooth" });
+  }
+
+  previous.addEventListener("click", () => renderSlide(activeIndex - 1));
+  next.addEventListener("click", () => renderSlide(activeIndex + 1));
+  renderSlide(0);
+  modal.showModal();
+}
+
+function openPedContentPreview(id) {
+  const item = state.pedItems.find((entry) => String(entry.id) === String(id));
+  if (!item) return;
+  const files = pedItemFiles(item);
+  if (files.length > 1) return openPedCarouselPreview(item);
+  const file = files[0];
+  return openDriveFile(file.drive_file_id, file.drive_file_name, file.drive_mime_type, file.content_url || "");
 }
 
 function labelClientStatus(status) {
@@ -4508,6 +4655,7 @@ document.body.addEventListener("click", (event) => {
   const pedOpen = event.target.closest("[data-ped-open]");
   const pedEditor = event.target.closest("[data-ped-editor]");
   const pedCaptionSelect = event.target.closest("[data-ped-caption-select]");
+  const pedCaptionPreview = event.target.closest("[data-ped-caption-preview]");
   const pedDay = event.target.closest(".ped-day[data-ped-day]");
   const pedInstagramOrderItem = event.target.closest("[data-ped-instagram-item]");
   const pedRemove = event.target.closest("[data-ped-remove]");
@@ -4560,6 +4708,7 @@ document.body.addEventListener("click", (event) => {
   if (pedRemove) return removePedItem(pedRemove.dataset.pedRemove);
   if (pedEditor) return openPedCaptionModal(pedEditor.dataset.pedEditor);
   if (pedCaptionSelect) return selectPedCaptionItem(pedCaptionSelect.dataset.pedCaptionSelect, { focus: true });
+  if (pedCaptionPreview) return openPedContentPreview(pedCaptionPreview.dataset.pedCaptionPreview);
   if (pedInstagramOrderItem && pedInstagramOrderEditing) return;
   if (pedOpen) return openDriveFile(pedOpen.dataset.pedOpen, pedOpen.dataset.pedName, pedOpen.dataset.pedMime, pedOpen.dataset.pedContentUrl);
   if (pedCarouselDownload) return downloadPedCarousel(pedCarouselDownload.dataset.pedCarouselDownload, pedCarouselDownload);
@@ -4970,7 +5119,9 @@ document.getElementById("contentImageFile").addEventListener("change", (event) =
 });
 document.getElementById("newClientButton").addEventListener("click", () => openClientModal());
 document.getElementById("drivePreviewModal").addEventListener("close", () => {
-  document.getElementById("drivePreviewBody").replaceChildren();
+  const body = document.getElementById("drivePreviewBody");
+  body.replaceChildren();
+  body.classList.remove("is-ped-carousel");
   if (clientDriveState.objectUrl) {
     URL.revokeObjectURL(clientDriveState.objectUrl);
     clientDriveState.objectUrl = "";
