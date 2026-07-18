@@ -22,6 +22,24 @@ const TASK_STATUS_GROUPS = [
   }
 ];
 const DEFAULT_TASK_STATUS_GROUP_ID = "todo";
+const MODULE_DEFINITIONS = Object.freeze([
+  { key: "tasks", label: "Task" },
+  { key: "ped", label: "PED" },
+  { key: "clients", label: "Clienti" },
+  { key: "site_backend", label: "Backend sito" },
+  { key: "users", label: "Utenti" },
+  { key: "smart_working", label: "Turni" },
+  { key: "settings", label: "Setup" }
+]);
+const VIEW_MODULES = Object.freeze({
+  content: "site_backend",
+  clients: "clients",
+  ped: "ped",
+  team: "tasks",
+  smart: "smart_working",
+  users: "users",
+  settings: "settings"
+});
 const seed = {
   content: [
     {
@@ -434,13 +452,23 @@ function renderSession() {
   badge.textContent = `${currentProfile.full_name || currentProfile.email} · ${currentProfile.role}`;
 }
 
+function canAccessModule(moduleKey) {
+  if (!moduleKey || currentProfile?.role === "admin") return true;
+  return currentProfile?.module_permissions?.[moduleKey] === true;
+}
+
+function canAccessView(view) {
+  return view === "dashboard" || canAccessModule(VIEW_MODULES[view]);
+}
+
 function applyRoleAccess() {
   const isAdmin = currentProfile?.role === "admin";
   document.querySelectorAll(".admin-only").forEach((item) => item.classList.toggle("is-hidden", !isAdmin));
-  const activeRestrictedView = document.querySelector('[data-view-panel="users"].is-active, [data-view-panel="content"].is-active');
-  if (!isAdmin && activeRestrictedView) {
-    setView("dashboard");
-  }
+  document.querySelectorAll("[data-module]").forEach((item) => {
+    item.classList.toggle("is-hidden", !canAccessModule(item.dataset.module));
+  });
+  const activeView = document.querySelector("[data-view-panel].is-active")?.dataset.viewPanel;
+  if (activeView && !canAccessView(activeView)) setView("dashboard");
 }
 
 function showLogin(message = "") {
@@ -556,6 +584,7 @@ function consumeRecoverySessionFromUrl() {
 }
 
 function setView(view) {
+  if (!canAccessView(view)) view = "dashboard";
   document.querySelectorAll(".nav-item").forEach((item) => item.classList.toggle("is-active", item.dataset.view === view));
   document.querySelectorAll("[data-view-panel]").forEach((panel) => panel.classList.toggle("is-active", panel.dataset.viewPanel === view));
   const titles = {
@@ -3473,7 +3502,7 @@ async function moveSmartAssignment(select) {
 }
 
 async function loadUsersFromBackend() {
-  if (currentProfile?.role !== "admin") return;
+  if (!canAccessModule("users")) return;
   try {
     const response = await apiFetch("/api/users");
     if (!response.ok) throw new Error(`Users backend error ${response.status}`);
@@ -3488,23 +3517,55 @@ async function loadUsersFromBackend() {
 function renderUsers() {
   const target = document.getElementById("userList");
   if (!target) return;
-  if (currentProfile?.role !== "admin") {
-    target.innerHTML = emptyState("Solo gli admin possono gestire gli utenti.");
+  if (!canAccessModule("users")) {
+    target.innerHTML = emptyState("Il modulo Utenti non e abilitato per questo account.");
     return;
   }
+  const canManage = currentProfile?.role === "admin";
   target.innerHTML = (state.staffProfiles || []).map((profile) => `
-    <article class="user-row" data-user-id="${profile.id}">
-      <div>
-        <strong>${profile.full_name || profile.email}</strong>
-        <span>${profile.email} · Supabase ${profile.user_id}</span>
+    <article class="user-row user-access-card ${canManage ? "" : "is-readonly"}" data-user-id="${escapeHtml(profile.id)}">
+      <header class="user-access-head">
+        <div class="user-identity">
+          <span class="user-avatar">${escapeHtml((profile.full_name || profile.email || "U").slice(0, 1).toUpperCase())}</span>
+          <div>
+            <strong>${escapeHtml(profile.full_name || profile.email)}</strong>
+            <span>${escapeHtml(profile.email)} · ${profile.role === "admin" ? "Amministratore" : "Staff"}</span>
+          </div>
+        </div>
+        <label class="user-active-toggle">
+          <input data-user-active type="checkbox" ${profile.active !== false ? "checked" : ""} ${canManage ? "" : "disabled"}>
+          <span>Accesso attivo</span>
+        </label>
+      </header>
+      <div class="user-access-fields">
+        <label>Nome
+          <input data-user-name value="${escapeHtml(profile.full_name || "")}" placeholder="Nome staff" ${canManage ? "" : "disabled"}>
+        </label>
+        <label>Ruolo
+          <select data-user-role ${canManage ? "" : "disabled"}>
+            <option value="admin" ${profile.role === "admin" ? "selected" : ""}>admin</option>
+            <option value="staff" ${profile.role === "staff" ? "selected" : ""}>staff</option>
+          </select>
+        </label>
+        <label>ClickUp user ID
+          <input data-user-clickup value="${escapeHtml(profile.clickup_user_id || "")}" placeholder="ClickUp user ID" ${canManage ? "" : "disabled"}>
+        </label>
       </div>
-      <input data-user-name value="${profile.full_name || ""}" placeholder="Nome staff" aria-label="Nome staff">
-      <select data-user-role aria-label="Ruolo">
-        <option value="admin" ${profile.role === "admin" ? "selected" : ""}>admin</option>
-        <option value="staff" ${profile.role === "staff" ? "selected" : ""}>staff</option>
-      </select>
-      <input data-user-clickup value="${profile.clickup_user_id || ""}" placeholder="ClickUp user ID" aria-label="ClickUp user ID">
-      <button class="ghost-button" data-save-user type="button">Salva</button>
+      <div class="user-permission-section">
+        <div>
+          <p class="eyebrow">Funzioni disponibili</p>
+          <span>${profile.role === "admin" ? "Gli admin hanno sempre accesso completo." : "Attiva solo le aree necessarie a questa persona."}</span>
+        </div>
+        <div class="user-permission-grid">
+          ${MODULE_DEFINITIONS.map((module) => `
+            <label class="permission-toggle">
+              <input type="checkbox" data-user-module="${module.key}" ${profile.role === "admin" || profile.module_permissions?.[module.key] ? "checked" : ""} ${canManage && profile.role !== "admin" ? "" : "disabled"}>
+              <span>${module.label}</span>
+            </label>
+          `).join("")}
+        </div>
+      </div>
+      ${canManage ? `<div class="user-access-actions"><button class="primary-button" data-save-user type="button">Salva accessi</button></div>` : ""}
     </article>
   `).join("") || emptyState("Nessun profilo staff configurato.");
 }
@@ -3518,7 +3579,11 @@ async function saveUserProfile(row) {
     full_name: row.querySelector("[data-user-name]").value,
     role: row.querySelector("[data-user-role]").value,
     clickup_user_id: row.querySelector("[data-user-clickup]").value,
-    active: profile.active !== false
+    active: row.querySelector("[data-user-active]").checked,
+    module_permissions: Object.fromEntries(MODULE_DEFINITIONS.map(({ key }) => [
+      key,
+      row.querySelector(`[data-user-module="${key}"]`)?.checked === true
+    ]))
   };
   try {
     const response = await apiFetch("/api/users", {
@@ -3532,6 +3597,47 @@ async function saveUserProfile(row) {
   } catch (error) {
     renderBackendStatus(error.message);
     alert("Non riesco a salvare il ruolo utente.");
+  }
+}
+
+async function createUserAccount(form) {
+  const submit = form.querySelector('button[type="submit"]');
+  const message = document.getElementById("userCreateMessage");
+  const data = new FormData(form);
+  const payload = {
+    full_name: String(data.get("full_name") || "").trim(),
+    email: String(data.get("email") || "").trim(),
+    password: String(data.get("password") || ""),
+    clickup_user_id: String(data.get("clickup_user_id") || "").trim(),
+    role: "staff",
+    active: true,
+    module_permissions: Object.fromEntries(MODULE_DEFINITIONS.map(({ key }) => [
+      key,
+      data.get(`module_${key}`) === "on"
+    ]))
+  };
+
+  submit.disabled = true;
+  message.className = "";
+  message.textContent = "Creazione accesso in corso...";
+  try {
+    const response = await apiFetch("/api/users", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || `Users backend error ${response.status}`);
+    form.reset();
+    message.className = "is-success";
+    message.textContent = `Accesso creato per ${result.email || payload.email}.`;
+    await loadUsersFromBackend();
+  } catch (error) {
+    message.className = "is-error";
+    message.textContent = error.message || "Non riesco a creare l'accesso.";
+    renderBackendStatus(error.message);
+  } finally {
+    submit.disabled = false;
   }
 }
 
@@ -4608,10 +4714,7 @@ function renderAll() {
 
 document.getElementById("navList").addEventListener("click", (event) => {
   const button = event.target.closest("[data-view]");
-  if (button) {
-    if (button.dataset.view === "users" && currentProfile?.role !== "admin") return;
-    setView(button.dataset.view);
-  }
+  if (button) setView(button.dataset.view);
 });
 
 document.body.addEventListener("click", (event) => {
@@ -4742,6 +4845,15 @@ document.body.addEventListener("click", (event) => {
 });
 
 document.body.addEventListener("change", (event) => {
+  const userRole = event.target.closest("[data-user-role]");
+  if (userRole) {
+    const row = userRole.closest("[data-user-id]");
+    row?.querySelectorAll("[data-user-module]").forEach((input) => {
+      input.disabled = userRole.value === "admin";
+      if (userRole.value === "admin") input.checked = true;
+    });
+    return;
+  }
   const pedType = event.target.closest("[data-ped-type-change]");
   if (pedType) {
     updatePedItemType(pedType.dataset.pedTypeChange, pedType.value);
@@ -5159,6 +5271,11 @@ document.getElementById("taskForm").addEventListener("submit", (event) => {
   document.getElementById("taskModal").close();
 });
 
+document.getElementById("userCreateForm").addEventListener("submit", (event) => {
+  event.preventDefault();
+  createUserAccount(event.currentTarget);
+});
+
 document.getElementById("passwordForm").addEventListener("submit", (event) => {
   if (event.submitter?.value === "cancel") return;
   event.preventDefault();
@@ -5192,16 +5309,13 @@ async function bootApp() {
       setPasswordMessage("Imposta una nuova password per completare il recupero.", "success");
     }
     renderBackendStatus();
-    const loaders = [
-      loadClientsFromBackend(),
-      loadClickUpTeam(),
-      loadClickUpTasks(),
-      loadClickUpTaskLogs(),
-      loadUsersFromBackend(),
-      loadClientAliases(),
-      loadSmartWorking()
-    ];
-    if (currentProfile?.role === "admin") loaders.push(loadContentFromBackend());
+    const loaders = [];
+    if (canAccessModule("clients") || canAccessModule("ped") || canAccessModule("tasks")) loaders.push(loadClientsFromBackend());
+    if (canAccessModule("tasks") || canAccessModule("smart_working")) loaders.push(loadClickUpTeam());
+    if (canAccessModule("tasks")) loaders.push(loadClickUpTasks(), loadClickUpTaskLogs(), loadClientAliases());
+    if (canAccessModule("users")) loaders.push(loadUsersFromBackend());
+    if (canAccessModule("smart_working")) loaders.push(loadSmartWorking());
+    if (canAccessModule("site_backend")) loaders.push(loadContentFromBackend());
     await Promise.all(loaders);
     renderHome();
   } catch (error) {

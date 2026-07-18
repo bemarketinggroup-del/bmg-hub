@@ -1,5 +1,6 @@
 import { jsonHeaders, readJson, requireUser, supabaseFetch } from "./_auth.js";
 import handleClientDrive from "../lib/client-drive-api.js";
+import { canAccessModule } from "../lib/staff-permissions.js";
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -59,7 +60,12 @@ export default async function handler(request, response) {
     return;
   }
 
-  if (!await requireUser(request, response, { headers: headers() })) return;
+  const session = await requireUser(request, response, {
+    headers: headers(),
+    modules: ["clients", "ped", "tasks"],
+    moduleMode: "any"
+  });
+  if (!session) return;
 
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
     response.writeHead(500, headers());
@@ -75,6 +81,11 @@ export default async function handler(request, response) {
   }
 
   if (request.method === "POST") {
+    if (!canAccessModule(session.profile, "clients")) {
+      response.writeHead(403, headers());
+      response.end(JSON.stringify({ error: "Modulo Clienti non abilitato" }));
+      return;
+    }
     const body = await readJson(request);
     const payload = clientPayload(body);
     if (!payload.name) {
@@ -102,6 +113,11 @@ export default async function handler(request, response) {
   }
 
   if (request.method === "PATCH") {
+    if (!canAccessModule(session.profile, "clients")) {
+      response.writeHead(403, headers());
+      response.end(JSON.stringify({ error: "Modulo Clienti non abilitato" }));
+      return;
+    }
     const body = await readJson(request);
     const id = String(body.id || "").trim();
     if (!id) {

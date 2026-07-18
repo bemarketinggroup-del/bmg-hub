@@ -1,3 +1,5 @@
+import { canAccessAnyModule, canAccessModule, profileWithPermissions } from "../lib/staff-permissions.js";
+
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
@@ -70,7 +72,7 @@ export async function requireUser(request, response, options = {}) {
   const user = await userResult.json();
   const profileResult = await supabaseFetch(`/staff_profiles?select=*&user_id=eq.${encodeURIComponent(user.id)}&limit=1`);
   const profiles = profileResult.ok ? await profileResult.json() : [];
-  const profile = profiles[0];
+  const profile = profileWithPermissions(profiles[0]);
 
   if (!profile || profile.active === false) {
     response.writeHead(403, headers);
@@ -82,6 +84,17 @@ export async function requireUser(request, response, options = {}) {
   if (!allowedRoles.includes(profile.role)) {
     response.writeHead(403, headers);
     response.end(JSON.stringify({ error: "Insufficient permissions" }));
+    return null;
+  }
+
+  const requestedModules = Array.isArray(options.modules) ? options.modules : options.module ? [options.module] : [];
+  const moduleAllowed = requestedModules.length === 0
+    || (options.moduleMode === "any"
+      ? canAccessAnyModule(profile, requestedModules)
+      : requestedModules.every((moduleKey) => canAccessModule(profile, moduleKey)));
+  if (!moduleAllowed) {
+    response.writeHead(403, headers);
+    response.end(JSON.stringify({ error: "Modulo non abilitato", modules: requestedModules }));
     return null;
   }
 

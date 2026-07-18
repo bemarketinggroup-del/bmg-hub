@@ -16,7 +16,7 @@ export default async function handler(request, response) {
     return;
   }
 
-  if (!await requireUser(request, response, { headers: headers() })) return;
+  if (!await requireUser(request, response, { headers: headers(), module: "clients" })) return;
 
   if (request.method !== "POST") {
     response.writeHead(405, headers());

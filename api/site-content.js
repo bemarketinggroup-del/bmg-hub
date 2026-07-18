@@ -50,7 +50,7 @@ export default async function handler(request, response) {
     return;
   }
 
-  if (!await requireUser(request, response, { headers: headers(), roles: ["admin"] })) return;
+  if (!await requireUser(request, response, { headers: headers(), module: "site_backend" })) return;
 
   if (request.method === "GET") {
     const result = await supabaseFetch("/site_content?select=*&order=updated_at.desc");

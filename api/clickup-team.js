@@ -79,7 +79,11 @@ export default async function handler(request, response) {
     return;
   }
 
-  const session = await requireUser(request, response, { headers: headers() });
+  const session = await requireUser(request, response, {
+    headers: headers(),
+    modules: ["tasks", "smart_working"],
+    moduleMode: "any"
+  });
   if (!session) return;
 
   if (!CLICKUP_API_TOKEN || !CLICKUP_WORKSPACE_ID) {

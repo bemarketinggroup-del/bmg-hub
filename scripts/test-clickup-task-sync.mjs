@@ -37,13 +37,13 @@ assert.match(app, /taskAssignedTo\(task, user\)/);
 assert.match(app, /TASK_STATUS_GROUPS/);
 assert.match(app, /function taskStatusGroup/);
 assert.match(app, /function compareTaskDueDate/);
-assert.match(app, /task-board/);
+assert.match(app, /clickup-task-list/);
 assert.match(app, /taskAssigneeFilter/);
 assert.match(app, /taskStatusFilter/);
 assert.match(app, /taskClientFilter/);
 assert.match(app, /ensureTeamSelection/);
 assert.match(app, /mini-avatar/);
 assert.match(app, /Priorit/);
-assert.match(readFileSync("public/index.html", "utf8"), /team-kanban-shell/);
+assert.match(readFileSync("public/index.html", "utf8"), /task-workspace/);
 
 console.log("ClickUp task sync checks passed");

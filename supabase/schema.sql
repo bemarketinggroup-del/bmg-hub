@@ -50,6 +50,8 @@ create table if not exists public.staff_profiles (
     check (role in ('admin', 'staff')),
   clickup_user_id text,
   active boolean not null default true,
+  module_permissions jsonb not null default '{"tasks":true,"ped":true,"clients":true,"site_backend":false,"users":false,"smart_working":true,"settings":false}'::jsonb
+    check (jsonb_typeof(module_permissions) = 'object'),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

@@ -16,6 +16,9 @@ const { default: handleClientsSyncClickUp } = await import("../api/clients-sync-
 const { default: handleClickUpTeam } = await import("../api/clickup-team.js");
 const { default: handleClickUpTasks } = await import("../api/clickup-tasks.js");
 const { handleSiteMedia } = await import("../lib/site-media.js");
+const { default: handleMeApi } = await import("../api/me.js");
+const { default: handleUsersApi } = await import("../api/users.js");
+const { default: handleSiteContentApi } = await import("../api/site-content.js");
 const port = Number(process.env.PORT || 8020);
 
 const mimeTypes = {
@@ -43,12 +46,12 @@ createServer(async (request, response) => {
     }
 
     if (url.pathname === "/api/me") {
-      await handleMe(request, response);
+      await handleMeApi(request, response);
       return;
     }
 
     if (url.pathname === "/api/users") {
-      await handleUsers(request, response);
+      await handleUsersApi(request, response);
       return;
     }
 
@@ -58,7 +61,7 @@ createServer(async (request, response) => {
     }
 
     if (url.pathname === "/api/site-content") {
-      await handleSiteContent(request, response, url);
+      await handleSiteContentApi(request, response);
       return;
     }
 

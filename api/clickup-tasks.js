@@ -453,7 +453,7 @@ export default async function handler(request, response) {
       return;
     }
 
-    const session = await requireUser(request, response, { headers: headers() });
+    const session = await requireUser(request, response, { headers: headers(), module: "tasks" });
     if (!session) return;
 
     if (!CLICKUP_API_TOKEN || !CLICKUP_WORKSPACE_ID) {
