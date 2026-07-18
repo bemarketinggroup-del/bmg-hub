@@ -2299,11 +2299,12 @@ function pedItemMarkup(item) {
         ? `<img src="${escapeHtml(previewUrl)}" alt="Anteprima ${escapeHtml(title)}" loading="lazy">`
         : `<div class="ped-preview-file">${driveFileIcon({ is_folder: false, mime_type: mime })}<strong>${escapeHtml(title)}</strong></div>`;
   const typeLabel = files.length > 1 ? `${files.length} file` : isVideo ? "Video" : isImage ? "Immagine" : mime === "application/pdf" ? "PDF" : "File";
+  const publishing = pedPublishingStatusMeta(item.publishing_status);
 
   return `<article class="ped-content-card ped-type-${format.type}${files.length > 1 ? " is-carousel" : ""}" data-ped-content="${escapeHtml(item.id)}" draggable="true" aria-grabbed="false" tabindex="0" title="Trascina su un altro giorno per riprogrammare">
-    <button class="ped-content-main" data-ped-open="${escapeHtml(primary.drive_file_id)}" data-ped-name="${escapeHtml(primary.drive_file_name)}" data-ped-mime="${escapeHtml(mime)}" data-ped-content-url="${escapeHtml(primary.content_url || "")}" type="button" title="Apri la prima anteprima nell'Hub">
+    <button class="ped-content-main" data-ped-editor="${escapeHtml(item.id)}" type="button" title="Apri contenuti e copy del giorno">
       <span class="ped-content-thumb">${media}${isVideo ? `<span class="ped-video-mini"><svg class="lc" viewBox="0 0 24 24"><path d="m9 7 8 5-8 5z"/></svg></span>` : ""}${files.length > 1 ? `<b class="ped-carousel-count">${files.length}</b>` : ""}</span>
-      <span class="ped-content-copy"><strong>${escapeHtml(title)}</strong><small><span class="ped-type-dot" aria-hidden="true"></span>${format.label} · ${typeLabel}${format.type !== "story" && item.caption ? " · Copy pronto" : ""}</small></span>
+      <span class="ped-content-copy"><strong>${escapeHtml(title)}</strong><small><span class="ped-type-dot" aria-hidden="true"></span>${format.label} · ${typeLabel}${format.type !== "story" && item.caption ? " · Copy pronto" : ""}<span class="ped-publishing-dot" data-ped-publishing-tone="${escapeHtml(publishing.value)}" tabindex="0" aria-label="${escapeHtml(publishing.label)}"><span class="ped-publishing-tooltip" role="tooltip">${escapeHtml(publishing.label)}</span></span></small></span>
     </button>
     <button class="ped-content-remove" data-ped-remove="${escapeHtml(item.id)}" type="button" title="Rimuovi dal PED" aria-label="Rimuovi ${escapeHtml(title)} dal PED">
       <svg class="lc" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
@@ -2406,6 +2407,15 @@ function pedPublishingStatusOptions(selectedStatus) {
     ["meta", "Programmato Meta"],
     ["phone", "Programmato telefono"]
   ].map(([value, label]) => `<option value="${value}"${value === selected ? " selected" : ""}>${label}</option>`).join("");
+}
+
+function pedPublishingStatusMeta(value) {
+  const status = pedPublishingStatus(value);
+  return {
+    ped_only: { value: "ped_only", label: "Solo PED" },
+    meta: { value: "meta", label: "Programmato Meta" },
+    phone: { value: "phone", label: "Programmato telefono" }
+  }[status];
 }
 
 async function downloadPedCarousel(groupId, button) {
@@ -2854,38 +2864,96 @@ function positionPedPointerGhost(x, y) {
   pedPointerDrag.ghost.style.transform = `translate3d(${Math.round(x + 14)}px, ${Math.round(y + 14)}px, 0)`;
 }
 
-function openPedCaptionModal(id) {
+function pedCaptionPlainText() {
+  return String(document.getElementById("pedCaptionText")?.innerText || "").replace(/\r/g, "").trim();
+}
+
+function pedPlainCaptionHtml(value) {
+  return escapeHtml(String(value || "")).replace(/\n/g, "<br>");
+}
+
+function pedCaptionDateLabel(value) {
+  const [year, month, day] = String(value || "").split("-").map(Number);
+  return year && month && day
+    ? new Intl.DateTimeFormat("it-IT", { weekday: "long", day: "numeric", month: "long" }).format(new Date(year, month - 1, day, 12))
+    : "giorno selezionato";
+}
+
+function renderPedCaptionDayItems(selectedItem) {
+  const dayItems = state.pedItems
+    .filter((entry) => String(entry.scheduled_date) === String(selectedItem.scheduled_date))
+    .sort((left, right) => Number(left.position || 0) - Number(right.position || 0));
+  document.getElementById("pedCaptionDayItems").innerHTML = dayItems.map((item) => {
+    const format = pedTypeMeta(item.content_type);
+    const files = pedItemFiles(item);
+    const primary = files[0];
+    const mime = String(primary.drive_mime_type || "");
+    const previewUrl = primary.thumbnail_url || (mime.startsWith("image/") ? primary.content_url : "");
+    const publishing = pedPublishingStatusMeta(item.publishing_status);
+    return `<button class="ped-caption-day-item${String(item.id) === String(selectedItem.id) ? " is-active" : ""}" data-ped-caption-select="${escapeHtml(item.id)}" type="button">
+      <span class="ped-caption-day-thumb">${previewUrl ? `<img src="${escapeHtml(previewUrl)}" alt="" loading="lazy" decoding="async">` : driveFileIcon({ is_folder: false, mime_type: mime })}${files.length > 1 ? `<b>${files.length}</b>` : ""}</span>
+      <span><strong>${escapeHtml(pedItemTitle(item))}</strong><small>${escapeHtml(format.label)}</small></span>
+      <i class="ped-publishing-dot" data-ped-publishing-tone="${escapeHtml(publishing.value)}" aria-label="${escapeHtml(publishing.label)}"></i>
+    </button>`;
+  }).join("");
+}
+
+function selectPedCaptionItem(id, { focus = false } = {}) {
   const item = state.pedItems.find((entry) => String(entry.id) === String(id));
-  if (!item || pedContentType(item.content_type) === "story") return;
+  if (!item) return;
   editingPedCaptionId = String(item.id);
   const format = pedTypeMeta(item.content_type);
-  const textarea = document.getElementById("pedCaptionText");
-  textarea.value = item.caption || "";
-  document.getElementById("pedCaptionEyebrow").textContent = `Copy Instagram · ${format.label}`;
-  document.getElementById("pedCaptionTitle").textContent = item.drive_file_name || "Copy del contenuto";
+  const editor = document.getElementById("pedCaptionText");
+  const isStory = format.type === "story";
+  const primary = pedItemFiles(item)[0];
+  editor.innerHTML = item.caption_html || pedPlainCaptionHtml(item.caption || "");
+  editor.contentEditable = isStory ? "false" : "true";
+  document.getElementById("pedCaptionEditorBlock").hidden = isStory;
+  document.getElementById("pedCaptionStoryNote").hidden = !isStory;
+  document.getElementById("pedCaptionCopyButton").hidden = isStory;
+  document.getElementById("pedCaptionPublishingStatus").value = pedPublishingStatus(item.publishing_status);
+  const previewLink = document.getElementById("pedCaptionPreviewLink");
+  previewLink.href = primary.content_url || primary.drive_web_url || "#";
+  previewLink.hidden = !primary.content_url && !primary.drive_web_url;
+  document.getElementById("pedCaptionEyebrow").textContent = `Programmazione · ${pedCaptionDateLabel(item.scheduled_date)}`;
+  document.getElementById("pedCaptionTitle").textContent = pedItemTitle(item);
   document.getElementById("pedCaptionMessage").textContent = "";
+  renderPedCaptionDayItems(item);
   updatePedCaptionCount();
+  if (focus && !isStory) requestAnimationFrame(() => editor.focus());
+}
+
+function openPedCaptionModal(id) {
+  const item = state.pedItems.find((entry) => String(entry.id) === String(id));
+  if (!item) return;
+  selectPedCaptionItem(item.id);
   document.getElementById("pedCaptionModal").showModal();
-  requestAnimationFrame(() => textarea.focus());
 }
 
 function updatePedCaptionCount() {
-  const textarea = document.getElementById("pedCaptionText");
-  document.getElementById("pedCaptionCount").textContent = String(textarea.value.length);
+  const count = pedCaptionPlainText().length;
+  document.getElementById("pedCaptionCount").textContent = String(count);
+  document.getElementById("pedCaptionSaveButton").disabled = count > 10000;
 }
 
 async function copyPedCaption() {
-  const textarea = document.getElementById("pedCaptionText");
+  const editor = document.getElementById("pedCaptionText");
   const message = document.getElementById("pedCaptionMessage");
-  if (!textarea.value.trim()) {
+  const copy = pedCaptionPlainText();
+  if (!copy) {
     message.textContent = "Inserisci prima il copy da copiare.";
     return;
   }
   try {
-    await navigator.clipboard.writeText(textarea.value);
+    await navigator.clipboard.writeText(copy);
   } catch {
-    textarea.select();
+    const range = document.createRange();
+    range.selectNodeContents(editor);
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
     document.execCommand("copy");
+    selection.removeAllRanges();
   }
   message.textContent = "Copy copiato negli appunti.";
 }
@@ -2898,21 +2966,31 @@ async function savePedCaption(event) {
   }
   const item = state.pedItems.find((entry) => String(entry.id) === editingPedCaptionId);
   if (!item) return;
-  const textarea = document.getElementById("pedCaptionText");
+  const editor = document.getElementById("pedCaptionText");
   const message = document.getElementById("pedCaptionMessage");
   const button = document.getElementById("pedCaptionSaveButton");
-  const caption = textarea.value.trim();
+  const isStory = pedContentType(item.content_type) === "story";
+  const caption = isStory ? null : pedCaptionPlainText();
+  const captionHtml = isStory ? null : editor.innerHTML.trim();
+  const publishingStatus = pedPublishingStatus(document.getElementById("pedCaptionPublishingStatus").value);
+  if (String(caption || "").length > 10000) {
+    message.textContent = "Il copy non puo superare 10000 caratteri.";
+    return;
+  }
   button.disabled = true;
-  message.textContent = "Salvataggio copy...";
+  message.textContent = "Salvataggio modifiche...";
   try {
     const response = await apiFetch("/api/ped", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: item.id, caption })
+      body: JSON.stringify({ id: item.id, caption, caption_html: captionHtml, publishing_status: publishingStatus })
     });
-    const data = await response.json().catch(() => ({}));
+    const data = await response.json().catch(() => ([]));
     if (!response.ok) throw new Error(data.error || "Impossibile salvare il copy");
-    item.caption = caption;
+    const saved = Array.isArray(data) ? data[0] : null;
+    item.caption = saved?.caption ?? caption;
+    item.caption_html = saved?.caption_html ?? null;
+    item.publishing_status = saved?.publishing_status || publishingStatus;
     renderPed();
     document.getElementById("pedCaptionModal").close();
   } catch (error) {
@@ -4428,6 +4506,9 @@ document.body.addEventListener("click", (event) => {
   const pedClient = event.target.closest("[data-ped-client]");
   const pedAdd = event.target.closest("[data-ped-add]");
   const pedOpen = event.target.closest("[data-ped-open]");
+  const pedEditor = event.target.closest("[data-ped-editor]");
+  const pedCaptionSelect = event.target.closest("[data-ped-caption-select]");
+  const pedDay = event.target.closest(".ped-day[data-ped-day]");
   const pedInstagramOrderItem = event.target.closest("[data-ped-instagram-item]");
   const pedRemove = event.target.closest("[data-ped-remove]");
   const pedPickerFolder = event.target.closest("[data-ped-picker-folder]");
@@ -4477,6 +4558,8 @@ document.body.addEventListener("click", (event) => {
   }
   if (pedAdd) return openPedDrivePicker(pedAdd.dataset.pedAdd);
   if (pedRemove) return removePedItem(pedRemove.dataset.pedRemove);
+  if (pedEditor) return openPedCaptionModal(pedEditor.dataset.pedEditor);
+  if (pedCaptionSelect) return selectPedCaptionItem(pedCaptionSelect.dataset.pedCaptionSelect, { focus: true });
   if (pedInstagramOrderItem && pedInstagramOrderEditing) return;
   if (pedOpen) return openDriveFile(pedOpen.dataset.pedOpen, pedOpen.dataset.pedName, pedOpen.dataset.pedMime, pedOpen.dataset.pedContentUrl);
   if (pedCarouselDownload) return downloadPedCarousel(pedCarouselDownload.dataset.pedCarouselDownload, pedCarouselDownload);
@@ -4499,6 +4582,10 @@ document.body.addEventListener("click", (event) => {
   }
   if (pedPickerClose) return document.getElementById("pedDrivePickerModal").close();
   if (pedCaption) return openPedCaptionModal(pedCaption.dataset.pedCaption);
+  if (pedDay && !event.target.closest("button,a,input,select,textarea,[contenteditable]")) {
+    const firstItem = state.pedItems.find((item) => String(item.scheduled_date) === String(pedDay.dataset.pedDay));
+    if (firstItem) return openPedCaptionModal(firstItem.id);
+  }
   if (taskRow && !event.target.closest("a, button, input, select, textarea")) return openTaskDetailModal(taskRow.dataset.taskDetail);
   if (saveUser) saveUserProfile(saveUser.closest("[data-user-id]"));
   if (applyAiClient) applyAiClientTag(applyAiClient);
@@ -4800,6 +4887,18 @@ document.getElementById("pedShareDisableButton").addEventListener("click", disab
 document.getElementById("pedCaptionForm").addEventListener("submit", savePedCaption);
 document.getElementById("pedCaptionText").addEventListener("input", updatePedCaptionCount);
 document.getElementById("pedCaptionCopyButton").addEventListener("click", copyPedCaption);
+document.getElementById("pedCaptionToolbar").addEventListener("click", (event) => {
+  const button = event.target.closest("[data-ped-caption-command]");
+  if (!button) return;
+  document.getElementById("pedCaptionText").focus();
+  document.execCommand(button.dataset.pedCaptionCommand, false, null);
+  updatePedCaptionCount();
+});
+document.getElementById("pedCaptionColor").addEventListener("input", (event) => {
+  document.getElementById("pedCaptionText").focus();
+  document.execCommand("foreColor", false, event.target.value);
+  updatePedCaptionCount();
+});
 document.getElementById("taskSearch").addEventListener("input", renderClickUpTasks);
 document.getElementById("taskAssigneeFilter").addEventListener("change", renderClickUpTasks);
 document.getElementById("taskStatusFilter").addEventListener("change", renderClickUpTasks);

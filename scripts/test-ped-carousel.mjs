@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { groupPedItems } from "../lib/ped.js";
+import { groupPedItems, sanitizeCaptionHtml } from "../lib/ped.js";
 
 function row(overrides = {}) {
   return {
@@ -14,6 +14,7 @@ function row(overrides = {}) {
     drive_has_thumbnail: false,
     content_type: "post",
     caption: "Copy dedicato",
+    caption_html: "<strong>Copy dedicato</strong>",
     content_group_id: null,
     group_position: 0,
     instagram_position: null,
@@ -32,6 +33,7 @@ assert.equal(grouped.length, 1, "il carosello deve essere una sola unita editori
 assert.equal(grouped[0].id, groupId);
 assert.equal(grouped[0].item_count, 3);
 assert.equal(grouped[0].caption, "Copy unico");
+assert.equal(grouped[0].caption_html, "<strong>Copy dedicato</strong>");
 assert.deepEqual(grouped[0].files.map((file) => file.drive_file_name), ["uno.jpg", "due.jpg", "tre.jpg"]);
 
 const singles = groupPedItems([
@@ -52,6 +54,7 @@ const pedSource = await readFile(new URL("../lib/ped.js", import.meta.url), "utf
 const instagramOrderMigration = await readFile(new URL("../supabase/20260717_ped_instagram_order.sql", import.meta.url), "utf8");
 const feedCalendarSyncMigration = await readFile(new URL("../supabase/20260717_ped_feed_calendar_sync.sql", import.meta.url), "utf8");
 const publishingStatusMigration = await readFile(new URL("../supabase/20260718_ped_publishing_status.sql", import.meta.url), "utf8");
+const richCaptionMigration = await readFile(new URL("../supabase/20260718_ped_rich_caption.sql", import.meta.url), "utf8");
 assert.match(appSource, /data-ped-picker-preview-type/, "il selettore Drive deve esporre il tipo di anteprima");
 assert.match(appSource, /showPedPickerPreview\(entry\)/, "il selettore Drive deve attivare l'anteprima al passaggio");
 assert.match(appSource, /preview\.setAttribute\("popover", "manual"\)/, "l'anteprima deve apparire sopra al modal PED");
@@ -116,5 +119,19 @@ assert.match(appSource, /body: JSON\.stringify\(\{ id, publishing_status: publis
 assert.match(pedSource, /body\.publishing_status !== undefined/, "l'API PED deve accettare lo stato di programmazione");
 assert.match(publishingStatusMigration, /publishing_status text not null default 'ped_only'/, "il database deve usare Solo PED come stato iniziale");
 assert.match(publishingStatusMigration, /publishing_status in \('ped_only', 'meta', 'phone'\)/, "il database deve accettare solo i tre stati previsti");
+assert.match(appSource, /class="ped-publishing-dot"/, "il calendario deve mostrare un indicatore compatto dello stato");
+assert.match(styleSource, /\.ped-publishing-dot:hover \.ped-publishing-tooltip/, "l'etichetta dello stato deve apparire solo al passaggio");
+assert.match(appSource, /data-ped-editor=/, "il clic su un contenuto del calendario deve aprire il pannello editoriale");
+assert.match(htmlSource, /contenteditable="true"/, "il copy deve usare una vera area rich text");
+assert.match(htmlSource, /data-ped-caption-command="bold"/, "l'editor deve offrire il grassetto");
+assert.match(htmlSource, /data-ped-caption-command="italic"/, "l'editor deve offrire il corsivo");
+assert.match(htmlSource, /data-ped-caption-command="strikeThrough"/, "l'editor deve offrire il barrato");
+assert.match(htmlSource, /id="pedCaptionColor" type="color"/, "l'editor deve offrire il colore del testo");
+assert.match(pedSource, /body\.caption_html !== undefined/, "l'API PED deve gestire il copy formattato");
+assert.match(richCaptionMigration, /add column if not exists caption_html text/, "il database deve conservare il copy formattato");
+assert.equal(sanitizeCaptionHtml('<strong>Ciao</strong><script>alert(1)</script><span style="color:#AABBCC">BMG</span>'), '<strong>Ciao</strong><span style="color:#aabbcc">BMG</span>');
+assert.equal(sanitizeCaptionHtml('<font color="#C95B32">BMG</font><span style="color: rgb(12, 34, 56)">Hub</span>'), '<span style="color:#c95b32">BMG</span><span style="color:rgb(12, 34, 56)">Hub</span>');
+assert.equal(sanitizeCaptionHtml('<span style="color:rgb(999, 0, 0)">No</span>'), '<span>No</span>');
+assert.equal(sanitizeCaptionHtml('<img src=x onerror=alert(1)><em>Test</em>'), '<em>Test</em>');
 
 console.log("PED carousel tests passed");

@@ -690,15 +690,40 @@
         </div>
         <button class="icon-button" value="cancel" type="submit" formnovalidate title="Chiudi" aria-label="Chiudi"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
       </div>
-      <label class="ped-caption-editor" for="pedCaptionText">
-        <span>Descrizione del post</span>
-        <textarea id="pedCaptionText" maxlength="10000" rows="12" placeholder="Scrivi il copy Instagram, gli hashtag e le eventuali call to action..."></textarea>
+      <div class="ped-caption-day-items" id="pedCaptionDayItems" aria-label="Contenuti programmati nel giorno"></div>
+      <div class="ped-caption-settings">
+        <label>
+          <span>Stato programmazione</span>
+          <select id="pedCaptionPublishingStatus">
+            <option value="ped_only">Solo PED</option>
+            <option value="meta">Programmato Meta</option>
+            <option value="phone">Programmato telefono</option>
+          </select>
+        </label>
+        <a class="ghost-button ped-caption-preview-link" id="pedCaptionPreviewLink" href="#" target="_blank" rel="noopener">Apri contenuto</a>
+      </div>
+      <div class="ped-caption-editor" id="pedCaptionEditorBlock">
+        <span>Copy Instagram</span>
+        <div class="ped-caption-editor-shell">
+          <div class="ped-caption-toolbar" id="pedCaptionToolbar" role="toolbar" aria-label="Formattazione copy">
+            <button type="button" data-ped-caption-command="bold" title="Grassetto" aria-label="Grassetto"><strong>B</strong></button>
+            <button type="button" data-ped-caption-command="italic" title="Corsivo" aria-label="Corsivo"><em>I</em></button>
+            <button type="button" data-ped-caption-command="strikeThrough" title="Barrato" aria-label="Barrato"><s>S</s></button>
+            <label class="ped-caption-color" title="Colore testo">
+              <span class="sr-only">Colore testo</span>
+              <input id="pedCaptionColor" type="color" value="#1b1916" aria-label="Colore testo">
+            </label>
+            <button type="button" data-ped-caption-command="removeFormat" title="Rimuovi formattazione" aria-label="Rimuovi formattazione">Aa</button>
+          </div>
+          <div id="pedCaptionText" class="ped-caption-rich-input" contenteditable="true" role="textbox" aria-multiline="true" data-placeholder="Scrivi il copy Instagram, gli hashtag e le eventuali call to action..."></div>
+        </div>
         <small><span id="pedCaptionCount">0</span>/10000 caratteri</small>
-      </label>
+      </div>
+      <p class="ped-caption-story-note" id="pedCaptionStoryNote" hidden>Le stories non prevedono copy. Puoi comunque controllare il contenuto e aggiornare lo stato di programmazione.</p>
       <p class="form-message" id="pedCaptionMessage" role="status"></p>
       <div class="modal-actions ped-caption-actions">
         <button class="ghost-button" id="pedCaptionCopyButton" type="button">Copia copy</button>
-        <button class="primary-button" id="pedCaptionSaveButton" type="submit">Salva copy</button>
+        <button class="primary-button" id="pedCaptionSaveButton" type="submit">Salva modifiche</button>
       </div>
     </form>
   </dialog>
