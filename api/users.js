@@ -1,7 +1,30 @@
+import crypto from "node:crypto";
 import { jsonHeaders, readJson, requireUser, supabaseFetch } from "./_auth.js";
 import { normalizeModulePermissions, profileWithPermissions } from "../lib/staff-permissions.js";
+import { fetchClickUpMembers } from "../lib/clickup-members.js";
+import { normalizedEmail, profileEmailMatchesMember, profileMatchesClickUpMember } from "../lib/clickup-identity.js";
 
 const headers = jsonHeaders("GET,POST,PATCH,OPTIONS");
+const noStoreHeaders = { ...headers, "Cache-Control": "no-store, max-age=0" };
+
+function adminAuthHeaders(includeJson = false) {
+  return {
+    apikey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+    Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
+    ...(includeJson ? { "Content-Type": "application/json" } : {})
+  };
+}
+
+async function adminAuthFetch(path, options = {}) {
+  return fetch(`${process.env.SUPABASE_URL}/auth/v1/admin${path}`, {
+    ...options,
+    headers: { ...adminAuthHeaders(Boolean(options.body)), ...(options.headers || {}) }
+  });
+}
+
+function temporaryPassword() {
+  return `Bmg!${crypto.randomBytes(18).toString("base64url")}`;
+}
 
 function userPayload(body) {
   const role = body.role === "admin" ? "admin" : "staff";
@@ -64,7 +87,19 @@ export default async function handler(request, response) {
       return;
     }
     const body = await readJson(request);
-    const email = String(body.email || "").trim().toLowerCase();
+    if (body.action === "provision_clickup_members") {
+      await provisionClickUpMembers(response);
+      return;
+    }
+
+    const payloadInput = userPayload(body);
+    const clickUpMember = await validateClickUpIdentity(payloadInput, body.email);
+    if (!clickUpMember.ok) {
+      response.writeHead(clickUpMember.status, headers);
+      response.end(JSON.stringify({ error: clickUpMember.error }));
+      return;
+    }
+    const email = normalizedEmail(clickUpMember.member?.email || body.email);
     const password = String(body.password || "");
     if (!/^\S+@\S+\.\S+$/.test(email)) {
       response.writeHead(400, headers);
@@ -77,18 +112,13 @@ export default async function handler(request, response) {
       return;
     }
 
-    const authResult = await fetch(`${process.env.SUPABASE_URL}/auth/v1/admin/users`, {
+    const authResult = await adminAuthFetch("/users", {
       method: "POST",
-      headers: {
-        apikey: process.env.SUPABASE_SERVICE_ROLE_KEY,
-        Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
-        "Content-Type": "application/json"
-      },
       body: JSON.stringify({
         email,
         password,
         email_confirm: true,
-        user_metadata: { full_name: String(body.full_name || "").trim() }
+        user_metadata: { full_name: clickUpMember.member?.full_name || String(body.full_name || "").trim() }
       })
     });
     const authBody = await authResult.json().catch(() => ({}));
@@ -99,19 +129,21 @@ export default async function handler(request, response) {
       return;
     }
 
-    const payload = { ...userPayload(body), user_id: authUser.id, email };
+    const payload = {
+      ...payloadInput,
+      full_name: clickUpMember.member?.full_name || payloadInput.full_name,
+      clickup_user_id: clickUpMember.member?.id || payloadInput.clickup_user_id,
+      user_id: authUser.id,
+      email
+    };
     const profileResult = await supabaseFetch("/staff_profiles", {
       method: "POST",
       headers: { Prefer: "return=representation" },
       body: JSON.stringify(payload)
     });
     if (!profileResult.ok) {
-      await fetch(`${process.env.SUPABASE_URL}/auth/v1/admin/users/${encodeURIComponent(authUser.id)}`, {
+      await adminAuthFetch(`/users/${encodeURIComponent(authUser.id)}`, {
         method: "DELETE",
-        headers: {
-          apikey: process.env.SUPABASE_SERVICE_ROLE_KEY,
-          Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`
-        }
       });
       response.writeHead(profileResult.status, headers);
       response.end(JSON.stringify({ error: "Profilo staff non creato; account annullato" }));
@@ -139,6 +171,16 @@ export default async function handler(request, response) {
     }
 
     const payload = userPayload(body);
+    const clickUpMember = await validateClickUpIdentity(payload, body.email, id);
+    if (!clickUpMember.ok) {
+      response.writeHead(clickUpMember.status, headers);
+      response.end(JSON.stringify({ error: clickUpMember.error }));
+      return;
+    }
+    if (clickUpMember.member) {
+      payload.clickup_user_id = clickUpMember.member.id;
+      payload.full_name = payload.full_name || clickUpMember.member.full_name;
+    }
     if (id === session.profile.id && (payload.role !== "admin" || payload.active === false)) {
       response.writeHead(400, headers);
       response.end(JSON.stringify({ error: "Non puoi disattivare o rimuovere il ruolo admin dal tuo account" }));
@@ -156,6 +198,152 @@ export default async function handler(request, response) {
 
   response.writeHead(405, headers);
   response.end(JSON.stringify({ error: "Method not allowed" }));
+}
+
+async function validateClickUpIdentity(payload, requestedEmail, currentProfileId = "") {
+  if (payload.role === "admin") return { ok: true, member: null };
+  if (!payload.clickup_user_id) {
+    return { ok: false, status: 400, error: "Seleziona il membro ClickUp da collegare" };
+  }
+  const source = await fetchClickUpMembers();
+  if (!source.members.length) return { ok: false, status: source.status, error: source.error };
+  const member = source.members.find((item) => String(item.id) === String(payload.clickup_user_id));
+  if (!member) return { ok: false, status: 400, error: "Utente ClickUp non trovato nel workspace" };
+  if (!member.email) return { ok: false, status: 400, error: "Il membro ClickUp non ha un indirizzo email utilizzabile" };
+  if (requestedEmail && normalizedEmail(requestedEmail) !== normalizedEmail(member.email)) {
+    return { ok: false, status: 400, error: "L'email deve coincidere con quella del membro ClickUp" };
+  }
+  const linkedResult = await supabaseFetch(`/staff_profiles?select=id,clickup_user_id&clickup_user_id=eq.${encodeURIComponent(member.id)}&limit=1`);
+  const linked = linkedResult.ok ? (await linkedResult.json())[0] : null;
+  if (linked && linked.id !== currentProfileId) {
+    return { ok: false, status: 409, error: "Questo utente ClickUp e gia collegato a un altro accesso" };
+  }
+  return { ok: true, member };
+}
+
+async function listAuthUsers() {
+  const users = [];
+  for (let page = 1; page <= 10; page += 1) {
+    const result = await adminAuthFetch(`/users?page=${page}&per_page=1000`);
+    if (!result.ok) return { ok: false, users: [] };
+    const data = await result.json().catch(() => ({}));
+    const pageUsers = data.users || [];
+    users.push(...pageUsers);
+    if (pageUsers.length < 1000) break;
+  }
+  return { ok: true, users };
+}
+
+async function createStaffProfileForMember(member, userId) {
+  return supabaseFetch("/staff_profiles", {
+    method: "POST",
+    headers: { Prefer: "return=representation" },
+    body: JSON.stringify({
+      user_id: userId,
+      email: member.email,
+      full_name: member.full_name,
+      role: "staff",
+      clickup_user_id: member.id,
+      active: true,
+      module_permissions: normalizeModulePermissions(null, "staff")
+    })
+  });
+}
+
+async function provisionClickUpMembers(response) {
+  const source = await fetchClickUpMembers();
+  if (!source.members.length) {
+    response.writeHead(source.status, noStoreHeaders);
+    response.end(JSON.stringify({ error: source.error }));
+    return;
+  }
+  const [profilesResult, authSource] = await Promise.all([
+    supabaseFetch("/staff_profiles?select=id,user_id,email,full_name,role,clickup_user_id"),
+    listAuthUsers()
+  ]);
+  if (!profilesResult.ok || !authSource.ok) {
+    response.writeHead(502, noStoreHeaders);
+    response.end(JSON.stringify({ error: "Non riesco a verificare gli account esistenti" }));
+    return;
+  }
+
+  const profiles = await profilesResult.json();
+  const authUsers = authSource.users;
+  const created = [];
+  const linked = [];
+  const skipped = [];
+
+  for (const member of source.members) {
+    if (!member.email) {
+      skipped.push({ clickup_user_id: member.id, full_name: member.full_name, reason: "email ClickUp mancante" });
+      continue;
+    }
+    const byId = profiles.find((profile) => profileMatchesClickUpMember(profile, member));
+    if (byId) {
+      linked.push({ clickup_user_id: member.id, email: member.email, full_name: member.full_name, status: "gia collegato" });
+      continue;
+    }
+    const byEmail = profiles.find((profile) => profileEmailMatchesMember(profile, member));
+    if (byEmail) {
+      if (byEmail.clickup_user_id && String(byEmail.clickup_user_id) !== member.id) {
+        skipped.push({ clickup_user_id: member.id, full_name: member.full_name, reason: "email collegata a un altro ID ClickUp" });
+        continue;
+      }
+      const patchResult = await supabaseFetch(`/staff_profiles?id=eq.${encodeURIComponent(byEmail.id)}`, {
+        method: "PATCH",
+        headers: { Prefer: "return=representation" },
+        body: JSON.stringify({ clickup_user_id: member.id, full_name: byEmail.full_name || member.full_name })
+      });
+      if (!patchResult.ok) {
+        skipped.push({ clickup_user_id: member.id, full_name: member.full_name, reason: "collegamento profilo non riuscito" });
+        continue;
+      }
+      byEmail.clickup_user_id = member.id;
+      linked.push({ clickup_user_id: member.id, email: member.email, full_name: member.full_name, status: "collegato ora" });
+      continue;
+    }
+
+    let authUser = authUsers.find((user) => normalizedEmail(user.email) === member.email);
+    let password = "";
+    let createdAuthUser = false;
+    if (!authUser) {
+      password = temporaryPassword();
+      const authResult = await adminAuthFetch("/users", {
+        method: "POST",
+        body: JSON.stringify({
+          email: member.email,
+          password,
+          email_confirm: true,
+          user_metadata: { full_name: member.full_name, clickup_user_id: member.id }
+        })
+      });
+      const authBody = await authResult.json().catch(() => ({}));
+      authUser = authBody.user || authBody;
+      if (!authResult.ok || !authUser.id) {
+        skipped.push({ clickup_user_id: member.id, full_name: member.full_name, reason: "creazione account non riuscita" });
+        continue;
+      }
+      createdAuthUser = true;
+      authUsers.push(authUser);
+    }
+
+    const profileResult = await createStaffProfileForMember(member, authUser.id);
+    if (!profileResult.ok) {
+      if (createdAuthUser) await adminAuthFetch(`/users/${encodeURIComponent(authUser.id)}`, { method: "DELETE" });
+      skipped.push({ clickup_user_id: member.id, full_name: member.full_name, reason: "creazione profilo non riuscita" });
+      continue;
+    }
+    const profileRows = await profileResult.json();
+    profiles.push(profileRows[0]);
+    if (createdAuthUser) {
+      created.push({ clickup_user_id: member.id, email: member.email, full_name: member.full_name, temporary_password: password });
+    } else {
+      linked.push({ clickup_user_id: member.id, email: member.email, full_name: member.full_name, status: "profilo creato per account esistente" });
+    }
+  }
+
+  response.writeHead(200, noStoreHeaders);
+  response.end(JSON.stringify({ created, linked, skipped, total_clickup_members: source.members.length }));
 }
 
 async function sendUserActivity(response, session, profileId, requestedDays) {

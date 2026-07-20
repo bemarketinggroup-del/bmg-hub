@@ -430,22 +430,25 @@
             <div>
               <p class="eyebrow">Accessi staff</p>
               <h2>Persone e funzioni abilitate</h2>
-              <span>Ogni persona accede con il proprio account. L'admin decide quali aree rendere disponibili.</span>
+              <span>Ogni account staff e collegato in modo univoco al relativo utente ClickUp.</span>
             </div>
+            <button class="ghost-button admin-only" id="provisionClickUpUsersButton" type="button">Crea accessi ClickUp mancanti</button>
           </div>
           <form class="user-create-form admin-only" id="userCreateForm">
             <div class="user-create-fields">
               <label>Nome e cognome
-                <input name="full_name" autocomplete="name" placeholder="Nome membro del team" required>
+                <input name="full_name" autocomplete="name" placeholder="Compilato da ClickUp" readonly required>
               </label>
               <label>Email personale
-                <input name="email" type="email" autocomplete="email" placeholder="nome@bemarketinggroup.it" required>
+                <input name="email" type="email" autocomplete="email" placeholder="Compilata da ClickUp" readonly required>
               </label>
               <label>Password temporanea
                 <input name="password" type="password" autocomplete="new-password" minlength="12" placeholder="Minimo 12 caratteri" required>
               </label>
-              <label>ClickUp user ID
-                <input name="clickup_user_id" placeholder="Facoltativo">
+              <label>Utente ClickUp
+                <select name="clickup_user_id" id="newUserClickUpMember" required>
+                  <option value="">Caricamento membri ClickUp...</option>
+                </select>
               </label>
             </div>
             <fieldset class="user-create-permissions">
@@ -463,6 +466,7 @@
               <button class="primary-button" type="submit">Crea accesso</button>
             </div>
           </form>
+          <section class="user-provision-result admin-only" id="provisionUsersResult" aria-live="polite" hidden></section>
           <div class="user-list" id="userList"></div>
         </section>
       </section>

@@ -768,8 +768,7 @@ function dashboardTasks() {
   const tasks = activeOperationalTasks();
   if (currentProfile?.role === "admin") return tasks;
   const ownUser = teamMembers().find((user) => {
-    return clickupUserId(user) === String(currentProfile?.clickup_user_id || "")
-      || normalizeIdentity(user.email) === normalizeIdentity(currentProfile?.email);
+    return clickupUserId(user) === String(currentProfile?.clickup_user_id || "");
   });
   return ownUser ? teamMemberTasks(ownUser) : [];
 }
@@ -846,6 +845,7 @@ async function loadClickUpTeam() {
     if (!response.ok) throw new Error(`ClickUp team error ${response.status}`);
     state.agencyUsers = await response.json();
     ensureTeamSelection();
+    renderNewUserClickUpOptions();
     clickupOnline = true;
     renderBackendStatus();
     renderHome();
@@ -3636,11 +3636,56 @@ async function loadUsersFromBackend() {
     const response = await apiFetch("/api/users");
     if (!response.ok) throw new Error(`Users backend error ${response.status}`);
     state.staffProfiles = await response.json();
+    renderNewUserClickUpOptions();
     renderUsers();
   } catch (error) {
     renderBackendStatus(error.message);
     renderUsers();
   }
+}
+
+function linkedClickUpProfile(memberId, exceptProfileId = "") {
+  const expected = String(memberId || "").trim();
+  if (!expected) return null;
+  return (state.staffProfiles || []).find((profile) => {
+    return profile.id !== exceptProfileId && String(profile.clickup_user_id || "").trim() === expected;
+  }) || null;
+}
+
+function clickUpMemberOptions(selectedId = "", exceptProfileId = "", allowEmpty = true) {
+  const expected = String(selectedId || "").trim();
+  const members = [...(state.agencyUsers || [])].sort((left, right) => {
+    return String(left.full_name || left.name || "").localeCompare(String(right.full_name || right.name || ""), "it", { sensitivity: "base" });
+  });
+  const options = members.map((member) => {
+    const id = String(member.clickup_user_id || member.id || "").trim();
+    const linked = linkedClickUpProfile(id, exceptProfileId);
+    const label = member.full_name || member.name || member.email || id;
+    const suffix = linked ? ` - collegato a ${linked.full_name || linked.email}` : "";
+    return `<option value="${escapeHtml(id)}" ${id === expected ? "selected" : ""} ${linked ? "disabled" : ""}>${escapeHtml(label + suffix)}</option>`;
+  }).join("");
+  const unknownSelected = expected && !members.some((member) => String(member.clickup_user_id || member.id || "") === expected)
+    ? `<option value="${escapeHtml(expected)}" selected>${escapeHtml(expected)} - non trovato nel workspace</option>`
+    : "";
+  return `${allowEmpty ? '<option value="">Nessun collegamento ClickUp</option>' : '<option value="">Seleziona un membro ClickUp</option>'}${unknownSelected}${options}`;
+}
+
+function renderNewUserClickUpOptions() {
+  const select = document.getElementById("newUserClickUpMember");
+  if (!select) return;
+  const selected = select.value;
+  select.innerHTML = clickUpMemberOptions(selected, "", false);
+  syncNewUserWithClickUpMember(select);
+}
+
+function syncNewUserWithClickUpMember(select) {
+  const form = select?.closest("form");
+  if (!form) return;
+  const member = (state.agencyUsers || []).find((item) => {
+    return String(item.clickup_user_id || item.id || "") === String(select.value || "");
+  });
+  form.elements.full_name.value = member?.full_name || member?.name || "";
+  form.elements.email.value = member?.email || "";
 }
 
 function renderUsers() {
@@ -3677,10 +3722,17 @@ function renderUsers() {
             <option value="staff" ${profile.role === "staff" ? "selected" : ""}>staff</option>
           </select>
         </label>
-        <label>ClickUp user ID
-          <input data-user-clickup value="${escapeHtml(profile.clickup_user_id || "")}" placeholder="ClickUp user ID" ${canManage ? "" : "disabled"}>
+        <label>Utente ClickUp
+          <select data-user-clickup ${canManage ? "" : "disabled"} ${profile.role === "staff" ? "required" : ""}>
+            ${clickUpMemberOptions(profile.clickup_user_id, profile.id, profile.role === "admin")}
+          </select>
         </label>
       </div>
+      <p class="user-clickup-link-status ${profile.clickup_user_id ? "is-linked" : "is-unlinked"}">
+        ${profile.clickup_user_id
+          ? `Collegato all'ID ClickUp ${escapeHtml(profile.clickup_user_id)}`
+          : profile.role === "admin" ? "L'account admin non richiede un assegnatario ClickUp." : "Collegamento ClickUp mancante: le task personali non sono disponibili."}
+      </p>
       <div class="user-permission-section">
         <div>
           <p class="eyebrow">Funzioni disponibili</p>
@@ -3898,6 +3950,7 @@ async function createUserAccount(form) {
     const result = await response.json();
     if (!response.ok) throw new Error(result.error || `Users backend error ${response.status}`);
     form.reset();
+    renderNewUserClickUpOptions();
     message.className = "is-success";
     message.textContent = `Accesso creato per ${result.email || payload.email}.`;
     await loadUsersFromBackend();
@@ -3908,6 +3961,68 @@ async function createUserAccount(form) {
   } finally {
     submit.disabled = false;
   }
+}
+
+async function provisionClickUpUsers() {
+  const button = document.getElementById("provisionClickUpUsersButton");
+  const resultPanel = document.getElementById("provisionUsersResult");
+  if (!button || !resultPanel) return;
+  if (!confirm("Creo o collego un accesso staff per ogni membro ClickUp che dispone di email. Continuare?")) return;
+  button.disabled = true;
+  button.textContent = "Verifico gli accessi...";
+  resultPanel.hidden = false;
+  resultPanel.innerHTML = "<p>Verifica dei membri ClickUp in corso...</p>";
+  try {
+    const response = await apiFetch("/api/users", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "provision_clickup_members" })
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || "Creazione accessi non riuscita");
+    resultPanel.innerHTML = renderProvisionUsersResult(result);
+    await Promise.all([loadUsersFromBackend(), loadClickUpTeam()]);
+  } catch (error) {
+    resultPanel.innerHTML = `<p class="is-error">${escapeHtml(error.message || "Creazione accessi non riuscita")}</p>`;
+    renderBackendStatus(error.message);
+  } finally {
+    button.disabled = false;
+    button.textContent = "Crea accessi ClickUp mancanti";
+  }
+}
+
+function renderProvisionUsersResult(result) {
+  const created = Array.isArray(result.created) ? result.created : [];
+  const linked = Array.isArray(result.linked) ? result.linked : [];
+  const skipped = Array.isArray(result.skipped) ? result.skipped : [];
+  return `
+    <div class="user-provision-head">
+      <div>
+        <strong>Accessi ClickUp verificati</strong>
+        <span>${created.length} creati, ${linked.length} collegati, ${skipped.length} da verificare.</span>
+      </div>
+    </div>
+    ${created.length ? `
+      <div class="user-provision-warning">Le password temporanee sono mostrate una sola volta. Consegnale ai rispettivi utenti e chiedi di cambiarle al primo accesso.</div>
+      <div class="user-provision-credentials">
+        ${created.map((item) => `
+          <article>
+            <div><strong>${escapeHtml(item.full_name || item.email)}</strong><span>${escapeHtml(item.email)}</span></div>
+            <input type="text" readonly value="${escapeHtml(item.temporary_password)}" aria-label="Password temporanea di ${escapeHtml(item.full_name || item.email)}">
+            <button class="ghost-button" type="button" data-copy-provision-password="${escapeHtml(item.temporary_password)}">Copia password</button>
+          </article>
+        `).join("")}
+      </div>` : `<p class="user-provision-note">Nessuna nuova password generata: gli account esistenti sono stati soltanto collegati.</p>`}
+    ${skipped.length ? `<div class="user-provision-skipped"><strong>Da verificare</strong>${skipped.map((item) => `<span>${escapeHtml(item.full_name || item.clickup_user_id)}: ${escapeHtml(item.reason)}</span>`).join("")}</div>` : ""}
+  `;
+}
+
+async function copyProvisionPassword(button) {
+  const password = button.dataset.copyProvisionPassword || "";
+  if (!password) return;
+  await navigator.clipboard.writeText(password);
+  button.textContent = "Copiata";
+  setTimeout(() => { button.textContent = "Copia password"; }, 1600);
 }
 
 function renderAgencyUsers() {
@@ -4133,7 +4248,7 @@ function ensureTeamSelection() {
     return;
   }
   const ownUser = users.find((user) => {
-    return clickupUserId(user) === String(currentProfile?.clickup_user_id || "") || normalizeIdentity(user.email) === normalizeIdentity(currentProfile?.email);
+    return clickupUserId(user) === String(currentProfile?.clickup_user_id || "");
   });
   selectedTeamMemberId = ownUser ? teamMemberKey(ownUser) : "";
 }
@@ -5042,6 +5157,7 @@ document.body.addEventListener("click", (event) => {
   const toggleUserActivityButton = event.target.closest("[data-toggle-user-activity]");
   const refreshUserActivityButton = event.target.closest("[data-refresh-user-activity]");
   const saveUser = event.target.closest("[data-save-user]");
+  const copyProvisionPasswordButton = event.target.closest("[data-copy-provision-password]");
   const applyAiClient = event.target.closest("[data-apply-ai-client]");
   const deleteAlias = event.target.closest("[data-delete-alias]");
   if (jump) return setView(jump.dataset.jump);
@@ -5116,11 +5232,17 @@ document.body.addEventListener("click", (event) => {
   }
   if (taskRow && !event.target.closest("a, button, input, select, textarea")) return openTaskDetailModal(taskRow.dataset.taskDetail);
   if (saveUser) saveUserProfile(saveUser.closest("[data-user-id]"));
+  if (copyProvisionPasswordButton) return copyProvisionPassword(copyProvisionPasswordButton);
   if (applyAiClient) applyAiClientTag(applyAiClient);
   if (deleteAlias) deleteClientAlias(deleteAlias.dataset.deleteAlias);
 });
 
 document.body.addEventListener("change", (event) => {
+  const newUserClickUpMember = event.target.closest("#newUserClickUpMember");
+  if (newUserClickUpMember) {
+    syncNewUserWithClickUpMember(newUserClickUpMember);
+    return;
+  }
   const userRole = event.target.closest("[data-user-role]");
   if (userRole) {
     const row = userRole.closest("[data-user-id]");
@@ -5551,6 +5673,7 @@ document.getElementById("userCreateForm").addEventListener("submit", (event) => 
   event.preventDefault();
   createUserAccount(event.currentTarget);
 });
+document.getElementById("provisionClickUpUsersButton").addEventListener("click", provisionClickUpUsers);
 
 document.getElementById("passwordForm").addEventListener("submit", (event) => {
   if (event.submitter?.value === "cancel") return;

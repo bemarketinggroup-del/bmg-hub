@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import { jsonHeaders, readJson, requireUser, supabaseFetch } from "./_auth.js";
 import { handleAiTaskAssist } from "../lib/ai-task-assist.js";
+import { taskAssignedToClickUpId } from "../lib/clickup-identity.js";
 
 const CLICKUP_API_TOKEN = process.env.CLICKUP_API_TOKEN;
 const CLICKUP_WORKSPACE_ID = process.env.CLICKUP_WORKSPACE_ID || "90152036988";
@@ -60,9 +61,7 @@ function clickupTaskUrl(taskId) {
 }
 
 function taskBelongsToProfile(task, profile) {
-  return (task.assignees || []).some((assignee) => {
-    return String(assignee.id || "") === String(profile.clickup_user_id || "") || assignee.email === profile.email;
-  });
+  return taskAssignedToClickUpId(task, profile?.clickup_user_id);
 }
 
 function taskFromRow(row) {
