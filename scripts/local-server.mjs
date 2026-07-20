@@ -18,7 +18,6 @@ const { default: handleClickUpTasks } = await import("../api/clickup-tasks.js");
 const { handleSiteMedia } = await import("../lib/site-media.js");
 const { default: handleMeApi } = await import("../api/me.js");
 const { default: handleUsersApi } = await import("../api/users.js");
-const { default: handleAccessLogsApi } = await import("../api/access-logs.js");
 const { default: handleSiteContentApi } = await import("../api/site-content.js");
 const port = Number(process.env.PORT || 8020);
 
@@ -57,7 +56,7 @@ createServer(async (request, response) => {
     }
 
     if (url.pathname === "/api/access-logs") {
-      await handleAccessLogsApi(request, response);
+      await handleMeApi(request, response);
       return;
     }
 

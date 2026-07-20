@@ -7,15 +7,20 @@ const payload = Buffer.from(JSON.stringify({ session_id: sessionId })).toString(
 assert.equal(sessionIdFromToken(`header.${payload}.signature`), sessionId);
 assert.equal(sessionIdFromToken("invalid-token"), "");
 
-const endpoint = readFileSync("api/access-logs.js", "utf8");
+const endpoint = readFileSync("api/me.js", "utf8");
 const users = readFileSync("api/users.js", "utf8");
 const frontend = readFileSync("public/app.js", "utf8");
 const migration = readFileSync("supabase/20260720120000_staff_access_logs.sql", "utf8");
 const vercel = readFileSync("vercel.json", "utf8");
+const accessLogBlock = endpoint.slice(
+  endpoint.indexOf("async function recordAccess"),
+  endpoint.indexOf("async function changePassword")
+);
 
 assert.match(endpoint, /requireUser/);
-assert.match(endpoint, /resolution=ignore-duplicates/);
-assert.doesNotMatch(endpoint, /password|user-agent|x-forwarded-for/i);
+assert.match(endpoint, /isAccessLogRequest/);
+assert.match(accessLogBlock, /resolution=ignore-duplicates/);
+assert.doesNotMatch(accessLogBlock, /password|user-agent|x-forwarded-for/i);
 assert.match(users, /last_access_at/);
 assert.match(users, /access_history/);
 assert.match(frontend, /recordLoginAccess/);
