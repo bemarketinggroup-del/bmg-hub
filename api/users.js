@@ -25,16 +25,22 @@ export default async function handler(request, response) {
   if (!session) return;
 
   if (request.method === "GET") {
+    const requestUrl = new URL(request.url || "/api/users", "http://localhost");
+    const activityProfileId = String(requestUrl.searchParams.get("activity_profile_id") || "").trim();
+    if (activityProfileId) {
+      await sendUserActivity(response, session, activityProfileId, requestUrl.searchParams.get("days"));
+      return;
+    }
     const [result, accessResult] = await Promise.all([
       supabaseFetch("/staff_profiles?select=*&order=full_name.asc,email.asc"),
       session.profile.role === "admin"
-        ? supabaseFetch("/staff_access_logs?select=profile_id,accessed_at&order=accessed_at.desc&limit=500")
+        ? supabaseFetch("/staff_access_logs?select=profile_id,last_activity_at&order=last_activity_at.desc&limit=500")
         : Promise.resolve(null)
     ]);
     const accessRows = accessResult?.ok ? await accessResult.json() : [];
     const accessByProfile = accessRows.reduce((map, item) => {
       const history = map.get(item.profile_id) || [];
-      if (history.length < 20) history.push(item.accessed_at);
+      if (history.length < 1) history.push(item.last_activity_at);
       map.set(item.profile_id, history);
       return map;
     }, new Map());
@@ -43,8 +49,7 @@ export default async function handler(request, response) {
       const history = accessByProfile.get(profile.id) || [];
       return {
         ...profile,
-        last_access_at: history[0] || null,
-        access_history: history
+        last_access_at: history[0] || null
       };
     }) : [];
     response.writeHead(result.status, headers);
@@ -151,4 +156,65 @@ export default async function handler(request, response) {
 
   response.writeHead(405, headers);
   response.end(JSON.stringify({ error: "Method not allowed" }));
+}
+
+async function sendUserActivity(response, session, profileId, requestedDays) {
+  if (session.profile.role !== "admin") {
+    response.writeHead(403, headers);
+    response.end(JSON.stringify({ error: "Solo gli admin possono vedere le attivita degli utenti" }));
+    return;
+  }
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(profileId)) {
+    response.writeHead(400, headers);
+    response.end(JSON.stringify({ error: "Profilo utente non valido" }));
+    return;
+  }
+
+  const days = Math.min(90, Math.max(7, Number.parseInt(requestedDays || "30", 10) || 30));
+  const dateKeys = recentDateKeys(days);
+  const firstDate = dateKeys[0];
+  const actionsSince = new Date(Date.now() - (days + 1) * 86400000).toISOString();
+  const profileFilter = encodeURIComponent(profileId);
+  const [profileResult, dailyResult, actionsResult] = await Promise.all([
+    supabaseFetch(`/staff_profiles?select=id,email,full_name&id=eq.${profileFilter}&limit=1`),
+    supabaseFetch(`/staff_activity_daily?select=activity_date,first_access_at,last_activity_at,active_seconds,session_count&profile_id=eq.${profileFilter}&activity_date=gte.${firstDate}&order=activity_date.asc`),
+    supabaseFetch(`/staff_action_logs?select=id,action_key,action_label,module_key,endpoint,method,created_at&profile_id=eq.${profileFilter}&created_at=gte.${encodeURIComponent(actionsSince)}&order=created_at.desc&limit=300`)
+  ]);
+  if (!profileResult.ok || !dailyResult.ok || !actionsResult.ok) {
+    response.writeHead(502, headers);
+    response.end(JSON.stringify({ error: "Registro attivita non disponibile" }));
+    return;
+  }
+
+  const profiles = await profileResult.json();
+  if (!profiles[0]) {
+    response.writeHead(404, headers);
+    response.end(JSON.stringify({ error: "Profilo utente non trovato" }));
+    return;
+  }
+  const dailyRows = await dailyResult.json();
+  const byDate = new Map(dailyRows.map((item) => [item.activity_date, item]));
+  const daily = dateKeys.map((date) => ({
+    date,
+    first_access_at: byDate.get(date)?.first_access_at || null,
+    last_activity_at: byDate.get(date)?.last_activity_at || null,
+    active_seconds: Number(byDate.get(date)?.active_seconds || 0),
+    session_count: Number(byDate.get(date)?.session_count || 0)
+  }));
+  const actions = await actionsResult.json();
+  response.writeHead(200, headers);
+  response.end(JSON.stringify({ profile: profiles[0], days, daily, actions }));
+}
+
+function recentDateKeys(days) {
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Rome",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  });
+  return Array.from({ length: days }, (_, index) => {
+    const date = new Date(Date.now() - (days - index - 1) * 86400000);
+    return formatter.format(date);
+  });
 }

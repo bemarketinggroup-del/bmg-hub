@@ -206,6 +206,10 @@ let selectedContentSection = "all";
 let authConfig = null;
 let authSession = loadAuthSession();
 let currentProfile = null;
+const userActivityCache = new Map();
+let activityHeartbeatTimer = null;
+let lastAuditedView = "";
+let lastAuditedViewAt = 0;
 let aiDescriptionProposal = null;
 let taskDetailTaskId = "";
 let quickStatusTaskId = "";
@@ -290,11 +294,116 @@ async function loginWithPassword(email, password) {
 }
 
 async function recordLoginAccess() {
-  const response = await apiFetch("/api/access-logs", { method: "POST" });
+  const response = await postAccessEvent({
+    event_type: "login",
+    module_key: activeModuleKey()
+  });
   if (!response.ok) {
     const data = await response.json().catch(() => ({}));
     throw new Error(data.error || "Registro accessi non disponibile");
   }
+}
+
+async function postAccessEvent(payload, { keepalive = false } = {}) {
+  const token = keepalive ? authSession?.access_token : await accessToken();
+  if (!token) throw new Error("Sessione richiesta");
+  return fetch("/api/access-logs", {
+    method: "POST",
+    keepalive,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(payload)
+  });
+}
+
+function activeModuleKey() {
+  const view = document.querySelector("[data-view-panel].is-active")?.dataset.viewPanel || "dashboard";
+  return VIEW_MODULES[view] || "dashboard";
+}
+
+function sendActivityEvent(eventType, options = {}) {
+  if (!authSession?.access_token || !currentProfile) return Promise.resolve(null);
+  return postAccessEvent({ event_type: eventType, module_key: activeModuleKey() }, options).catch(() => null);
+}
+
+function startActivityTracker() {
+  stopActivityTracker();
+  void sendActivityEvent("resume");
+  activityHeartbeatTimer = window.setInterval(() => {
+    if (document.visibilityState === "visible") void sendActivityEvent("heartbeat");
+  }, 30000);
+}
+
+function stopActivityTracker() {
+  if (activityHeartbeatTimer) window.clearInterval(activityHeartbeatTimer);
+  activityHeartbeatTimer = null;
+}
+
+function recordAuditAction(endpoint, method = "VIEW", moduleKey = activeModuleKey(), metadata = {}) {
+  return postAccessEvent({
+    event_type: "action",
+    endpoint,
+    method,
+    module_key: moduleKey,
+    action_key: method === "VIEW" ? "view_module" : metadata.action_key,
+    entity_type: metadata.entity_type,
+    entity_id: metadata.entity_id
+  }).catch(() => null);
+}
+
+function auditMetadata(url, method, options = {}) {
+  const requestUrl = new URL(String(url || "/"), window.location.origin);
+  const endpoint = requestUrl.pathname;
+  let body = {};
+  if (typeof options.body === "string" && options.body.length <= 20000) {
+    try { body = JSON.parse(options.body); } catch { body = {}; }
+  }
+
+  const actionKey = (() => {
+    if (endpoint === "/api/me") return "change_password";
+    if (endpoint === "/api/users") return method === "POST" ? "create_user" : "update_user";
+    if (endpoint === "/api/clients/sync-clickup") return "sync_clients";
+    if (endpoint === "/api/clients") return method === "POST" ? "create_client" : "update_client";
+    if (endpoint === "/api/clickup/tasks") return method === "POST" ? "create_task" : "update_task";
+    if (endpoint === "/api/ped") return method === "POST" ? "create_ped_content" : method === "DELETE" ? "remove_ped_content" : "update_ped_content";
+    if (endpoint === "/api/ped-share") return method === "DELETE" ? "disable_ped_share" : "create_ped_share";
+    if (endpoint === "/api/site-media") return "upload_site_media";
+    if (endpoint === "/api/site-content") return method === "POST" ? "create_site_content" : method === "DELETE" ? "delete_site_content" : "update_site_content";
+    if (endpoint === "/api/smart-working") return "smart_working_operation";
+    if (endpoint === "/api/ai/task-assist") {
+      if (requestUrl.searchParams.get("aliases") === "1") return method === "DELETE" ? "delete_client_alias" : "create_client_alias";
+      return "ai_task_operation";
+    }
+    if (endpoint === "/api/client-drive") {
+      const action = requestUrl.searchParams.get("action");
+      if (action === "create-folder") return "create_drive_folder";
+      if (action === "rename") return "rename_drive_item";
+      if (action === "trash") return "trash_drive_item";
+      return method === "POST" ? "upload_drive_file" : "post_operation";
+    }
+    return `${method.toLowerCase()}_operation`;
+  })();
+
+  const entityId = body.id || body.clickup_task_id || body.client_id || body.file_id || requestUrl.searchParams.get("id") || requestUrl.searchParams.get("client_id") || "";
+  const entityType = endpoint.includes("clickup/tasks") ? "task"
+    : endpoint.includes("client") ? "client"
+      : endpoint.includes("ped") ? "ped_content"
+        : endpoint.includes("site-content") ? "site_content"
+          : endpoint.includes("users") ? "user"
+            : "";
+  return { action_key: actionKey, entity_type: entityType, entity_id: String(entityId || "") };
+}
+
+function auditModuleView(view) {
+  if (!currentProfile) return;
+  const moduleKey = VIEW_MODULES[view] || "dashboard";
+  const now = Date.now();
+  if (lastAuditedView === moduleKey && now - lastAuditedViewAt < 10000) return;
+  lastAuditedView = moduleKey;
+  lastAuditedViewAt = now;
+  void recordAuditAction(`/view/${view}`, "VIEW", moduleKey);
 }
 
 async function updateCurrentPassword(currentPassword, newPassword, recoveryMode = false) {
@@ -351,6 +460,10 @@ async function apiFetch(url, options = {}) {
   if (response.status === 401) {
     saveAuthSession(null);
     showLogin();
+  }
+  const method = String(options.method || "GET").toUpperCase();
+  if (response.ok && ["POST", "PATCH", "PUT", "DELETE"].includes(method) && String(url) !== "/api/access-logs") {
+    void recordAuditAction(String(url), method, activeModuleKey(), auditMetadata(url, method, options));
   }
   return response;
 }
@@ -499,6 +612,7 @@ async function logout() {
   const token = authSession?.access_token;
   if (token) {
     try {
+      await sendActivityEvent("session_end");
       await supabaseAuth("/logout", {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` }
@@ -507,6 +621,7 @@ async function logout() {
       // Local logout must still work if Supabase is unreachable.
     }
   }
+  stopActivityTracker();
   currentProfile = null;
   saveAuthSession(null);
   showLogin();
@@ -612,6 +727,7 @@ function setView(view) {
   };
   document.getElementById("viewKicker").textContent = titles[view][0];
   document.getElementById("viewTitle").textContent = titles[view][1];
+  auditModuleView(view);
   if (view === "ped") {
     ensurePedClientSelection();
     loadPedCalendar();
@@ -3550,7 +3666,7 @@ function renderUsers() {
           <span>Accesso attivo</span>
         </label>
       </header>
-      ${canManage ? renderUserAccessHistory(profile) : ""}
+      ${canManage ? renderUserActivitySummary(profile) : ""}
       <div class="user-access-fields">
         <label>Nome
           <input data-user-name value="${escapeHtml(profile.full_name || "")}" placeholder="Nome staff" ${canManage ? "" : "disabled"}>
@@ -3584,24 +3700,105 @@ function renderUsers() {
   `).join("") || emptyState("Nessun profilo staff configurato.");
 }
 
-function renderUserAccessHistory(profile) {
-  const history = Array.isArray(profile.access_history) ? profile.access_history : [];
+function renderUserActivitySummary(profile) {
   const lastAccess = profile.last_access_at ? formatUserAccessTime(profile.last_access_at) : "Nessun accesso registrato";
   return `
-    <section class="user-login-audit" aria-label="Storico accessi di ${escapeHtml(profile.full_name || profile.email)}">
+    <section class="user-activity-summary" aria-label="Attivita di ${escapeHtml(profile.full_name || profile.email)}">
       <div class="user-last-login">
-        <span>Ultimo accesso</span>
+        <span>Ultima attivita</span>
         <strong>${escapeHtml(lastAccess)}</strong>
       </div>
-      <details class="user-login-history">
-        <summary>Orari accessi recenti</summary>
-        ${history.length ? `
-          <ol>
-            ${history.map((accessedAt) => `<li><time datetime="${escapeHtml(accessedAt)}">${escapeHtml(formatUserAccessTime(accessedAt))}</time></li>`).join("")}
-          </ol>
-        ` : `<p>Lo storico iniziera dal prossimo login dell'utente.</p>`}
-      </details>
+      <button class="ghost-button" data-toggle-user-activity="${escapeHtml(profile.id)}" type="button" aria-expanded="false">Apri registro attivita</button>
+      <div class="user-activity-panel" data-user-activity-panel="${escapeHtml(profile.id)}" hidden></div>
     </section>`;
+}
+
+async function toggleUserActivity(button, forceRefresh = false) {
+  const profileId = button.dataset.toggleUserActivity;
+  const panel = document.querySelector(`[data-user-activity-panel="${profileId}"]`);
+  if (!panel) return;
+  const opening = panel.hidden;
+  panel.hidden = !opening;
+  button.setAttribute("aria-expanded", String(opening));
+  button.textContent = opening ? "Chiudi registro" : "Apri registro attivita";
+  if (opening) await loadUserActivity(profileId, forceRefresh);
+}
+
+async function loadUserActivity(profileId, forceRefresh = false) {
+  const panel = document.querySelector(`[data-user-activity-panel="${profileId}"]`);
+  if (!panel) return;
+  if (!forceRefresh && userActivityCache.has(profileId)) {
+    panel.innerHTML = renderUserActivityDetails(userActivityCache.get(profileId));
+    return;
+  }
+  panel.innerHTML = `<div class="user-activity-loading">Caricamento registro...</div>`;
+  try {
+    const response = await apiFetch(`/api/users?activity_profile_id=${encodeURIComponent(profileId)}&days=30`);
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "Registro attivita non disponibile");
+    userActivityCache.set(profileId, data);
+    panel.innerHTML = renderUserActivityDetails(data);
+  } catch (error) {
+    panel.innerHTML = `<div class="user-activity-error">${escapeHtml(error.message)}</div>`;
+  }
+}
+
+function renderUserActivityDetails(data) {
+  const daily = Array.isArray(data.daily) ? data.daily : [];
+  const actions = Array.isArray(data.actions) ? data.actions : [];
+  const totalSeconds = daily.reduce((total, day) => total + Number(day.active_seconds || 0), 0);
+  const activeDays = daily.filter((day) => day.first_access_at).length;
+  const maximum = Math.max(1, ...daily.map((day) => Number(day.active_seconds || 0)));
+  const dayRows = daily.filter((day) => day.first_access_at || day.active_seconds > 0).slice().reverse();
+  return `
+    <div class="user-activity-toolbar">
+      <div>
+        <strong>Presenza misurata · ultimi ${Number(data.days || 30)} giorni</strong>
+        <span>Il tempo conta solo mentre il gestionale e aperto e visibile.</span>
+      </div>
+      <button class="ghost-button" data-refresh-user-activity="${escapeHtml(data.profile?.id || "")}" type="button">Aggiorna</button>
+    </div>
+    <div class="user-activity-kpis">
+      <div><span>Tempo attivo</span><strong>${escapeHtml(formatActiveDuration(totalSeconds))}</strong></div>
+      <div><span>Giorni attivi</span><strong>${activeDays}</strong></div>
+      <div><span>Azioni registrate</span><strong>${actions.length}</strong></div>
+    </div>
+    <div class="user-activity-chart" role="img" aria-label="Tempo attivo giorno per giorno negli ultimi ${daily.length} giorni">
+      ${daily.map((day) => {
+        const seconds = Number(day.active_seconds || 0);
+        const height = seconds ? Math.max(8, Math.round((seconds / maximum) * 100)) : 2;
+        const title = `${formatActivityDate(day.date)}: ${formatActiveDuration(seconds)}`;
+        return `<span class="user-activity-bar-wrap" title="${escapeHtml(title)}"><i class="user-activity-bar ${seconds ? "is-active" : ""}" style="height:${height}%"></i></span>`;
+      }).join("")}
+    </div>
+    <div class="user-activity-columns">
+      <section>
+        <h4>Dettaglio giornaliero</h4>
+        <div class="user-activity-days">
+          ${dayRows.length ? dayRows.map((day) => `
+            <article>
+              <strong>${escapeHtml(formatActivityDate(day.date))}</strong>
+              <span>Primo accesso <b>${escapeHtml(formatActivityClock(day.first_access_at))}</b></span>
+              <span>Ultima attivita <b>${escapeHtml(formatActivityClock(day.last_activity_at))}</b></span>
+              <span>Tempo attivo <b>${escapeHtml(formatActiveDuration(day.active_seconds))}</b></span>
+              <small>${Number(day.session_count || 0)} ${Number(day.session_count || 0) === 1 ? "sessione" : "sessioni"}</small>
+            </article>
+          `).join("") : `<p class="user-activity-empty">Nessuna presenza misurata nel periodo.</p>`}
+        </div>
+      </section>
+      <section>
+        <h4>Azioni nel gestionale</h4>
+        <div class="user-action-list">
+          ${actions.length ? actions.map((action) => `
+            <article>
+              <span class="user-action-method">${escapeHtml(action.method || "VIEW")}</span>
+              <div><strong>${escapeHtml(action.action_label || "Operazione")}</strong><small>${escapeHtml(formatUserAccessTime(action.created_at))}</small></div>
+            </article>
+          `).join("") : `<p class="user-activity-empty">Nessuna azione registrata nel periodo.</p>`}
+        </div>
+      </section>
+    </div>
+    <p class="user-activity-note">La durata e una misura operativa basata su heartbeat ogni 30 secondi. Arresti improvvisi, sospensione del dispositivo o assenza di rete possono produrre uno scarto massimo nell'ultima frazione di sessione.</p>`;
 }
 
 function formatUserAccessTime(value) {
@@ -3612,6 +3809,34 @@ function formatUserAccessTime(value) {
     timeStyle: "short",
     timeZone: "Europe/Rome"
   }).format(date);
+}
+
+function formatActivityClock(value) {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+  return new Intl.DateTimeFormat("it-IT", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    timeZone: "Europe/Rome"
+  }).format(date);
+}
+
+function formatActivityDate(value) {
+  const date = new Date(`${value}T12:00:00`);
+  if (Number.isNaN(date.getTime())) return value || "-";
+  return new Intl.DateTimeFormat("it-IT", { weekday: "short", day: "2-digit", month: "short" }).format(date);
+}
+
+function formatActiveDuration(value) {
+  const seconds = Math.max(0, Number(value || 0));
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const remainingSeconds = Math.floor(seconds % 60);
+  if (hours) return `${hours} h ${minutes} min`;
+  if (minutes) return `${minutes} min ${remainingSeconds} sec`;
+  return `${remainingSeconds} sec`;
 }
 
 async function saveUserProfile(row) {
@@ -4814,6 +5039,8 @@ document.body.addEventListener("click", (event) => {
   const pedCreateCarousel = event.target.closest("[data-ped-create-carousel]");
   const pedCarouselDownload = event.target.closest("[data-ped-carousel-download]");
   const pedCaption = event.target.closest("[data-ped-caption]");
+  const toggleUserActivityButton = event.target.closest("[data-toggle-user-activity]");
+  const refreshUserActivityButton = event.target.closest("[data-refresh-user-activity]");
   const saveUser = event.target.closest("[data-save-user]");
   const applyAiClient = event.target.closest("[data-apply-ai-client]");
   const deleteAlias = event.target.closest("[data-delete-alias]");
@@ -4878,6 +5105,11 @@ document.body.addEventListener("click", (event) => {
   }
   if (pedPickerClose) return document.getElementById("pedDrivePickerModal").close();
   if (pedCaption) return openPedCaptionModal(pedCaption.dataset.pedCaption);
+  if (toggleUserActivityButton) return toggleUserActivity(toggleUserActivityButton);
+  if (refreshUserActivityButton) {
+    userActivityCache.delete(refreshUserActivityButton.dataset.refreshUserActivity);
+    return loadUserActivity(refreshUserActivityButton.dataset.refreshUserActivity, true);
+  }
   if (pedDay && !event.target.closest("button,a,input,select,textarea,[contenteditable]")) {
     const firstItem = state.pedItems.find((item) => String(item.scheduled_date) === String(pedDay.dataset.pedDay));
     if (firstItem) return openPedCaptionModal(firstItem.id);
@@ -5347,6 +5579,7 @@ async function bootApp() {
     await loadAuthConfig();
     await loadCurrentUser();
     showApp();
+    startActivityTracker();
     renderAll();
     if (recoveryMode) {
       openProfileModal();
@@ -5366,5 +5599,18 @@ async function bootApp() {
     showLogin(error.message);
   }
 }
+
+document.addEventListener("visibilitychange", () => {
+  if (!currentProfile || !authSession?.access_token) return;
+  if (document.visibilityState === "hidden") {
+    void sendActivityEvent("heartbeat", { keepalive: true });
+  } else {
+    void sendActivityEvent("resume");
+  }
+});
+
+window.addEventListener("pagehide", () => {
+  if (currentProfile && authSession?.access_token) void sendActivityEvent("session_end", { keepalive: true });
+});
 
 bootApp();
