@@ -98,7 +98,7 @@ export async function requireUser(request, response, options = {}) {
     return null;
   }
 
-  return { user, profile };
+  return { user, profile, sessionId: sessionIdFromToken(token) };
 }
 
 export function publicAuthConfig() {
@@ -112,4 +112,16 @@ function bearerToken(request) {
   const header = request.headers.authorization || request.headers.Authorization || "";
   if (!header.startsWith("Bearer ")) return "";
   return header.slice(7).trim();
+}
+
+export function sessionIdFromToken(token) {
+  try {
+    const payload = String(token || "").split(".")[1];
+    if (!payload) return "";
+    const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const decoded = JSON.parse(Buffer.from(normalized, "base64").toString("utf8"));
+    return typeof decoded.session_id === "string" ? decoded.session_id : "";
+  } catch {
+    return "";
+  }
 }

@@ -24,6 +24,10 @@
       "dest": "/api/users.js"
     },
     {
+      "src": "/api/access-logs",
+      "dest": "/api/access-logs.js"
+    },
+    {
       "src": "/api/site-content",
       "dest": "/api/site-content.js"
     },

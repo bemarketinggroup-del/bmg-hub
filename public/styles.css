@@ -3261,6 +3261,34 @@ code { font-family: var(--font-mono); font-size: 12px; }
 .user-row strong { font-size: 15px; }
 .user-row span { display: block; }
 .user-access-card.is-readonly { background: var(--surface-soft); }
+.user-login-audit {
+  display: grid;
+  grid-template-columns: minmax(220px, .75fr) minmax(260px, 1.25fr);
+  gap: 12px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  padding: 14px 0;
+}
+.user-last-login,
+.user-login-history {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-soft);
+  padding: 11px 13px;
+}
+.user-last-login span { color: var(--muted); font-size: 11px; font-weight: 700; text-transform: uppercase; }
+.user-last-login strong { margin-top: 4px; font-size: 13px; }
+.user-login-history summary { cursor: pointer; color: var(--terra-deep); font-size: 12px; font-weight: 800; }
+.user-login-history ol {
+  display: grid;
+  gap: 6px;
+  max-height: 180px;
+  overflow: auto;
+  margin: 10px 0 0;
+  padding: 0 0 0 20px;
+}
+.user-login-history li { color: var(--muted); font-size: 12px; }
+.user-login-history p { margin: 9px 0 0; color: var(--muted); font-size: 12px; }
 .user-access-head,
 .user-identity,
 .user-access-actions { display: flex; align-items: center; }
@@ -3311,6 +3339,10 @@ code { font-family: var(--font-mono); font-size: 12px; }
 .permission-toggle:has(input:checked) { border-color: var(--terra-line); background: var(--terra-tint); }
 .permission-toggle:has(input:disabled) { cursor: default; }
 .user-access-actions { justify-content: flex-end; }
+
+@media (max-width: 760px) {
+  .user-login-audit { grid-template-columns: 1fr; }
+}
 
 /* ============================================================
    MODALI

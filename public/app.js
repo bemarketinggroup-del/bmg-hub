@@ -282,6 +282,19 @@ async function loginWithPassword(email, password) {
   if (!response.ok) throw new Error(data.error_description || data.msg || "Credenziali non valide");
   saveAuthSession(normalizeSession(data));
   await loadCurrentUser();
+  try {
+    await recordLoginAccess();
+  } catch (error) {
+    renderBackendStatus(error.message);
+  }
+}
+
+async function recordLoginAccess() {
+  const response = await apiFetch("/api/access-logs", { method: "POST" });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.error || "Registro accessi non disponibile");
+  }
 }
 
 async function updateCurrentPassword(currentPassword, newPassword, recoveryMode = false) {
@@ -3537,6 +3550,7 @@ function renderUsers() {
           <span>Accesso attivo</span>
         </label>
       </header>
+      ${canManage ? renderUserAccessHistory(profile) : ""}
       <div class="user-access-fields">
         <label>Nome
           <input data-user-name value="${escapeHtml(profile.full_name || "")}" placeholder="Nome staff" ${canManage ? "" : "disabled"}>
@@ -3568,6 +3582,36 @@ function renderUsers() {
       ${canManage ? `<div class="user-access-actions"><button class="primary-button" data-save-user type="button">Salva accessi</button></div>` : ""}
     </article>
   `).join("") || emptyState("Nessun profilo staff configurato.");
+}
+
+function renderUserAccessHistory(profile) {
+  const history = Array.isArray(profile.access_history) ? profile.access_history : [];
+  const lastAccess = profile.last_access_at ? formatUserAccessTime(profile.last_access_at) : "Nessun accesso registrato";
+  return `
+    <section class="user-login-audit" aria-label="Storico accessi di ${escapeHtml(profile.full_name || profile.email)}">
+      <div class="user-last-login">
+        <span>Ultimo accesso</span>
+        <strong>${escapeHtml(lastAccess)}</strong>
+      </div>
+      <details class="user-login-history">
+        <summary>Orari accessi recenti</summary>
+        ${history.length ? `
+          <ol>
+            ${history.map((accessedAt) => `<li><time datetime="${escapeHtml(accessedAt)}">${escapeHtml(formatUserAccessTime(accessedAt))}</time></li>`).join("")}
+          </ol>
+        ` : `<p>Lo storico iniziera dal prossimo login dell'utente.</p>`}
+      </details>
+    </section>`;
+}
+
+function formatUserAccessTime(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Data non disponibile";
+  return new Intl.DateTimeFormat("it-IT", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "Europe/Rome"
+  }).format(date);
 }
 
 async function saveUserProfile(row) {

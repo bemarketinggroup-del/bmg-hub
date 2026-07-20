@@ -25,8 +25,28 @@ export default async function handler(request, response) {
   if (!session) return;
 
   if (request.method === "GET") {
-    const result = await supabaseFetch("/staff_profiles?select=*&order=full_name.asc,email.asc");
-    const rows = result.ok ? (await result.json()).map(profileWithPermissions) : [];
+    const [result, accessResult] = await Promise.all([
+      supabaseFetch("/staff_profiles?select=*&order=full_name.asc,email.asc"),
+      session.profile.role === "admin"
+        ? supabaseFetch("/staff_access_logs?select=profile_id,accessed_at&order=accessed_at.desc&limit=500")
+        : Promise.resolve(null)
+    ]);
+    const accessRows = accessResult?.ok ? await accessResult.json() : [];
+    const accessByProfile = accessRows.reduce((map, item) => {
+      const history = map.get(item.profile_id) || [];
+      if (history.length < 20) history.push(item.accessed_at);
+      map.set(item.profile_id, history);
+      return map;
+    }, new Map());
+    const rows = result.ok ? (await result.json()).map((row) => {
+      const profile = profileWithPermissions(row);
+      const history = accessByProfile.get(profile.id) || [];
+      return {
+        ...profile,
+        last_access_at: history[0] || null,
+        access_history: history
+      };
+    }) : [];
     response.writeHead(result.status, headers);
     response.end(result.ok ? JSON.stringify(rows) : JSON.stringify({ error: "Utenti non disponibili" }));
     return;
