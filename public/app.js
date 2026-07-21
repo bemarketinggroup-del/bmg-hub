@@ -5217,9 +5217,28 @@ function googleCalendarEventsForDate(dateKey) {
 }
 
 function calendarEventColor(event) {
-  const colors = ["#cf5b31", "#3d7f77", "#4f73bd", "#9367a6", "#be8a31", "#d0526f", "#587c52", "#667085", "#9a654f", "#2f7d98", "#b55c39"];
-  const index = Math.max(0, Number(event.color_id || 1) - 1) % colors.length;
-  return colors[index];
+  const categoryColors = {
+    tentative: "#dbadff",
+    smart_working: "#ff887c",
+    staff_leave: "#fbd75b",
+    client_event: "#51b749",
+    client_appointment: "#dc2127"
+  };
+  const googleColors = {
+    1: "#a4bdfc", 2: "#7ae7bf", 3: "#dbadff", 4: "#ff887c", 5: "#fbd75b", 6: "#ffb878",
+    7: "#46d6db", 8: "#e1e1e1", 9: "#5484ed", 10: "#51b749", 11: "#dc2127"
+  };
+  return categoryColors[event.event_category] || googleColors[Number(event.color_id)] || "#667085";
+}
+
+function calendarEventCategoryLabel(event) {
+  return {
+    tentative: "Appuntamento in forse",
+    smart_working: "Smart working",
+    staff_leave: "OFF / Ferie personale",
+    client_event: "Evento cliente",
+    client_appointment: "Appuntamento cliente"
+  }[event.event_category] || "Evento calendario";
 }
 
 function calendarEventTime(event) {
@@ -5232,7 +5251,7 @@ function calendarEventChip(event, detailed = false) {
   const eventId = encodeURIComponent(event.id);
   const attendees = Array.isArray(event.attendees) ? event.attendees.length : 0;
   return `
-    <button class="google-calendar-event${detailed ? " is-detailed" : ""}" data-calendar-event="${eventId}" type="button" style="--event-color:${calendarEventColor(event)}" title="${escapeHtml(event.title)}">
+    <button class="google-calendar-event${detailed ? " is-detailed" : ""}" data-calendar-event="${eventId}" type="button" style="--event-color:${calendarEventColor(event)}" title="${escapeHtml(`${calendarEventCategoryLabel(event)} · ${event.title}`)}">
       <span class="google-calendar-event-time">${escapeHtml(calendarEventTime(event))}</span>
       <strong>${escapeHtml(event.title)}</strong>
       ${detailed && event.location ? `<small>${escapeHtml(event.location)}</small>` : ""}
@@ -5352,6 +5371,7 @@ function openGoogleCalendarEvent(eventId = "", dateKey = "") {
   form.elements.start_date.value = initialDate;
   form.elements.end_date.value = initialDate;
   form.elements.all_day.checked = Boolean(event?.all_day);
+  form.elements.event_category.value = event?.event_category || "auto";
   const existingAttendees = attendeeEmails(event?.attendees || []);
   const teamEmails = new Set(personalAreaState.team.map((member) => String(member.email || "").trim().toLowerCase()).filter(Boolean));
   renderCalendarTeamAttendees(existingAttendees);

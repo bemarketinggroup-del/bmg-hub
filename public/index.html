@@ -355,6 +355,14 @@
           </div>
 
           <div class="google-calendar-error is-hidden" id="googleCalendarError" role="alert"></div>
+          <div class="google-calendar-legend" aria-label="Legenda colori eventi">
+            <strong>Legenda</strong>
+            <span><i style="--legend-color:#fbd75b"></i>OFF / Ferie personale</span>
+            <span><i style="--legend-color:#dc2127"></i>Appuntamenti clienti</span>
+            <span><i style="--legend-color:#ff887c"></i>Smart working</span>
+            <span><i style="--legend-color:#51b749"></i>Eventi clienti</span>
+            <span><i style="--legend-color:#dbadff"></i>Appuntamenti in forse</span>
+          </div>
           <div class="google-calendar-grid" id="googleCalendarGrid" aria-live="polite"></div>
         </section>
       </section>
@@ -568,6 +576,17 @@
       <div class="form-grid calendar-event-form-grid">
         <label class="full">Titolo
           <input name="title" maxlength="500" autocomplete="off" required placeholder="Es. Shooting cliente Europa Palace">
+        </label>
+        <label class="full">Categoria e colore
+          <select name="event_category">
+            <option value="auto">Automatico dal titolo</option>
+            <option value="staff_leave">OFF / Ferie personale · Banana</option>
+            <option value="client_appointment">Appuntamento cliente · Pomodoro</option>
+            <option value="smart_working">Smart working · Fenicottero</option>
+            <option value="client_event">Evento cliente · Basilico</option>
+            <option value="tentative">Appuntamento in forse · Vinaccia</option>
+          </select>
+          <small>Il colore viene salvato anche sull'evento Google Calendar.</small>
         </label>
         <label class="calendar-all-day-field">
           <span>Durata</span>

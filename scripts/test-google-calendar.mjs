@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { buildGoogleEvent, calendarPayload, normalizeGoogleEvent } from "../lib/google-calendar.js";
+import { buildGoogleEvent, calendarPayload, classifyGoogleCalendarEvent, normalizeGoogleEvent } from "../lib/google-calendar.js";
 
 const timed = buildGoogleEvent({
   title: "Shooting Europa Palace",
@@ -14,6 +14,7 @@ assert.equal(timed.summary, "Shooting Europa Palace");
 assert.equal(timed.start.dateTime, "2026-07-22T09:30:00");
 assert.equal(timed.end.dateTime, "2026-07-22T12:00:00");
 assert.deepEqual(timed.attendees, [{ email: "marta@example.com" }, { email: "federica@example.com" }]);
+assert.equal(timed.colorId, "10");
 
 const allDay = buildGoogleEvent({
   title: "Trasferta",
@@ -25,6 +26,32 @@ assert.deepEqual(allDay.start, { date: "2026-07-23" });
 assert.deepEqual(allDay.end, { date: "2026-07-25" });
 assert.deepEqual(allDay.attendees, []);
 
+const staffLeave = buildGoogleEvent({
+  title: "Ferie Marta",
+  event_category: "staff_leave",
+  all_day: true,
+  start_date: "2026-07-27",
+  end_date: "2026-07-27"
+});
+assert.equal(staffLeave.colorId, "5");
+
+const smartWorking = buildGoogleEvent({
+  title: "Smart working Federica",
+  all_day: true,
+  start_date: "2026-07-28",
+  end_date: "2026-07-28"
+});
+assert.equal(smartWorking.colorId, "4");
+
+const clientAppointment = buildGoogleEvent({
+  title: "Appuntamento Europa Palace",
+  start_date: "2026-07-29",
+  end_date: "2026-07-29",
+  start_time: "10:00",
+  end_time: "11:00"
+});
+assert.equal(clientAppointment.colorId, "11");
+
 const normalized = normalizeGoogleEvent({
   id: "event_12345",
   summary: "Appuntamento cliente",
@@ -35,6 +62,18 @@ const normalized = normalizeGoogleEvent({
 assert.equal(normalized.title, "Appuntamento cliente");
 assert.equal(normalized.all_day, false);
 assert.equal(normalized.attendees[0].response_status, "accepted");
+assert.equal(normalized.event_category, "client_appointment");
+
+const tentative = normalizeGoogleEvent({
+  id: "event_tentative",
+  summary: "Appuntamento cliente",
+  colorId: "11",
+  start: { dateTime: "2026-07-22T10:00:00+02:00" },
+  end: { dateTime: "2026-07-22T11:00:00+02:00" },
+  attendees: [{ email: "cliente@example.com", responseStatus: "tentative" }]
+});
+assert.equal(tentative.event_category, "tentative");
+assert.equal(classifyGoogleCalendarEvent({ summary: "Evento cliente in fiera" }), "client_event");
 
 const payload = calendarPayload([normalized]);
 assert.equal(payload.calendar.id, process.env.GOOGLE_CALENDAR_ID || "beviralagency@gmail.com");

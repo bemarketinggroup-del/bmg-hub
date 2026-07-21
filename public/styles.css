@@ -3629,6 +3629,16 @@ code { font-family: var(--font-mono); font-size: 12px; }
   margin: 16px 28px 0; padding: 12px 14px; border: 1px solid var(--red-line); border-radius: var(--r-sm);
   background: var(--red-tint); color: var(--red); font-size: 13px; font-weight: 600;
 }
+.google-calendar-legend {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 8px 18px; padding: 10px 28px;
+  border-bottom: 1px solid var(--line); background: var(--surface); color: var(--muted); font-size: 11.5px;
+}
+.google-calendar-legend strong { color: var(--ink); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
+.google-calendar-legend span { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; }
+.google-calendar-legend i {
+  display: inline-block; width: 10px; height: 10px; border: 1px solid color-mix(in srgb, var(--legend-color) 72%, #000);
+  border-radius: 50%; background: var(--legend-color); box-shadow: 0 0 0 2px color-mix(in srgb, var(--legend-color) 22%, white);
+}
 .google-calendar-grid { min-height: 590px; background: var(--surface); }
 .google-calendar-grid.is-loading { display: grid; place-items: center; }
 .google-calendar-loading { display: grid; justify-items: center; gap: 9px; color: var(--ink); }
@@ -3704,6 +3714,7 @@ code { font-family: var(--font-mono); font-size: 12px; }
   .google-calendar-navigation { width: 100%; }
   .google-calendar-navigation h3 { font-size: 15px; }
   .google-calendar-view-switch { margin-left: auto; }
+  .google-calendar-legend { padding: 10px 14px; gap: 8px 12px; overflow-x: auto; flex-wrap: nowrap; }
   .google-calendar-grid { min-height: 520px; overflow-x: auto; }
   .google-calendar-weekdays, .google-calendar-month-grid { min-width: 770px; }
   .calendar-form-spacer { display: none; }
