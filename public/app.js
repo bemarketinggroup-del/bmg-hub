@@ -5218,17 +5218,17 @@ function googleCalendarEventsForDate(dateKey) {
 
 function calendarEventColor(event) {
   const categoryColors = {
-    tentative: "#dbadff",
-    smart_working: "#ff887c",
-    staff_leave: "#fbd75b",
-    client_event: "#51b749",
-    client_appointment: "#dc2127"
+    tentative: "#8E24AA",
+    smart_working: "#E67C73",
+    staff_leave: "#F6BF26",
+    client_event: "#0B8043",
+    client_appointment: "#D50000"
   };
   const googleColors = {
-    1: "#a4bdfc", 2: "#7ae7bf", 3: "#dbadff", 4: "#ff887c", 5: "#fbd75b", 6: "#ffb878",
-    7: "#46d6db", 8: "#e1e1e1", 9: "#5484ed", 10: "#51b749", 11: "#dc2127"
+    1: "#7986CB", 2: "#33B679", 3: "#8E24AA", 4: "#E67C73", 5: "#F6BF26", 6: "#F4511E",
+    7: "#039BE5", 8: "#616161", 9: "#3F51B5", 10: "#0B8043", 11: "#D50000"
   };
-  return categoryColors[event.event_category] || googleColors[Number(event.color_id)] || "#667085";
+  return categoryColors[event.event_category] || googleColors[Number(event.color_id)] || "#616161";
 }
 
 function calendarEventCategoryLabel(event) {
