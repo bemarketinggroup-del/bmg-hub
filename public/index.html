@@ -289,7 +289,13 @@
                 <p class="eyebrow">Programmazione SMM</p>
                 <h3 id="pedAgendaTitle">Agenda giorno per giorno</h3>
               </div>
-              <span id="pedAgendaSummary"></span>
+              <div class="ped-agenda-head-meta">
+                <span id="pedAgendaSummary"></span>
+                <button class="ped-agenda-previous is-hidden" id="pedAgendaPrevious" data-ped-agenda-previous type="button" aria-expanded="false">
+                  <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+                  <span id="pedAgendaPreviousLabel">Carica precedenti</span>
+                </button>
+              </div>
             </div>
             <div class="ped-agenda-list" id="pedAgendaList" aria-live="polite"></div>
           </section>

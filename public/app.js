@@ -182,6 +182,7 @@ let selectedClientId = "";
 let clientDriveState = { clientId: "", path: [], objectUrl: "", thumbnailUrls: new Set(), uploadEnabled: false };
 let selectedPedClientId = "";
 let selectedPedMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+let pedAgendaShowPrevious = false;
 let pedPickerState = { date: "", path: [], files: [], contentType: "post", caption: "", selectedFiles: [] };
 const DRIVE_FOLDER_BROWSER_CACHE_TTL = 2 * 60 * 1000;
 const driveFolderBrowserCache = new Map();
@@ -2502,7 +2503,9 @@ function pedItemMarkup(item) {
 function renderPedAgenda() {
   const list = document.getElementById("pedAgendaList");
   const summary = document.getElementById("pedAgendaSummary");
-  if (!list || !summary) return;
+  const previousButton = document.getElementById("pedAgendaPrevious");
+  const previousLabel = document.getElementById("pedAgendaPreviousLabel");
+  if (!list || !summary || !previousButton || !previousLabel) return;
 
   const monthStart = new Date(selectedPedMonth.getFullYear(), selectedPedMonth.getMonth(), 1, 12);
   const monthKey = pedMonthKey(monthStart);
@@ -2515,8 +2518,12 @@ function renderPedAgenda() {
   const scheduledDays = [...grouped.entries()]
     .filter(([dateKey, items]) => dateKey.startsWith(`${monthKey}-`) && items.length)
     .sort(([left], [right]) => left.localeCompare(right));
+  const todayKey = localDateKey(new Date());
+  const previousDays = scheduledDays.filter(([dateKey]) => dateKey < todayKey);
+  const upcomingDays = scheduledDays.filter(([dateKey]) => dateKey >= todayKey);
+  const visibleDays = pedAgendaShowPrevious ? scheduledDays : upcomingDays;
 
-  list.innerHTML = scheduledDays.map(([dateKey, items]) => {
+  list.innerHTML = visibleDays.map(([dateKey, items]) => {
     const [year, month, day] = dateKey.split("-").map(Number);
     const date = new Date(year, month - 1, day, 12);
     const dayName = new Intl.DateTimeFormat("it-IT", { weekday: "short" }).format(date).replace(".", "");
@@ -2531,13 +2538,21 @@ function renderPedAgenda() {
     </section>`;
   }).join("") || `<div class="ped-agenda-month-empty">
     <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg>
-    <strong>Nessun contenuto programmato</strong>
-    <span>Quando aggiungi un contenuto al calendario, comparirà qui.</span>
+    <strong>${previousDays.length && !pedAgendaShowPrevious ? "Nessuna uscita da oggi in poi" : "Nessun contenuto programmato"}</strong>
+    <span>${previousDays.length && !pedAgendaShowPrevious ? "Usa Carica precedenti per consultare lo storico." : "Quando aggiungi un contenuto al calendario, comparirà qui."}</span>
   </div>`;
 
-  summary.textContent = state.pedItems.length
-    ? `${state.pedItems.length} ${state.pedItems.length === 1 ? "uscita" : "uscite"} in ${scheduledDays.length} ${scheduledDays.length === 1 ? "giorno" : "giorni"}`
-    : "Nessuna uscita nel mese";
+  const visibleItemsCount = visibleDays.reduce((total, [, items]) => total + items.length, 0);
+  summary.textContent = visibleItemsCount
+    ? `${visibleItemsCount} ${visibleItemsCount === 1 ? "uscita" : "uscite"} in ${visibleDays.length} ${visibleDays.length === 1 ? "giorno" : "giorni"}`
+    : previousDays.length && !pedAgendaShowPrevious
+      ? `${previousDays.length} ${previousDays.length === 1 ? "giorno precedente nascosto" : "giorni precedenti nascosti"}`
+      : "Nessuna uscita nel mese";
+  previousButton.classList.toggle("is-hidden", previousDays.length === 0);
+  previousButton.setAttribute("aria-expanded", String(pedAgendaShowPrevious));
+  previousLabel.textContent = pedAgendaShowPrevious
+    ? "Nascondi precedenti"
+    : `Carica precedenti (${previousDays.length})`;
 }
 
 function pedAgendaItemMarkup(item) {
@@ -2662,6 +2677,7 @@ async function loadPedCalendar() {
 
 function shiftPedMonth(delta) {
   selectedPedMonth = new Date(selectedPedMonth.getFullYear(), selectedPedMonth.getMonth() + delta, 1);
+  pedAgendaShowPrevious = false;
   loadPedCalendar();
 }
 
@@ -5790,6 +5806,7 @@ document.body.addEventListener("click", (event) => {
   const driveTrash = event.target.closest("[data-drive-trash]");
   const copyDriveLinkButton = event.target.closest("[data-copy-drive-link]");
   const pedClient = event.target.closest("[data-ped-client]");
+  const pedAgendaPrevious = event.target.closest("[data-ped-agenda-previous]");
   const pedAdd = event.target.closest("[data-ped-add]");
   const pedOpen = event.target.closest("[data-ped-open]");
   const pedEditor = event.target.closest("[data-ped-editor]");
@@ -5848,7 +5865,12 @@ document.body.addEventListener("click", (event) => {
     selectedPedClientId = pedClient.dataset.pedClient;
     state.pedItems = [];
     pedShareState = { active: false, shareUrl: "" };
+    pedAgendaShowPrevious = false;
     return loadPedCalendar();
+  }
+  if (pedAgendaPrevious) {
+    pedAgendaShowPrevious = !pedAgendaShowPrevious;
+    return renderPedAgenda();
   }
   if (pedAdd) return openPedDrivePicker(pedAdd.dataset.pedAdd);
   if (pedRemove) return removePedItem(pedRemove.dataset.pedRemove);
@@ -6198,6 +6220,7 @@ document.getElementById("pedPreviousMonth").addEventListener("click", () => shif
 document.getElementById("pedNextMonth").addEventListener("click", () => shiftPedMonth(1));
 document.getElementById("pedTodayButton").addEventListener("click", () => {
   selectedPedMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+  pedAgendaShowPrevious = false;
   loadPedCalendar();
 });
 document.getElementById("pedFeedPreviewButton").addEventListener("click", openPedInstagramPreview);

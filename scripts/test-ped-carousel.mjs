@@ -76,6 +76,11 @@ assert.match(styleSource, /width: min\(280px, calc\(100vw - 24px\)\)/, "il centr
 assert.match(styleSource, /height: max-content !important/, "Safari non deve estendere il centro trasferimenti a tutta altezza");
 assert.match(styleSource, /\.media-load-progress/, "le anteprime devono avere una barra di caricamento");
 assert.match(appSource, /const scheduledDays = \[\.\.\.grouped\.entries\(\)\]/, "l'agenda deve derivare i giorni dai contenuti programmati");
+assert.match(appSource, /const previousDays = scheduledDays\.filter\(\(\[dateKey\]\) => dateKey < todayKey\)/, "l'agenda deve separare lo storico rispetto alla data corrente");
+assert.match(appSource, /const visibleDays = pedAgendaShowPrevious \? scheduledDays : upcomingDays/, "lo storico deve apparire solo su richiesta");
+assert.match(htmlSource, /id="pedAgendaPrevious"/, "l'agenda deve offrire il comando Carica precedenti");
+assert.match(styleSource, /\.ped-agenda-day[\s\S]*?border-bottom: 3px solid var\(--line-strong\)/, "i giorni devono avere separatori orizzontali marcati");
+assert.match(styleSource, /\.ped-agenda-date[\s\S]*?border-right: 2px solid var\(--line-strong\)/, "la data deve essere separata nettamente dai contenuti");
 assert.doesNotMatch(appSource, /ped-agenda-empty">Nessun contenuto programmato/, "l'agenda non deve creare righe per i giorni vuoti");
 assert.match(appSource, /draggable="true" aria-grabbed="false"/, "le card PED devono essere trascinabili");
 assert.match(appSource, /movePedItemToDate\(itemId, targetDate\)/, "il rilascio deve aggiornare la data del contenuto");

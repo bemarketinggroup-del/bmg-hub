@@ -2636,13 +2636,32 @@ code { font-family: var(--font-mono); font-size: 12px; }
 }
 .ped-agenda-head .eyebrow { margin: 0 0 4px; }
 .ped-agenda-head h3 { margin: 0; color: var(--ink); font-size: 19px; }
-.ped-agenda-head > span { color: var(--muted); font-size: 12px; }
+.ped-agenda-head-meta { display: flex; align-items: center; justify-content: flex-end; gap: 12px; }
+.ped-agenda-head-meta > span { color: var(--muted); font-size: 12px; white-space: nowrap; }
+.ped-agenda-previous {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 8px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.ped-agenda-previous:hover { border-color: var(--terracotta); color: var(--terracotta); background: var(--surface-tint); }
+.ped-agenda-previous .lc { width: 15px; height: 15px; }
 .ped-agenda-list { max-height: 660px; overflow-y: auto; scrollbar-width: thin; }
 .ped-agenda-day {
   min-height: 78px;
   display: grid;
   grid-template-columns: 94px minmax(0, 1fr);
-  border-bottom: 1px solid var(--line);
+  border-bottom: 3px solid var(--line-strong);
 }
 .ped-agenda-day:last-child { border-bottom: 0; }
 .ped-agenda-day.has-content { background: color-mix(in srgb, var(--surface-soft) 36%, var(--surface)); }
@@ -2653,7 +2672,7 @@ code { font-family: var(--font-mono); font-size: 12px; }
   align-content: center;
   justify-content: center;
   column-gap: 6px;
-  border-right: 1px solid var(--line);
+  border-right: 2px solid var(--line-strong);
   background: var(--surface-tint);
   color: var(--muted);
   text-align: center;
@@ -3954,7 +3973,8 @@ code { font-family: var(--font-mono); font-size: 12px; }
   .ped-picker-shell { padding: 18px; }
   .ped-picker-grid { grid-template-columns: 1fr; }
   .ped-picker-hover-preview { display: none !important; }
-  .ped-agenda-head { align-items: flex-start; flex-direction: column; gap: 5px; padding: 16px; }
+  .ped-agenda-head { align-items: flex-start; flex-direction: column; gap: 10px; padding: 16px; }
+  .ped-agenda-head-meta { width: 100%; align-items: flex-start; justify-content: space-between; }
   .ped-agenda-day { grid-template-columns: 64px minmax(0, 1fr); }
   .ped-agenda-item { grid-template-columns: 42px minmax(0, 1fr) 40px 40px; }
   .ped-agenda-preview { width: 42px; height: 48px; }
