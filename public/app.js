@@ -5431,6 +5431,77 @@ function collectCalendarAttendees(form) {
   return attendeeEmails([...selectedTeam, ...attendeeEmails(form.elements.external_attendees.value)]);
 }
 
+function capitalizeCalendarLabel(value) {
+  const label = String(value || "").trim();
+  return label ? label.charAt(0).toUpperCase() + label.slice(1) : "";
+}
+
+function calendarEventDisplayDate(event) {
+  const dateLabel = new Intl.DateTimeFormat("it-IT", { weekday: "long", day: "numeric", month: "long" });
+  const timeLabel = new Intl.DateTimeFormat("it-IT", { hour: "2-digit", minute: "2-digit" });
+  const span = calendarEventDateSpan(event);
+  const startDate = event.all_day ? gcDateFromKey(span.startKey) : new Date(event.start_at);
+  const endDate = event.all_day ? gcDateFromKey(span.endKey) : new Date(event.end_at || event.start_at);
+  if (Number.isNaN(startDate.valueOf()) || Number.isNaN(endDate.valueOf())) return "Data non disponibile";
+
+  if (event.all_day) {
+    const start = capitalizeCalendarLabel(dateLabel.format(startDate));
+    if (span.startKey === span.endKey) return `${start} · Tutto il giorno`;
+    return `${start} – ${capitalizeCalendarLabel(dateLabel.format(endDate))} · Tutto il giorno`;
+  }
+
+  const start = capitalizeCalendarLabel(dateLabel.format(startDate));
+  if (gcDateKey(startDate) === gcDateKey(endDate)) {
+    return `${start} · ${timeLabel.format(startDate)} – ${timeLabel.format(endDate)}`;
+  }
+  return `${start}, ${timeLabel.format(startDate)} – ${capitalizeCalendarLabel(dateLabel.format(endDate))}, ${timeLabel.format(endDate)}`;
+}
+
+function calendarAttendeeLabel(attendee) {
+  const email = String(attendee?.email || attendee || "").trim().toLowerCase();
+  const teamMember = personalAreaState.team.find((member) => String(member.email || "").trim().toLowerCase() === email);
+  return String(teamMember?.full_name || attendee?.name || email || "Partecipante").trim();
+}
+
+function openGoogleCalendarEventDetails(eventId) {
+  const event = googleCalendarState.events.find((item) => item.id === eventId);
+  if (!event) return;
+  const modal = document.getElementById("calendarEventDetailModal");
+  const attendees = Array.isArray(event.attendees) ? event.attendees.filter((attendee) => attendee?.email || attendee) : [];
+  const location = String(event.location || "").trim();
+  const description = String(event.description || "").trim();
+  const calendarName = googleCalendarState.calendar?.name || "Google Calendar";
+
+  modal.dataset.eventId = event.id;
+  document.getElementById("calendarEventDetailCategory").textContent = calendarEventCategoryLabel(event);
+  document.getElementById("calendarEventDetailTitle").textContent = event.title || "Senza titolo";
+  document.getElementById("calendarEventDetailColor").style.setProperty("--detail-event-color", calendarEventColor(event));
+  document.getElementById("calendarEventDetailDate").textContent = calendarEventDisplayDate(event);
+  document.getElementById("calendarEventDetailCalendar").textContent = calendarName;
+
+  const locationRow = document.getElementById("calendarEventDetailLocationRow");
+  locationRow.classList.toggle("is-hidden", !location);
+  document.getElementById("calendarEventDetailLocation").textContent = location;
+
+  const attendeesRow = document.getElementById("calendarEventDetailAttendeesRow");
+  attendeesRow.classList.toggle("is-hidden", !attendees.length);
+  document.getElementById("calendarEventDetailAttendees").innerHTML = attendees.map((attendee) => {
+    const label = calendarAttendeeLabel(attendee);
+    const email = String(attendee?.email || attendee || "").trim();
+    const status = String(attendee?.response_status || "").trim();
+    return `<span class="calendar-event-detail-person"><strong>${escapeHtml(label)}</strong>${email && email !== label ? `<small>${escapeHtml(email)}</small>` : ""}${status ? `<i title="Stato risposta">${escapeHtml(status)}</i>` : ""}</span>`;
+  }).join("");
+
+  const descriptionRow = document.getElementById("calendarEventDetailDescriptionRow");
+  descriptionRow.classList.toggle("is-hidden", !description);
+  document.getElementById("calendarEventDetailDescription").textContent = description;
+
+  const googleLink = document.getElementById("calendarEventDetailGoogleLink");
+  googleLink.classList.toggle("is-hidden", !event.html_link);
+  googleLink.href = event.html_link || "#";
+  modal.showModal();
+}
+
 function openGoogleCalendarEvent(eventId = "", dateKey = "") {
   const modal = document.getElementById("calendarEventModal");
   const form = document.getElementById("calendarEventForm");
@@ -6215,9 +6286,18 @@ document.querySelectorAll("[data-calendar-mode]").forEach((button) => {
 });
 document.getElementById("googleCalendarGrid").addEventListener("click", (event) => {
   const eventButton = event.target.closest("[data-calendar-event]");
-  if (eventButton) return openGoogleCalendarEvent(decodeURIComponent(eventButton.dataset.calendarEvent));
+  if (eventButton) return openGoogleCalendarEventDetails(decodeURIComponent(eventButton.dataset.calendarEvent));
   const dateButton = event.target.closest("[data-calendar-new-date], [data-calendar-date-more]");
   if (dateButton) return openGoogleCalendarEvent("", dateButton.dataset.calendarNewDate || dateButton.dataset.calendarDateMore);
+});
+document.getElementById("closeCalendarEventDetailButton").addEventListener("click", () => {
+  document.getElementById("calendarEventDetailModal").close();
+});
+document.getElementById("editCalendarEventDetailButton").addEventListener("click", () => {
+  const modal = document.getElementById("calendarEventDetailModal");
+  const eventId = modal.dataset.eventId || "";
+  modal.close();
+  openGoogleCalendarEvent(eventId);
 });
 document.getElementById("calendarAllDay").addEventListener("change", toggleGoogleCalendarTimeFields);
 document.getElementById("calendarEventForm").addEventListener("submit", (event) => {

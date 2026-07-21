@@ -563,6 +563,49 @@
     </main>
   </div>
 
+  <dialog class="modal calendar-event-detail-modal" id="calendarEventDetailModal">
+    <section class="calendar-event-detail-shell" aria-labelledby="calendarEventDetailTitle">
+      <header class="calendar-event-detail-head">
+        <div>
+          <p class="eyebrow" id="calendarEventDetailCategory">Evento calendario</p>
+          <div class="calendar-event-detail-title-row">
+            <span class="calendar-event-detail-color" id="calendarEventDetailColor" aria-hidden="true"></span>
+            <h2 id="calendarEventDetailTitle">Dettaglio evento</h2>
+          </div>
+        </div>
+        <button class="icon-button" id="closeCalendarEventDetailButton" type="button" title="Chiudi" aria-label="Chiudi"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+      </header>
+
+      <div class="calendar-event-detail-list">
+        <div class="calendar-event-detail-row">
+          <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/></svg>
+          <div><span>Data e ora</span><strong id="calendarEventDetailDate"></strong></div>
+        </div>
+        <div class="calendar-event-detail-row">
+          <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 2v4M16 2v4M3 10h18"/><rect x="3" y="4" width="18" height="18" rx="2"/></svg>
+          <div><span>Calendario</span><strong id="calendarEventDetailCalendar"></strong></div>
+        </div>
+        <div class="calendar-event-detail-row is-hidden" id="calendarEventDetailLocationRow">
+          <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+          <div><span>Luogo</span><strong id="calendarEventDetailLocation"></strong></div>
+        </div>
+        <div class="calendar-event-detail-row is-hidden" id="calendarEventDetailAttendeesRow">
+          <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <div><span>Partecipanti</span><div class="calendar-event-detail-attendees" id="calendarEventDetailAttendees"></div></div>
+        </div>
+        <div class="calendar-event-detail-row is-hidden" id="calendarEventDetailDescriptionRow">
+          <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M8 13h8M8 17h8"/></svg>
+          <div><span>Descrizione</span><p id="calendarEventDetailDescription"></p></div>
+        </div>
+      </div>
+
+      <footer class="modal-actions calendar-event-detail-actions">
+        <a class="ghost-button is-hidden" id="calendarEventDetailGoogleLink" href="#" target="_blank" rel="noopener">Apri in Google</a>
+        <button class="primary-button" id="editCalendarEventDetailButton" type="button"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>Modifica evento</button>
+      </footer>
+    </section>
+  </dialog>
+
   <dialog class="modal calendar-event-modal" id="calendarEventModal">
     <form method="dialog" id="calendarEventForm">
       <div class="modal-head">
