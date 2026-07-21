@@ -76,6 +76,13 @@ assert.equal(classifyGoogleCalendarEvent({ summary: "HOTEL EUROPA" }, clientTerm
 assert.equal(classifyGoogleCalendarEvent({ summary: "Bufale" }, ["Bufalè"]), "client_appointment");
 assert.equal(classifyGoogleCalendarEvent({ summary: "Europa Palace preventivo" }, clientTerms), "");
 assert.equal(classifyGoogleCalendarEvent({ summary: "Europa" }, clientTerms), "");
+assert.equal(classifyGoogleCalendarEvent({ summary: "Europa Palace", colorId: "5" }, clientTerms), "staff_leave");
+assert.equal(classifyGoogleCalendarEvent({ summary: "Forse Europa Palace", colorId: "11" }, clientTerms), "client_appointment");
+assert.equal(classifyGoogleCalendarEvent({
+  summary: "Forse Europa Palace",
+  colorId: "11",
+  event_category: "client_event"
+}, clientTerms), "client_event");
 
 const clientNameAppointment = buildGoogleEvent({
   title: "Europa Palace",
@@ -101,7 +108,6 @@ assert.equal(normalized.event_category, "client_appointment");
 const tentative = normalizeGoogleEvent({
   id: "event_tentative",
   summary: "Appuntamento cliente",
-  colorId: "11",
   start: { dateTime: "2026-07-22T10:00:00+02:00" },
   end: { dateTime: "2026-07-22T11:00:00+02:00" },
   attendees: [{ email: "cliente@example.com", responseStatus: "tentative" }]
