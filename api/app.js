@@ -4,6 +4,7 @@ import handlePed, { handlePedCarouselDownload } from "../lib/ped.js";
 import { handlePedShareAdmin, handlePublicPed } from "../lib/ped-share.js";
 import { handleSmartWorking } from "../lib/smart-working.js";
 import { handleGoogleCalendar } from "../lib/google-calendar.js";
+import { handlePersonalArea } from "../lib/personal-area.js";
 
 const publicRoot = join(process.cwd(), "public");
 
@@ -23,6 +24,10 @@ export default async function handler(request, response) {
   const requestUrl = new URL(request.url, `https://${request.headers.host}`);
   if (requestUrl.pathname === "/api/google-calendar") {
     await handleGoogleCalendar(request, response);
+    return;
+  }
+  if (requestUrl.pathname === "/api/personal-area") {
+    await handlePersonalArea(request, response);
     return;
   }
   if (requestUrl.pathname === "/api/smart-working") {

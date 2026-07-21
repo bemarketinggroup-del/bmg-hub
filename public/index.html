@@ -42,6 +42,10 @@
           <span class="icon"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg></span>
           <span>Home</span>
         </button>
+        <button class="nav-item" data-view="personal" type="button">
+          <span class="icon"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></span>
+          <span>La mia area</span>
+        </button>
         <button class="nav-item" data-view="content" data-module="site_backend" type="button">
           <span class="icon"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"/></svg></span>
           <span>Backend sito</span>
@@ -90,6 +94,16 @@
         </div>
         <div class="topbar-actions">
           <span class="session-badge" id="sessionBadge">Sessione</span>
+          <div class="notification-center">
+            <button class="icon-button notification-button" id="notificationButton" type="button" title="Notifiche" aria-label="Notifiche" aria-expanded="false">
+              <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg>
+              <span class="notification-badge is-hidden" id="notificationBadge">0</span>
+            </button>
+            <section class="notification-panel is-hidden" id="notificationPanel" aria-label="Notifiche recenti">
+              <header><strong>Notifiche</strong><small>Restano visibili finché non le chiudi</small></header>
+              <div class="notification-list" id="notificationList"></div>
+            </section>
+          </div>
           <button class="ghost-button" id="profileButton" type="button"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></svg>Profilo</button>
           <button class="ghost-button" id="logoutButton" type="button"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>Logout</button>
           <button class="icon-button" id="exportButton" type="button" title="Esporta dati"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg></button>
@@ -280,6 +294,30 @@
             <div class="ped-agenda-list" id="pedAgendaList" aria-live="polite"></div>
           </section>
         </section>
+      </section>
+
+      <section class="view" id="personalView" data-view-panel="personal">
+        <section class="personal-summary">
+          <div>
+            <p class="eyebrow">Spazio personale</p>
+            <h2 id="personalGreeting">Il tuo lavoro</h2>
+            <p>Task assegnate ed eventi ai quali devi partecipare, riuniti in un'unica vista.</p>
+          </div>
+          <div class="personal-metrics">
+            <span><strong id="personalTaskCount">0</strong> task attive</span>
+            <span><strong id="personalEventCount">0</strong> eventi in arrivo</span>
+          </div>
+        </section>
+        <div class="personal-grid">
+          <section class="panel personal-panel">
+            <div class="panel-head"><div><p class="eyebrow">ClickUp</p><h2>Le mie task</h2></div></div>
+            <div class="personal-list" id="personalTaskList"></div>
+          </section>
+          <section class="panel personal-panel">
+            <div class="panel-head"><div><p class="eyebrow">Google Calendar</p><h2>I miei eventi</h2></div></div>
+            <div class="personal-list" id="personalEventList"></div>
+          </section>
+        </div>
       </section>
 
       <section class="view" id="calendarView" data-view-panel="calendar">
@@ -541,9 +579,14 @@
         <label data-calendar-time-field>Ora inizio<input name="start_time" type="time" value="09:00" required></label>
         <label data-calendar-time-field>Ora fine<input name="end_time" type="time" value="10:00" required></label>
         <label class="full">Luogo<input name="location" maxlength="500" autocomplete="off" placeholder="Sede, indirizzo o link riunione"></label>
-        <label class="full">Partecipanti
-          <textarea name="attendees" rows="2" placeholder="email1@azienda.it, email2@azienda.it"></textarea>
-          <small>Separa più indirizzi con virgole o andando a capo.</small>
+        <fieldset class="full calendar-attendees-field">
+          <legend>Persone del team</legend>
+          <p>Seleziona chi deve partecipare all'evento.</p>
+          <div class="calendar-team-attendees" id="calendarTeamAttendees"></div>
+        </fieldset>
+        <label class="full">Altri partecipanti via email
+          <textarea name="external_attendees" rows="2" placeholder="cliente@azienda.it, collaboratore@email.it"></textarea>
+          <small>Puoi aggiungere persone esterne separando le email con virgole o andando a capo.</small>
         </label>
         <label class="full">Descrizione<textarea name="description" rows="5" maxlength="8000" placeholder="Dettagli, note e informazioni utili"></textarea></label>
       </div>

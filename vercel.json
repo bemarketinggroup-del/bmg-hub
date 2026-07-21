@@ -52,6 +52,10 @@
       "dest": "/api/app.js"
     },
     {
+      "src": "/api/personal-area",
+      "dest": "/api/app.js"
+    },
+    {
       "src": "/api/ped",
       "dest": "/api/app.js"
     },

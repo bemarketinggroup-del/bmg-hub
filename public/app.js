@@ -211,6 +211,16 @@ let googleCalendarState = {
   loading: false,
   loadedRange: ""
 };
+let personalAreaState = {
+  team: [],
+  tasks: [],
+  events: [],
+  notifications: [],
+  loading: false,
+  loaded: false,
+  error: ""
+};
+let personalAreaTimer = null;
 let selectedSmartWeek = mondayOf(new Date());
 let selectedContentSection = "all";
 let authConfig = null;
@@ -596,7 +606,7 @@ function canAccessModule(moduleKey) {
 }
 
 function canAccessView(view) {
-  return view === "dashboard" || canAccessModule(VIEW_MODULES[view]);
+  return view === "dashboard" || view === "personal" || canAccessModule(VIEW_MODULES[view]);
 }
 
 function applyRoleAccess() {
@@ -634,7 +644,9 @@ async function logout() {
     }
   }
   stopActivityTracker();
+  stopPersonalAreaUpdates();
   currentProfile = null;
+  personalAreaState = { team: [], tasks: [], events: [], notifications: [], loading: false, loaded: false, error: "" };
   saveAuthSession(null);
   showLogin();
 }
@@ -729,6 +741,7 @@ function setView(view) {
   document.querySelectorAll("[data-view-panel]").forEach((panel) => panel.classList.toggle("is-active", panel.dataset.viewPanel === view));
   const titles = {
     dashboard: ["BMG Internal OS", "Home"],
+    personal: ["Spazio personale", "La mia area"],
     content: ["CMS leggero", "Backend sito"],
     clients: ["Gestionale interno", "Clienti"],
     ped: ["Piano editoriale", "PED"],
@@ -746,6 +759,7 @@ function setView(view) {
     loadPedCalendar();
   }
   if (view === "calendar") loadGoogleCalendar();
+  if (view === "personal") loadPersonalArea();
 }
 
 function mondayOf(value = new Date()) {
@@ -5300,6 +5314,32 @@ function calendarInputDateTime(dateValue) {
   };
 }
 
+function attendeeEmails(value) {
+  const entries = Array.isArray(value) ? value : String(value || "").split(/[;,\n]+/);
+  return [...new Set(entries.map((item) => String(item?.email || item || "").trim().toLowerCase()).filter((email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)))];
+}
+
+function renderCalendarTeamAttendees(selectedEmails = []) {
+  const target = document.getElementById("calendarTeamAttendees");
+  if (!target) return;
+  const selected = new Set(attendeeEmails(selectedEmails));
+  const team = [...personalAreaState.team].sort((left, right) => String(left.full_name || left.email).localeCompare(String(right.full_name || right.email), "it"));
+  target.innerHTML = team.length
+    ? team.map((member) => {
+      const email = String(member.email || "").trim().toLowerCase();
+      return `<label class="calendar-attendee-option">
+        <input type="checkbox" name="team_attendee" value="${escapeHtml(email)}"${selected.has(email) ? " checked" : ""}>
+        <span><strong>${escapeHtml(member.full_name || member.email)}</strong><small>${escapeHtml(member.email)}</small></span>
+      </label>`;
+    }).join("")
+    : `<p class="empty-state compact">Nessun utente staff attivo.</p>`;
+}
+
+function collectCalendarAttendees(form) {
+  const selectedTeam = [...form.querySelectorAll('input[name="team_attendee"]:checked')].map((input) => input.value);
+  return attendeeEmails([...selectedTeam, ...attendeeEmails(form.elements.external_attendees.value)]);
+}
+
 function openGoogleCalendarEvent(eventId = "", dateKey = "") {
   const modal = document.getElementById("calendarEventModal");
   const form = document.getElementById("calendarEventForm");
@@ -5312,12 +5352,15 @@ function openGoogleCalendarEvent(eventId = "", dateKey = "") {
   form.elements.start_date.value = initialDate;
   form.elements.end_date.value = initialDate;
   form.elements.all_day.checked = Boolean(event?.all_day);
+  const existingAttendees = attendeeEmails(event?.attendees || []);
+  const teamEmails = new Set(personalAreaState.team.map((member) => String(member.email || "").trim().toLowerCase()).filter(Boolean));
+  renderCalendarTeamAttendees(existingAttendees);
+  form.elements.external_attendees.value = existingAttendees.filter((email) => !teamEmails.has(email)).join(", ");
 
   if (event) {
     form.elements.title.value = event.title || "";
     form.elements.description.value = event.description || "";
     form.elements.location.value = event.location || "";
-    form.elements.attendees.value = (event.attendees || []).map((attendee) => attendee.email).join(", ");
     if (event.all_day) {
       form.elements.start_date.value = event.start_at.slice(0, 10);
       form.elements.end_date.value = gcDateKey(gcAddDays(event.end_at.slice(0, 10), -1));
@@ -5354,6 +5397,9 @@ async function submitGoogleCalendarEvent(form) {
   const message = document.getElementById("calendarEventMessage");
   const data = Object.fromEntries(new FormData(form).entries());
   data.all_day = form.elements.all_day.checked;
+  data.attendees = collectCalendarAttendees(form);
+  delete data.external_attendees;
+  delete data.team_attendee;
   const isUpdate = Boolean(data.event_id);
   button.disabled = true;
   button.textContent = "Salvataggio...";
@@ -5403,12 +5449,137 @@ async function deleteGoogleCalendarEvent() {
   }
 }
 
+function formatPersonalDate(value, includeTime = true) {
+  const date = new Date(Number.isFinite(Number(value)) ? Number(value) : value);
+  if (Number.isNaN(date.valueOf())) return "Data non indicata";
+  return new Intl.DateTimeFormat("it-IT", includeTime
+    ? { weekday: "short", day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }
+    : { weekday: "short", day: "2-digit", month: "short" }).format(date);
+}
+
+async function loadPersonalArea({ quiet = false } = {}) {
+  if (personalAreaState.loading) return;
+  personalAreaState.loading = true;
+  if (!quiet) renderPersonalArea();
+  try {
+    const response = await apiFetch("/api/personal-area");
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "Area personale non disponibile");
+    personalAreaState = {
+      team: Array.isArray(data.team) ? data.team : [],
+      tasks: Array.isArray(data.tasks) ? data.tasks : [],
+      events: Array.isArray(data.events) ? data.events : [],
+      notifications: Array.isArray(data.notifications) ? data.notifications : [],
+      loading: false,
+      loaded: true,
+      error: ""
+    };
+  } catch (error) {
+    personalAreaState.loading = false;
+    personalAreaState.error = error.message;
+  }
+  renderPersonalArea();
+  renderNotifications();
+}
+
+function renderPersonalArea() {
+  const taskList = document.getElementById("personalTaskList");
+  const eventList = document.getElementById("personalEventList");
+  if (!taskList || !eventList) return;
+  document.getElementById("personalGreeting").textContent = currentProfile?.full_name
+    ? `Il lavoro di ${currentProfile.full_name}`
+    : "Il tuo lavoro";
+  document.getElementById("personalTaskCount").textContent = personalAreaState.tasks.length;
+  document.getElementById("personalEventCount").textContent = personalAreaState.events.length;
+
+  if (personalAreaState.loading && !personalAreaState.loaded) {
+    taskList.innerHTML = eventList.innerHTML = `<div class="personal-empty"><span class="drive-folder-spinner" aria-hidden="true"></span><strong>Aggiornamento in corso</strong></div>`;
+    return;
+  }
+  if (personalAreaState.error && !personalAreaState.loaded) {
+    taskList.innerHTML = eventList.innerHTML = `<div class="personal-empty is-error"><strong>${escapeHtml(personalAreaState.error)}</strong><button class="text-button" data-personal-refresh type="button">Riprova</button></div>`;
+    return;
+  }
+
+  const tasks = [...personalAreaState.tasks].sort(compareTaskDueDate);
+  taskList.innerHTML = tasks.length ? tasks.map((task) => {
+    const link = safeExternalUrl(task.clickup_url);
+    const due = task.due_date_ms ? formatPersonalDate(task.due_date_ms, false) : "Senza scadenza";
+    const group = taskStatusGroup(task);
+    return `<article class="personal-item personal-task-item">
+      <span class="personal-item-marker is-${escapeHtml(group.id)}" aria-hidden="true"></span>
+      <div class="personal-item-body"><strong>${escapeHtml(task.name)}</strong><span>${escapeHtml(task.client_tag || "Cliente non indicato")} · ${escapeHtml(task.status || group.label)}</span></div>
+      <time class="personal-date">${escapeHtml(due)}</time>
+      ${link ? `<a class="icon-button" href="${escapeHtml(link)}" target="_blank" rel="noopener" title="Apri in ClickUp" aria-label="Apri in ClickUp"><svg class="lc" viewBox="0 0 24 24"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg></a>` : ""}
+    </article>`;
+  }).join("") : `<div class="personal-empty"><strong>Nessuna task attiva</strong><span>Le nuove assegnazioni ClickUp compariranno qui.</span></div>`;
+
+  const events = [...personalAreaState.events].sort((left, right) => String(left.start_at).localeCompare(String(right.start_at)));
+  eventList.innerHTML = events.length ? events.map((item) => {
+    const link = safeExternalUrl(item.html_link);
+    return `<article class="personal-item personal-event-item is-event">
+      <span class="personal-item-marker" aria-hidden="true"></span>
+      <div class="personal-item-body"><strong>${escapeHtml(item.title)}</strong><span>${escapeHtml(item.location || (item.all_day ? "Tutto il giorno" : formatPersonalDate(item.start_at)))}</span><small>${escapeHtml(formatPersonalDate(item.start_at, !item.all_day))}</small></div>
+      ${link ? `<a class="icon-button" href="${escapeHtml(link)}" target="_blank" rel="noopener" title="Apri in Google Calendar" aria-label="Apri in Google Calendar"><svg class="lc" viewBox="0 0 24 24"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg></a>` : ""}
+    </article>`;
+  }).join("") : `<div class="personal-empty"><strong>Nessun evento in arrivo</strong><span>Gli eventi ai quali sei invitato compariranno qui.</span></div>`;
+}
+
+function renderNotifications() {
+  const badge = document.getElementById("notificationBadge");
+  const list = document.getElementById("notificationList");
+  if (!badge || !list) return;
+  const notifications = personalAreaState.notifications;
+  badge.textContent = notifications.length > 99 ? "99+" : String(notifications.length);
+  badge.classList.toggle("is-hidden", !notifications.length);
+  list.innerHTML = notifications.length ? notifications.map((item) => {
+    const link = safeExternalUrl(item.link);
+    return `<article class="notification-item" data-notification-type="${escapeHtml(item.source_type)}">
+      <span class="notification-type is-${escapeHtml(item.source_type)}" aria-hidden="true"></span>
+      <div class="notification-item-body">${link ? `<a href="${escapeHtml(link)}" target="_blank" rel="noopener"><strong>${escapeHtml(item.title)}</strong></a>` : `<strong>${escapeHtml(item.title)}</strong>`}<span>${escapeHtml(item.message || "")}</span><small>${escapeHtml(formatPersonalDate(item.occurred_at))}</small></div>
+      <button class="icon-button notification-dismiss" data-notification-dismiss="${escapeHtml(item.id)}" type="button" title="Chiudi notifica" aria-label="Chiudi notifica"><svg class="lc" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+    </article>`;
+  }).join("") : `<div class="notification-empty"><strong>Nessuna nuova notifica</strong><span>Sei aggiornato.</span></div>`;
+}
+
+async function dismissPersonalNotification(notificationId) {
+  const notification = personalAreaState.notifications.find((item) => item.id === notificationId);
+  if (!notification) return;
+  personalAreaState.notifications = personalAreaState.notifications.filter((item) => item.id !== notificationId);
+  renderNotifications();
+  try {
+    const response = await apiFetch("/api/personal-area", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ notification_id: notificationId })
+    });
+    if (!response.ok) throw new Error("Notifica non aggiornata");
+  } catch {
+    personalAreaState.notifications.unshift(notification);
+    renderNotifications();
+  }
+}
+
+function startPersonalAreaUpdates() {
+  window.clearInterval(personalAreaTimer);
+  personalAreaTimer = window.setInterval(() => {
+    if (document.visibilityState === "visible" && currentProfile) void loadPersonalArea({ quiet: true });
+  }, 60000);
+}
+
+function stopPersonalAreaUpdates() {
+  window.clearInterval(personalAreaTimer);
+  personalAreaTimer = null;
+}
+
 function renderAll() {
   renderHome();
   renderContent();
   renderClients();
   renderPed();
   renderGoogleCalendar();
+  renderPersonalArea();
+  renderNotifications();
   renderTeam();
   renderSmartWorking();
   renderUsers();
@@ -5478,6 +5649,10 @@ document.body.addEventListener("click", (event) => {
   const copyProvisionPasswordButton = event.target.closest("[data-copy-provision-password]");
   const applyAiClient = event.target.closest("[data-apply-ai-client]");
   const deleteAlias = event.target.closest("[data-delete-alias]");
+  const notificationDismiss = event.target.closest("[data-notification-dismiss]");
+  const personalRefresh = event.target.closest("[data-personal-refresh]");
+  if (notificationDismiss) return dismissPersonalNotification(notificationDismiss.dataset.notificationDismiss);
+  if (personalRefresh) return loadPersonalArea();
   if (jump) return setView(jump.dataset.jump);
   if (teamMember) return selectTeamMember(teamMember.dataset.teamMember);
   if (newTaskFor) return openTaskModal(newTaskFor.dataset.newTaskFor);
@@ -5833,6 +6008,21 @@ document.body.addEventListener("focusout", (event) => {
 
 document.getElementById("profileButton").addEventListener("click", openProfileModal);
 document.getElementById("logoutButton").addEventListener("click", logout);
+document.getElementById("notificationButton").addEventListener("click", (event) => {
+  event.stopPropagation();
+  const button = event.currentTarget;
+  const panel = document.getElementById("notificationPanel");
+  const willOpen = panel.classList.contains("is-hidden");
+  panel.classList.toggle("is-hidden", !willOpen);
+  button.setAttribute("aria-expanded", String(willOpen));
+});
+document.getElementById("notificationPanel").addEventListener("click", (event) => event.stopPropagation());
+document.addEventListener("click", () => {
+  const panel = document.getElementById("notificationPanel");
+  if (!panel || panel.classList.contains("is-hidden")) return;
+  panel.classList.add("is-hidden");
+  document.getElementById("notificationButton")?.setAttribute("aria-expanded", "false");
+});
 document.getElementById("exportButton").addEventListener("click", exportData);
 document.getElementById("contentPageFilter").addEventListener("change", () => {
   selectedContentSection = "all";
@@ -6079,7 +6269,9 @@ async function bootApp() {
     if (canAccessModule("users")) loaders.push(loadUsersFromBackend());
     if (canAccessModule("smart_working")) loaders.push(loadSmartWorking());
     if (canAccessModule("site_backend")) loaders.push(loadContentFromBackend());
+    loaders.push(loadPersonalArea({ quiet: true }));
     await Promise.all(loaders);
+    startPersonalAreaUpdates();
     renderHome();
   } catch (error) {
     showLogin(error.message);
@@ -6092,6 +6284,7 @@ document.addEventListener("visibilitychange", () => {
     void sendActivityEvent("heartbeat", { keepalive: true });
   } else {
     void sendActivityEvent("resume");
+    void loadPersonalArea({ quiet: true });
   }
 });
 

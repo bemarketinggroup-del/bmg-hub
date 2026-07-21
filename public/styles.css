@@ -3954,3 +3954,206 @@ code { font-family: var(--font-mono); font-size: 12px; }
 @media (max-width: 400px) {
   .metric-grid { grid-template-columns: 1fr; }
 }
+
+/* ============================================================
+   PERSONAL AREA, CALENDAR ATTENDEES AND NOTIFICATIONS
+   ============================================================ */
+
+.notification-center { position: relative; }
+
+.notification-button { position: relative; }
+
+.notification-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  display: grid;
+  min-width: 19px;
+  height: 19px;
+  padding: 0 5px;
+  place-items: center;
+  border: 2px solid var(--paper);
+  border-radius: 999px;
+  background: var(--terracotta);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.notification-panel {
+  position: absolute;
+  z-index: 90;
+  top: calc(100% + 12px);
+  right: 0;
+  width: min(390px, calc(100vw - 32px));
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: 0 22px 60px rgba(33, 29, 24, .18);
+}
+
+.notification-panel > header {
+  display: grid;
+  gap: 3px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--line);
+  background: var(--paper);
+}
+
+.notification-panel > header strong { font-size: 14px; }
+.notification-panel > header small { color: var(--muted); font-size: 11px; }
+
+.notification-list {
+  max-height: min(480px, 65vh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.notification-item {
+  display: grid;
+  grid-template-columns: 8px minmax(0, 1fr) 32px;
+  gap: 12px;
+  align-items: start;
+  padding: 14px 12px 14px 18px;
+  border-bottom: 1px solid var(--line);
+}
+
+.notification-item:last-child { border-bottom: 0; }
+
+.notification-type {
+  width: 8px;
+  height: 8px;
+  margin-top: 6px;
+  border-radius: 50%;
+  background: var(--terracotta);
+}
+
+.notification-item[data-notification-type="event"] .notification-type { background: var(--teal); }
+
+.notification-item-body { min-width: 0; }
+.notification-item-body strong,
+.notification-item-body span,
+.notification-item-body small { display: block; }
+.notification-item-body strong { overflow-wrap: anywhere; font-size: 13px; }
+.notification-item-body span { margin-top: 3px; color: var(--muted); font-size: 11.5px; line-height: 1.45; }
+.notification-item-body small { margin-top: 6px; color: var(--subtle); font-size: 10.5px; }
+.notification-item-body a { color: inherit; text-decoration: none; }
+.notification-item-body a:hover strong { color: var(--terracotta); }
+
+.notification-dismiss {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.notification-dismiss:hover { background: var(--paper); color: var(--ink); }
+.notification-dismiss .lc { width: 15px; height: 15px; }
+.notification-empty { padding: 28px 18px; color: var(--muted); font-size: 12px; text-align: center; }
+
+.personal-summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 28px;
+  align-items: center;
+  margin-bottom: 18px;
+  padding: 24px 26px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: var(--shadow-xs);
+}
+
+.personal-summary h2 { margin: 3px 0 5px; font-size: 25px; }
+.personal-summary p:last-child { margin: 0; color: var(--muted); font-size: 13px; }
+
+.personal-metrics { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+.personal-metrics span {
+  min-width: 124px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  color: var(--muted);
+  font-size: 11px;
+  text-align: center;
+}
+.personal-metrics strong { display: block; margin-bottom: 2px; color: var(--ink); font-size: 20px; }
+
+.personal-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.personal-panel { min-width: 0; overflow: hidden; }
+.personal-panel .panel-head { border-bottom: 1px solid var(--line); }
+.personal-list { min-height: 150px; }
+
+.personal-item {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) auto auto;
+  gap: 12px;
+  align-items: start;
+  padding: 15px 18px;
+  border-bottom: 1px solid var(--line);
+}
+.personal-item.is-event { grid-template-columns: 10px minmax(0, 1fr) auto; }
+.personal-item:last-child { border-bottom: 0; }
+.personal-item:hover { background: var(--paper); }
+.personal-item-marker { width: 9px; height: 9px; margin-top: 5px; border-radius: 50%; background: var(--terracotta); }
+.personal-item.is-event .personal-item-marker { background: var(--teal); }
+.personal-item-body { min-width: 0; }
+.personal-item-body strong,
+.personal-item-body span,
+.personal-item-body small { display: block; }
+.personal-item-body strong { overflow-wrap: anywhere; font-size: 13px; }
+.personal-item-body span { margin-top: 3px; color: var(--muted); font-size: 11.5px; line-height: 1.4; }
+.personal-item-body small { margin-top: 6px; color: var(--subtle); font-size: 10.5px; }
+.personal-item a { color: inherit; text-decoration: none; }
+.personal-item a:hover strong { color: var(--terracotta); }
+.personal-date { min-width: 62px; color: var(--muted); font-size: 11px; font-weight: 700; text-align: right; }
+.personal-empty { padding: 30px 18px; color: var(--muted); font-size: 12px; text-align: center; }
+
+.calendar-attendees-field {
+  margin: 0;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.calendar-attendees-field legend { padding: 0 6px; color: var(--ink); font-size: 12px; font-weight: 700; }
+.calendar-attendees-field > p { margin: 0 0 11px; color: var(--muted); font-size: 11px; }
+.calendar-team-attendees { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.calendar-attendee-option {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--paper);
+  cursor: pointer;
+}
+.calendar-attendee-option:has(input:checked) { border-color: var(--terracotta); background: var(--terracotta-tint); }
+.calendar-attendee-option input { width: 16px; height: 16px; margin: 0; accent-color: var(--terracotta); }
+.calendar-attendee-option span { min-width: 0; }
+.calendar-attendee-option strong,
+.calendar-attendee-option small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.calendar-attendee-option strong { font-size: 11.5px; }
+.calendar-attendee-option small { margin-top: 2px; color: var(--muted); font-size: 9.5px; }
+
+@media (max-width: 980px) {
+  .personal-grid { grid-template-columns: 1fr; }
+  .calendar-team-attendees { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 640px) {
+  .notification-panel { position: fixed; top: 76px; right: 12px; left: 12px; width: auto; }
+  .personal-summary { align-items: flex-start; flex-direction: column; padding: 20px; }
+  .personal-metrics { width: 100%; justify-content: stretch; }
+  .personal-metrics span { flex: 1 1 120px; }
+  .calendar-team-attendees { grid-template-columns: 1fr; }
+}
