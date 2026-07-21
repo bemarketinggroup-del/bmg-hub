@@ -5359,7 +5359,6 @@ function renderGoogleCalendar() {
   if (googleCalendarState.mode === "month") {
     const today = gcDateKey(new Date());
     const month = googleCalendarState.anchor.getMonth();
-    const visibleSlots = 4;
     const cells = Array.from({ length: 6 }, (_, weekIndex) => {
       const weekStart = gcAddDays(range.start, weekIndex * 7);
       const weekLayout = googleCalendarWeekLayout(weekStart);
@@ -5367,14 +5366,11 @@ function renderGoogleCalendar() {
         const date = gcAddDays(weekStart, dayIndex);
         const dateKey = gcDateKey(date);
         const entries = weekLayout[dayIndex];
-        const visible = entries.filter((entry) => entry.slot < visibleSlots);
-        const hidden = entries.length - visible.length;
         return `
           <div class="google-calendar-day${date.getMonth() !== month ? " is-outside" : ""}${dateKey === today ? " is-today" : ""}" data-calendar-date="${dateKey}">
             <button class="google-calendar-day-number" data-calendar-new-date="${dateKey}" type="button" aria-label="Nuovo evento il ${dateKey}">${date.getDate()}</button>
             <div class="google-calendar-day-events">
-              ${visible.map((entry) => calendarEventChip(entry.event, false, entry)).join("")}
-              ${hidden ? `<button class="google-calendar-more" data-calendar-date-more="${dateKey}" type="button" style="grid-row:${visibleSlots + 1}">+ ${hidden} altri</button>` : ""}
+              ${entries.map((entry) => calendarEventChip(entry.event, false, entry)).join("")}
             </div>
           </div>`;
       }).join("");
