@@ -70,6 +70,22 @@ const abbreviatedClientAppointment = buildGoogleEvent({
 assert.equal(abbreviatedClientAppointment.colorId, "11");
 assert.equal(classifyGoogleCalendarEvent({ summary: "Aggiornamento applicazione" }), "");
 
+const clientTerms = ["Europa Palace", "Hotel Europa", "Bufale"];
+assert.equal(classifyGoogleCalendarEvent({ summary: "Europa Palace" }, clientTerms), "client_appointment");
+assert.equal(classifyGoogleCalendarEvent({ summary: "HOTEL EUROPA" }, clientTerms), "client_appointment");
+assert.equal(classifyGoogleCalendarEvent({ summary: "Bufale" }, ["Bufalè"]), "client_appointment");
+assert.equal(classifyGoogleCalendarEvent({ summary: "Europa Palace preventivo" }, clientTerms), "");
+assert.equal(classifyGoogleCalendarEvent({ summary: "Europa" }, clientTerms), "");
+
+const clientNameAppointment = buildGoogleEvent({
+  title: "Europa Palace",
+  start_date: "2026-07-29",
+  end_date: "2026-07-29",
+  start_time: "15:00",
+  end_time: "16:00"
+}, clientTerms);
+assert.equal(clientNameAppointment.colorId, "11");
+
 const normalized = normalizeGoogleEvent({
   id: "event_12345",
   summary: "Appuntamento cliente",
