@@ -49,7 +49,7 @@
     },
     {
       "src": "/api/google-calendar",
-      "dest": "/api/google-calendar.js"
+      "dest": "/api/app.js"
     },
     {
       "src": "/api/ped",
