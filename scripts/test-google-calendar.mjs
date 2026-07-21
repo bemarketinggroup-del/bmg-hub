@@ -43,6 +43,14 @@ const smartWorking = buildGoogleEvent({
 });
 assert.equal(smartWorking.colorId, "4");
 
+const abbreviatedSmartWorking = buildGoogleEvent({
+  title: "Marta SMART",
+  all_day: true,
+  start_date: "2026-07-28",
+  end_date: "2026-07-28"
+});
+assert.equal(abbreviatedSmartWorking.colorId, "4");
+
 const clientAppointment = buildGoogleEvent({
   title: "Appuntamento Europa Palace",
   start_date: "2026-07-29",
@@ -51,6 +59,16 @@ const clientAppointment = buildGoogleEvent({
   end_time: "11:00"
 });
 assert.equal(clientAppointment.colorId, "11");
+
+const abbreviatedClientAppointment = buildGoogleEvent({
+  title: "APP Europa Palace",
+  start_date: "2026-07-29",
+  end_date: "2026-07-29",
+  start_time: "12:00",
+  end_time: "13:00"
+});
+assert.equal(abbreviatedClientAppointment.colorId, "11");
+assert.equal(classifyGoogleCalendarEvent({ summary: "Aggiornamento applicazione" }), "");
 
 const normalized = normalizeGoogleEvent({
   id: "event_12345",
