@@ -5216,6 +5216,69 @@ function googleCalendarEventsForDate(dateKey) {
   });
 }
 
+function calendarEventDateSpan(event) {
+  const startKey = event.all_day ? String(event.start_at || "").slice(0, 10) : gcDateKey(event.start_at);
+  const rawEnd = event.end_at || event.start_at;
+  const endDate = new Date(rawEnd);
+  const endsAtMidnight = !event.all_day
+    && rawEnd !== event.start_at
+    && !Number.isNaN(endDate.valueOf())
+    && endDate.getHours() === 0
+    && endDate.getMinutes() === 0
+    && endDate.getSeconds() === 0
+    && endDate.getMilliseconds() === 0;
+  let endKey = event.all_day
+    ? gcDateKey(gcAddDays(String(rawEnd || "").slice(0, 10), -1))
+    : gcDateKey(endsAtMidnight ? new Date(endDate.valueOf() - 1) : rawEnd);
+  if (!endKey || endKey < startKey) endKey = startKey;
+  return { startKey, endKey };
+}
+
+function calendarDateDistance(startKey, endKey) {
+  return Math.round((gcDateFromKey(endKey) - gcDateFromKey(startKey)) / 86400000);
+}
+
+function googleCalendarWeekLayout(weekStart) {
+  const weekStartKey = gcDateKey(weekStart);
+  const weekEndKey = gcDateKey(gcAddDays(weekStart, 6));
+  const occupiedSlots = Array.from({ length: 7 }, () => new Set());
+  const days = Array.from({ length: 7 }, () => []);
+  const segments = googleCalendarState.events.map((event) => {
+    const span = calendarEventDateSpan(event);
+    if (!span.startKey || span.endKey < weekStartKey || span.startKey > weekEndKey) return null;
+    const startColumn = Math.max(0, calendarDateDistance(weekStartKey, span.startKey));
+    const endColumn = Math.min(6, calendarDateDistance(weekStartKey, span.endKey));
+    return { event, ...span, startColumn, endColumn, duration: calendarDateDistance(span.startKey, span.endKey) };
+  }).filter(Boolean).sort((left, right) => {
+    if ((left.duration > 0) !== (right.duration > 0)) return left.duration > 0 ? -1 : 1;
+    if (left.event.all_day !== right.event.all_day) return left.event.all_day ? -1 : 1;
+    if (left.startColumn !== right.startColumn) return left.startColumn - right.startColumn;
+    if (left.duration !== right.duration) return right.duration - left.duration;
+    return String(left.event.start_at).localeCompare(String(right.event.start_at)) || String(left.event.title).localeCompare(String(right.event.title), "it");
+  });
+
+  segments.forEach((segment) => {
+    let slot = 0;
+    while (Array.from({ length: segment.endColumn - segment.startColumn + 1 }, (_, index) => segment.startColumn + index)
+      .some((column) => occupiedSlots[column].has(slot))) slot += 1;
+    for (let column = segment.startColumn; column <= segment.endColumn; column += 1) {
+      occupiedSlots[column].add(slot);
+      const multiDay = segment.startColumn !== segment.endColumn;
+      const position = !multiDay
+        ? "single"
+        : column === segment.startColumn
+          ? "start"
+          : column === segment.endColumn
+            ? "end"
+            : "middle";
+      days[column].push({ event: segment.event, slot, multiDay, position, showLabel: column === segment.startColumn });
+    }
+  });
+
+  days.forEach((entries) => entries.sort((left, right) => left.slot - right.slot));
+  return days;
+}
+
 function calendarEventColor(event) {
   const categoryColors = {
     tentative: "#8E24AA",
@@ -5247,15 +5310,22 @@ function calendarEventTime(event) {
   return Number.isNaN(date.valueOf()) ? "" : new Intl.DateTimeFormat("it-IT", { hour: "2-digit", minute: "2-digit" }).format(date);
 }
 
-function calendarEventChip(event, detailed = false) {
+function calendarEventChip(event, detailed = false, options = {}) {
   const eventId = encodeURIComponent(event.id);
   const attendees = Array.isArray(event.attendees) ? event.attendees.length : 0;
-  return `
-    <button class="google-calendar-event${detailed ? " is-detailed" : ""}" data-calendar-event="${eventId}" type="button" style="--event-color:${calendarEventColor(event)}" title="${escapeHtml(`${calendarEventCategoryLabel(event)} · ${event.title}`)}">
-      <span class="google-calendar-event-time">${escapeHtml(calendarEventTime(event))}</span>
+  const segmentClass = options.multiDay ? ` is-span-${options.position}` : "";
+  const slotStyle = Number.isInteger(options.slot) ? `;grid-row:${options.slot + 1}` : "";
+  const content = options.multiDay
+    ? options.showLabel
+      ? `<strong>${escapeHtml(event.title)}</strong>`
+      : `<span class="google-calendar-event-segment-filler" aria-hidden="true"></span>`
+    : `<span class="google-calendar-event-time">${escapeHtml(calendarEventTime(event))}</span>
       <strong>${escapeHtml(event.title)}</strong>
       ${detailed && event.location ? `<small>${escapeHtml(event.location)}</small>` : ""}
-      ${detailed && attendees ? `<small>${attendees} partecipant${attendees === 1 ? "e" : "i"}</small>` : ""}
+      ${detailed && attendees ? `<small>${attendees} partecipant${attendees === 1 ? "e" : "i"}</small>` : ""}`;
+  return `
+    <button class="google-calendar-event${detailed ? " is-detailed" : ""}${segmentClass}" data-calendar-event="${eventId}" type="button" style="--event-color:${calendarEventColor(event)}${slotStyle}" title="${escapeHtml(`${calendarEventCategoryLabel(event)} · ${event.title}`)}">
+      ${content}
     </button>`;
 }
 
@@ -5289,19 +5359,25 @@ function renderGoogleCalendar() {
   if (googleCalendarState.mode === "month") {
     const today = gcDateKey(new Date());
     const month = googleCalendarState.anchor.getMonth();
-    const cells = Array.from({ length: range.days }, (_, index) => {
-      const date = gcAddDays(range.start, index);
-      const dateKey = gcDateKey(date);
-      const events = googleCalendarEventsForDate(dateKey);
-      const visible = events.slice(0, 4);
-      return `
-        <div class="google-calendar-day${date.getMonth() !== month ? " is-outside" : ""}${dateKey === today ? " is-today" : ""}" data-calendar-date="${dateKey}">
-          <button class="google-calendar-day-number" data-calendar-new-date="${dateKey}" type="button" aria-label="Nuovo evento il ${dateKey}">${date.getDate()}</button>
-          <div class="google-calendar-day-events">
-            ${visible.map((event) => calendarEventChip(event)).join("")}
-            ${events.length > visible.length ? `<button class="google-calendar-more" data-calendar-date-more="${dateKey}" type="button">+ ${events.length - visible.length} altri</button>` : ""}
-          </div>
-        </div>`;
+    const visibleSlots = 4;
+    const cells = Array.from({ length: 6 }, (_, weekIndex) => {
+      const weekStart = gcAddDays(range.start, weekIndex * 7);
+      const weekLayout = googleCalendarWeekLayout(weekStart);
+      return Array.from({ length: 7 }, (_, dayIndex) => {
+        const date = gcAddDays(weekStart, dayIndex);
+        const dateKey = gcDateKey(date);
+        const entries = weekLayout[dayIndex];
+        const visible = entries.filter((entry) => entry.slot < visibleSlots);
+        const hidden = entries.length - visible.length;
+        return `
+          <div class="google-calendar-day${date.getMonth() !== month ? " is-outside" : ""}${dateKey === today ? " is-today" : ""}" data-calendar-date="${dateKey}">
+            <button class="google-calendar-day-number" data-calendar-new-date="${dateKey}" type="button" aria-label="Nuovo evento il ${dateKey}">${date.getDate()}</button>
+            <div class="google-calendar-day-events">
+              ${visible.map((entry) => calendarEventChip(entry.event, false, entry)).join("")}
+              ${hidden ? `<button class="google-calendar-more" data-calendar-date-more="${dateKey}" type="button" style="grid-row:${visibleSlots + 1}">+ ${hidden} altri</button>` : ""}
+            </div>
+          </div>`;
+      }).join("");
     }).join("");
     grid.className = "google-calendar-grid is-month";
     grid.innerHTML = `<div class="google-calendar-weekdays">${weekdays.map((day) => `<span>${day}</span>`).join("")}</div><div class="google-calendar-month-grid">${cells}</div>`;
