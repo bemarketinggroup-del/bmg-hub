@@ -48,6 +48,10 @@
       "dest": "/api/clients.js"
     },
     {
+      "src": "/api/google-calendar",
+      "dest": "/api/google-calendar.js"
+    },
+    {
       "src": "/api/ped",
       "dest": "/api/app.js"
     },

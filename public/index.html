@@ -54,6 +54,10 @@
           <span class="icon"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></svg></span>
           <span>PED</span>
         </button>
+        <button class="nav-item" data-view="calendar" data-module="calendar" type="button">
+          <span class="icon"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/><path d="M8 14h2M14 14h2M8 18h2M14 18h2"/></svg></span>
+          <span>Calendario</span>
+        </button>
         <button class="nav-item" data-view="team" data-module="tasks" type="button">
           <span class="icon"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M8 7v7"/><path d="M12 7v4"/><path d="M16 7v9"/></svg></span>
           <span>Task del team</span>
@@ -278,6 +282,45 @@
         </section>
       </section>
 
+      <section class="view" id="calendarView" data-view-panel="calendar">
+        <section class="panel google-calendar-workspace">
+          <div class="google-calendar-head">
+            <div>
+              <p class="eyebrow">Google Calendar</p>
+              <h2>Calendario BeViral Agency</h2>
+              <span id="googleCalendarAccount">Appuntamenti, shooting e impegni condivisi del team</span>
+            </div>
+            <div class="google-calendar-actions">
+              <button class="ghost-button" id="calendarRefreshButton" type="button">
+                <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8.1 8.1 0 0 0-15.5-2M4 4v5h5"/><path d="M4 13a8.1 8.1 0 0 0 15.5 2M20 20v-5h-5"/></svg>
+                Sincronizza
+              </button>
+              <button class="primary-button" id="calendarNewEventButton" type="button">
+                <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M12 5v14"/></svg>
+                Nuovo evento
+              </button>
+            </div>
+          </div>
+
+          <div class="google-calendar-toolbar">
+            <div class="google-calendar-navigation">
+              <button class="icon-button" id="calendarPreviousButton" type="button" title="Periodo precedente" aria-label="Periodo precedente"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
+              <button class="ghost-button calendar-today-button" id="calendarTodayButton" type="button">Oggi</button>
+              <button class="icon-button" id="calendarNextButton" type="button" title="Periodo successivo" aria-label="Periodo successivo"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>
+              <h3 id="calendarPeriodLabel">Mese</h3>
+            </div>
+            <div class="google-calendar-view-switch" role="group" aria-label="Vista calendario">
+              <button class="is-active" data-calendar-mode="month" type="button">Mese</button>
+              <button data-calendar-mode="week" type="button">Settimana</button>
+            </div>
+            <span class="google-calendar-status" id="calendarStatus" role="status"></span>
+          </div>
+
+          <div class="google-calendar-error is-hidden" id="googleCalendarError" role="alert"></div>
+          <div class="google-calendar-grid" id="googleCalendarGrid" aria-live="polite"></div>
+        </section>
+      </section>
+
       <section class="view" id="teamView" data-view-panel="team">
         <section class="panel task-workspace">
           <div class="task-workspace-head">
@@ -456,6 +499,7 @@
               <label class="permission-toggle"><input name="module_tasks" type="checkbox" checked><span>Task</span></label>
               <label class="permission-toggle"><input name="module_ped" type="checkbox" checked><span>PED</span></label>
               <label class="permission-toggle"><input name="module_clients" type="checkbox" checked><span>Clienti</span></label>
+              <label class="permission-toggle"><input name="module_calendar" type="checkbox" checked><span>Calendario</span></label>
               <label class="permission-toggle"><input name="module_site_backend" type="checkbox"><span>Backend sito</span></label>
               <label class="permission-toggle"><input name="module_users" type="checkbox"><span>Utenti</span></label>
               <label class="permission-toggle"><input name="module_smart_working" type="checkbox" checked><span>Turni</span></label>
@@ -472,6 +516,47 @@
       </section>
     </main>
   </div>
+
+  <dialog class="modal calendar-event-modal" id="calendarEventModal">
+    <form method="dialog" id="calendarEventForm">
+      <div class="modal-head">
+        <div>
+          <p class="eyebrow">Google Calendar</p>
+          <h2 id="calendarEventModalTitle">Nuovo evento</h2>
+        </div>
+        <button class="icon-button" value="cancel" type="submit" formnovalidate title="Chiudi" aria-label="Chiudi"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+      </div>
+      <input name="event_id" type="hidden">
+      <div class="form-grid calendar-event-form-grid">
+        <label class="full">Titolo
+          <input name="title" maxlength="500" autocomplete="off" required placeholder="Es. Shooting cliente Europa Palace">
+        </label>
+        <label class="calendar-all-day-field">
+          <span>Durata</span>
+          <span class="calendar-all-day-toggle"><input id="calendarAllDay" name="all_day" type="checkbox"><span>Intera giornata</span></span>
+        </label>
+        <span class="calendar-form-spacer" aria-hidden="true"></span>
+        <label>Data inizio<input name="start_date" type="date" required></label>
+        <label>Data fine<input name="end_date" type="date" required></label>
+        <label data-calendar-time-field>Ora inizio<input name="start_time" type="time" value="09:00" required></label>
+        <label data-calendar-time-field>Ora fine<input name="end_time" type="time" value="10:00" required></label>
+        <label class="full">Luogo<input name="location" maxlength="500" autocomplete="off" placeholder="Sede, indirizzo o link riunione"></label>
+        <label class="full">Partecipanti
+          <textarea name="attendees" rows="2" placeholder="email1@azienda.it, email2@azienda.it"></textarea>
+          <small>Separa più indirizzi con virgole o andando a capo.</small>
+        </label>
+        <label class="full">Descrizione<textarea name="description" rows="5" maxlength="8000" placeholder="Dettagli, note e informazioni utili"></textarea></label>
+      </div>
+      <p class="form-message" id="calendarEventMessage" role="status"></p>
+      <div class="modal-actions calendar-event-actions">
+        <a class="ghost-button is-hidden" id="calendarGoogleLink" href="#" target="_blank" rel="noopener">Apri in Google</a>
+        <button class="danger-button is-hidden" id="deleteCalendarEventButton" type="button">Elimina</button>
+        <span class="calendar-actions-spacer"></span>
+        <button class="ghost-button" value="cancel" type="submit" formnovalidate>Annulla</button>
+        <button class="primary-button" id="saveCalendarEventButton" value="default" type="submit">Salva evento</button>
+      </div>
+    </form>
+  </dialog>
 
   <dialog class="modal wide-modal" id="contentModal">
     <form method="dialog" id="contentForm">

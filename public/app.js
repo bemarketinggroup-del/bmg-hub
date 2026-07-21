@@ -26,6 +26,7 @@ const MODULE_DEFINITIONS = Object.freeze([
   { key: "tasks", label: "Task" },
   { key: "ped", label: "PED" },
   { key: "clients", label: "Clienti" },
+  { key: "calendar", label: "Calendario" },
   { key: "site_backend", label: "Backend sito" },
   { key: "users", label: "Utenti" },
   { key: "smart_working", label: "Turni" },
@@ -35,6 +36,7 @@ const VIEW_MODULES = Object.freeze({
   content: "site_backend",
   clients: "clients",
   ped: "ped",
+  calendar: "calendar",
   team: "tasks",
   smart: "smart_working",
   users: "users",
@@ -201,6 +203,14 @@ let pedInstagramDraftOrder = [];
 let pedInstagramDraggedId = "";
 let pedPointerDrag = { pointerId: null, card: null, itemId: "", timer: 0, active: false, startX: 0, startY: 0, ghost: null };
 const pedMoveRequests = new Set();
+let googleCalendarState = {
+  mode: "month",
+  anchor: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+  events: [],
+  calendar: null,
+  loading: false,
+  loadedRange: ""
+};
 let selectedSmartWeek = mondayOf(new Date());
 let selectedContentSection = "all";
 let authConfig = null;
@@ -369,6 +379,7 @@ function auditMetadata(url, method, options = {}) {
     if (endpoint === "/api/clickup/tasks") return method === "POST" ? "create_task" : "update_task";
     if (endpoint === "/api/ped") return method === "POST" ? "create_ped_content" : method === "DELETE" ? "remove_ped_content" : "update_ped_content";
     if (endpoint === "/api/ped-share") return method === "DELETE" ? "disable_ped_share" : "create_ped_share";
+    if (endpoint === "/api/google-calendar") return method === "POST" ? "create_calendar_event" : method === "PATCH" ? "update_calendar_event" : method === "DELETE" ? "delete_calendar_event" : "sync_calendar_events";
     if (endpoint === "/api/site-media") return "upload_site_media";
     if (endpoint === "/api/site-content") return method === "POST" ? "create_site_content" : method === "DELETE" ? "delete_site_content" : "update_site_content";
     if (endpoint === "/api/smart-working") return "smart_working_operation";
@@ -389,6 +400,7 @@ function auditMetadata(url, method, options = {}) {
   const entityId = body.id || body.clickup_task_id || body.client_id || body.file_id || requestUrl.searchParams.get("id") || requestUrl.searchParams.get("client_id") || "";
   const entityType = endpoint.includes("clickup/tasks") ? "task"
     : endpoint.includes("client") ? "client"
+      : endpoint.includes("google-calendar") ? "calendar_event"
       : endpoint.includes("ped") ? "ped_content"
         : endpoint.includes("site-content") ? "site_content"
           : endpoint.includes("users") ? "user"
@@ -720,6 +732,7 @@ function setView(view) {
     content: ["CMS leggero", "Backend sito"],
     clients: ["Gestionale interno", "Clienti"],
     ped: ["Piano editoriale", "PED"],
+    calendar: ["Agenda condivisa", "Calendario"],
     team: ["ClickUp operativo", "Task del team"],
     smart: ["Turni interni", "Turni / Smart Working"],
     users: ["Accessi interni", "Utenti"],
@@ -732,6 +745,7 @@ function setView(view) {
     ensurePedClientSelection();
     loadPedCalendar();
   }
+  if (view === "calendar") loadGoogleCalendar();
 }
 
 function mondayOf(value = new Date()) {
@@ -5086,11 +5100,315 @@ async function submitTask(form) {
   }
 }
 
+function gcDateKey(value = new Date()) {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.valueOf())) return "";
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function gcDateFromKey(value) {
+  return new Date(`${value}T12:00:00`);
+}
+
+function gcAddDays(value, amount) {
+  const date = value instanceof Date ? new Date(value) : gcDateFromKey(value);
+  date.setDate(date.getDate() + amount);
+  return date;
+}
+
+function gcStartOfWeek(value) {
+  const date = value instanceof Date ? new Date(value) : new Date(value);
+  date.setHours(12, 0, 0, 0);
+  const day = date.getDay();
+  date.setDate(date.getDate() + (day === 0 ? -6 : 1 - day));
+  return date;
+}
+
+function googleCalendarRange() {
+  if (googleCalendarState.mode === "week") {
+    const start = gcStartOfWeek(googleCalendarState.anchor);
+    return { start, end: gcAddDays(start, 7), days: 7 };
+  }
+  const monthStart = new Date(googleCalendarState.anchor.getFullYear(), googleCalendarState.anchor.getMonth(), 1, 12);
+  const start = gcStartOfWeek(monthStart);
+  return { start, end: gcAddDays(start, 42), days: 42 };
+}
+
+function googleCalendarRangeKey(range = googleCalendarRange()) {
+  return `${googleCalendarState.mode}:${gcDateKey(range.start)}:${gcDateKey(range.end)}`;
+}
+
+function calendarApiIso(date) {
+  const localMidnight = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0, 0);
+  return localMidnight.toISOString();
+}
+
+async function loadGoogleCalendar(options = {}) {
+  if (!canAccessModule("calendar") || googleCalendarState.loading) return;
+  const range = googleCalendarRange();
+  const rangeKey = googleCalendarRangeKey(range);
+  if (!options.fresh && googleCalendarState.loadedRange === rangeKey) {
+    renderGoogleCalendar();
+    return;
+  }
+  googleCalendarState.loading = true;
+  setGoogleCalendarError("");
+  renderGoogleCalendar();
+  try {
+    const params = new URLSearchParams({
+      time_min: calendarApiIso(range.start),
+      time_max: calendarApiIso(range.end)
+    });
+    const response = await apiFetch(`/api/google-calendar?${params}`);
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "Google Calendar non disponibile");
+    googleCalendarState.events = Array.isArray(data.events) ? data.events.filter((event) => event.status !== "cancelled") : [];
+    googleCalendarState.calendar = data.calendar || null;
+    googleCalendarState.loadedRange = rangeKey;
+    document.getElementById("googleCalendarAccount").textContent = data.calendar?.id
+      ? `${data.calendar.name || "Calendario condiviso"} · ${data.calendar.id}`
+      : "Appuntamenti, shooting e impegni condivisi del team";
+  } catch (error) {
+    googleCalendarState.events = [];
+    googleCalendarState.loadedRange = "";
+    setGoogleCalendarError(error.message);
+  } finally {
+    googleCalendarState.loading = false;
+    renderGoogleCalendar();
+  }
+}
+
+function setGoogleCalendarError(message) {
+  const target = document.getElementById("googleCalendarError");
+  if (!target) return;
+  target.textContent = message || "";
+  target.classList.toggle("is-hidden", !message);
+}
+
+function googleCalendarEventsForDate(dateKey) {
+  return googleCalendarState.events.filter((event) => {
+    if (event.all_day) {
+      return event.start_at.slice(0, 10) <= dateKey && dateKey < event.end_at.slice(0, 10);
+    }
+    const startKey = gcDateKey(event.start_at);
+    const endKey = gcDateKey(event.end_at);
+    return startKey <= dateKey && dateKey <= endKey;
+  }).sort((left, right) => {
+    if (left.all_day !== right.all_day) return left.all_day ? -1 : 1;
+    return String(left.start_at).localeCompare(String(right.start_at));
+  });
+}
+
+function calendarEventColor(event) {
+  const colors = ["#cf5b31", "#3d7f77", "#4f73bd", "#9367a6", "#be8a31", "#d0526f", "#587c52", "#667085", "#9a654f", "#2f7d98", "#b55c39"];
+  const index = Math.max(0, Number(event.color_id || 1) - 1) % colors.length;
+  return colors[index];
+}
+
+function calendarEventTime(event) {
+  if (event.all_day) return "Tutto il giorno";
+  const date = new Date(event.start_at);
+  return Number.isNaN(date.valueOf()) ? "" : new Intl.DateTimeFormat("it-IT", { hour: "2-digit", minute: "2-digit" }).format(date);
+}
+
+function calendarEventChip(event, detailed = false) {
+  const eventId = encodeURIComponent(event.id);
+  const attendees = Array.isArray(event.attendees) ? event.attendees.length : 0;
+  return `
+    <button class="google-calendar-event${detailed ? " is-detailed" : ""}" data-calendar-event="${eventId}" type="button" style="--event-color:${calendarEventColor(event)}" title="${escapeHtml(event.title)}">
+      <span class="google-calendar-event-time">${escapeHtml(calendarEventTime(event))}</span>
+      <strong>${escapeHtml(event.title)}</strong>
+      ${detailed && event.location ? `<small>${escapeHtml(event.location)}</small>` : ""}
+      ${detailed && attendees ? `<small>${attendees} partecipant${attendees === 1 ? "e" : "i"}</small>` : ""}
+    </button>`;
+}
+
+function renderGoogleCalendar() {
+  const grid = document.getElementById("googleCalendarGrid");
+  if (!grid) return;
+  const range = googleCalendarRange();
+  const periodLabel = document.getElementById("calendarPeriodLabel");
+  const status = document.getElementById("calendarStatus");
+  document.querySelectorAll("[data-calendar-mode]").forEach((button) => {
+    button.classList.toggle("is-active", button.dataset.calendarMode === googleCalendarState.mode);
+  });
+
+  if (googleCalendarState.mode === "month") {
+    periodLabel.textContent = new Intl.DateTimeFormat("it-IT", { month: "long", year: "numeric" }).format(googleCalendarState.anchor);
+  } else {
+    const end = gcAddDays(range.end, -1);
+    periodLabel.textContent = `${new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "short" }).format(range.start)} – ${new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "short", year: "numeric" }).format(end)}`;
+  }
+  status.textContent = googleCalendarState.loading
+    ? "Sincronizzazione in corso..."
+    : `${googleCalendarState.events.length} event${googleCalendarState.events.length === 1 ? "o" : "i"}`;
+
+  if (googleCalendarState.loading && !googleCalendarState.events.length) {
+    grid.className = "google-calendar-grid is-loading";
+    grid.innerHTML = `<div class="google-calendar-loading"><span class="drive-folder-spinner" aria-hidden="true"></span><strong>Caricamento calendario</strong><small>Recupero eventi da Google Calendar</small></div>`;
+    return;
+  }
+
+  const weekdays = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"];
+  if (googleCalendarState.mode === "month") {
+    const today = gcDateKey(new Date());
+    const month = googleCalendarState.anchor.getMonth();
+    const cells = Array.from({ length: range.days }, (_, index) => {
+      const date = gcAddDays(range.start, index);
+      const dateKey = gcDateKey(date);
+      const events = googleCalendarEventsForDate(dateKey);
+      const visible = events.slice(0, 4);
+      return `
+        <div class="google-calendar-day${date.getMonth() !== month ? " is-outside" : ""}${dateKey === today ? " is-today" : ""}" data-calendar-date="${dateKey}">
+          <button class="google-calendar-day-number" data-calendar-new-date="${dateKey}" type="button" aria-label="Nuovo evento il ${dateKey}">${date.getDate()}</button>
+          <div class="google-calendar-day-events">
+            ${visible.map((event) => calendarEventChip(event)).join("")}
+            ${events.length > visible.length ? `<button class="google-calendar-more" data-calendar-date-more="${dateKey}" type="button">+ ${events.length - visible.length} altri</button>` : ""}
+          </div>
+        </div>`;
+    }).join("");
+    grid.className = "google-calendar-grid is-month";
+    grid.innerHTML = `<div class="google-calendar-weekdays">${weekdays.map((day) => `<span>${day}</span>`).join("")}</div><div class="google-calendar-month-grid">${cells}</div>`;
+    return;
+  }
+
+  const columns = Array.from({ length: 7 }, (_, index) => {
+    const date = gcAddDays(range.start, index);
+    const dateKey = gcDateKey(date);
+    const events = googleCalendarEventsForDate(dateKey);
+    return `
+      <section class="google-calendar-week-day${dateKey === gcDateKey(new Date()) ? " is-today" : ""}" data-calendar-date="${dateKey}">
+        <header><span>${weekdays[index]}</span><strong>${date.getDate()}</strong><button data-calendar-new-date="${dateKey}" type="button" title="Nuovo evento" aria-label="Nuovo evento">+</button></header>
+        <div class="google-calendar-week-events">
+          ${events.length ? events.map((event) => calendarEventChip(event, true)).join("") : `<button class="google-calendar-empty-day" data-calendar-new-date="${dateKey}" type="button">Nessun evento</button>`}
+        </div>
+      </section>`;
+  }).join("");
+  grid.className = "google-calendar-grid is-week";
+  grid.innerHTML = `<div class="google-calendar-week-grid">${columns}</div>`;
+}
+
+function calendarInputDateTime(dateValue) {
+  const date = new Date(dateValue);
+  if (Number.isNaN(date.valueOf())) return { date: "", time: "" };
+  return {
+    date: gcDateKey(date),
+    time: `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`
+  };
+}
+
+function openGoogleCalendarEvent(eventId = "", dateKey = "") {
+  const modal = document.getElementById("calendarEventModal");
+  const form = document.getElementById("calendarEventForm");
+  const event = googleCalendarState.events.find((item) => item.id === eventId);
+  form.reset();
+  form.elements.event_id.value = event?.id || "";
+  form.elements.start_time.value = "09:00";
+  form.elements.end_time.value = "10:00";
+  const initialDate = dateKey || gcDateKey(new Date());
+  form.elements.start_date.value = initialDate;
+  form.elements.end_date.value = initialDate;
+  form.elements.all_day.checked = Boolean(event?.all_day);
+
+  if (event) {
+    form.elements.title.value = event.title || "";
+    form.elements.description.value = event.description || "";
+    form.elements.location.value = event.location || "";
+    form.elements.attendees.value = (event.attendees || []).map((attendee) => attendee.email).join(", ");
+    if (event.all_day) {
+      form.elements.start_date.value = event.start_at.slice(0, 10);
+      form.elements.end_date.value = gcDateKey(gcAddDays(event.end_at.slice(0, 10), -1));
+    } else {
+      const start = calendarInputDateTime(event.start_at);
+      const end = calendarInputDateTime(event.end_at);
+      form.elements.start_date.value = start.date;
+      form.elements.start_time.value = start.time;
+      form.elements.end_date.value = end.date;
+      form.elements.end_time.value = end.time;
+    }
+  }
+
+  document.getElementById("calendarEventModalTitle").textContent = event ? "Modifica evento" : "Nuovo evento";
+  document.getElementById("deleteCalendarEventButton").classList.toggle("is-hidden", !event);
+  const googleLink = document.getElementById("calendarGoogleLink");
+  googleLink.classList.toggle("is-hidden", !event?.html_link);
+  googleLink.href = event?.html_link || "#";
+  document.getElementById("calendarEventMessage").textContent = "";
+  toggleGoogleCalendarTimeFields();
+  modal.showModal();
+}
+
+function toggleGoogleCalendarTimeFields() {
+  const allDay = document.getElementById("calendarAllDay").checked;
+  document.querySelectorAll("[data-calendar-time-field]").forEach((field) => field.classList.toggle("is-hidden", allDay));
+  const form = document.getElementById("calendarEventForm");
+  form.elements.start_time.required = !allDay;
+  form.elements.end_time.required = !allDay;
+}
+
+async function submitGoogleCalendarEvent(form) {
+  const button = document.getElementById("saveCalendarEventButton");
+  const message = document.getElementById("calendarEventMessage");
+  const data = Object.fromEntries(new FormData(form).entries());
+  data.all_day = form.elements.all_day.checked;
+  const isUpdate = Boolean(data.event_id);
+  button.disabled = true;
+  button.textContent = "Salvataggio...";
+  message.textContent = "";
+  message.className = "form-message";
+  try {
+    const response = await apiFetch("/api/google-calendar", {
+      method: isUpdate ? "PATCH" : "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data)
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || "Non riesco a salvare l'evento");
+    message.textContent = "Evento salvato su Google Calendar.";
+    message.classList.add("is-success");
+    googleCalendarState.loadedRange = "";
+    await loadGoogleCalendar({ fresh: true });
+    document.getElementById("calendarEventModal").close();
+  } catch (error) {
+    message.textContent = error.message;
+    message.classList.add("is-error");
+  } finally {
+    button.disabled = false;
+    button.textContent = "Salva evento";
+  }
+}
+
+async function deleteGoogleCalendarEvent() {
+  const form = document.getElementById("calendarEventForm");
+  const eventId = form.elements.event_id.value;
+  if (!eventId || !window.confirm("Eliminare questo evento anche da Google Calendar?")) return;
+  const button = document.getElementById("deleteCalendarEventButton");
+  const message = document.getElementById("calendarEventMessage");
+  button.disabled = true;
+  try {
+    const response = await apiFetch(`/api/google-calendar?event_id=${encodeURIComponent(eventId)}`, { method: "DELETE" });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || "Non riesco a eliminare l'evento");
+    googleCalendarState.loadedRange = "";
+    await loadGoogleCalendar({ fresh: true });
+    document.getElementById("calendarEventModal").close();
+  } catch (error) {
+    message.textContent = error.message;
+    message.className = "form-message is-error";
+  } finally {
+    button.disabled = false;
+  }
+}
+
 function renderAll() {
   renderHome();
   renderContent();
   renderClients();
   renderPed();
+  renderGoogleCalendar();
   renderTeam();
   renderSmartWorking();
   renderUsers();
@@ -5581,6 +5899,51 @@ document.getElementById("smartWeekGrid").addEventListener("change", (event) => {
   const select = event.target.closest("[data-smart-move]");
   if (select) moveSmartAssignment(select);
 });
+
+document.getElementById("calendarRefreshButton").addEventListener("click", () => {
+  googleCalendarState.loadedRange = "";
+  loadGoogleCalendar({ fresh: true });
+});
+document.getElementById("calendarNewEventButton").addEventListener("click", () => openGoogleCalendarEvent());
+document.getElementById("calendarTodayButton").addEventListener("click", () => {
+  googleCalendarState.anchor = googleCalendarState.mode === "month"
+    ? new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+    : new Date();
+  loadGoogleCalendar();
+});
+document.getElementById("calendarPreviousButton").addEventListener("click", () => {
+  const anchor = new Date(googleCalendarState.anchor);
+  if (googleCalendarState.mode === "month") anchor.setMonth(anchor.getMonth() - 1, 1);
+  else anchor.setDate(anchor.getDate() - 7);
+  googleCalendarState.anchor = anchor;
+  loadGoogleCalendar();
+});
+document.getElementById("calendarNextButton").addEventListener("click", () => {
+  const anchor = new Date(googleCalendarState.anchor);
+  if (googleCalendarState.mode === "month") anchor.setMonth(anchor.getMonth() + 1, 1);
+  else anchor.setDate(anchor.getDate() + 7);
+  googleCalendarState.anchor = anchor;
+  loadGoogleCalendar();
+});
+document.querySelectorAll("[data-calendar-mode]").forEach((button) => {
+  button.addEventListener("click", () => {
+    googleCalendarState.mode = button.dataset.calendarMode;
+    loadGoogleCalendar();
+  });
+});
+document.getElementById("googleCalendarGrid").addEventListener("click", (event) => {
+  const eventButton = event.target.closest("[data-calendar-event]");
+  if (eventButton) return openGoogleCalendarEvent(decodeURIComponent(eventButton.dataset.calendarEvent));
+  const dateButton = event.target.closest("[data-calendar-new-date], [data-calendar-date-more]");
+  if (dateButton) return openGoogleCalendarEvent("", dateButton.dataset.calendarNewDate || dateButton.dataset.calendarDateMore);
+});
+document.getElementById("calendarAllDay").addEventListener("change", toggleGoogleCalendarTimeFields);
+document.getElementById("calendarEventForm").addEventListener("submit", (event) => {
+  if (event.submitter?.value === "cancel") return;
+  event.preventDefault();
+  submitGoogleCalendarEvent(event.currentTarget);
+});
+document.getElementById("deleteCalendarEventButton").addEventListener("click", deleteGoogleCalendarEvent);
 
 document.getElementById("contentTable").addEventListener("click", (event) => {
   const row = event.target.closest("[data-content-id]");
