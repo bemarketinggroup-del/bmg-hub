@@ -240,6 +240,10 @@ let selectedSmartDate = localDateKey(new Date());
 let selectedSmartOffEmployeeId = "";
 let selectedSmartOffPeriod = "month";
 let pendingSmartConflict = null;
+let smartDraggedAssignmentId = "";
+let smartDragTarget = null;
+let smartDragSuppressClickUntil = 0;
+const smartSuggestionsEnsuredMonths = new Set();
 let selectedContentSection = "all";
 let authConfig = null;
 let authSession = loadAuthSession();
@@ -956,7 +960,17 @@ async function loadSmartWorking() {
     if (!response.ok) throw new Error(data.error || `Smart working error ${response.status}`);
     state.smartWorking = data;
     if (data.month) selectedSmartMonth = new Date(`${data.month}-01T12:00:00`);
-    if (!selectedSmartDate?.startsWith(data.month || smartMonthKey())) selectedSmartDate = `${data.month || smartMonthKey()}-01`;
+    if (data.can_manage && smartMonthHasFutureWeeks(data) && !smartSuggestionsEnsuredMonths.has(data.month)) {
+      smartSuggestionsEnsuredMonths.add(data.month);
+      try {
+        await smartWorkingAction("ensure_future_suggestions");
+      } catch (suggestionError) {
+        smartSuggestionsEnsuredMonths.delete(data.month);
+        renderBackendStatus(suggestionError.message);
+      }
+    }
+    const freshData = state.smartWorking || data;
+    if (!selectedSmartDate?.startsWith(freshData.month || smartMonthKey())) selectedSmartDate = `${freshData.month || smartMonthKey()}-01`;
     renderHome();
     renderSmartWorking();
   } catch (error) {
@@ -3624,15 +3638,30 @@ function smartEntriesForDate(data, date) {
 function renderSmartMonth(data) {
   const target = document.getElementById("smartMonthGrid");
   if (!target) return;
+  const dates = data.grid_dates || [];
+  const weeks = [];
+  for (let index = 0; index < dates.length; index += 7) weeks.push(dates.slice(index, index + 7));
+  target.innerHTML = weeks.map((weekDates) => {
+    const summary = smartWeekSummary(data, weekDates);
+    return `<section class="smart-month-week${summary.future ? " is-future" : ""}">
+      <div class="smart-week-status${summary.complete ? " is-complete" : " is-incomplete"}">
+        <strong>${escapeHtml(summary.label)}</strong>
+        <span>${summary.complete ? "Tutte le persone hanno lo smart" : `Mancano: ${escapeHtml(summary.missingNames.join(", "))}`}</span>
+      </div>
+      <div class="smart-month-week-days">${weekDates.map((date) => smartMonthDay(data, date)).join("")}</div>
+    </section>`;
+  }).join("") || emptyState("Il calendario del mese non è disponibile.");
+}
+
+function smartMonthDay(data, date) {
   const month = data.month || smartMonthKey();
   const today = localDateKey(new Date());
-  target.innerHTML = (data.grid_dates || []).map((date) => {
     const entries = smartEntriesForDate(data, date);
     const day = new Date(`${date}T12:00:00`);
     const workday = day.getDay() > 0 && day.getDay() < 6;
     const outside = !date.startsWith(month);
     const selected = date === selectedSmartDate;
-    return `
+  return `
       <article class="smart-month-day${outside ? " is-outside" : ""}${!workday ? " is-weekend" : ""}${date === today ? " is-today" : ""}${selected ? " is-selected" : ""}" data-smart-date="${date}">
         <header><time datetime="${date}">${day.getDate()}</time>${workday && data.can_manage ? `<button type="button" data-smart-add="${date}" title="Aggiungi turno" aria-label="Aggiungi turno">+</button>` : ""}</header>
         <div class="smart-month-items">
@@ -3641,7 +3670,36 @@ function renderSmartMonth(data) {
           ${entries.busy.map((item) => smartMonthChip(item, "busy", data)).join("")}
         </div>
       </article>`;
-  }).join("") || emptyState("Il calendario del mese non è disponibile.");
+}
+
+function smartWeekStart(date) {
+  const value = new Date(`${date}T12:00:00`);
+  const offset = value.getDay() === 0 ? -6 : 1 - value.getDay();
+  value.setDate(value.getDate() + offset);
+  return localDateKey(value);
+}
+
+function smartMonthHasFutureWeeks(data) {
+  const currentWeek = smartWeekStart(localDateKey(new Date()));
+  return (data.grid_dates || []).some((date) => smartWeekStart(date) > currentWeek);
+}
+
+function smartWeekSummary(data, dates) {
+  const weekStart = dates[0] || "";
+  const weekEnd = dates[dates.length - 1] || weekStart;
+  const assignedIds = new Set((data.assignments || [])
+    .filter((item) => item.date >= weekStart && item.date <= weekEnd)
+    .map((item) => item.employee_id));
+  const staff = data.staff || [];
+  const missing = staff.filter((employee) => !assignedIds.has(employee.id));
+  const future = weekStart > smartWeekStart(localDateKey(new Date()));
+  const dateLabel = `${new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "short" }).format(new Date(`${weekStart}T12:00:00`))} – ${new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "short" }).format(new Date(`${weekEnd}T12:00:00`))}`;
+  return {
+    complete: staff.length > 0 && missing.length === 0,
+    future,
+    label: future ? `Proposta · ${dateLabel}` : `Verifica settimana · ${dateLabel}`,
+    missingNames: missing.map(staffName)
+  };
 }
 
 function smartMonthChip(item, type, data) {
@@ -3649,10 +3707,12 @@ function smartMonthChip(item, type, data) {
   const label = type === "smart" ? `${staffName(employee)} · SMART` : type === "off" ? `${staffName(employee)} · OFF` : `${staffName(employee)} · ${item.title || "Impegno cliente"}`;
   const externalCalendar = item.source === "google_calendar";
   const editable = type !== "busy" && data.can_manage && !externalCalendar;
+  const proposal = type === "smart" && item.status === "suggested" && item.source === "auto";
+  const draggable = proposal && data.can_manage && smartWeekStart(item.date) > smartWeekStart(localDateKey(new Date()));
   const title = externalCalendar
     ? "Importato da Google Calendar. Modificalo dal calendario."
     : item.reason || item.notes || item.title || label;
-  return `<button class="smart-month-chip is-${type}${item.forced ? " is-forced" : ""}" type="button" ${editable ? `data-smart-edit="${type}" data-entry-id="${item.id}"` : "aria-disabled=\"true\""} title="${escapeHtml(title)}"><span>${escapeHtml(label)}</span>${item.forced ? "<i>forzato</i>" : ""}</button>`;
+  return `<button class="smart-month-chip is-${type}${proposal ? " is-proposal" : ""}${item.forced ? " is-forced" : ""}${draggable ? " is-draggable" : ""}" type="button" ${editable ? `data-smart-edit="${type}" data-entry-id="${item.id}"` : "aria-disabled=\"true\""} ${draggable ? `draggable="true" data-smart-drag="${escapeHtml(item.id)}" aria-label="Trascina ${escapeHtml(label)} su un altro giorno della settimana"` : ""} title="${escapeHtml(draggable ? `${title} Trascina per cambiare giorno.` : title)}"><span>${escapeHtml(label)}</span>${proposal ? "<i>proposta</i>" : item.forced ? "<i>forzato</i>" : ""}</button>`;
 }
 
 function renderSmartDay(data) {
@@ -3805,6 +3865,44 @@ function shiftSmartMonth(offset) {
   selectedSmartMonth = new Date(selectedSmartMonth.getFullYear(), selectedSmartMonth.getMonth() + offset, 1);
   selectedSmartDate = `${smartMonthKey()}-01`;
   loadSmartWorking();
+}
+
+function setSmartDragTarget(day) {
+  if (smartDragTarget === day) return;
+  smartDragTarget?.classList.remove("is-smart-drop-target");
+  smartDragTarget = day || null;
+  smartDragTarget?.classList.add("is-smart-drop-target");
+}
+
+function clearSmartDragVisuals() {
+  setSmartDragTarget(null);
+  document.querySelectorAll(".smart-month-chip.is-dragging").forEach((chip) => chip.classList.remove("is-dragging"));
+  document.querySelectorAll(".smart-month-day.is-smart-drop-ready").forEach((day) => day.classList.remove("is-smart-drop-ready"));
+}
+
+async function moveSmartProposal(assignmentId, targetDate, force = false) {
+  const assignment = (state.smartWorking?.assignments || []).find((item) => String(item.id) === String(assignmentId));
+  if (!assignment || !targetDate || assignment.date === targetDate) return;
+  try {
+    await smartWorkingAction("move_smart_assignment", {
+      assignment_id: assignmentId,
+      target_date: targetDate,
+      force
+    });
+    selectedSmartDate = targetDate;
+    renderSmartWorking();
+  } catch (error) {
+    if (error.payload?.code === "CALENDAR_CONFLICT" && error.payload?.can_force && !force) {
+      const conflicts = (error.payload.conflicts || []).map((item) => item.title || "Appuntamento cliente").join("\n• ");
+      const employee = staffById(state.smartWorking || {}, assignment.employee_id);
+      if (confirm(`${staffName(employee)} ha già questo appuntamento:\n• ${conflicts}\n\nVuoi spostare comunque lo smart?`)) {
+        return moveSmartProposal(assignmentId, targetDate, true);
+      }
+      return;
+    }
+    renderBackendStatus(error.message);
+    alert(error.message || "Non riesco a spostare la proposta smart.");
+  }
 }
 
 function openSmartEntryModal({ date = selectedSmartDate, type = "smart", id = "" } = {}) {
@@ -6233,6 +6331,21 @@ function driveDropZoneFromEvent(event) {
 }
 
 document.body.addEventListener("dragstart", (event) => {
+  const smartChip = event.target.closest?.("[data-smart-drag]");
+  if (smartChip) {
+    smartDraggedAssignmentId = String(smartChip.dataset.smartDrag || "");
+    const assignment = (state.smartWorking?.assignments || []).find((item) => String(item.id) === smartDraggedAssignmentId);
+    if (!assignment) return;
+    smartChip.classList.add("is-dragging");
+    const sourceWeek = smartWeekStart(assignment.date);
+    document.querySelectorAll(".smart-month-day[data-smart-date]").forEach((day) => {
+      if (!day.classList.contains("is-weekend") && smartWeekStart(day.dataset.smartDate) === sourceWeek) day.classList.add("is-smart-drop-ready");
+    });
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("application/x-bmg-smart-assignment", smartDraggedAssignmentId);
+    event.dataTransfer.setData("text/plain", smartDraggedAssignmentId);
+    return;
+  }
   const instagramItem = event.target.closest?.("[data-ped-instagram-item]");
   if (instagramItem && pedInstagramOrderEditing) {
     pedInstagramDraggedId = String(instagramItem.dataset.pedInstagramItem || "");
@@ -6256,6 +6369,17 @@ document.body.addEventListener("dragstart", (event) => {
 });
 
 document.body.addEventListener("dragover", (event) => {
+  if (smartDraggedAssignmentId) {
+    const day = event.target.closest?.(".smart-month-day.is-smart-drop-ready[data-smart-date]");
+    if (!day) {
+      setSmartDragTarget(null);
+      return;
+    }
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+    setSmartDragTarget(day);
+    return;
+  }
   if (pedInstagramDraggedId) {
     const target = event.target.closest?.("[data-ped-instagram-item]");
     if (!target || String(target.dataset.pedInstagramItem || "") === pedInstagramDraggedId) return;
@@ -6277,11 +6401,27 @@ document.body.addEventListener("dragover", (event) => {
 });
 
 document.body.addEventListener("dragleave", (event) => {
+  if (smartDraggedAssignmentId) {
+    if (smartDragTarget && !smartDragTarget.contains(event.relatedTarget)) setSmartDragTarget(null);
+    return;
+  }
   if (!pedDraggedItemId || !pedDragTarget || pedDragTarget.contains(event.relatedTarget)) return;
   setPedDragTarget(null);
 });
 
 document.body.addEventListener("drop", (event) => {
+  if (smartDraggedAssignmentId) {
+    const day = event.target.closest?.(".smart-month-day.is-smart-drop-ready[data-smart-date]");
+    if (!day) return;
+    event.preventDefault();
+    const assignmentId = smartDraggedAssignmentId;
+    const targetDate = day.dataset.smartDate;
+    smartDraggedAssignmentId = "";
+    smartDragSuppressClickUntil = Date.now() + 500;
+    clearSmartDragVisuals();
+    moveSmartProposal(assignmentId, targetDate);
+    return;
+  }
   if (pedInstagramDraggedId) {
     const target = event.target.closest?.("[data-ped-instagram-item]");
     if (!target) return;
@@ -6306,6 +6446,8 @@ document.body.addEventListener("drop", (event) => {
 });
 
 document.body.addEventListener("dragend", () => {
+  smartDraggedAssignmentId = "";
+  clearSmartDragVisuals();
   pedInstagramDraggedId = "";
   document.querySelectorAll("[data-ped-instagram-item].is-dragging, [data-ped-instagram-item].is-order-target").forEach((item) => item.classList.remove("is-dragging", "is-order-target"));
   pedDraggedItemId = "";
@@ -6543,6 +6685,7 @@ document.getElementById("smartView").addEventListener("click", (event) => {
   const editButton = event.target.closest("[data-smart-edit]");
   if (editButton) {
     event.stopPropagation();
+    if (Date.now() < smartDragSuppressClickUntil) return;
     return openSmartEntryModal({ type: editButton.dataset.smartEdit, id: editButton.dataset.entryId });
   }
   const dateCell = event.target.closest("[data-smart-date]");

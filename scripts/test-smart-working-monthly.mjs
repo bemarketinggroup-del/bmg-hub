@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import {
   allocateWeek,
   buildOffCounters,
+  calendarEventBlocksStaff,
   calendarOffEntries,
   calendarSmartEntries,
   isClientWorkEvent,
@@ -25,6 +26,8 @@ assert.equal(isClientWorkEvent({ event_category: "staff_leave", title: "Marta OF
 assert.equal(isClientWorkEvent({ event_category: "smart_working", title: "Daniele SMART" }), false);
 assert.equal(isClientWorkEvent({ event_category: "client_appointment", title: "Europa Palace" }), true);
 assert.equal(isClientWorkEvent({ title: "Shooting cliente" }), true);
+assert.equal(calendarEventBlocksStaff({ event_category: "", title: "VETERA DAVIDE" }, [{ id: "davide" }]), true);
+assert.equal(calendarEventBlocksStaff({ event_category: "smart_working", title: "DAVIDE SMART" }, [{ id: "davide" }]), false);
 
 const employees = ["Andry", "Daniele", "Federica", "Francesco", "Marta", "Marzia", "Sabrina"]
   .map((full_name, index) => ({ id: `employee-${index + 1}`, full_name }));
