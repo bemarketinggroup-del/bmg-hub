@@ -3692,7 +3692,7 @@ function renderSmartMonth(data) {
         <strong>${escapeHtml(summary.label)}</strong>
         <span>${summary.complete ? "Tutte le persone hanno lo smart" : `Mancano: ${escapeHtml(summary.missingNames.join(", "))}`}</span>
       </div>
-      <div class="smart-month-week-days" style="--smart-event-lanes:${eventBars.laneCount}">${weekDates.map((date) => smartMonthDay(data, date, eventBars.consumedEntries)).join("")}${eventBars.html}</div>
+      <div class="smart-month-week-days" style="--smart-event-lanes:${eventBars.laneCount}">${weekDates.map((date, columnIndex) => smartMonthDay(data, date, eventBars.consumedEntries, columnIndex)).join("")}${eventBars.html}</div>
     </section>`;
   }).join("");
 }
@@ -3704,14 +3704,16 @@ function smartEntryRenderKey(item, type) {
 function smartWeekEventBars(data, weekDates) {
   const groups = new Map();
   const rows = [
+    ...(data.assignments || []).map((item) => ({ ...item, bar_type: "smart" })),
     ...(data.busy_entries || []).map((item) => ({ ...item, bar_type: "busy" })),
     ...(data.leave_entries || []).map((item) => ({ ...item, bar_type: "off" }))
   ];
   rows.forEach((item) => {
     const eventId = item.google_event_id || item.source_event_id || "";
-    const fallback = item.bar_type === "off" ? `${item.employee_id}:${item.title || "off"}` : item.title || item.employee_id;
+    const fallback = smartEntryRenderKey(item, item.bar_type);
     const key = `${item.bar_type}:${eventId || fallback}`;
-    if (!groups.has(key)) groups.set(key, { type: item.bar_type, title: item.title || (item.bar_type === "off" ? "OFF / ferie" : "Impegno cliente"), dates: new Set(), employeeIds: new Set(), entries: [] });
+    const defaultTitle = item.bar_type === "smart" ? "SMART" : item.bar_type === "off" ? "OFF / ferie" : "Impegno cliente";
+    if (!groups.has(key)) groups.set(key, { type: item.bar_type, title: item.title || defaultTitle, dates: new Set(), employeeIds: new Set(), entries: [] });
     const group = groups.get(key);
     group.dates.add(item.date);
     group.employeeIds.add(item.employee_id);
@@ -3721,7 +3723,7 @@ function smartWeekEventBars(data, weekDates) {
   const weekStart = weekDates[0];
   const weekEnd = weekDates[weekDates.length - 1];
   const bars = [...groups.values()]
-    .filter((group) => group.type === "busy" || group.dates.size > 1)
+    .filter((group) => group.dates.size > 1)
     .map((group) => {
       const dates = [...group.dates].filter((date) => date >= weekStart && date <= weekEnd).sort();
       if (!dates.length) return null;
@@ -3747,7 +3749,7 @@ function smartWeekEventBars(data, weekDates) {
   return { html, laneCount: laneEnds.length, consumedEntries };
 }
 
-function smartMonthDay(data, date, consumedEntries = new Set()) {
+function smartMonthDay(data, date, consumedEntries = new Set(), columnIndex = 0) {
   const month = data.month || smartMonthKey();
   const today = localDateKey(new Date());
   const entries = smartEntriesForDate(data, date);
@@ -3755,13 +3757,14 @@ function smartMonthDay(data, date, consumedEntries = new Set()) {
   const workday = day.getDay() > 0 && day.getDay() < 6;
   const outside = !date.startsWith(month);
   const selected = date === selectedSmartDate;
+  const visibleSmart = entries.smart.filter((item) => !consumedEntries.has(smartEntryRenderKey(item, "smart")));
   const visibleOff = entries.off.filter((item) => !consumedEntries.has(smartEntryRenderKey(item, "off")));
   const visibleBusy = entries.busy.filter((item) => !consumedEntries.has(smartEntryRenderKey(item, "busy")));
   return `
-      <article class="smart-month-day${outside ? " is-outside" : ""}${!workday ? " is-weekend" : ""}${date === today ? " is-today" : ""}${selected ? " is-selected" : ""}" data-smart-date="${date}">
+      <article class="smart-month-day${outside ? " is-outside" : ""}${!workday ? " is-weekend" : ""}${date === today ? " is-today" : ""}${selected ? " is-selected" : ""}" data-smart-date="${date}" style="grid-column:${columnIndex + 1}">
         <header><time datetime="${date}">${day.getDate()}</time>${workday && data.can_manage ? `<button type="button" data-smart-add="${date}" title="Aggiungi turno" aria-label="Aggiungi turno">+</button>` : ""}</header>
         <div class="smart-month-items">
-          ${entries.smart.map((item) => smartMonthChip(item, "smart", data)).join("")}
+          ${visibleSmart.map((item) => smartMonthChip(item, "smart", data)).join("")}
           ${visibleOff.map((item) => smartMonthChip(item, "off", data)).join("")}
           ${visibleBusy.map((item) => smartMonthChip(item, "busy", data)).join("")}
         </div>

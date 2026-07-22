@@ -4049,6 +4049,7 @@ code { font-family: var(--font-mono); font-size: 12px; }
   margin: calc(40px + var(--smart-event-lane, 0) * 29px) 3px 0; padding: 4px 8px;
   border: 0; border-radius: 5px; color: #fff; background: #d50000; text-align: left; cursor: pointer;
 }
+.smart-multiday-event.is-smart { background: #e67c73; }
 .smart-multiday-event.is-off { color: #332600; background: #f6bf26; }
 .smart-multiday-event span { display: block; overflow: hidden; font-size: 10px; font-weight: 750; text-overflow: ellipsis; white-space: nowrap; }
 .smart-multiday-event:hover { filter: brightness(.94); }
