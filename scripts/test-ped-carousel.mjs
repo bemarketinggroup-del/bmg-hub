@@ -55,13 +55,8 @@ const instagramOrderMigration = await readFile(new URL("../supabase/20260717_ped
 const feedCalendarSyncMigration = await readFile(new URL("../supabase/20260717_ped_feed_calendar_sync.sql", import.meta.url), "utf8");
 const publishingStatusMigration = await readFile(new URL("../supabase/20260718_ped_publishing_status.sql", import.meta.url), "utf8");
 const richCaptionMigration = await readFile(new URL("../supabase/20260718_ped_rich_caption.sql", import.meta.url), "utf8");
-assert.match(appSource, /data-ped-picker-preview-type/, "il selettore Drive deve esporre il tipo di anteprima");
-assert.match(appSource, /showPedPickerPreview\(entry\)/, "il selettore Drive deve attivare l'anteprima al passaggio");
-assert.match(appSource, /preview\.setAttribute\("popover", "manual"\)/, "l'anteprima deve apparire sopra al modal PED");
-assert.match(appSource, /autoplay preload="metadata"/, "il video hover deve tentare la riproduzione automatica silenziosa");
-assert.match(appSource, /bindStreamProgress\(video, preview, \{/, "il video hover deve mostrare il buffering reale");
-assert.match(appSource, /isCurrent: \(\) => loadId === pedPickerPreviewLoadId/, "gli eventi video non devono aggiornare una nuova anteprima");
-assert.doesNotMatch(appSource, /<img alt="Anteprima \$\{escapeHtml\(name\)\}" decoding="async">\$\{mediaProgressMarkup\("Caricamento foto"\)\}/, "le foto non devono mostrare il buffering video o barre artificiali");
+assert.doesNotMatch(appSource, /data-ped-picker-preview-type/, "il selettore Drive non deve aprire anteprime al passaggio del mouse");
+assert.doesNotMatch(appSource, /function showPedPickerPreview/, "la vecchia anteprima hover deve essere rimossa");
 assert.match(appSource, /Il codec di questo video MOV non è supportato/, "i video incompatibili devono mostrare una spiegazione chiara");
 assert.match(appSource, /showEmbeddedDriveVideo/, "i codec video non supportati devono usare il player incorporato di Drive");
 assert.match(appSource, /createTransferProgress/, "upload e download devono esporre una barra di avanzamento");
@@ -70,7 +65,7 @@ assert.match(appSource, /X-Archive-Source-Bytes/, "il download ZIP deve usare la
 assert.match(pedSource, /mapWithConcurrency\(rows, CAROUSEL_DOWNLOAD_CONCURRENCY/, "i file del carosello devono essere preparati in parallelo");
 assert.match(pedSource, /X-Archive-File-Count/, "lo ZIP deve comunicare quanti file contiene");
 assert.match(appSource, /data-drive-download-url/, "i download Drive devono passare dal gestore tracciato");
-assert.match(styleSource, /\.ped-picker-hover-preview\.is-visible/, "l'anteprima hover deve avere uno stato visibile");
+assert.doesNotMatch(styleSource, /\.ped-picker-hover-preview/, "gli stili della vecchia anteprima hover devono essere rimossi");
 assert.match(styleSource, /\.drive-transfer-center/, "il centro trasferimenti deve essere visibile sopra ai modal");
 assert.match(styleSource, /width: min\(280px, calc\(100vw - 24px\)\)/, "il centro trasferimenti deve restare compatto");
 assert.match(styleSource, /height: max-content !important/, "Safari non deve estendere il centro trasferimenti a tutta altezza");
