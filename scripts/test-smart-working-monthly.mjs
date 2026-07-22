@@ -7,6 +7,7 @@ import {
   calendarSmartEntries,
   isClientWorkEvent,
   isSmartEligibleEmployee,
+  prefersFridaySmart,
   matchedEmployees,
   mergeSmartAssignments,
   monthBounds
@@ -32,6 +33,11 @@ assert.equal(calendarEventBlocksStaff({ event_category: "smart_working", title: 
 assert.equal(isSmartEligibleEmployee({ full_name: "Davide De Luca" }), false);
 assert.equal(isSmartEligibleEmployee({ full_name: "Simone Prezioso" }), false);
 assert.equal(isSmartEligibleEmployee({ full_name: "Federica" }), true);
+assert.equal(prefersFridaySmart({ full_name: "Francesco Gaglione" }), true);
+assert.equal(allocateWeek({
+  employees: [{ id: "francesco", full_name: "Francesco Gaglione" }],
+  dates: ["2026-07-27", "2026-07-28", "2026-07-29", "2026-07-30", "2026-07-31"]
+}).assignments[0].date, "2026-07-31");
 assert.equal(buildOffCounters({
   employees: [{ id: "davide", full_name: "Davide De Luca" }],
   month: "2026-07",

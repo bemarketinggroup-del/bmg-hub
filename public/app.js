@@ -3686,31 +3686,84 @@ function renderSmartMonth(data) {
   for (let index = 0; index < dates.length; index += 7) weeks.push(dates.slice(index, index + 7));
   target.innerHTML = weeks.map((weekDates) => {
     const summary = smartWeekSummary(data, weekDates);
+    const eventBars = smartWeekEventBars(data, weekDates);
     return `<section class="smart-month-week${summary.future ? " is-future" : ""}">
       <div class="smart-week-status${summary.complete ? " is-complete" : " is-incomplete"}">
         <strong>${escapeHtml(summary.label)}</strong>
         <span>${summary.complete ? "Tutte le persone hanno lo smart" : `Mancano: ${escapeHtml(summary.missingNames.join(", "))}`}</span>
       </div>
-      <div class="smart-month-week-days">${weekDates.map((date) => smartMonthDay(data, date)).join("")}</div>
+      <div class="smart-month-week-days" style="--smart-event-lanes:${eventBars.laneCount}">${weekDates.map((date) => smartMonthDay(data, date, eventBars.consumedEntries)).join("")}${eventBars.html}</div>
     </section>`;
   }).join("");
 }
 
-function smartMonthDay(data, date) {
+function smartEntryRenderKey(item, type) {
+  return `${type}:${item.id || `${item.employee_id}:${item.date}:${item.google_event_id || item.source_event_id || item.title || "event"}`}`;
+}
+
+function smartWeekEventBars(data, weekDates) {
+  const groups = new Map();
+  const rows = [
+    ...(data.busy_entries || []).map((item) => ({ ...item, bar_type: "busy" })),
+    ...(data.leave_entries || []).map((item) => ({ ...item, bar_type: "off" }))
+  ];
+  rows.forEach((item) => {
+    const eventId = item.google_event_id || item.source_event_id || "";
+    const fallback = item.bar_type === "off" ? `${item.employee_id}:${item.title || "off"}` : item.title || item.employee_id;
+    const key = `${item.bar_type}:${eventId || fallback}`;
+    if (!groups.has(key)) groups.set(key, { type: item.bar_type, title: item.title || (item.bar_type === "off" ? "OFF / ferie" : "Impegno cliente"), dates: new Set(), employeeIds: new Set(), entries: [] });
+    const group = groups.get(key);
+    group.dates.add(item.date);
+    group.employeeIds.add(item.employee_id);
+    group.entries.push(item);
+  });
+
+  const weekStart = weekDates[0];
+  const weekEnd = weekDates[weekDates.length - 1];
+  const bars = [...groups.values()]
+    .filter((group) => group.type === "busy" || group.dates.size > 1)
+    .map((group) => {
+      const dates = [...group.dates].filter((date) => date >= weekStart && date <= weekEnd).sort();
+      if (!dates.length) return null;
+      const start = weekDates.indexOf(dates[0]);
+      const end = weekDates.indexOf(dates[dates.length - 1]);
+      const names = [...group.employeeIds].map((id) => staffName(staffById(data, id))).filter(Boolean);
+      return { ...group, start, end, names };
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.start - b.start || b.end - b.start - (a.end - a.start));
+  const laneEnds = [];
+  bars.forEach((bar) => {
+    let lane = laneEnds.findIndex((end) => end < bar.start);
+    if (lane < 0) lane = laneEnds.length;
+    laneEnds[lane] = bar.end;
+    bar.lane = lane;
+  });
+  const consumedEntries = new Set(bars.flatMap((bar) => bar.entries.map((item) => smartEntryRenderKey(item, bar.type))));
+  const html = bars.map((bar) => {
+    const label = `${bar.title}${bar.names.length ? ` · ${bar.names.join(", ")}` : ""}`;
+    return `<button class="smart-multiday-event is-${bar.type}" type="button" data-smart-date="${escapeHtml(weekDates[bar.start])}" style="grid-column:${bar.start + 1} / ${bar.end + 2};--smart-event-lane:${bar.lane}" title="${escapeHtml(label)}"><span>${escapeHtml(label)}</span></button>`;
+  }).join("");
+  return { html, laneCount: laneEnds.length, consumedEntries };
+}
+
+function smartMonthDay(data, date, consumedEntries = new Set()) {
   const month = data.month || smartMonthKey();
   const today = localDateKey(new Date());
-    const entries = smartEntriesForDate(data, date);
-    const day = new Date(`${date}T12:00:00`);
-    const workday = day.getDay() > 0 && day.getDay() < 6;
-    const outside = !date.startsWith(month);
-    const selected = date === selectedSmartDate;
+  const entries = smartEntriesForDate(data, date);
+  const day = new Date(`${date}T12:00:00`);
+  const workday = day.getDay() > 0 && day.getDay() < 6;
+  const outside = !date.startsWith(month);
+  const selected = date === selectedSmartDate;
+  const visibleOff = entries.off.filter((item) => !consumedEntries.has(smartEntryRenderKey(item, "off")));
+  const visibleBusy = entries.busy.filter((item) => !consumedEntries.has(smartEntryRenderKey(item, "busy")));
   return `
       <article class="smart-month-day${outside ? " is-outside" : ""}${!workday ? " is-weekend" : ""}${date === today ? " is-today" : ""}${selected ? " is-selected" : ""}" data-smart-date="${date}">
         <header><time datetime="${date}">${day.getDate()}</time>${workday && data.can_manage ? `<button type="button" data-smart-add="${date}" title="Aggiungi turno" aria-label="Aggiungi turno">+</button>` : ""}</header>
         <div class="smart-month-items">
           ${entries.smart.map((item) => smartMonthChip(item, "smart", data)).join("")}
-          ${entries.off.map((item) => smartMonthChip(item, "off", data)).join("")}
-          ${entries.busy.map((item) => smartMonthChip(item, "busy", data)).join("")}
+          ${visibleOff.map((item) => smartMonthChip(item, "off", data)).join("")}
+          ${visibleBusy.map((item) => smartMonthChip(item, "busy", data)).join("")}
         </div>
       </article>`;
 }

@@ -3968,6 +3968,7 @@ code { font-family: var(--font-mono); font-size: 12px; }
 .smart-calendar-panel { padding: 0; overflow: hidden; }
 .smart-month-weekdays,
 .smart-month-week-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.smart-month-week-days { position: relative; }
 .smart-month-grid { display: block; }
 .smart-month-loading {
   display: grid; min-height: 190px; place-items: center; align-content: center; gap: 7px;
@@ -4000,6 +4001,7 @@ code { font-family: var(--font-mono); font-size: 12px; }
 .smart-month-week.is-future .smart-week-status.is-incomplete { color: #2f6f4e; background: #eef8f1; }
 .smart-month-day {
   position: relative;
+  grid-row: 1;
   min-width: 0;
   min-height: 138px;
   padding: 8px;
@@ -4041,7 +4043,15 @@ code { font-family: var(--font-mono); font-size: 12px; }
   cursor: pointer;
 }
 .smart-month-day header button:hover { color: var(--ink); background: var(--surface-tint); }
-.smart-month-items { display: grid; gap: 4px; }
+.smart-month-items { display: grid; gap: 4px; padding-top: calc(var(--smart-event-lanes, 0) * 29px); }
+.smart-multiday-event {
+  z-index: 4; align-self: start; grid-row: 1; height: 25px; min-width: 0;
+  margin: calc(40px + var(--smart-event-lane, 0) * 29px) 3px 0; padding: 4px 8px;
+  border: 0; border-radius: 5px; color: #fff; background: #d50000; text-align: left; cursor: pointer;
+}
+.smart-multiday-event.is-off { color: #332600; background: #f6bf26; }
+.smart-multiday-event span { display: block; overflow: hidden; font-size: 10px; font-weight: 750; text-overflow: ellipsis; white-space: nowrap; }
+.smart-multiday-event:hover { filter: brightness(.94); }
 .smart-month-chip {
   display: flex;
   align-items: center;
