@@ -155,8 +155,10 @@ assert.match(htmlSource, /data-ped-viewer-zoom-in/, "il visualizzatore deve offr
 assert.match(appSource, /data-ped-media-viewer/, "ogni contenuto visualizzabile deve avere un comando separato dalla selezione");
 assert.match(appSource, /const viewerSource = !file\.is_folder && previewType \? file\.content_url/, "il visualizzatore deve caricare il file originale e non la miniatura");
 assert.match(appSource, /PED_MEDIA_VIEWER_MAX_SCALE = 8/, "lo zoom deve consentire di ispezionare i dettagli ad alta risoluzione");
+assert.match(appSource, /function fitPedMediaViewerImage\(\)/, "il 100% deve adattare la foto intera allo spazio disponibile");
+assert.match(appSource, /imageRatio >= stageRatio \? availableWidth : availableHeight \* imageRatio/, "il visualizzatore deve rispettare le proporzioni originali senza ritagli");
 assert.match(appSource, /setPointerCapture\(event\.pointerId\)/, "la foto ingrandita deve poter essere trascinata");
-assert.match(styleSource, /\.modal\.ped-media-viewer-modal[\s\S]*?width: min\(1560px, calc\(100vw - 20px\)\)/, "il visualizzatore deve occupare quasi tutto lo schermo desktop");
+assert.match(styleSource, /\.modal\.ped-media-viewer-modal[\s\S]*?width: min\(1380px, calc\(100vw - 72px\)\)/, "il visualizzatore deve essere ampio ma lasciare margine sul desktop");
 assert.match(styleSource, /\.ped-media-viewer-media img[\s\S]*?object-fit: contain/, "la foto intera non deve essere ritagliata nel visualizzatore");
 
 console.log("PED carousel tests passed");

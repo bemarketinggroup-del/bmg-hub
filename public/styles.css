@@ -3022,7 +3022,7 @@ code { font-family: var(--font-mono); font-size: 12px; }
 .ped-picker-error { flex-direction: column; color: var(--red); }
 
 .modal.ped-media-viewer-modal {
-  width: min(1560px, calc(100vw - 20px));
+  width: min(1380px, calc(100vw - 72px));
   max-width: none;
   max-height: none;
   overflow: hidden;
@@ -3033,8 +3033,8 @@ code { font-family: var(--font-mono); font-size: 12px; }
 }
 .modal.ped-media-viewer-modal::backdrop { background: rgba(12, 10, 8, .84); backdrop-filter: blur(7px); }
 .ped-media-viewer-shell {
-  height: min(960px, calc(100vh - 20px));
-  height: min(960px, calc(100dvh - 20px));
+  height: min(820px, calc(100vh - 72px));
+  height: min(820px, calc(100dvh - 72px));
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
   padding: 14px;
@@ -3076,14 +3076,16 @@ code { font-family: var(--font-mono); font-size: 12px; }
 }
 .ped-media-viewer-stage.is-zoomed { cursor: grab; touch-action: none; }
 .ped-media-viewer-stage.is-dragging { cursor: grabbing; }
-.ped-media-viewer-media { width: 100%; height: 100%; min-height: 0; display: grid; place-items: center; overflow: hidden; }
+.ped-media-viewer-media { width: 100%; height: 100%; min-height: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; }
 .ped-media-viewer-media img {
-  width: 100%;
-  height: 100%;
-  max-width: 100%;
-  max-height: 100%;
+  width: auto;
+  height: auto;
+  max-width: none;
+  max-height: none;
+  flex: 0 0 auto;
   display: block;
   object-fit: contain;
+  object-position: center;
   transform-origin: center;
   will-change: transform;
   -webkit-user-drag: none;

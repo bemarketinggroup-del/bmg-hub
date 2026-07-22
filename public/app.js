@@ -2943,6 +2943,20 @@ function pedMediaViewerImage() {
   return document.querySelector("#pedMediaViewerStage [data-ped-viewer-image]");
 }
 
+function fitPedMediaViewerImage() {
+  const stage = document.getElementById("pedMediaViewerStage");
+  const image = pedMediaViewerImage();
+  if (!stage || !image?.naturalWidth || !image?.naturalHeight) return;
+  const availableWidth = stage.clientWidth;
+  const availableHeight = stage.clientHeight;
+  const imageRatio = image.naturalWidth / image.naturalHeight;
+  const stageRatio = availableWidth / availableHeight;
+  const width = imageRatio >= stageRatio ? availableWidth : availableHeight * imageRatio;
+  const height = imageRatio >= stageRatio ? availableWidth / imageRatio : availableHeight;
+  image.style.width = `${Math.max(1, Math.floor(width))}px`;
+  image.style.height = `${Math.max(1, Math.floor(height))}px`;
+}
+
 function resetPedMediaViewerTransform({ render = true } = {}) {
   pedMediaViewerState.scale = 1;
   pedMediaViewerState.x = 0;
@@ -3038,6 +3052,7 @@ function openPedMediaViewer(button) {
       window.setTimeout(() => {
         if (loadId === pedMediaViewerState.loadId) stage.querySelector("[data-media-progress]")?.classList.add("is-hidden");
       }, 350);
+      fitPedMediaViewerImage();
       applyPedMediaViewerTransform();
     }, { once: true });
     image.addEventListener("error", () => {
@@ -6789,7 +6804,10 @@ pedMediaViewerModal.addEventListener("close", () => {
   resetPedMediaViewerTransform({ render: false });
 });
 window.addEventListener("resize", () => {
-  if (pedMediaViewerModal.open && pedMediaViewerState.type === "image") applyPedMediaViewerTransform();
+  if (pedMediaViewerModal.open && pedMediaViewerState.type === "image") {
+    fitPedMediaViewerImage();
+    applyPedMediaViewerTransform();
+  }
 });
 document.getElementById("syncClickUpButton").addEventListener("click", syncClientsFromClickUp);
 document.getElementById("syncTasksButton").addEventListener("click", syncTasksFromClickUp);
