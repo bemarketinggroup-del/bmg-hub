@@ -3535,8 +3535,9 @@ function renderSmartMonth(data) {
 function smartMonthChip(item, type, data) {
   const employee = staffById(data, item.employee_id);
   const label = type === "smart" ? `${staffName(employee)} · SMART` : type === "off" ? `${staffName(employee)} · OFF` : `${staffName(employee)} · ${item.title || "Impegno cliente"}`;
-  const editable = type !== "busy" && data.can_manage && !(type === "off" && item.source === "google_calendar");
-  const title = item.source === "google_calendar" && type === "off"
+  const externalCalendar = item.source === "google_calendar";
+  const editable = type !== "busy" && data.can_manage && !externalCalendar;
+  const title = externalCalendar
     ? "Importato da Google Calendar. Modificalo dal calendario."
     : item.reason || item.notes || item.title || label;
   return `<button class="smart-month-chip is-${type}${item.forced ? " is-forced" : ""}" type="button" ${editable ? `data-smart-edit="${type}" data-entry-id="${item.id}"` : "aria-disabled=\"true\""} title="${escapeHtml(title)}"><span>${escapeHtml(label)}</span>${item.forced ? "<i>forzato</i>" : ""}</button>`;
@@ -3561,9 +3562,9 @@ function renderSmartDay(data) {
 function smartDayGroup(title, rows, type, data) {
   return `<section class="smart-day-group"><h3>${title}<span>${rows.length}</span></h3>${rows.map((item) => {
     const employee = staffById(data, item.employee_id);
-    const externalOff = type === "off" && item.source === "google_calendar";
-    const editable = data.can_manage && type !== "busy" && !externalOff;
-    const detail = externalOff ? "Importato da Google Calendar" : item.reason || item.notes || item.title || labelAssignmentStatus(item.status);
+    const externalCalendar = item.source === "google_calendar";
+    const editable = data.can_manage && type !== "busy" && !externalCalendar;
+    const detail = externalCalendar ? "Importato da Google Calendar" : item.reason || item.notes || item.title || labelAssignmentStatus(item.status);
     return `<button class="smart-day-row is-${type}" type="button" ${editable ? `data-smart-edit="${type}" data-entry-id="${item.id}"` : "disabled"}><strong>${escapeHtml(staffName(employee))}</strong><small>${escapeHtml(detail)}</small></button>`;
   }).join("") || `<span class="smart-empty">Nessuno</span>`}</section>`;
 }

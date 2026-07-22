@@ -1,5 +1,13 @@
 import assert from "node:assert/strict";
-import { allocateWeek, buildOffCounters, calendarOffEntries, isClientWorkEvent, monthBounds } from "../lib/smart-working.js";
+import {
+  allocateWeek,
+  buildOffCounters,
+  calendarOffEntries,
+  calendarSmartEntries,
+  isClientWorkEvent,
+  mergeSmartAssignments,
+  monthBounds
+} from "../lib/smart-working.js";
 
 const bounds = monthBounds("2026-07");
 assert.deepEqual(bounds, {
@@ -91,5 +99,31 @@ const ambiguousAbbreviationEntries = calendarOffEntries({
   ]
 });
 assert.deepEqual(ambiguousAbbreviationEntries, []);
+
+const calendarSmart = calendarSmartEntries({
+  employees,
+  rangeStart: "2026-07-01",
+  rangeEnd: "2026-08-01",
+  events: [{
+    id: "google-smart-20",
+    event_category: "smart_working",
+    title: "MARZIA SABRINA E DANIELE SMART",
+    start_at: "2026-07-20",
+    end_at: "2026-07-21",
+    all_day: true,
+    attendees: []
+  }]
+});
+assert.deepEqual(calendarSmart.map(({ employee_id, date, source }) => ({ employee_id, date, source })), [
+  { employee_id: employees[1].id, date: "2026-07-20", source: "google_calendar" },
+  { employee_id: employees[5].id, date: "2026-07-20", source: "google_calendar" },
+  { employee_id: employees[6].id, date: "2026-07-20", source: "google_calendar" }
+]);
+
+const mergedSmart = mergeSmartAssignments([
+  { id: "hub-marzia", employee_id: employees[5].id, date: "2026-07-20", source: "bmg_hub" }
+], calendarSmart);
+assert.equal(mergedSmart.length, 3);
+assert.equal(mergedSmart.find((entry) => entry.employee_id === employees[5].id).id, "hub-marzia");
 
 console.log("Smart working monthly allocation tests passed.");
