@@ -109,6 +109,7 @@ assert.deepEqual(ambiguousAbbreviationEntries, []);
 
 const clientCommitmentStaff = [
   { id: "andry", full_name: "Andry", email: "andriyph@gmail.com" },
+  { id: "davide", full_name: "Davide De Luca", email: "davidedelucarec@gmail.com" },
   { id: "federica", full_name: "Federica", email: "federicamatacena01@gmail.com" },
   { id: "simone", full_name: "Simone Prezioso", email: "simone.foto@live.it" }
 ];
@@ -131,6 +132,11 @@ assert.deepEqual(matchedEmployees({
   title: "MORFEO FEDERICO",
   attendees: []
 }, clientCommitmentStaff), []);
+assert.deepEqual(matchedEmployees({
+  event_category: "client_appointment",
+  title: "SCIOPA DAVI E SABRINA",
+  attendees: []
+}, clientCommitmentStaff).map((employee) => employee.id), ["davide"]);
 
 const calendarSmart = calendarSmartEntries({
   employees,

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { buildGoogleEvent, calendarPayload, classifyGoogleCalendarEvent, normalizeGoogleEvent } from "../lib/google-calendar.js";
+import { buildGoogleEvent, calendarPayload, classifyGoogleCalendarEvent, mergeGoogleEventAttendees, normalizeGoogleEvent } from "../lib/google-calendar.js";
 
 const timed = buildGoogleEvent({
   title: "Shooting Europa Palace",
@@ -118,6 +118,16 @@ assert.equal(classifyGoogleCalendarEvent({ summary: "Evento cliente in fiera" })
 const payload = calendarPayload([normalized]);
 assert.equal(payload.calendar.id, process.env.GOOGLE_CALENDAR_ID || "beviralagency@gmail.com");
 assert.equal(payload.events.length, 1);
+
+assert.deepEqual(mergeGoogleEventAttendees([
+  { email: "existing@example.com", responseStatus: "accepted" }
+], ["Existing@example.com", "davidedelucarec@gmail.com", "invalid-email"]), {
+  attendees: [
+    { email: "existing@example.com", responseStatus: "accepted" },
+    { email: "davidedelucarec@gmail.com" }
+  ],
+  added: ["davidedelucarec@gmail.com"]
+});
 
 assert.throws(() => buildGoogleEvent({ title: "", start_date: "2026-07-22" }), /titolo/i);
 assert.throws(() => buildGoogleEvent({ title: "Test", start_date: "2026-07-22", end_date: "2026-07-22", start_time: "12:00", end_time: "11:00" }), /fine/i);

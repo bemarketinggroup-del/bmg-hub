@@ -3881,7 +3881,9 @@ async function syncSmartCalendar() {
   try {
     const data = await smartWorkingAction("sync_calendar");
     renderSmartWorking();
-    alert(`Calendar sincronizzato. ${data.result?.cached || 0} eventi letti, ${data.result?.blocked || 0} impegni associati.`);
+    const invited = Number(data.result?.invited) || 0;
+    const invitationErrors = Number(data.result?.invitation_errors) || 0;
+    alert(`Calendar sincronizzato. ${data.result?.cached || 0} eventi letti, ${data.result?.blocked || 0} impegni associati${invited ? `, ${invited} nuovi inviti inviati` : ""}${invitationErrors ? `, ${invitationErrors} inviti non riusciti` : ""}.`);
   } catch (error) {
     renderBackendStatus(error.message);
     alert(error.message || "Non riesco a sincronizzare Google Calendar.");
