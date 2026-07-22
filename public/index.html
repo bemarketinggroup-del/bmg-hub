@@ -480,6 +480,25 @@
           <aside class="panel smart-day-panel" id="smartDayPanel"></aside>
         </div>
 
+        <section class="panel smart-off-summary">
+          <div class="smart-off-summary-head">
+            <div>
+              <p class="eyebrow">Assenze</p>
+              <h2>Contatore giorni OFF</h2>
+              <span>Conteggio dei giorni lavorativi registrati, senza duplicati.</span>
+            </div>
+            <div class="smart-off-totals" aria-label="Totali giorni OFF">
+              <div class="smart-off-total"><small id="smartOffMonthLabel">Mese</small><strong id="smartOffMonthTotal">0</strong></div>
+              <div class="smart-off-total"><small id="smartOffYearLabel">Anno</small><strong id="smartOffYearTotal">0</strong></div>
+            </div>
+          </div>
+          <div class="smart-off-table">
+            <div class="smart-off-table-head"><span>Persona</span><span>Mese</span><span>Anno</span></div>
+            <div class="smart-off-table-body" id="smartOffCounters"></div>
+          </div>
+          <p class="smart-settings-note">I totali uniscono gli OFF inseriti nell'Hub e quelli sincronizzati da Google Calendar, contando una sola volta la stessa persona nella stessa data.</p>
+        </section>
+
         <section class="panel smart-settings-panel">
           <div>
             <p class="eyebrow">Regole</p>

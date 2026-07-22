@@ -3485,6 +3485,7 @@ function renderSmartWorking() {
   renderSmartSettings(data);
   renderSmartMonth(data);
   renderSmartDay(data);
+  renderSmartOffCounters(data);
   renderSmartEvents(data);
 }
 
@@ -3570,6 +3571,28 @@ function renderSmartEvents(data) {
   if (!target) return;
   const events = data.busy_entries || [];
   target.innerHTML = events.slice(0, 16).map((item) => `<article class="smart-event"><strong>${escapeHtml(item.title || "Impegno cliente")}</strong><span>${formatSmartDate(item.date)} · ${escapeHtml(staffName(staffById(data, item.employee_id)))}</span><small>Non viene scelto automaticamente come giorno smart.</small></article>`).join("") || emptyState("Nessun impegno cliente sincronizzato per questo mese.");
+}
+
+function renderSmartOffCounters(data) {
+  const counters = data.off_counters || {};
+  const rows = counters.staff || [];
+  const monthLabel = document.getElementById("smartOffMonthLabel");
+  const yearLabel = document.getElementById("smartOffYearLabel");
+  const monthTotal = document.getElementById("smartOffMonthTotal");
+  const yearTotal = document.getElementById("smartOffYearTotal");
+  const target = document.getElementById("smartOffCounters");
+  const monthDate = /^\d{4}-\d{2}$/.test(counters.month || "") ? new Date(`${counters.month}-01T12:00:00`) : selectedSmartMonth;
+
+  if (monthLabel) monthLabel.textContent = new Intl.DateTimeFormat("it-IT", { month: "long" }).format(monthDate);
+  if (yearLabel) yearLabel.textContent = counters.year || String(monthDate.getFullYear());
+  if (monthTotal) monthTotal.textContent = String(counters.month_total || 0);
+  if (yearTotal) yearTotal.textContent = String(counters.year_total || 0);
+  if (!target) return;
+
+  target.innerHTML = rows.map((row) => {
+    const employee = staffById(data, row.employee_id);
+    return `<div class="smart-off-row"><strong>${escapeHtml(staffName(employee))}</strong><span>${Number(row.month_days) || 0}</span><span>${Number(row.year_days) || 0}</span></div>`;
+  }).join("") || smartEmpty("Nessun dipendente attivo disponibile per il conteggio.");
 }
 
 function staffById(data, id) {

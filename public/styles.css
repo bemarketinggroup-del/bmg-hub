@@ -3966,6 +3966,37 @@ code { font-family: var(--font-mono); font-size: 12px; }
 .smart-office-list { display: flex; flex-wrap: wrap; gap: 5px; }
 .smart-office-list span { padding: 6px 8px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); background: var(--surface); font-size: 10.5px; font-weight: 600; }
 
+.smart-off-summary { margin-top: 14px; padding: 16px; }
+.smart-off-summary-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; }
+.smart-off-summary-head h2 { margin: 4px 0 4px; font-size: 17px; }
+.smart-off-summary-head > div > span { color: var(--muted); font-size: 11px; }
+.smart-off-totals { display: flex; gap: 8px; }
+.smart-off-total {
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 116px;
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--surface-tint);
+}
+.smart-off-total small { color: var(--muted); font-size: 10px; font-weight: 700; text-transform: capitalize; }
+.smart-off-total strong { margin-left: auto; color: var(--ink); font-size: 19px; }
+.smart-off-table { margin: 14px 0 10px; overflow: hidden; border: 1px solid var(--line); border-radius: var(--r-sm); }
+.smart-off-table-head,
+.smart-off-row { display: grid; grid-template-columns: minmax(0, 1fr) 92px 92px; align-items: center; }
+.smart-off-table-head { min-height: 32px; color: var(--muted); background: var(--surface-tint); font-size: 9px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.smart-off-table-head span,
+.smart-off-row > * { padding: 7px 11px; }
+.smart-off-table-head span:not(:first-child),
+.smart-off-row span { text-align: center; }
+.smart-off-row { min-height: 38px; border-top: 1px solid var(--line); }
+.smart-off-row strong { overflow: hidden; font-size: 11.5px; text-overflow: ellipsis; white-space: nowrap; }
+.smart-off-row span { color: var(--ink); font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.smart-off-table-body > .smart-empty { margin: 10px; }
+
 .smart-settings-panel {
   display: grid;
   grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr);
@@ -4088,6 +4119,11 @@ code { font-family: var(--font-mono); font-size: 12px; }
   .smart-month-actions .primary-button { grid-column: 1 / -1; }
   .smart-plan-strip { align-items: flex-start; flex-direction: column; }
   .smart-legend { justify-content: flex-start; }
+  .smart-off-summary-head { align-items: stretch; flex-direction: column; gap: 14px; }
+  .smart-off-totals { width: 100%; }
+  .smart-off-total { flex: 1; min-width: 0; }
+  .smart-off-table-head,
+  .smart-off-row { grid-template-columns: minmax(0, 1fr) 64px 64px; }
   .smart-settings { grid-template-columns: 1fr; }
   .smart-events-list { grid-template-columns: 1fr; }
   .smart-settings-panel { padding: 16px; }

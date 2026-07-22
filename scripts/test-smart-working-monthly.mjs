@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { allocateWeek, isClientWorkEvent, monthBounds } from "../lib/smart-working.js";
+import { allocateWeek, buildOffCounters, calendarOffEntries, isClientWorkEvent, monthBounds } from "../lib/smart-working.js";
 
 const bounds = monthBounds("2026-07");
 assert.deepEqual(bounds, {
@@ -36,5 +36,55 @@ const overcrowded = Array.from({ length: 11 }, (_, index) => ({ id: `crowded-${i
 const impossible = allocateWeek({ employees: overcrowded, dates, limit: 2 });
 assert.equal(impossible.assignments.length, 10);
 assert.equal(impossible.conflicts.length, 1);
+
+const counters = buildOffCounters({
+  employees: employees.slice(0, 2),
+  month: "2026-07",
+  entries: [
+    { employee_id: employees[0].id, date: "2026-07-01", type: "staff_leave", source: "bmg_hub" },
+    { employee_id: employees[0].id, date: "2026-07-01", type: "staff_leave", source: "google_calendar" },
+    { employee_id: employees[0].id, date: "2026-01-05", type: "staff_leave", source: "google_calendar" },
+    { employee_id: employees[0].id, date: "2026-07-04", type: "staff_leave", source: "bmg_hub" },
+    { employee_id: employees[1].id, date: "2026-07-02", type: "staff_leave", source: "bmg_hub" },
+    { employee_id: "unknown", date: "2026-07-03", type: "staff_leave", source: "bmg_hub" }
+  ]
+});
+assert.equal(counters.month_total, 2);
+assert.equal(counters.year_total, 3);
+assert.deepEqual(counters.staff, [
+  { employee_id: employees[0].id, month_days: 1, year_days: 2 },
+  { employee_id: employees[1].id, month_days: 1, year_days: 1 }
+]);
+
+const calendarEntries = calendarOffEntries({
+  employees: employees.map((employee) => ({ ...employee, email: `${employee.full_name.toLowerCase()}@bmg.test` })),
+  rangeStart: "2026-01-01",
+  rangeEnd: "2027-01-01",
+  events: [
+    { event_category: "staff_leave", title: "Fede OFF", start_at: "2026-07-06", end_at: "2026-07-07", all_day: true, attendees: [] },
+    { event_category: "staff_leave", title: "FRANCY FERIE", start_at: "2026-07-13", end_at: "2026-07-15", all_day: true, attendees: [] },
+    { event_category: "staff_leave", title: "Assenza", start_at: "2026-07-20", end_at: "2026-07-21", all_day: true, attendees: [{ email: "sabrina@bmg.test" }] },
+    { event_category: "client_appointment", title: "Marta cliente", start_at: "2026-07-22", end_at: "2026-07-23", all_day: true, attendees: [] }
+  ]
+});
+assert.deepEqual(calendarEntries, [
+  { employee_id: employees[2].id, date: "2026-07-06", type: "staff_leave", source: "google_calendar" },
+  { employee_id: employees[3].id, date: "2026-07-13", type: "staff_leave", source: "google_calendar" },
+  { employee_id: employees[3].id, date: "2026-07-14", type: "staff_leave", source: "google_calendar" },
+  { employee_id: employees[6].id, date: "2026-07-20", type: "staff_leave", source: "google_calendar" }
+]);
+
+const ambiguousAbbreviationEntries = calendarOffEntries({
+  employees: [
+    { id: "francesco", full_name: "Francesco Rossi" },
+    { id: "francesca", full_name: "Francesca Bianchi" }
+  ],
+  rangeStart: "2026-01-01",
+  rangeEnd: "2027-01-01",
+  events: [
+    { event_category: "staff_leave", title: "FRANCY OFF", start_at: "2026-07-27", end_at: "2026-07-28", all_day: true, attendees: [] }
+  ]
+});
+assert.deepEqual(ambiguousAbbreviationEntries, []);
 
 console.log("Smart working monthly allocation tests passed.");
