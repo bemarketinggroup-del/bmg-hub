@@ -6,6 +6,7 @@ import {
   calendarOffEntries,
   calendarSmartEntries,
   isClientWorkEvent,
+  isSmartEligibleEmployee,
   matchedEmployees,
   mergeSmartAssignments,
   monthBounds
@@ -28,6 +29,14 @@ assert.equal(isClientWorkEvent({ event_category: "client_appointment", title: "E
 assert.equal(isClientWorkEvent({ title: "Shooting cliente" }), true);
 assert.equal(calendarEventBlocksStaff({ event_category: "", title: "VETERA DAVIDE" }, [{ id: "davide" }]), true);
 assert.equal(calendarEventBlocksStaff({ event_category: "smart_working", title: "DAVIDE SMART" }, [{ id: "davide" }]), false);
+assert.equal(isSmartEligibleEmployee({ full_name: "Davide De Luca" }), false);
+assert.equal(isSmartEligibleEmployee({ full_name: "Simone Prezioso" }), false);
+assert.equal(isSmartEligibleEmployee({ full_name: "Federica" }), true);
+assert.equal(buildOffCounters({
+  employees: [{ id: "davide", full_name: "Davide De Luca" }],
+  month: "2026-07",
+  entries: [{ employee_id: "davide", date: "2026-07-23", type: "staff_leave", source: "google_calendar" }]
+}).month_total, 1);
 
 const employees = ["Andry", "Daniele", "Federica", "Francesco", "Marta", "Marzia", "Sabrina"]
   .map((full_name, index) => ({ id: `employee-${index + 1}`, full_name }));

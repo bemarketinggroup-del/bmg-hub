@@ -165,6 +165,7 @@ const seed = {
     grid_dates: [],
     rules: { max_remote_per_day: 2, remote_days_per_employee: 1, working_days: ["mon", "tue", "wed", "thu", "fri"] },
     staff: [],
+    smart_staff: [],
     all_staff: [],
     plans: [],
     assignments: [],
@@ -3732,7 +3733,7 @@ function smartWeekSummary(data, dates) {
   const assignedIds = new Set((data.assignments || [])
     .filter((item) => item.date >= weekStart && item.date <= weekEnd)
     .map((item) => item.employee_id));
-  const staff = data.staff || [];
+  const staff = data.smart_staff || data.staff || [];
   const missing = staff.filter((employee) => !assignedIds.has(employee.id));
   const future = weekStart > smartWeekStart(localDateKey(new Date()));
   const dateLabel = `${new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "short" }).format(new Date(`${weekStart}T12:00:00`))} – ${new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "short" }).format(new Date(`${weekEnd}T12:00:00`))}`;
@@ -3768,7 +3769,7 @@ function renderSmartDay(data) {
   const entries = smartEntriesForDate(data, date);
   const unavailableIds = new Set([...entries.off, ...entries.busy].map((item) => item.employee_id));
   const smartIds = new Set(entries.smart.map((item) => item.employee_id));
-  const office = (data.staff || []).filter((employee) => !unavailableIds.has(employee.id) && !smartIds.has(employee.id));
+  const office = (data.smart_staff || data.staff || []).filter((employee) => !unavailableIds.has(employee.id) && !smartIds.has(employee.id));
   target.innerHTML = `
     <div class="smart-day-panel-head"><div><p class="eyebrow">Dettaglio giorno</p><h2>${formatSmartDate(date)}</h2></div>${data.can_manage ? `<button class="icon-button" type="button" data-smart-add="${date}" title="Aggiungi turno" aria-label="Aggiungi turno">+</button>` : ""}</div>
     ${smartDayGroup("Smart working", entries.smart, "smart", data)}
@@ -3963,7 +3964,7 @@ function openSmartEntryModal({ date = selectedSmartDate, type = "smart", id = ""
   form.elements.entry_id.value = assignment?.id || "";
   form.elements.date.value = assignment?.date || date;
   form.elements.entry_type.value = type;
-  form.elements.employee_id.innerHTML = (data.all_staff || data.staff || []).map((employee) => `<option value="${employee.id}">${escapeHtml(staffName(employee))}</option>`).join("");
+  renderSmartEntryEmployeeOptions(form, type, assignment?.employee_id || "");
   if (assignment) form.elements.employee_id.value = assignment.employee_id;
   form.elements.employee_id.disabled = Boolean(assignment);
   form.elements.entry_type.disabled = Boolean(assignment);
@@ -3974,6 +3975,15 @@ function openSmartEntryModal({ date = selectedSmartDate, type = "smart", id = ""
   document.getElementById("smartEntryMessage").textContent = "";
   pendingSmartConflict = null;
   document.getElementById("smartEntryModal").showModal();
+}
+
+function renderSmartEntryEmployeeOptions(form, type, selectedId = "") {
+  const data = state.smartWorking || {};
+  const employees = type === "smart"
+    ? data.smart_staff || data.staff || []
+    : data.all_staff || data.staff || [];
+  form.elements.employee_id.innerHTML = employees.map((employee) => `<option value="${employee.id}">${escapeHtml(staffName(employee))}</option>`).join("");
+  if (selectedId && employees.some((employee) => employee.id === selectedId)) form.elements.employee_id.value = selectedId;
 }
 
 function closeSmartEntryModal() {
@@ -6747,6 +6757,10 @@ document.getElementById("smartView").addEventListener("click", (event) => {
 document.getElementById("smartEntryForm").addEventListener("submit", (event) => {
   event.preventDefault();
   submitSmartEntry(event.currentTarget);
+});
+document.getElementById("smartEntryType").addEventListener("change", (event) => {
+  const form = event.currentTarget.form;
+  renderSmartEntryEmployeeOptions(form, event.currentTarget.value, form.elements.employee_id.value);
 });
 document.getElementById("smartEntryCloseButton").addEventListener("click", closeSmartEntryModal);
 document.getElementById("smartEntryCancelButton").addEventListener("click", closeSmartEntryModal);
