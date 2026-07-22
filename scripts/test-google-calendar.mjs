@@ -77,6 +77,8 @@ assert.equal(classifyGoogleCalendarEvent({ summary: "Bufale" }, ["Bufalè"]), "c
 assert.equal(classifyGoogleCalendarEvent({ summary: "Europa Palace preventivo" }, clientTerms), "");
 assert.equal(classifyGoogleCalendarEvent({ summary: "Europa" }, clientTerms), "");
 assert.equal(classifyGoogleCalendarEvent({ summary: "Europa Palace", colorId: "5" }, clientTerms), "staff_leave");
+assert.equal(classifyGoogleCalendarEvent({ summary: "Fede SMART", colorId: "11" }, clientTerms), "smart_working");
+assert.equal(classifyGoogleCalendarEvent({ summary: "Fede SMART", event_category: "client_event" }, clientTerms), "smart_working");
 assert.equal(classifyGoogleCalendarEvent({ summary: "Forse Europa Palace", colorId: "11" }, clientTerms), "client_appointment");
 assert.equal(classifyGoogleCalendarEvent({
   summary: "Forse Europa Palace",

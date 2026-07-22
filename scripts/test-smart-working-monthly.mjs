@@ -4,7 +4,9 @@ import {
   buildOffCounters,
   calendarEventBlocksStaff,
   calendarOffEntries,
+  calendarSmartOverrides,
   calendarSmartEntries,
+  isSmartCalendarEvent,
   isClientWorkEvent,
   isSmartEligibleEmployee,
   prefersFridaySmart,
@@ -30,6 +32,8 @@ assert.equal(isClientWorkEvent({ event_category: "client_appointment", title: "E
 assert.equal(isClientWorkEvent({ title: "Shooting cliente" }), true);
 assert.equal(calendarEventBlocksStaff({ event_category: "", title: "VETERA DAVIDE" }, [{ id: "davide" }]), true);
 assert.equal(calendarEventBlocksStaff({ event_category: "smart_working", title: "DAVIDE SMART" }, [{ id: "davide" }]), false);
+assert.equal(isSmartCalendarEvent({ event_category: "client_appointment", title: "FEDE SMART" }), true);
+assert.equal(calendarEventBlocksStaff({ event_category: "client_appointment", title: "FEDE SMART" }, [{ id: "federica" }]), false);
 assert.equal(isSmartEligibleEmployee({ full_name: "Davide De Luca" }), false);
 assert.equal(isSmartEligibleEmployee({ full_name: "Simone Prezioso" }), false);
 assert.equal(isSmartEligibleEmployee({ full_name: "Federica" }), true);
@@ -175,6 +179,31 @@ assert.deepEqual(calendarSmart.map(({ employee_id, date, source }) => ({ employe
   { employee_id: employees[5].id, date: "2026-07-20", source: "google_calendar" },
   { employee_id: employees[6].id, date: "2026-07-20", source: "google_calendar" }
 ]);
+
+const coloredCalendarSmart = calendarSmartEntries({
+  employees,
+  rangeStart: "2026-07-01",
+  rangeEnd: "2026-08-01",
+  events: [{
+    id: "google-colored-smart-21",
+    event_category: "client_appointment",
+    title: "FEDE SMART",
+    start_at: "2026-07-21",
+    end_at: "2026-07-22",
+    all_day: true,
+    attendees: []
+  }]
+});
+assert.deepEqual(coloredCalendarSmart.map(({ employee_id, date }) => ({ employee_id, date })), [
+  { employee_id: employees[2].id, date: "2026-07-21" }
+]);
+
+const calendarOverride = calendarSmartOverrides([
+  { id: "future-auto", employee_id: employees[2].id, date: "2026-07-23", source: "auto", status: "suggested" },
+  { id: "manual", employee_id: employees[2].id, date: "2026-07-24", source: "manual", status: "confirmed" }
+], coloredCalendarSmart);
+assert.deepEqual(calendarOverride.overridden.map((row) => row.id), ["future-auto"]);
+assert.deepEqual(calendarOverride.assignments.map((row) => row.id), ["manual"]);
 
 const mergedSmart = mergeSmartAssignments([
   { id: "hub-marzia", employee_id: employees[5].id, date: "2026-07-20", source: "bmg_hub" }
