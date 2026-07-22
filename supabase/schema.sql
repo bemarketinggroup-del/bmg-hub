@@ -453,16 +453,18 @@ on conflict (full_name) do update set
   is_active = excluded.is_active,
   updated_at = now();
 
-insert into public.smart_work_employees (full_name, is_active)
+insert into public.smart_work_employees (full_name, email, is_active)
 values
-  ('Andry', true),
-  ('Marta', true),
-  ('Marzia', true),
-  ('Sabrina', true),
-  ('Federica', true),
-  ('Francesco', true),
-  ('Daniele', true)
+  ('Andry', 'andriyph@gmail.com', true),
+  ('Marta', null, true),
+  ('Marzia', null, true),
+  ('Sabrina', null, true),
+  ('Federica', 'federicamatacena01@gmail.com', true),
+  ('Francesco', null, true),
+  ('Daniele', null, true),
+  ('Simone Prezioso', 'simone.foto@live.it', true)
 on conflict (full_name) do update set
+  email = coalesce(excluded.email, public.smart_work_employees.email),
   is_active = true,
   updated_at = now();
 
@@ -470,7 +472,7 @@ update public.smart_work_employees
 set is_active = false,
     updated_at = now()
 where staff_profile_id is not null
-  and full_name not in ('Andry','Marta','Marzia','Sabrina','Federica','Francesco','Daniele');
+  and full_name not in ('Andry','Marta','Marzia','Sabrina','Federica','Francesco','Daniele','Simone Prezioso');
 
 create index if not exists calendar_events_cache_week_idx on public.calendar_events_cache (calendar_id, start_at, end_at);
 create index if not exists smart_work_employees_active_idx on public.smart_work_employees (is_active, full_name);

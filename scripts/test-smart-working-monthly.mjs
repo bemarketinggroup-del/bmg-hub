@@ -5,6 +5,7 @@ import {
   calendarOffEntries,
   calendarSmartEntries,
   isClientWorkEvent,
+  matchedEmployees,
   mergeSmartAssignments,
   monthBounds
 } from "../lib/smart-working.js";
@@ -105,6 +106,31 @@ const ambiguousAbbreviationEntries = calendarOffEntries({
   ]
 });
 assert.deepEqual(ambiguousAbbreviationEntries, []);
+
+const clientCommitmentStaff = [
+  { id: "andry", full_name: "Andry", email: "andriyph@gmail.com" },
+  { id: "federica", full_name: "Federica", email: "federicamatacena01@gmail.com" },
+  { id: "simone", full_name: "Simone Prezioso", email: "simone.foto@live.it" }
+];
+assert.deepEqual(matchedEmployees({
+  event_category: "client_appointment",
+  title: "MORFEO SIMO-ANDRY-FEDE",
+  attendees: [
+    { email: "andriyph@gmail.com" },
+    { email: "federicamatacena01@gmail.com" },
+    { email: "simone.foto@live.it" }
+  ]
+}, clientCommitmentStaff).map((employee) => employee.id), ["andry", "federica", "simone"]);
+assert.deepEqual(matchedEmployees({
+  event_category: "client_appointment",
+  title: "MORFEO SIMO-ANDRY-FEDE",
+  attendees: []
+}, clientCommitmentStaff).map((employee) => employee.id), ["andry", "federica", "simone"]);
+assert.deepEqual(matchedEmployees({
+  event_category: "client_appointment",
+  title: "MORFEO FEDERICO",
+  attendees: []
+}, clientCommitmentStaff), []);
 
 const calendarSmart = calendarSmartEntries({
   employees,
