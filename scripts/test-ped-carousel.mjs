@@ -142,5 +142,13 @@ assert.equal(sanitizeCaptionHtml('<strong>Ciao</strong><script>alert(1)</script>
 assert.equal(sanitizeCaptionHtml('<font color="#C95B32">BMG</font><span style="color: rgb(12, 34, 56)">Hub</span>'), '<span style="color:#c95b32">BMG</span><span style="color:rgb(12, 34, 56)">Hub</span>');
 assert.equal(sanitizeCaptionHtml('<span style="color:rgb(999, 0, 0)">No</span>'), '<span>No</span>');
 assert.equal(sanitizeCaptionHtml('<img src=x onerror=alert(1)><em>Test</em>'), '<em>Test</em>');
+assert.match(pedSource, /used_file_ids:/, "l'API PED deve restituire tutti i file gia usati dal cliente");
+assert.match(appSource, /let pedUsedFileIds = new Set\(\)/, "il PED deve mantenere l'indice dei file gia usati");
+assert.match(appSource, /pedUsedFileIds\.has\(String\(file\.id\)\)/, "il selettore deve riconoscere i file Drive gia usati");
+assert.match(appSource, /pedPickerState\.showUsed/, "il filtro dei contenuti gia usati deve essere reversibile");
+assert.match(htmlSource, /data-ped-used-toggle/, "il selettore deve offrire il comando per mostrare i contenuti gia usati");
+assert.match(styleSource, /\.ped-picker-entry:not\(\.is-folder\) \.ped-picker-media[\s\S]*?aspect-ratio: 4 \/ 5/, "le anteprime del selettore devono essere verticali");
+assert.match(styleSource, /\.ped-picker-entry:not\(\.is-folder\) \.ped-picker-media img[\s\S]*?object-fit: contain/, "le immagini del selettore devono essere mostrate per intero");
+assert.match(appSource, /Tutti i contenuti di questa cartella sono gia nel PED/, "il filtro deve spiegare quando tutti i file sono gia usati");
 
 console.log("PED carousel tests passed");

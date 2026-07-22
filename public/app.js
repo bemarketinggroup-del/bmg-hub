@@ -183,9 +183,10 @@ let selectedTeamMemberId = ALL_TEAM_TASKS_ID;
 let selectedClientId = "";
 let clientDriveState = { clientId: "", path: [], objectUrl: "", thumbnailUrls: new Set(), uploadEnabled: false };
 let selectedPedClientId = "";
+let pedUsedFileIds = new Set();
 let selectedPedMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
 let pedAgendaShowPrevious = false;
-let pedPickerState = { date: "", path: [], files: [], contentType: "post", caption: "", selectedFiles: [] };
+let pedPickerState = { date: "", path: [], files: [], contentType: "post", caption: "", selectedFiles: [], showUsed: false };
 const DRIVE_FOLDER_BROWSER_CACHE_TTL = 2 * 60 * 1000;
 const driveFolderBrowserCache = new Map();
 const driveFolderBrowserRequests = new Map();
@@ -2669,6 +2670,7 @@ async function loadPedCalendar() {
   ensurePedClientSelection();
   if (!selectedPedClientId) {
     state.pedItems = [];
+    pedUsedFileIds = new Set();
     renderPed();
     return;
   }
@@ -2683,10 +2685,12 @@ async function loadPedCalendar() {
     if (!response.ok) throw new Error(data.error || "PED non disponibile");
     if (pedLoadingKey !== key) return;
     state.pedItems = Array.isArray(data.items) ? data.items : [];
+    pedUsedFileIds = new Set((data.used_file_ids || []).map(String));
     renderPed();
   } catch (error) {
     if (pedLoadingKey !== key) return;
     state.pedItems = [];
+    pedUsedFileIds = new Set();
     renderPed();
     if (grid) grid.innerHTML = `<div class="ped-error"><strong>Calendario non disponibile</strong><span>${escapeHtml(error.message)}</span></div>`;
   }
@@ -2704,7 +2708,7 @@ async function openPedDrivePicker(date) {
     alert("Collega prima la cartella Google Drive del cliente.");
     return;
   }
-  pedPickerState = { date, path: [], files: [], contentType: "post", caption: "", selectedFiles: [] };
+  pedPickerState = { date, path: [], files: [], contentType: "post", caption: "", selectedFiles: [], showUsed: false };
   document.getElementById("pedPickerTitle").textContent = `Contenuto per ${new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "long" }).format(new Date(`${date}T12:00:00`))}`;
   document.getElementById("pedPickerSubtitle").textContent = `${client.name} · scegli una foto, un video o una grafica dal Drive`;
   document.getElementById("pedPickerMessage").textContent = "";
@@ -2772,34 +2776,59 @@ async function loadPedPickerFolder(folderId = "", folderName = "") {
   }
 }
 
+function isPedDriveFileUsed(file) {
+  return !file?.is_folder && pedUsedFileIds.has(String(file.id));
+}
+
 function renderPedPicker() {
   hidePedPickerPreview();
   const breadcrumbs = document.getElementById("pedPickerBreadcrumbs");
   const grid = document.getElementById("pedPickerGrid");
+  const summary = document.getElementById("pedUnusedMediaSummary");
+  const usedToggle = document.getElementById("pedUsedMediaToggle");
+  const usedCount = pedPickerState.files.filter(isPedDriveFileUsed).length;
+  const visibleFiles = pedPickerState.files.filter((file) => (
+    file.is_folder || pedPickerState.showUsed || !isPedDriveFileUsed(file)
+  ));
+  if (summary) {
+    summary.textContent = pedPickerState.showUsed
+      ? `${usedCount} contenuti gia inseriti visibili.`
+      : usedCount
+        ? `${usedCount} contenuti gia inseriti nascosti.`
+        : "Mostro solo i contenuti non ancora usati.";
+  }
+  if (usedToggle) {
+    usedToggle.setAttribute("aria-pressed", String(pedPickerState.showUsed));
+    const label = usedToggle.querySelector("span");
+    if (label) label.textContent = pedPickerState.showUsed ? "Nascondi gia utilizzati" : "Mostra gia utilizzati";
+  }
   breadcrumbs.innerHTML = pedPickerState.path.map((item, index) => {
     const current = index === pedPickerState.path.length - 1;
     return `${index ? `<svg class="lc" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>` : ""}${current
       ? `<span>${escapeHtml(item.name)}</span>`
       : `<button data-ped-picker-breadcrumb="${index}" type="button">${escapeHtml(item.name)}</button>`}`;
   }).join("");
-  grid.innerHTML = pedPickerState.files.map((file) => {
+  grid.innerHTML = visibleFiles.map((file) => {
     const isImage = String(file.mime_type || "").startsWith("image/");
     const isVideo = String(file.mime_type || "").startsWith("video/");
     const hasPreview = file.has_thumbnail && (isImage || isVideo);
+    const used = isPedDriveFileUsed(file);
     const previewType = !file.is_folder && isVideo ? "video" : (!file.is_folder && isImage ? "image" : "");
     const previewSource = previewType === "video" ? file.content_url : (file.thumbnail_url || file.content_url);
     const selected = !file.is_folder && pedPickerState.selectedFiles.some((item) => String(item.id) === String(file.id));
     const previewAttributes = previewType && previewSource
       ? ` data-ped-picker-preview-type="${previewType}" data-ped-picker-preview-src="${escapeHtml(previewSource)}" data-ped-picker-preview-poster="${escapeHtml(file.thumbnail_url || "")}" data-ped-picker-preview-mime="${escapeHtml(file.mime_type || "")}" data-ped-picker-size="${escapeHtml(file.size || "")}"`
       : "";
-    return `<button class="ped-picker-entry${file.is_folder ? " is-folder" : ""}${selected ? " is-selected" : ""}" ${file.is_folder ? "data-ped-picker-folder" : "data-ped-picker-file"}="${escapeHtml(file.id)}" data-ped-picker-name="${escapeHtml(file.name)}"${previewAttributes} type="button"${file.is_folder ? "" : ` aria-pressed="${selected}"`}>
+    return `<button class="ped-picker-entry${file.is_folder ? " is-folder" : ""}${selected ? " is-selected" : ""}${used ? " is-used" : ""}" ${file.is_folder ? "data-ped-picker-folder" : "data-ped-picker-file"}="${escapeHtml(file.id)}" data-ped-picker-name="${escapeHtml(file.name)}"${previewAttributes} type="button"${file.is_folder ? "" : ` aria-pressed="${selected}"`}>
       <span class="ped-picker-media">${hasPreview
         ? `<img src="${escapeHtml(file.thumbnail_url || "")}" alt="" loading="lazy">${isVideo ? `<span class="ped-video-mini"><svg class="lc" viewBox="0 0 24 24"><path d="m9 7 8 5-8 5z"/></svg></span>` : ""}`
-        : driveFileIcon(file)}</span>
+        : driveFileIcon(file)}${used ? `<span class="ped-picker-used-badge">Gia nel PED</span>` : ""}</span>
       <span><strong>${escapeHtml(file.name)}</strong><small>${file.is_folder ? "Cartella" : [formatFileSize(file.size), formatDriveDate(file.modified_at)].filter(Boolean).join(" · ") || "File"}</small></span>
       ${file.is_folder ? `<svg class="lc ped-picker-arrow" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>` : `<span class="ped-picker-check" aria-hidden="true"><svg class="lc" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg></span>`}
     </button>`;
-  }).join("") || `<p class="ped-picker-empty">Questa cartella è vuota.</p>`;
+  }).join("") || `<p class="ped-picker-empty">${pedPickerState.files.length && !pedPickerState.showUsed
+    ? "Tutti i contenuti di questa cartella sono gia nel PED."
+    : "Questa cartella e vuota."}</p>`;
 }
 
 function pedPickerPreviewElement() {
@@ -5937,6 +5966,7 @@ document.body.addEventListener("click", (event) => {
   const pedPickerType = event.target.closest("[data-ped-picker-type]");
   const pedPickerBreadcrumb = event.target.closest("[data-ped-picker-breadcrumb]");
   const pedPickerClose = event.target.closest("[data-ped-picker-close]");
+  const pedUsedToggle = event.target.closest("[data-ped-used-toggle]");
   const pedCreateCarousel = event.target.closest("[data-ped-create-carousel]");
   const pedCarouselDownload = event.target.closest("[data-ped-carousel-download]");
   const pedCaption = event.target.closest("[data-ped-caption]");
@@ -5981,6 +6011,7 @@ document.body.addEventListener("click", (event) => {
   if (pedClient) {
     selectedPedClientId = pedClient.dataset.pedClient;
     state.pedItems = [];
+    pedUsedFileIds = new Set();
     pedShareState = { active: false, shareUrl: "" };
     pedAgendaShowPrevious = false;
     return loadPedCalendar();
@@ -6003,6 +6034,11 @@ document.body.addEventListener("click", (event) => {
     if (pedPickerState.contentType !== "carousel") pedPickerState.selectedFiles = [];
     renderPedPickerFormat();
     return renderPedPicker();
+  }
+  if (pedUsedToggle) {
+    pedPickerState.showUsed = !pedPickerState.showUsed;
+    renderPedPicker();
+    return;
   }
   if (pedPickerFolder) return loadPedPickerFolder(pedPickerFolder.dataset.pedPickerFolder, pedPickerFolder.dataset.pedPickerName);
   if (pedPickerFile) return pedContentType(pedPickerState.contentType) === "carousel"

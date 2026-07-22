@@ -918,6 +918,13 @@
         <textarea id="pedPickerCaption" maxlength="10000" rows="3" placeholder="Scrivi la descrizione del contenuto, gli hashtag e le eventuali call to action..."></textarea>
       </label>
       <nav class="ped-picker-breadcrumbs" id="pedPickerBreadcrumbs" aria-label="Percorso Google Drive"></nav>
+      <div class="ped-picker-tools">
+        <span id="pedUnusedMediaSummary">Mostro solo i contenuti non ancora usati.</span>
+        <button class="secondary-button ped-used-media-toggle" id="pedUsedMediaToggle" data-ped-used-toggle type="button" aria-pressed="false">
+          <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>
+          <span>Mostra gia utilizzati</span>
+        </button>
+      </div>
       <div class="ped-picker-grid" id="pedPickerGrid"></div>
       <div class="ped-carousel-selection is-hidden" id="pedCarouselSelection">
         <span><strong id="pedCarouselSelectionCount">0 contenuti selezionati</strong><small>Seleziona da 2 a 20 file, anche in cartelle diverse.</small></span>
