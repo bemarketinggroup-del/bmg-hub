@@ -3969,6 +3969,13 @@ code { font-family: var(--font-mono); font-size: 12px; }
 .smart-month-weekdays,
 .smart-month-week-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
 .smart-month-grid { display: block; }
+.smart-month-loading {
+  display: grid; min-height: 190px; place-items: center; align-content: center; gap: 7px;
+  color: var(--muted); background: var(--surface); text-align: center;
+}
+.smart-month-loading strong { color: var(--ink); font-size: 12px; }
+.smart-month-loading small { font-size: 10px; }
+.smart-loading-spinner { width: 20px; height: 20px; border: 2px solid color-mix(in srgb, var(--terracotta) 20%, transparent); border-top-color: var(--terracotta); border-radius: 50%; animation: drive-folder-spin .7s linear infinite; }
 .smart-month-weekdays {
   border-bottom: 1px solid var(--line-strong);
   background: var(--surface-tint);
@@ -4075,6 +4082,7 @@ code { font-family: var(--font-mono); font-size: 12px; }
   padding: 16px;
   overflow-y: auto;
 }
+.smart-side-loading { display: grid; min-height: 210px; place-items: center; align-content: center; gap: 9px; color: var(--muted); font-size: 10px; }
 .smart-day-panel-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding-bottom: 13px; border-bottom: 1px solid var(--line); }
 .smart-day-panel-head h2 { margin: 3px 0 0; font-size: 18px; text-transform: capitalize; }
 .smart-day-group { display: grid; gap: 7px; padding: 13px 0; border-bottom: 1px solid var(--line); }

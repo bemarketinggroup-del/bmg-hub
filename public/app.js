@@ -244,6 +244,9 @@ let smartDraggedAssignmentId = "";
 let smartDragTarget = null;
 let smartDragSuppressClickUntil = 0;
 const smartSuggestionsEnsuredMonths = new Set();
+const smartCalendarRefreshedMonths = new Set();
+const smartWorkingBackgroundMonths = new Set();
+let smartWorkingLoading = false;
 let selectedContentSection = "all";
 let authConfig = null;
 let authSession = loadAuthSession();
@@ -954,32 +957,63 @@ async function loadClientAliases() {
 }
 
 async function loadSmartWorking() {
+  const requestedMonth = smartMonthKey();
+  smartWorkingLoading = true;
+  renderSmartWorking();
   try {
-    const response = await apiFetch(`/api/smart-working?month=${encodeURIComponent(smartMonthKey())}`);
+    const response = await apiFetch(`/api/smart-working?month=${encodeURIComponent(requestedMonth)}`);
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || `Smart working error ${response.status}`);
+    if (requestedMonth !== smartMonthKey()) return;
     state.smartWorking = data;
     if (data.month) selectedSmartMonth = new Date(`${data.month}-01T12:00:00`);
-    if (data.can_manage && smartMonthHasFutureWeeks(data) && !smartSuggestionsEnsuredMonths.has(data.month)) {
-      smartSuggestionsEnsuredMonths.add(data.month);
-      try {
-        await smartWorkingAction("ensure_future_suggestions");
-      } catch (suggestionError) {
-        smartSuggestionsEnsuredMonths.delete(data.month);
-        renderBackendStatus(suggestionError.message);
-      }
-    }
-    const freshData = state.smartWorking || data;
-    if (!selectedSmartDate?.startsWith(freshData.month || smartMonthKey())) selectedSmartDate = `${freshData.month || smartMonthKey()}-01`;
+    if (!selectedSmartDate?.startsWith(data.month || smartMonthKey())) selectedSmartDate = `${data.month || smartMonthKey()}-01`;
+    smartWorkingLoading = false;
     renderHome();
     renderSmartWorking();
+    if (data.can_manage) refreshSmartWorkingInBackground(data.month);
   } catch (error) {
+    smartWorkingLoading = false;
     renderBackendStatus(error.message);
     renderSmartWorking();
   }
 }
 
-async function smartWorkingAction(action, payload = {}) {
+async function refreshSmartWorkingInBackground(month) {
+  if (!month || smartCalendarRefreshedMonths.has(month)) return;
+  smartCalendarRefreshedMonths.add(month);
+  smartWorkingBackgroundMonths.add(month);
+  renderSmartWorking();
+  try {
+    let fresh = await smartWorkingAction("sync_calendar", { month }, { apply: false });
+    if (smartMonthKey() === month) {
+      state.smartWorking = fresh;
+      renderHome();
+      renderSmartWorking();
+    }
+    if (fresh.can_manage && smartMonthHasFutureWeeks(fresh) && !smartSuggestionsEnsuredMonths.has(month)) {
+      smartSuggestionsEnsuredMonths.add(month);
+      try {
+        fresh = await smartWorkingAction("ensure_future_suggestions", { month }, { apply: false });
+      } catch (suggestionError) {
+        smartSuggestionsEnsuredMonths.delete(month);
+        throw suggestionError;
+      }
+    }
+    if (smartMonthKey() === month) {
+      state.smartWorking = fresh;
+      renderHome();
+    }
+  } catch (error) {
+    smartCalendarRefreshedMonths.delete(month);
+    renderBackendStatus(error.message);
+  } finally {
+    smartWorkingBackgroundMonths.delete(month);
+    if (smartMonthKey() === month) renderSmartWorking();
+  }
+}
+
+async function smartWorkingAction(action, payload = {}, options = {}) {
   const response = await apiFetch("/api/smart-working", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -992,7 +1026,7 @@ async function smartWorkingAction(action, payload = {}) {
     error.status = response.status;
     throw error;
   }
-  if (data.month) {
+  if (data.month && options.apply !== false) {
     state.smartWorking = data;
     selectedSmartMonth = new Date(`${data.month}-01T12:00:00`);
   }
@@ -3608,7 +3642,11 @@ function renderSmartWorking() {
   if (status) {
     const approved = plans.filter((plan) => plan.status === "approved").length;
     const drafts = plans.filter((plan) => plan.status === "draft").length;
-    status.textContent = approved ? `${approved} settimane approvate${drafts ? ` · ${drafts} in bozza` : ""}` : drafts ? `${drafts} settimane in bozza` : "Mese non ancora pianificato";
+    status.textContent = smartWorkingLoading && !(data.grid_dates || []).length
+      ? "Caricamento calendario…"
+      : smartWorkingBackgroundMonths.has(data.month)
+        ? "Calendario disponibile · aggiornamento Google in corso…"
+        : approved ? `${approved} settimane approvate${drafts ? ` · ${drafts} in bozza` : ""}` : drafts ? `${drafts} settimane in bozza` : "Mese non ancora pianificato";
   }
   renderSmartSettings(data);
   renderSmartMonth(data);
@@ -3639,6 +3677,10 @@ function renderSmartMonth(data) {
   const target = document.getElementById("smartMonthGrid");
   if (!target) return;
   const dates = data.grid_dates || [];
+  if (!dates.length) {
+    target.innerHTML = `<div class="smart-month-loading"><span class="smart-loading-spinner" aria-hidden="true"></span><strong>Caricamento calendario</strong><small>Recupero turni e appuntamenti salvati…</small></div>`;
+    return;
+  }
   const weeks = [];
   for (let index = 0; index < dates.length; index += 7) weeks.push(dates.slice(index, index + 7));
   target.innerHTML = weeks.map((weekDates) => {
@@ -3650,7 +3692,7 @@ function renderSmartMonth(data) {
       </div>
       <div class="smart-month-week-days">${weekDates.map((date) => smartMonthDay(data, date)).join("")}</div>
     </section>`;
-  }).join("") || emptyState("Il calendario del mese non è disponibile.");
+  }).join("");
 }
 
 function smartMonthDay(data, date) {
@@ -3718,6 +3760,10 @@ function smartMonthChip(item, type, data) {
 function renderSmartDay(data) {
   const target = document.getElementById("smartDayPanel");
   if (!target) return;
+  if (smartWorkingLoading && !(data.grid_dates || []).length) {
+    target.innerHTML = `<div class="smart-side-loading"><span class="smart-loading-spinner" aria-hidden="true"></span><strong>Caricamento dettaglio…</strong></div>`;
+    return;
+  }
   const date = selectedSmartDate || `${data.month || smartMonthKey()}-01`;
   const entries = smartEntriesForDate(data, date);
   const unavailableIds = new Set([...entries.off, ...entries.busy].map((item) => item.employee_id));
@@ -3763,6 +3809,10 @@ function renderSmartOffCounters(data) {
   if (monthTotal) monthTotal.textContent = String(counters.month_total || 0);
   if (yearTotal) yearTotal.textContent = String(counters.year_total || 0);
   if (!target) return;
+  if (smartWorkingLoading && !(counters.staff || []).length) {
+    target.innerHTML = smartEmpty("Caricamento conteggi OFF…");
+    return;
+  }
 
   target.innerHTML = rows.map((row) => {
     const employee = staffById(data, row.employee_id);
