@@ -159,17 +159,19 @@ const seed = {
   clickupTaskLogs: [],
   pedItems: [],
   smartWorking: {
-    week_start_date: "",
-    week_dates: [],
+    month: "",
+    range_start: "",
+    range_end: "",
+    grid_dates: [],
     rules: { max_remote_per_day: 2, remote_days_per_employee: 1, working_days: ["mon", "tue", "wed", "thu", "fri"] },
-    connections: [],
     staff: [],
     all_staff: [],
-    plan: null,
+    plans: [],
     assignments: [],
+    leave_entries: [],
+    busy_entries: [],
     events: [],
-    attendees: [],
-    unavailable: []
+    can_manage: false
   }
 };
 
@@ -222,7 +224,9 @@ let personalAreaState = {
   error: ""
 };
 let personalAreaTimer = null;
-let selectedSmartWeek = mondayOf(new Date());
+let selectedSmartMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+let selectedSmartDate = localDateKey(new Date());
+let pendingSmartConflict = null;
 let selectedContentSection = "all";
 let authConfig = null;
 let authSession = loadAuthSession();
@@ -779,7 +783,12 @@ function renderHome() {
   const tasks = dashboardTasks();
   const counts = taskGroupCounts(tasks);
   const profileName = firstName(currentProfile?.full_name || currentProfile?.email?.split("@")[0] || "");
-  const planStatus = state.smartWorking?.plan?.status || "none";
+  const smartPlans = state.smartWorking?.plans || [];
+  const planStatus = smartPlans.some((plan) => plan.status === "draft")
+    ? "draft"
+    : smartPlans.length && smartPlans.every((plan) => plan.status === "approved")
+      ? "approved"
+      : "none";
   const statusLabels = { draft: "Bozza", approved: "Approvata", archived: "Archiviata", none: "Da generare" };
   const today = new Intl.DateTimeFormat("it-IT", { weekday: "long", day: "numeric", month: "long" }).format(new Date());
 
@@ -929,11 +938,12 @@ async function loadClientAliases() {
 
 async function loadSmartWorking() {
   try {
-    const response = await apiFetch(`/api/smart-working?week_start=${encodeURIComponent(selectedSmartWeek)}`);
+    const response = await apiFetch(`/api/smart-working?month=${encodeURIComponent(smartMonthKey())}`);
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || `Smart working error ${response.status}`);
     state.smartWorking = data;
-    selectedSmartWeek = data.week_start_date || selectedSmartWeek;
+    if (data.month) selectedSmartMonth = new Date(`${data.month}-01T12:00:00`);
+    if (!selectedSmartDate?.startsWith(data.month || smartMonthKey())) selectedSmartDate = `${data.month || smartMonthKey()}-01`;
     renderHome();
     renderSmartWorking();
   } catch (error) {
@@ -946,13 +956,18 @@ async function smartWorkingAction(action, payload = {}) {
   const response = await apiFetch("/api/smart-working", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ action, week_start: selectedSmartWeek, ...payload })
+    body: JSON.stringify({ action, month: smartMonthKey(), ...payload })
   });
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.error || `Smart working error ${response.status}`);
-  if (data.week_start_date) {
+  if (!response.ok) {
+    const error = new Error(data.error || `Smart working error ${response.status}`);
+    error.payload = data;
+    error.status = response.status;
+    throw error;
+  }
+  if (data.month) {
     state.smartWorking = data;
-    selectedSmartWeek = data.week_start_date;
+    selectedSmartMonth = new Date(`${data.month}-01T12:00:00`);
   }
   return data;
 }
@@ -3451,108 +3466,110 @@ function renderTeam() {
   renderAliasControls();
 }
 
+function smartMonthKey(value = selectedSmartMonth) {
+  const date = value instanceof Date ? value : new Date(value);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
+
 function renderSmartWorking() {
-  const data = state.smartWorking || seed.smartWorking;
-  const weekInput = document.getElementById("smartWeekInput");
-  if (weekInput) weekInput.value = selectedSmartWeek || mondayOf(new Date());
+  const data = state.smartWorking || seed.smartWorking || {};
+  const title = document.getElementById("smartMonthTitle");
+  if (title) title.textContent = new Intl.DateTimeFormat("it-IT", { month: "long", year: "numeric" }).format(selectedSmartMonth);
   const status = document.getElementById("smartPlanStatus");
+  const plans = data.plans || [];
   if (status) {
-    status.textContent = data.plan
-      ? `${labelPlanStatus(data.plan.status)} · settimana dal ${formatSmartDate(data.week_start_date)}`
-      : `Nessuna bozza · settimana dal ${formatSmartDate(selectedSmartWeek)}`;
+    const approved = plans.filter((plan) => plan.status === "approved").length;
+    const drafts = plans.filter((plan) => plan.status === "draft").length;
+    status.textContent = approved ? `${approved} settimane approvate${drafts ? ` · ${drafts} in bozza` : ""}` : drafts ? `${drafts} settimane in bozza` : "Mese non ancora pianificato";
   }
   renderSmartSettings(data);
-  renderSmartWeek(data);
+  renderSmartMonth(data);
+  renderSmartDay(data);
   renderSmartEvents(data);
 }
 
 function renderSmartSettings(data) {
-  const connection = (data.connections || []).find((item) => item.is_active) || (data.connections || [])[0];
-  const summary = document.getElementById("smartCalendarSummary");
-  if (summary) summary.textContent = connection ? `${connection.calendar_name} · ${connection.calendar_id}` : "Nessun calendario collegato.";
-
-  const connectionForm = document.getElementById("smartConnectionForm");
-  if (connectionForm && connection) {
-    connectionForm.elements.calendar_id.value = connection.calendar_id || "";
-    connectionForm.elements.calendar_name.value = connection.calendar_name || "";
-  }
   const rulesForm = document.getElementById("smartRulesForm");
   if (rulesForm && data.rules) {
     rulesForm.elements.max_remote_per_day.value = data.rules.max_remote_per_day || 2;
     rulesForm.elements.remote_days_per_employee.value = data.rules.remote_days_per_employee || 1;
   }
+  const summary = document.getElementById("smartCalendarSummary");
+  if (summary) summary.textContent = "BMG - Shooting e Appuntamenti";
 }
 
-function renderSmartWeek(data) {
-  const target = document.getElementById("smartWeekGrid");
+function smartEntriesForDate(data, date) {
+  return {
+    smart: (data.assignments || []).filter((item) => item.date === date),
+    off: (data.leave_entries || []).filter((item) => item.date === date),
+    busy: (data.busy_entries || []).filter((item) => item.date === date)
+  };
+}
+
+function renderSmartMonth(data) {
+  const target = document.getElementById("smartMonthGrid");
   if (!target) return;
-  const days = data.week_dates || [];
-  const staff = data.all_staff || data.staff || [];
-  const assignments = data.assignments || [];
-  target.innerHTML = days.map((date) => {
-    const smart = assignments.filter((assignment) => assignment.date === date);
-    const unavailable = unavailableForDate(data, date);
-    const remoteIds = new Set(smart.filter((item) => item.status !== "conflict").map((item) => item.employee_id));
-    const unavailableIds = new Set(unavailable.map((item) => item.employee_id));
-    const office = staff.filter((employee) => !remoteIds.has(employee.id) && !unavailableIds.has(employee.id));
+  const month = data.month || smartMonthKey();
+  const today = localDateKey(new Date());
+  target.innerHTML = (data.grid_dates || []).map((date) => {
+    const entries = smartEntriesForDate(data, date);
+    const day = new Date(`${date}T12:00:00`);
+    const workday = day.getDay() > 0 && day.getDay() < 6;
+    const outside = !date.startsWith(month);
+    const selected = date === selectedSmartDate;
     return `
-      <section class="smart-day">
-        <div class="smart-day-head">
-          <strong>${weekdayLabel(date)}</strong>
-          <span>${smart.filter((item) => item.status !== "conflict").length}/${data.rules?.max_remote_per_day || 2} smart</span>
+      <article class="smart-month-day${outside ? " is-outside" : ""}${!workday ? " is-weekend" : ""}${date === today ? " is-today" : ""}${selected ? " is-selected" : ""}" data-smart-date="${date}">
+        <header><time datetime="${date}">${day.getDate()}</time>${workday && data.can_manage ? `<button type="button" data-smart-add="${date}" title="Aggiungi turno" aria-label="Aggiungi turno">+</button>` : ""}</header>
+        <div class="smart-month-items">
+          ${entries.smart.map((item) => smartMonthChip(item, "smart", data)).join("")}
+          ${entries.off.map((item) => smartMonthChip(item, "off", data)).join("")}
+          ${entries.busy.map((item) => smartMonthChip(item, "busy", data)).join("")}
         </div>
-        <div class="smart-block">
-          <h3>Smart working</h3>
-          ${smart.map((assignment) => smartAssignmentCard(assignment, data)).join("") || smartEmpty("Nessuno in smart")}
-        </div>
-        <div class="smart-block">
-          <h3>Ufficio</h3>
-          ${office.map((employee) => `<span class="smart-pill">${staffName(employee)}</span>`).join("") || smartEmpty("Nessuno")}
-        </div>
-        <div class="smart-block">
-          <h3>Shooting / clienti</h3>
-          ${unavailable.map((item) => `<span class="smart-pill is-busy">${staffName(staffById(data, item.employee_id))}: ${item.title || item.type}</span>`).join("") || smartEmpty("Nessun blocco")}
-        </div>
-      </section>
-    `;
-  }).join("") || emptyState("Scegli una settimana e genera una bozza.");
+      </article>`;
+  }).join("") || emptyState("Il calendario del mese non è disponibile.");
 }
 
-function smartAssignmentCard(assignment, data) {
-  const employee = staffById(data, assignment.employee_id);
-  const statusClass = assignment.status === "conflict" ? "is-conflict" : assignment.status === "manual_changed" ? "is-manual" : "";
-  const canEdit = currentProfile?.role === "admin" && data.plan?.status === "draft";
-  return `
-    <article class="smart-assignment ${statusClass}">
-      <div>
-        <strong>${staffName(employee)}</strong>
-        <span>${labelAssignmentStatus(assignment.status)}</span>
-        <small>${assignment.reason || "Assegnazione smart working"}</small>
-      </div>
-      ${canEdit ? `
-        <select data-smart-move="${assignment.employee_id}" data-plan-id="${assignment.plan_id}" aria-label="Sposta giorno smart">
-          ${(data.week_dates || []).map((date) => `<option value="${date}" ${date === assignment.date ? "selected" : ""}>${weekdayLabel(date)}</option>`).join("")}
-        </select>
-      ` : ""}
-    </article>
-  `;
+function smartMonthChip(item, type, data) {
+  const employee = staffById(data, item.employee_id);
+  const label = type === "smart" ? `${staffName(employee)} · SMART` : type === "off" ? `${staffName(employee)} · OFF` : `${staffName(employee)} · ${item.title || "Impegno cliente"}`;
+  const editable = type !== "busy" && data.can_manage && !(type === "off" && item.source === "google_calendar");
+  const title = item.source === "google_calendar" && type === "off"
+    ? "Importato da Google Calendar. Modificalo dal calendario."
+    : item.reason || item.notes || item.title || label;
+  return `<button class="smart-month-chip is-${type}${item.forced ? " is-forced" : ""}" type="button" ${editable ? `data-smart-edit="${type}" data-entry-id="${item.id}"` : "aria-disabled=\"true\""} title="${escapeHtml(title)}"><span>${escapeHtml(label)}</span>${item.forced ? "<i>forzato</i>" : ""}</button>`;
+}
+
+function renderSmartDay(data) {
+  const target = document.getElementById("smartDayPanel");
+  if (!target) return;
+  const date = selectedSmartDate || `${data.month || smartMonthKey()}-01`;
+  const entries = smartEntriesForDate(data, date);
+  const unavailableIds = new Set([...entries.off, ...entries.busy].map((item) => item.employee_id));
+  const smartIds = new Set(entries.smart.map((item) => item.employee_id));
+  const office = (data.staff || []).filter((employee) => !unavailableIds.has(employee.id) && !smartIds.has(employee.id));
+  target.innerHTML = `
+    <div class="smart-day-panel-head"><div><p class="eyebrow">Dettaglio giorno</p><h2>${formatSmartDate(date)}</h2></div>${data.can_manage ? `<button class="icon-button" type="button" data-smart-add="${date}" title="Aggiungi turno" aria-label="Aggiungi turno">+</button>` : ""}</div>
+    ${smartDayGroup("Smart working", entries.smart, "smart", data)}
+    ${smartDayGroup("OFF / ferie", entries.off, "off", data)}
+    ${smartDayGroup("Impegni cliente", entries.busy, "busy", data)}
+    <section class="smart-day-group"><h3>In ufficio</h3><div class="smart-office-list">${office.map((employee) => `<span>${escapeHtml(staffName(employee))}</span>`).join("") || `<small>Nessuno</small>`}</div></section>`;
+}
+
+function smartDayGroup(title, rows, type, data) {
+  return `<section class="smart-day-group"><h3>${title}<span>${rows.length}</span></h3>${rows.map((item) => {
+    const employee = staffById(data, item.employee_id);
+    const externalOff = type === "off" && item.source === "google_calendar";
+    const editable = data.can_manage && type !== "busy" && !externalOff;
+    const detail = externalOff ? "Importato da Google Calendar" : item.reason || item.notes || item.title || labelAssignmentStatus(item.status);
+    return `<button class="smart-day-row is-${type}" type="button" ${editable ? `data-smart-edit="${type}" data-entry-id="${item.id}"` : "disabled"}><strong>${escapeHtml(staffName(employee))}</strong><small>${escapeHtml(detail)}</small></button>`;
+  }).join("") || `<span class="smart-empty">Nessuno</span>`}</section>`;
 }
 
 function renderSmartEvents(data) {
   const target = document.getElementById("smartEventsList");
   if (!target) return;
-  const unavailable = data.unavailable || [];
-  target.innerHTML = unavailable.slice(0, 18).map((item) => `
-    <article class="smart-event">
-      <strong>${item.title || "Evento Google"}</strong>
-      <span>${formatSmartDate(item.date)} · ${staffName(staffById(data, item.employee_id))}</span>
-      <small>${item.notes || item.type || "Evento bloccante"}</small>
-    </article>
-  `).join("") || emptyState("Nessun evento bloccante sincronizzato per questa settimana.");
-}
-
-function unavailableForDate(data, date) {
-  return (data.unavailable || []).filter((item) => item.date === date);
+  const events = data.busy_entries || [];
+  target.innerHTML = events.slice(0, 16).map((item) => `<article class="smart-event"><strong>${escapeHtml(item.title || "Impegno cliente")}</strong><span>${formatSmartDate(item.date)} · ${escapeHtml(staffName(staffById(data, item.employee_id)))}</span><small>Non viene scelto automaticamente come giorno smart.</small></article>`).join("") || emptyState("Nessun impegno cliente sincronizzato per questo mese.");
 }
 
 function staffById(data, id) {
@@ -3563,31 +3580,90 @@ function staffName(employee) {
   return employee?.full_name || employee?.email || "Staff";
 }
 
-function weekdayLabel(date) {
-  const formatter = new Intl.DateTimeFormat("it-IT", { weekday: "short", day: "2-digit", month: "short" });
-  return formatter.format(new Date(`${date}T12:00:00`));
-}
-
 function formatSmartDate(date) {
   if (!date) return "";
-  return new Intl.DateTimeFormat("it-IT", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(`${date}T12:00:00`));
-}
-
-function labelPlanStatus(status) {
-  return { draft: "Bozza", approved: "Approvata", archived: "Archiviata" }[status] || status;
+  return new Intl.DateTimeFormat("it-IT", { weekday: "long", day: "2-digit", month: "long", year: "numeric" }).format(new Date(`${date}T12:00:00`));
 }
 
 function labelAssignmentStatus(status) {
-  return {
-    suggested: "suggerito",
-    confirmed: "confermato",
-    manual_changed: "modificato manualmente",
-    conflict: "conflitto"
-  }[status] || status;
+  return { suggested: "Suggerito automaticamente", confirmed: "Confermato", manual_changed: "Modificato manualmente", conflict: "Conflitto" }[status] || "Turno del personale";
 }
 
 function smartEmpty(text) {
   return `<span class="smart-empty">${text}</span>`;
+}
+
+function shiftSmartMonth(offset) {
+  selectedSmartMonth = new Date(selectedSmartMonth.getFullYear(), selectedSmartMonth.getMonth() + offset, 1);
+  selectedSmartDate = `${smartMonthKey()}-01`;
+  loadSmartWorking();
+}
+
+function openSmartEntryModal({ date = selectedSmartDate, type = "smart", id = "" } = {}) {
+  const data = state.smartWorking || {};
+  const assignment = type === "smart" ? (data.assignments || []).find((item) => String(item.id) === String(id)) : (data.leave_entries || []).find((item) => String(item.id) === String(id));
+  const form = document.getElementById("smartEntryForm");
+  form.reset();
+  form.elements.entry_id.value = assignment?.id || "";
+  form.elements.date.value = assignment?.date || date;
+  form.elements.entry_type.value = type;
+  form.elements.employee_id.innerHTML = (data.all_staff || data.staff || []).map((employee) => `<option value="${employee.id}">${escapeHtml(staffName(employee))}</option>`).join("");
+  if (assignment) form.elements.employee_id.value = assignment.employee_id;
+  form.elements.employee_id.disabled = Boolean(assignment);
+  form.elements.entry_type.disabled = Boolean(assignment);
+  document.getElementById("smartEntryTitle").textContent = assignment ? "Modifica turno" : "Aggiungi turno";
+  document.getElementById("smartEntryDeleteButton").classList.toggle("is-hidden", !assignment);
+  document.getElementById("smartEntryForceButton").classList.add("is-hidden");
+  document.getElementById("smartEntryConflict").classList.add("is-hidden");
+  document.getElementById("smartEntryMessage").textContent = "";
+  pendingSmartConflict = null;
+  document.getElementById("smartEntryModal").showModal();
+}
+
+function closeSmartEntryModal() {
+  pendingSmartConflict = null;
+  document.getElementById("smartEntryModal").close();
+}
+
+async function submitSmartEntry(form, force = false) {
+  const payload = Object.fromEntries(new FormData(form).entries());
+  payload.employee_id = form.elements.employee_id.value;
+  payload.entry_type = form.elements.entry_type.value;
+  payload.force = force;
+  const message = document.getElementById("smartEntryMessage");
+  message.textContent = force ? "Inserimento forzato in corso..." : "Salvataggio in corso...";
+  try {
+    await smartWorkingAction("save_entry", payload);
+    pendingSmartConflict = null;
+    closeSmartEntryModal();
+    renderSmartWorking();
+  } catch (error) {
+    message.textContent = error.message;
+    const conflict = document.getElementById("smartEntryConflict");
+    const forceButton = document.getElementById("smartEntryForceButton");
+    if (error.payload?.code === "CALENDAR_CONFLICT") {
+      pendingSmartConflict = payload;
+      conflict.innerHTML = `<strong>Impegno già presente</strong>${(error.payload.conflicts || []).map((item) => `<span>${escapeHtml(item.title || "Appuntamento cliente")}</span>`).join("")}<small>È un avviso: puoi scegliere comunque questa persona usando “Forza comunque”.</small>`;
+      conflict.classList.remove("is-hidden");
+      forceButton.classList.remove("is-hidden");
+    } else {
+      conflict.classList.add("is-hidden");
+      forceButton.classList.add("is-hidden");
+    }
+  }
+}
+
+async function deleteSmartEntry() {
+  const form = document.getElementById("smartEntryForm");
+  const entryId = form.elements.entry_id.value;
+  if (!entryId || !confirm("Eliminare questo turno anche da Google Calendar?")) return;
+  try {
+    await smartWorkingAction("delete_entry", { entry_id: entryId, entry_type: form.elements.entry_type.value });
+    closeSmartEntryModal();
+    renderSmartWorking();
+  } catch (error) {
+    document.getElementById("smartEntryMessage").textContent = error.message;
+  }
 }
 
 async function syncSmartCalendar() {
@@ -3595,82 +3671,56 @@ async function syncSmartCalendar() {
   button.disabled = true;
   button.textContent = "Sincronizzo...";
   try {
-    const result = await smartWorkingAction("sync_calendar");
-    await loadSmartWorking();
-    alert(`Google Calendar sincronizzato. Eventi: ${result.imported || 0}, blocchi: ${result.blocking || 0}.`);
+    const data = await smartWorkingAction("sync_calendar");
+    renderSmartWorking();
+    alert(`Calendar sincronizzato. ${data.result?.cached || 0} eventi letti, ${data.result?.blocked || 0} impegni associati.`);
   } catch (error) {
     renderBackendStatus(error.message);
     alert(error.message || "Non riesco a sincronizzare Google Calendar.");
   } finally {
     button.disabled = false;
-    button.textContent = "Sincronizza Google Calendar";
+    button.textContent = "Sincronizza Calendar";
   }
 }
 
-async function generateSmartWeek() {
-  const button = document.getElementById("generateSmartWeekButton");
+async function generateSmartMonth() {
+  const button = document.getElementById("generateSmartMonthButton");
   button.disabled = true;
   button.textContent = "Genero...";
   try {
-    await smartWorkingAction("generate_week");
+    const data = await smartWorkingAction("generate_month");
     renderSmartWorking();
+    const conflicts = data.result?.conflicts?.length || 0;
+    alert(`Proposta mensile generata: ${data.result?.created || 0} assegnazioni${conflicts ? `, ${conflicts} conflitti da verificare` : ""}.`);
   } catch (error) {
     renderBackendStatus(error.message);
-    alert(error.message || "Non riesco a generare la settimana.");
+    alert(error.message || "Non riesco a generare il mese.");
   } finally {
     button.disabled = false;
-    button.textContent = "Genera settimana";
+    button.textContent = "Genera bozza smart";
   }
 }
 
-async function approveSmartWeek() {
-  const planId = state.smartWorking?.plan?.id;
-  if (!planId) return alert("Genera prima una bozza.");
-  if (!confirm("Approvare questa settimana di smart working?")) return;
+async function approveSmartMonth() {
+  if (!(state.smartWorking?.plans || []).some((plan) => plan.status === "draft")) return alert("Genera prima una proposta mensile.");
+  if (!confirm("Approvare il mese e pubblicare gli smart working su Google Calendar?")) return;
   try {
-    await smartWorkingAction("approve_week", { plan_id: planId });
-    await loadSmartWorking();
+    const data = await smartWorkingAction("approve_month");
+    renderSmartWorking();
+    alert(`Mese approvato. ${data.result?.published || 0} smart working pubblicati su Google Calendar.`);
   } catch (error) {
     renderBackendStatus(error.message);
-    alert(error.message || "Non riesco ad approvare la settimana.");
-  }
-}
-
-async function saveSmartConnection(form) {
-  const payload = Object.fromEntries(new FormData(form).entries());
-  try {
-    await smartWorkingAction("save_connection", payload);
-    await loadSmartWorking();
-  } catch (error) {
-    renderBackendStatus(error.message);
-    alert(error.message || "Non riesco a salvare il calendario.");
+    alert(error.message || "Non riesco ad approvare il mese.");
   }
 }
 
 async function saveSmartRules(form) {
-  const payload = Object.fromEntries(new FormData(form).entries());
   try {
-    await smartWorkingAction("save_rules", payload);
-    await loadSmartWorking();
+    await smartWorkingAction("save_rules", Object.fromEntries(new FormData(form).entries()));
+    renderSmartWorking();
   } catch (error) {
     renderBackendStatus(error.message);
     alert(error.message || "Non riesco a salvare le regole.");
-  }
-}
-
-async function moveSmartAssignment(select) {
-  const previous = state.smartWorking.assignments.find((item) => item.employee_id === select.dataset.smartMove)?.date;
-  try {
-    await smartWorkingAction("move_assignment", {
-      plan_id: select.dataset.planId,
-      employee_id: select.dataset.smartMove,
-      date: select.value
-    });
-    await loadSmartWorking();
-  } catch (error) {
-    if (previous) select.value = previous;
-    renderBackendStatus(error.message);
-    alert(error.message || "Non riesco a spostare questa assegnazione.");
   }
 }
 
@@ -6256,24 +6306,46 @@ document.getElementById("taskSearch").addEventListener("input", renderClickUpTas
 document.getElementById("taskAssigneeFilter").addEventListener("change", renderClickUpTasks);
 document.getElementById("taskStatusFilter").addEventListener("change", renderClickUpTasks);
 document.getElementById("taskClientFilter").addEventListener("change", renderClickUpTasks);
-document.getElementById("smartWeekInput").addEventListener("change", (event) => {
-  selectedSmartWeek = mondayOf(event.target.value || new Date());
+document.getElementById("smartPreviousMonthButton").addEventListener("click", () => shiftSmartMonth(-1));
+document.getElementById("smartNextMonthButton").addEventListener("click", () => shiftSmartMonth(1));
+document.getElementById("smartTodayButton").addEventListener("click", () => {
+  selectedSmartMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+  selectedSmartDate = localDateKey(new Date());
   loadSmartWorking();
 });
 document.getElementById("syncCalendarButton").addEventListener("click", syncSmartCalendar);
-document.getElementById("generateSmartWeekButton").addEventListener("click", generateSmartWeek);
-document.getElementById("approveSmartWeekButton").addEventListener("click", approveSmartWeek);
-document.getElementById("smartConnectionForm").addEventListener("submit", (event) => {
-  event.preventDefault();
-  saveSmartConnection(event.currentTarget);
-});
+document.getElementById("generateSmartMonthButton").addEventListener("click", generateSmartMonth);
+document.getElementById("approveSmartMonthButton").addEventListener("click", approveSmartMonth);
 document.getElementById("smartRulesForm").addEventListener("submit", (event) => {
   event.preventDefault();
   saveSmartRules(event.currentTarget);
 });
-document.getElementById("smartWeekGrid").addEventListener("change", (event) => {
-  const select = event.target.closest("[data-smart-move]");
-  if (select) moveSmartAssignment(select);
+document.getElementById("smartView").addEventListener("click", (event) => {
+  const addButton = event.target.closest("[data-smart-add]");
+  if (addButton) {
+    event.stopPropagation();
+    return openSmartEntryModal({ date: addButton.dataset.smartAdd });
+  }
+  const editButton = event.target.closest("[data-smart-edit]");
+  if (editButton) {
+    event.stopPropagation();
+    return openSmartEntryModal({ type: editButton.dataset.smartEdit, id: editButton.dataset.entryId });
+  }
+  const dateCell = event.target.closest("[data-smart-date]");
+  if (!dateCell) return;
+  selectedSmartDate = dateCell.dataset.smartDate;
+  renderSmartMonth(state.smartWorking || {});
+  renderSmartDay(state.smartWorking || {});
+});
+document.getElementById("smartEntryForm").addEventListener("submit", (event) => {
+  event.preventDefault();
+  submitSmartEntry(event.currentTarget);
+});
+document.getElementById("smartEntryCloseButton").addEventListener("click", closeSmartEntryModal);
+document.getElementById("smartEntryCancelButton").addEventListener("click", closeSmartEntryModal);
+document.getElementById("smartEntryDeleteButton").addEventListener("click", deleteSmartEntry);
+document.getElementById("smartEntryForceButton").addEventListener("click", () => {
+  if (pendingSmartConflict) submitSmartEntry(document.getElementById("smartEntryForm"), true);
 });
 
 document.getElementById("calendarRefreshButton").addEventListener("click", () => {

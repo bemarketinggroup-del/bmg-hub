@@ -447,49 +447,56 @@
       </section>
 
       <section class="view" id="smartView" data-view-panel="smart">
-        <div class="toolbar client-toolbar">
-          <label class="search week-search">
-            <span>Settimana</span>
-            <input id="smartWeekInput" type="date" aria-label="Settimana smart working">
-          </label>
-          <button class="ghost-button admin-only" id="syncCalendarButton" type="button">Sincronizza Google Calendar</button>
-          <button class="ghost-button admin-only" id="generateSmartWeekButton" type="button">Genera settimana</button>
-          <button class="primary-button admin-only" id="approveSmartWeekButton" type="button">Approva settimana</button>
+        <div class="smart-month-toolbar">
+          <div class="smart-month-navigation">
+            <button class="icon-button" id="smartPreviousMonthButton" type="button" title="Mese precedente" aria-label="Mese precedente"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
+            <button class="ghost-button" id="smartTodayButton" type="button">Oggi</button>
+            <button class="icon-button" id="smartNextMonthButton" type="button" title="Mese successivo" aria-label="Mese successivo"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>
+            <h2 id="smartMonthTitle">Turni del mese</h2>
+          </div>
+          <div class="smart-month-actions admin-only">
+            <button class="ghost-button" id="syncCalendarButton" type="button">Sincronizza Calendar</button>
+            <button class="ghost-button" id="generateSmartMonthButton" type="button">Genera bozza smart</button>
+            <button class="primary-button" id="approveSmartMonthButton" type="button">Approva e pubblica</button>
+          </div>
         </div>
-        <div class="split-panel smart-layout">
-          <section class="panel smart-main-panel">
-            <div class="panel-head">
-              <div>
-                <h2>Bozza smart working</h2>
-                <span id="smartPlanStatus">Nessuna bozza</span>
-              </div>
+
+        <div class="smart-plan-strip">
+          <span id="smartPlanStatus">Nessuna bozza</span>
+          <div class="smart-legend" aria-label="Legenda turni">
+            <span><i class="is-smart"></i>Smart working</span>
+            <span><i class="is-off"></i>OFF / ferie</span>
+            <span><i class="is-busy"></i>Impegno cliente</span>
+          </div>
+        </div>
+
+        <div class="smart-month-layout">
+          <section class="panel smart-calendar-panel">
+            <div class="smart-month-weekdays" aria-hidden="true">
+              <span>Lun</span><span>Mar</span><span>Mer</span><span>Gio</span><span>Ven</span><span>Sab</span><span>Dom</span>
             </div>
-            <div class="smart-week-grid" id="smartWeekGrid"></div>
+            <div class="smart-month-grid" id="smartMonthGrid"></div>
           </section>
-          <aside class="panel inspector">
-            <p class="eyebrow">Google Calendar</p>
-            <h2>Regole e connessione</h2>
-            <form class="smart-settings admin-only" id="smartConnectionForm">
-              <label>Calendar ID<input name="calendar_id" placeholder="bmg-calendar@group.calendar.google.com"></label>
-              <label>Nome calendario<input name="calendar_name" placeholder="BMG - Shooting e Appuntamenti"></label>
-              <button class="ghost-button" type="submit">Salva calendario</button>
-            </form>
+          <aside class="panel smart-day-panel" id="smartDayPanel"></aside>
+        </div>
+
+        <section class="panel smart-settings-panel">
+          <div>
+            <p class="eyebrow">Regole</p>
+            <h2>Rotazione automatica</h2>
             <form class="smart-settings admin-only" id="smartRulesForm">
-              <label>Max persone in smart al giorno<input name="max_remote_per_day" type="number" min="1" max="10" value="2"></label>
-              <label>Giorni smart per dipendente<input name="remote_days_per_employee" type="number" min="1" max="5" value="1"></label>
+              <label>Massimo persone in smart al giorno<input name="max_remote_per_day" type="number" min="1" max="2" value="2"></label>
+              <label>Giorni smart a settimana<input name="remote_days_per_employee" type="number" value="1" disabled></label>
               <button class="ghost-button" type="submit">Salva regole</button>
             </form>
-            <div class="setup-box">
-              <code>Calendario</code>
-              <span id="smartCalendarSummary">Nessun calendario collegato.</span>
-            </div>
-            <div class="setup-box">
-              <code>Eventi bloccanti</code>
-              <span>Shooting, Cliente, Trasferta, Appuntamento esterno, [NO SMART] o eventi lunghi.</span>
-            </div>
+            <p class="smart-settings-note">La proposta assegna un giorno a settimana per persona, evita gli impegni cliente e non supera mai due persone nello stesso giorno.</p>
+          </div>
+          <div>
+            <p class="eyebrow">Google Calendar</p>
+            <h2 id="smartCalendarSummary">Calendario BMG collegato</h2>
             <div class="smart-events-list" id="smartEventsList"></div>
-          </aside>
-        </div>
+          </div>
+        </section>
       </section>
 
       <section class="view" id="settingsView" data-view-panel="settings">
@@ -1073,6 +1080,33 @@
       <div class="modal-actions">
         <button class="ghost-button" value="cancel" type="submit" formnovalidate>Annulla</button>
         <button class="primary-button" id="driveManageSubmit" value="default" type="submit">Salva</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="modal smart-entry-modal" id="smartEntryModal">
+    <form id="smartEntryForm">
+      <div class="modal-head">
+        <div>
+          <p class="eyebrow">Turni del personale</p>
+          <h2 id="smartEntryTitle">Aggiungi turno</h2>
+        </div>
+        <button class="icon-button" id="smartEntryCloseButton" type="button" title="Chiudi" aria-label="Chiudi"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+      </div>
+      <input name="entry_id" type="hidden">
+      <div class="form-grid">
+        <label>Persona<select id="smartEntryEmployee" name="employee_id" required></select></label>
+        <label>Tipo<select id="smartEntryType" name="entry_type" required><option value="smart">Smart working</option><option value="off">OFF / ferie</option></select></label>
+        <label class="full">Giorno<input id="smartEntryDate" name="date" type="date" required></label>
+      </div>
+      <div class="smart-conflict-message is-hidden" id="smartEntryConflict" role="alert"></div>
+      <p class="form-message" id="smartEntryMessage" role="status"></p>
+      <div class="modal-actions smart-entry-actions">
+        <button class="danger-button is-hidden" id="smartEntryDeleteButton" type="button">Elimina</button>
+        <span class="smart-entry-spacer"></span>
+        <button class="ghost-button" id="smartEntryCancelButton" type="button">Annulla</button>
+        <button class="ghost-button is-hidden" id="smartEntryForceButton" type="button">Forza comunque</button>
+        <button class="primary-button" type="submit">Salva turno</button>
       </div>
     </form>
   </dialog>
