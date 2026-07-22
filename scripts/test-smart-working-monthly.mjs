@@ -98,6 +98,27 @@ assert.deepEqual(counters.staff, [
   ] }
 ]);
 
+const durableConfirmedCounters = buildOffCounters({
+  employees: employees.slice(0, 1),
+  month: "2026-07",
+  entries: [],
+  reviews: [
+    { employee_id: employees[0].id, date: "2026-07-06", title: "confirmed" },
+    { employee_id: employees[0].id, date: "2026-07-07", title: "excluded" }
+  ]
+});
+assert.equal(durableConfirmedCounters.month_total, 1);
+assert.equal(durableConfirmedCounters.year_total, 1);
+assert.deepEqual(durableConfirmedCounters.staff[0].details, [{
+  date: "2026-07-06",
+  title: "OFF confermato manualmente",
+  sources: ["counter_review"],
+  notes: "Conferma mantenuta anche senza l'evento originale nella cache.",
+  source_event_ids: [],
+  review_status: "confirmed",
+  included: true
+}]);
+
 const calendarEntries = calendarOffEntries({
   employees: employees.map((employee) => ({ ...employee, email: `${employee.full_name.toLowerCase()}@bmg.test` })),
   rangeStart: "2026-01-01",
@@ -128,6 +149,20 @@ const ambiguousAbbreviationEntries = calendarOffEntries({
   ]
 });
 assert.deepEqual(ambiguousAbbreviationEntries, []);
+
+const andryAliasEntries = calendarOffEntries({
+  employees: [{ id: "andry", full_name: "Andry" }],
+  rangeStart: "2026-01-01",
+  rangeEnd: "2027-01-01",
+  events: [
+    { id: "andy-off", event_category: "staff_leave", title: "ANDY OFF", start_at: "2026-04-03", end_at: "2026-04-04", all_day: true, attendees: [] },
+    { id: "amdriy-off", event_category: "staff_leave", title: "AMDRIY OFF MATTINA", start_at: "2026-06-05", end_at: "2026-06-06", all_day: true, attendees: [] }
+  ]
+});
+assert.deepEqual(andryAliasEntries.map(({ employee_id, date }) => ({ employee_id, date })), [
+  { employee_id: "andry", date: "2026-04-03" },
+  { employee_id: "andry", date: "2026-06-05" }
+]);
 
 const clientCommitmentStaff = [
   { id: "andry", full_name: "Andry", email: "andriyph@gmail.com" },

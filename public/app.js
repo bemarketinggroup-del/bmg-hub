@@ -1001,6 +1001,7 @@ async function refreshSmartWorkingInBackground(month) {
         throw suggestionError;
       }
     }
+    fresh = await smartWorkingAction("sync_off_year", { month }, { apply: false });
     if (smartMonthKey() === month) {
       state.smartWorking = fresh;
       renderHome();
@@ -3879,7 +3880,7 @@ function renderSmartOffCounters(data) {
 }
 
 function smartOffSourceLabel(source) {
-  return { bmg_hub: "BMG Hub", google_calendar: "Google Calendar" }[source] || source || "Origine non indicata";
+  return { bmg_hub: "BMG Hub", google_calendar: "Google Calendar", counter_review: "Conferma manuale" }[source] || source || "Origine non indicata";
 }
 
 function smartOffReviewLabel(status) {
@@ -4091,13 +4092,14 @@ async function deleteSmartEntry() {
 async function syncSmartCalendar() {
   const button = document.getElementById("syncCalendarButton");
   button.disabled = true;
-  button.textContent = "Sincronizzo...";
+  button.textContent = "Sincronizzo mese e OFF...";
   try {
-    const data = await smartWorkingAction("sync_calendar");
+    const monthData = await smartWorkingAction("sync_calendar");
+    const data = await smartWorkingAction("sync_off_year", { force: true });
     renderSmartWorking();
-    const invited = Number(data.result?.invited) || 0;
-    const invitationErrors = Number(data.result?.invitation_errors) || 0;
-    alert(`Calendar sincronizzato. ${data.result?.cached || 0} eventi letti, ${data.result?.blocked || 0} impegni associati${invited ? `, ${invited} nuovi inviti inviati` : ""}${invitationErrors ? `, ${invitationErrors} inviti non riusciti` : ""}.`);
+    const invited = Number(monthData.result?.invited) || 0;
+    const invitationErrors = Number(monthData.result?.invitation_errors) || 0;
+    alert(`Calendar sincronizzato. ${monthData.result?.cached || 0} eventi mensili letti, ${monthData.result?.blocked || 0} impegni associati e ${data.result?.off_days || 0} registrazioni OFF annuali aggiornate${invited ? `, ${invited} nuovi inviti inviati` : ""}${invitationErrors ? `, ${invitationErrors} inviti non riusciti` : ""}.`);
   } catch (error) {
     renderBackendStatus(error.message);
     alert(error.message || "Non riesco a sincronizzare Google Calendar.");
