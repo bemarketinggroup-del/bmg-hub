@@ -3715,6 +3715,10 @@ function smartOffSourceLabel(source) {
   return { bmg_hub: "BMG Hub", google_calendar: "Google Calendar" }[source] || source || "Origine non indicata";
 }
 
+function smartOffReviewLabel(status) {
+  return { confirmed: "Confermato", excluded: "Non conteggiato", pending: "Da verificare" }[status] || "Da verificare";
+}
+
 function renderSmartOffDetail() {
   const data = state.smartWorking || {};
   const counters = data.off_counters || {};
@@ -3736,8 +3740,33 @@ function renderSmartOffDetail() {
 
   list.innerHTML = details.map((item) => {
     const sources = (item.sources || []).map((source) => `<span class="smart-off-source is-${escapeHtml(source)}">${escapeHtml(smartOffSourceLabel(source))}</span>`).join("");
-    return `<article class="smart-off-detail-item"><time datetime="${escapeHtml(item.date)}"><strong>${escapeHtml(new Intl.DateTimeFormat("it-IT", { day: "2-digit", month: "short" }).format(new Date(`${item.date}T12:00:00`)))}</strong><span>${escapeHtml(new Intl.DateTimeFormat("it-IT", { weekday: "long" }).format(new Date(`${item.date}T12:00:00`)))}</span></time><div><strong>${escapeHtml(item.title || "OFF / ferie")}</strong>${item.notes ? `<small>${escapeHtml(item.notes)}</small>` : ""}</div><div class="smart-off-sources">${sources}</div></article>`;
+    const reviewStatus = item.review_status || "pending";
+    const reviewActions = data.can_manage
+      ? `<div class="smart-off-review-actions"><button type="button" class="${reviewStatus === "confirmed" ? "is-active" : ""}" data-smart-off-review="true" data-smart-off-date="${escapeHtml(item.date)}">Conferma</button><button type="button" class="${reviewStatus === "excluded" ? "is-active is-exclude" : ""}" data-smart-off-review="false" data-smart-off-date="${escapeHtml(item.date)}">Non conteggiare</button></div>`
+      : "";
+    return `<article class="smart-off-detail-item${item.included === false ? " is-excluded" : ""}"><time datetime="${escapeHtml(item.date)}"><strong>${escapeHtml(new Intl.DateTimeFormat("it-IT", { day: "2-digit", month: "short" }).format(new Date(`${item.date}T12:00:00`)))}</strong><span>${escapeHtml(new Intl.DateTimeFormat("it-IT", { weekday: "long" }).format(new Date(`${item.date}T12:00:00`)))}</span></time><div class="smart-off-detail-copy"><strong>${escapeHtml(item.title || "OFF / ferie")}</strong>${item.notes ? `<small>${escapeHtml(item.notes)}</small>` : ""}<div class="smart-off-sources">${sources}</div></div><div class="smart-off-review"><span class="smart-off-review-status is-${escapeHtml(reviewStatus)}">${escapeHtml(smartOffReviewLabel(reviewStatus))}</span>${reviewActions}</div></article>`;
   }).join("") || smartEmpty(`Nessun giorno OFF registrato per ${selectedSmartOffPeriod === "month" ? monthName : `il ${counters.year}`}.`);
+}
+
+async function reviewSmartOffDay(button) {
+  const date = button.dataset.smartOffDate;
+  const included = button.dataset.smartOffReview === "true";
+  if (!date || !selectedSmartOffEmployeeId) return;
+  const buttons = document.querySelectorAll(`[data-smart-off-date="${date}"]`);
+  buttons.forEach((item) => { item.disabled = true; });
+  try {
+    await smartWorkingAction("review_off_day", {
+      employee_id: selectedSmartOffEmployeeId,
+      date,
+      included
+    });
+    renderSmartWorking();
+    renderSmartOffDetail();
+  } catch (error) {
+    renderBackendStatus(error.message);
+    alert(error.message || "Non riesco a salvare la revisione del giorno OFF.");
+    buttons.forEach((item) => { item.disabled = false; });
+  }
 }
 
 function openSmartOffDetail(employeeId) {
@@ -6532,6 +6561,8 @@ document.getElementById("smartEntryForceButton").addEventListener("click", () =>
 });
 document.getElementById("smartOffDetailCloseButton").addEventListener("click", closeSmartOffDetail);
 document.getElementById("smartOffDetailModal").addEventListener("click", (event) => {
+  const review = event.target.closest("[data-smart-off-review]");
+  if (review) return reviewSmartOffDay(review);
   const period = event.target.closest("[data-smart-off-period]");
   if (!period) return;
   selectedSmartOffPeriod = period.dataset.smartOffPeriod;

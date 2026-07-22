@@ -17,6 +17,8 @@ assert.deepEqual(bounds, {
   gridStart: "2026-06-29",
   gridEnd: "2026-08-03"
 });
+assert.equal(monthBounds("2026-06").month, "2026-06");
+assert.equal(monthBounds("2026-08").month, "2026-08");
 
 assert.equal(isClientWorkEvent({ event_category: "staff_leave", title: "Marta OFF" }), false);
 assert.equal(isClientWorkEvent({ event_category: "smart_working", title: "Daniele SMART" }), false);
@@ -55,17 +57,21 @@ const counters = buildOffCounters({
     { employee_id: employees[0].id, date: "2026-07-04", type: "staff_leave", source: "bmg_hub" },
     { employee_id: employees[1].id, date: "2026-07-02", type: "staff_leave", source: "bmg_hub", title: "Daniele OFF" },
     { employee_id: "unknown", date: "2026-07-03", type: "staff_leave", source: "bmg_hub" }
+  ],
+  reviews: [
+    { employee_id: employees[0].id, date: "2026-01-05", title: "excluded" },
+    { employee_id: employees[0].id, date: "2026-07-01", title: "confirmed" }
   ]
 });
 assert.equal(counters.month_total, 2);
-assert.equal(counters.year_total, 3);
+assert.equal(counters.year_total, 2);
 assert.deepEqual(counters.staff, [
-  { employee_id: employees[0].id, month_days: 1, year_days: 2, details: [
-    { date: "2026-01-05", title: "Andry OFF gennaio", sources: ["google_calendar"], notes: "", source_event_ids: ["g-2"] },
-    { date: "2026-07-01", title: "Andry OFF", sources: ["bmg_hub", "google_calendar"], notes: "Ferie", source_event_ids: ["g-1"] }
+  { employee_id: employees[0].id, month_days: 1, year_days: 1, details: [
+    { date: "2026-01-05", title: "Andry OFF gennaio", sources: ["google_calendar"], notes: "", source_event_ids: ["g-2"], review_status: "excluded", included: false },
+    { date: "2026-07-01", title: "Andry OFF", sources: ["bmg_hub", "google_calendar"], notes: "Ferie", source_event_ids: ["g-1"], review_status: "confirmed", included: true }
   ] },
   { employee_id: employees[1].id, month_days: 1, year_days: 1, details: [
-    { date: "2026-07-02", title: "Daniele OFF", sources: ["bmg_hub"], notes: "", source_event_ids: [] }
+    { date: "2026-07-02", title: "Daniele OFF", sources: ["bmg_hub"], notes: "", source_event_ids: [], review_status: "pending", included: true }
   ] }
 ]);
 

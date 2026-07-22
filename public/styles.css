@@ -4136,18 +4136,32 @@ code { font-family: var(--font-mono); font-size: 12px; }
 .smart-off-detail-periods button.is-active { color: var(--terracotta); border-color: color-mix(in srgb, var(--terracotta) 42%, var(--line)); background: var(--terra-tint); }
 .smart-off-detail-list { display: grid; gap: 7px; max-height: min(500px, 60vh); overflow: auto; }
 .smart-off-detail-item {
-  display: grid; grid-template-columns: 82px minmax(0, 1fr) auto; align-items: center; gap: 12px;
+  display: grid; grid-template-columns: 72px minmax(0, 1fr) auto; align-items: center; gap: 12px;
   min-height: 66px; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--surface-soft);
 }
+.smart-off-detail-item.is-excluded { opacity: .7; background: var(--surface-tint); }
 .smart-off-detail-item time { display: grid; gap: 2px; text-transform: capitalize; }
 .smart-off-detail-item time strong { font-size: 13px; }
 .smart-off-detail-item time span, .smart-off-detail-item small { color: var(--muted); font-size: 9.5px; line-height: 1.4; }
-.smart-off-detail-item > div:nth-child(2) { display: grid; gap: 3px; min-width: 0; }
-.smart-off-detail-item > div:nth-child(2) > strong { overflow: hidden; font-size: 11.5px; text-overflow: ellipsis; white-space: nowrap; }
-.smart-off-sources { display: flex; align-items: flex-end; flex-direction: column; gap: 4px; }
+.smart-off-detail-copy { display: grid; gap: 4px; min-width: 0; }
+.smart-off-detail-copy > strong { overflow: hidden; font-size: 11.5px; text-overflow: ellipsis; white-space: nowrap; }
+.smart-off-sources { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
 .smart-off-source { padding: 4px 7px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); background: var(--surface); font-size: 8.5px; font-weight: 700; white-space: nowrap; }
 .smart-off-source.is-google_calendar { color: #185abc; border-color: #aecbfa; background: #e8f0fe; }
 .smart-off-source.is-bmg_hub { color: var(--terracotta); border-color: color-mix(in srgb, var(--terracotta) 32%, var(--line)); background: var(--terra-tint); }
+.smart-off-review { display: grid; justify-items: end; gap: 6px; }
+.smart-off-review-status { padding: 3px 7px; border-radius: 999px; color: #9a6700; background: #fff8c5; font-size: 8.5px; font-weight: 800; white-space: nowrap; }
+.smart-off-review-status.is-confirmed { color: #237a57; background: #e6f4ea; }
+.smart-off-review-status.is-excluded { color: var(--muted); background: var(--surface); }
+.smart-off-review-actions { display: flex; gap: 4px; }
+.smart-off-review-actions button {
+  min-height: 27px; padding: 0 8px; border: 1px solid var(--line); border-radius: 7px;
+  color: var(--muted); background: var(--surface); font: inherit; font-size: 8.5px; font-weight: 750; cursor: pointer;
+}
+.smart-off-review-actions button:hover { color: var(--ink); border-color: var(--subtle); }
+.smart-off-review-actions button.is-active { color: #237a57; border-color: #a8d5bd; background: #e6f4ea; }
+.smart-off-review-actions button.is-active.is-exclude { color: var(--ink); border-color: var(--subtle); background: var(--surface-tint); }
+.smart-off-review-actions button:disabled { opacity: .5; cursor: wait; }
 
 .smart-settings-panel {
   display: grid;
@@ -4278,8 +4292,10 @@ code { font-family: var(--font-mono); font-size: 12px; }
   .smart-off-table-head,
   .smart-off-row { grid-template-columns: minmax(0, 1fr) 64px 64px; }
   .smart-off-detail-shell { padding: 18px; }
-  .smart-off-detail-item { grid-template-columns: 68px minmax(0, 1fr); }
-  .smart-off-sources { grid-column: 1 / -1; align-items: flex-start; flex-direction: row; padding-left: 80px; }
+  .smart-off-detail-item { grid-template-columns: 62px minmax(0, 1fr); }
+  .smart-off-review { grid-column: 1 / -1; width: 100%; justify-items: stretch; padding-left: 74px; }
+  .smart-off-review-status { justify-self: start; }
+  .smart-off-review-actions { display: grid; grid-template-columns: 1fr 1fr; }
   .smart-settings { grid-template-columns: 1fr; }
   .smart-events-list { grid-template-columns: 1fr; }
   .smart-settings-panel { padding: 16px; }
