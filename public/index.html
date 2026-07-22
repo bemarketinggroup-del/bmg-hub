@@ -934,6 +934,34 @@
     </div>
   </dialog>
 
+  <dialog class="modal ped-media-viewer-modal" id="pedMediaViewerModal" aria-labelledby="pedMediaViewerTitle">
+    <div class="ped-media-viewer-shell">
+      <div class="ped-media-viewer-head">
+        <div>
+          <p class="eyebrow">Visualizzatore contenuto</p>
+          <h2 id="pedMediaViewerTitle">Anteprima in alta risoluzione</h2>
+          <span id="pedMediaViewerMeta">File originale da Google Drive</span>
+        </div>
+        <div class="ped-media-viewer-actions">
+          <div class="ped-media-viewer-zoom" id="pedMediaViewerZoomControls" role="group" aria-label="Controlli zoom">
+            <button data-ped-viewer-zoom-out type="button" title="Riduci zoom" aria-label="Riduci zoom">
+              <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/></svg>
+            </button>
+            <button data-ped-viewer-reset type="button" title="Reimposta zoom"><span id="pedMediaViewerZoomValue">100%</span></button>
+            <button data-ped-viewer-zoom-in type="button" title="Aumenta zoom" aria-label="Aumenta zoom">
+              <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+            </button>
+          </div>
+          <button class="icon-button ped-media-viewer-close" data-ped-viewer-close type="button" title="Chiudi" aria-label="Chiudi visualizzatore">
+            <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="ped-media-viewer-stage" id="pedMediaViewerStage" aria-live="polite"></div>
+      <p class="ped-media-viewer-help" id="pedMediaViewerHelp">Usa la rotella o i pulsanti per ingrandire. Trascina la foto quando è ingrandita e fai doppio clic per alternare lo zoom.</p>
+    </div>
+  </dialog>
+
   <dialog class="modal ped-caption-modal" id="pedCaptionModal">
     <form id="pedCaptionForm">
       <div class="modal-head">

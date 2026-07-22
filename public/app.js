@@ -196,6 +196,18 @@ let pedPickerFolderLoadId = 0;
 let driveFolderPrefetchTimer = null;
 let pedPickerPreviewTimer = null;
 let pedPickerPreviewLoadId = 0;
+let pedMediaViewerState = {
+  scale: 1,
+  x: 0,
+  y: 0,
+  pointerId: null,
+  startX: 0,
+  startY: 0,
+  originX: 0,
+  originY: 0,
+  type: "",
+  loadId: 0
+};
 let pedShareState = { active: false, shareUrl: "" };
 let pedLoadingKey = "";
 let editingPedCaptionId = "";
@@ -2815,17 +2827,26 @@ function renderPedPicker() {
     const used = isPedDriveFileUsed(file);
     const previewType = !file.is_folder && isVideo ? "video" : (!file.is_folder && isImage ? "image" : "");
     const previewSource = previewType === "video" ? file.content_url : (file.thumbnail_url || file.content_url);
+    const viewerSource = !file.is_folder && previewType ? file.content_url : "";
     const selected = !file.is_folder && pedPickerState.selectedFiles.some((item) => String(item.id) === String(file.id));
     const previewAttributes = previewType && previewSource
       ? ` data-ped-picker-preview-type="${previewType}" data-ped-picker-preview-src="${escapeHtml(previewSource)}" data-ped-picker-preview-poster="${escapeHtml(file.thumbnail_url || "")}" data-ped-picker-preview-mime="${escapeHtml(file.mime_type || "")}" data-ped-picker-size="${escapeHtml(file.size || "")}"`
       : "";
-    return `<button class="ped-picker-entry${file.is_folder ? " is-folder" : ""}${selected ? " is-selected" : ""}${used ? " is-used" : ""}" ${file.is_folder ? "data-ped-picker-folder" : "data-ped-picker-file"}="${escapeHtml(file.id)}" data-ped-picker-name="${escapeHtml(file.name)}"${previewAttributes} type="button"${file.is_folder ? "" : ` aria-pressed="${selected}"`}>
+    const entry = `<button class="ped-picker-entry${file.is_folder ? " is-folder" : ""}${selected ? " is-selected" : ""}${used ? " is-used" : ""}" ${file.is_folder ? "data-ped-picker-folder" : "data-ped-picker-file"}="${escapeHtml(file.id)}" data-ped-picker-name="${escapeHtml(file.name)}"${previewAttributes} type="button"${file.is_folder ? "" : ` aria-pressed="${selected}"`}>
       <span class="ped-picker-media">${hasPreview
         ? `<img src="${escapeHtml(file.thumbnail_url || "")}" alt="" loading="lazy">${isVideo ? `<span class="ped-video-mini"><svg class="lc" viewBox="0 0 24 24"><path d="m9 7 8 5-8 5z"/></svg></span>` : ""}`
         : driveFileIcon(file)}${used ? `<span class="ped-picker-used-badge">Gia nel PED</span>` : ""}</span>
       <span><strong>${escapeHtml(file.name)}</strong><small>${file.is_folder ? "Cartella" : [formatFileSize(file.size), formatDriveDate(file.modified_at)].filter(Boolean).join(" · ") || "File"}</small></span>
       ${file.is_folder ? `<svg class="lc ped-picker-arrow" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>` : `<span class="ped-picker-check" aria-hidden="true"><svg class="lc" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg></span>`}
     </button>`;
+    if (file.is_folder) return entry;
+    const viewerButton = viewerSource
+      ? `<button class="ped-picker-view-button" data-ped-media-viewer data-ped-viewer-file="${escapeHtml(file.id)}" data-ped-viewer-name="${escapeHtml(file.name)}" data-ped-viewer-type="${previewType}" data-ped-viewer-src="${escapeHtml(viewerSource)}" data-ped-viewer-poster="${escapeHtml(file.thumbnail_url || "")}" type="button">
+          <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>
+          <span>Visualizza grande</span>
+        </button>`
+      : `<span class="ped-picker-view-unavailable">Anteprima grande non disponibile</span>`;
+    return `<article class="ped-picker-file-card">${entry}${viewerButton}</article>`;
   }).join("") || `<p class="ped-picker-empty">${pedPickerState.files.length && !pedPickerState.showUsed
     ? "Tutti i contenuti di questa cartella sono gia nel PED."
     : "Questa cartella e vuota."}</p>`;
@@ -2913,6 +2934,145 @@ function hidePedPickerPreview(entry = null) {
   preview.classList.remove("is-visible");
   preview.removeAttribute("data-owner");
   preview.innerHTML = "";
+}
+
+const PED_MEDIA_VIEWER_MIN_SCALE = 1;
+const PED_MEDIA_VIEWER_MAX_SCALE = 8;
+
+function pedMediaViewerImage() {
+  return document.querySelector("#pedMediaViewerStage [data-ped-viewer-image]");
+}
+
+function resetPedMediaViewerTransform({ render = true } = {}) {
+  pedMediaViewerState.scale = 1;
+  pedMediaViewerState.x = 0;
+  pedMediaViewerState.y = 0;
+  pedMediaViewerState.pointerId = null;
+  if (render) applyPedMediaViewerTransform();
+}
+
+function clampPedMediaViewerPosition() {
+  const stage = document.getElementById("pedMediaViewerStage");
+  const image = pedMediaViewerImage();
+  if (!stage || !image) return;
+  const overflowX = Math.max(0, (image.clientWidth * pedMediaViewerState.scale - stage.clientWidth) / 2);
+  const overflowY = Math.max(0, (image.clientHeight * pedMediaViewerState.scale - stage.clientHeight) / 2);
+  pedMediaViewerState.x = Math.max(-overflowX, Math.min(overflowX, pedMediaViewerState.x));
+  pedMediaViewerState.y = Math.max(-overflowY, Math.min(overflowY, pedMediaViewerState.y));
+}
+
+function applyPedMediaViewerTransform() {
+  const stage = document.getElementById("pedMediaViewerStage");
+  const image = pedMediaViewerImage();
+  const zoomValue = document.getElementById("pedMediaViewerZoomValue");
+  const zoomOut = document.querySelector("[data-ped-viewer-zoom-out]");
+  const zoomIn = document.querySelector("[data-ped-viewer-zoom-in]");
+  if (zoomValue) zoomValue.textContent = `${Math.round(pedMediaViewerState.scale * 100)}%`;
+  if (zoomOut) zoomOut.disabled = pedMediaViewerState.type !== "image" || pedMediaViewerState.scale <= PED_MEDIA_VIEWER_MIN_SCALE;
+  if (zoomIn) zoomIn.disabled = pedMediaViewerState.type !== "image" || pedMediaViewerState.scale >= PED_MEDIA_VIEWER_MAX_SCALE;
+  stage?.classList.toggle("is-zoomed", pedMediaViewerState.type === "image" && pedMediaViewerState.scale > 1);
+  if (!image) return;
+  clampPedMediaViewerPosition();
+  image.style.transform = `translate3d(${pedMediaViewerState.x}px, ${pedMediaViewerState.y}px, 0) scale(${pedMediaViewerState.scale})`;
+}
+
+function setPedMediaViewerScale(nextScale, anchor = null) {
+  if (pedMediaViewerState.type !== "image") return;
+  const previousScale = pedMediaViewerState.scale;
+  const scale = Math.max(PED_MEDIA_VIEWER_MIN_SCALE, Math.min(PED_MEDIA_VIEWER_MAX_SCALE, Number(nextScale || 1)));
+  if (scale === previousScale) return;
+  const stage = document.getElementById("pedMediaViewerStage");
+  if (anchor && stage) {
+    const rect = stage.getBoundingClientRect();
+    const pointX = anchor.clientX - rect.left - rect.width / 2;
+    const pointY = anchor.clientY - rect.top - rect.height / 2;
+    const ratio = scale / previousScale;
+    pedMediaViewerState.x = pointX - (pointX - pedMediaViewerState.x) * ratio;
+    pedMediaViewerState.y = pointY - (pointY - pedMediaViewerState.y) * ratio;
+  }
+  pedMediaViewerState.scale = scale;
+  if (scale === 1) {
+    pedMediaViewerState.x = 0;
+    pedMediaViewerState.y = 0;
+  }
+  applyPedMediaViewerTransform();
+}
+
+function openPedMediaViewer(button) {
+  const modal = document.getElementById("pedMediaViewerModal");
+  const stage = document.getElementById("pedMediaViewerStage");
+  const title = document.getElementById("pedMediaViewerTitle");
+  const meta = document.getElementById("pedMediaViewerMeta");
+  const help = document.getElementById("pedMediaViewerHelp");
+  const source = button?.dataset.pedViewerSrc || "";
+  const type = button?.dataset.pedViewerType || "";
+  const name = button?.dataset.pedViewerName || "Contenuto Drive";
+  if (!modal || !stage || !source || !["image", "video"].includes(type)) return;
+
+  hidePedPickerPreview();
+  pedMediaViewerState.loadId += 1;
+  const loadId = pedMediaViewerState.loadId;
+  pedMediaViewerState.type = type;
+  resetPedMediaViewerTransform({ render: false });
+  title.textContent = name;
+  meta.textContent = type === "image" ? "File originale da Google Drive · caricamento piena risoluzione" : "Video originale da Google Drive";
+  help.classList.toggle("is-hidden", type !== "image");
+  document.getElementById("pedMediaViewerZoomControls")?.classList.toggle("is-hidden", type !== "image");
+  stage.className = "ped-media-viewer-stage is-loading";
+  stage.innerHTML = `${mediaProgressMarkup(type === "image" ? "Caricamento foto originale" : "Preparazione video")}<div class="ped-media-viewer-media" data-ped-viewer-media></div>`;
+  modal.showModal();
+  applyPedMediaViewerTransform();
+
+  const mediaRoot = stage.querySelector("[data-ped-viewer-media]");
+  if (type === "image") {
+    const image = new Image();
+    image.dataset.pedViewerImage = "";
+    image.alt = name;
+    image.draggable = false;
+    image.decoding = "async";
+    image.addEventListener("load", () => {
+      if (loadId !== pedMediaViewerState.loadId || !image.isConnected) return;
+      stage.classList.remove("is-loading", "is-error");
+      meta.textContent = `${image.naturalWidth} × ${image.naturalHeight} px · file originale Google Drive`;
+      updateMediaProgress(stage, 100, "Foto in piena risoluzione pronta");
+      window.setTimeout(() => {
+        if (loadId === pedMediaViewerState.loadId) stage.querySelector("[data-media-progress]")?.classList.add("is-hidden");
+      }, 350);
+      applyPedMediaViewerTransform();
+    }, { once: true });
+    image.addEventListener("error", () => {
+      if (loadId !== pedMediaViewerState.loadId) return;
+      stage.classList.remove("is-loading");
+      stage.classList.add("is-error");
+      failMediaProgress(stage, "Non riesco a caricare il file originale da Google Drive.");
+    }, { once: true });
+    mediaRoot.append(image);
+    updateMediaProgress(stage, 8, "Caricamento foto originale", "La miniatura non viene usata nel visualizzatore");
+    image.src = source;
+  } else {
+    const video = document.createElement("video");
+    video.controls = true;
+    video.playsInline = true;
+    video.preload = "metadata";
+    video.poster = button.dataset.pedViewerPoster || "";
+    mediaRoot.append(video);
+    bindStreamProgress(video, stage, {
+      onUnsupported: () => showEmbeddedDriveVideo(mediaRoot, button.dataset.pedViewerFile, name),
+      isCurrent: () => loadId === pedMediaViewerState.loadId && video.isConnected
+    });
+    video.addEventListener("loadedmetadata", () => {
+      if (loadId !== pedMediaViewerState.loadId) return;
+      stage.classList.remove("is-loading");
+      const dimensions = video.videoWidth && video.videoHeight ? `${video.videoWidth} × ${video.videoHeight} px · ` : "";
+      meta.textContent = `${dimensions}video originale Google Drive`;
+    }, { once: true });
+    video.src = source;
+    video.load();
+  }
+}
+
+function closePedMediaViewer() {
+  document.getElementById("pedMediaViewerModal")?.close();
 }
 
 function togglePedCarouselFile(fileId) {
@@ -5963,6 +6123,11 @@ document.body.addEventListener("click", (event) => {
   const pedRemove = event.target.closest("[data-ped-remove]");
   const pedPickerFolder = event.target.closest("[data-ped-picker-folder]");
   const pedPickerFile = event.target.closest("[data-ped-picker-file]");
+  const pedMediaViewer = event.target.closest("[data-ped-media-viewer]");
+  const pedViewerClose = event.target.closest("[data-ped-viewer-close]");
+  const pedViewerZoomOut = event.target.closest("[data-ped-viewer-zoom-out]");
+  const pedViewerZoomIn = event.target.closest("[data-ped-viewer-zoom-in]");
+  const pedViewerReset = event.target.closest("[data-ped-viewer-reset]");
   const pedPickerType = event.target.closest("[data-ped-picker-type]");
   const pedPickerBreadcrumb = event.target.closest("[data-ped-picker-breadcrumb]");
   const pedPickerClose = event.target.closest("[data-ped-picker-close]");
@@ -6040,6 +6205,11 @@ document.body.addEventListener("click", (event) => {
     renderPedPicker();
     return;
   }
+  if (pedMediaViewer) return openPedMediaViewer(pedMediaViewer);
+  if (pedViewerClose) return closePedMediaViewer();
+  if (pedViewerZoomOut) return setPedMediaViewerScale(pedMediaViewerState.scale / 1.35);
+  if (pedViewerZoomIn) return setPedMediaViewerScale(pedMediaViewerState.scale * 1.35);
+  if (pedViewerReset) return resetPedMediaViewerTransform();
   if (pedPickerFolder) return loadPedPickerFolder(pedPickerFolder.dataset.pedPickerFolder, pedPickerFolder.dataset.pedPickerName);
   if (pedPickerFile) return pedContentType(pedPickerState.contentType) === "carousel"
     ? togglePedCarouselFile(pedPickerFile.dataset.pedPickerFile)
@@ -6571,6 +6741,55 @@ document.getElementById("drivePreviewModal").addEventListener("close", () => {
     URL.revokeObjectURL(clientDriveState.objectUrl);
     clientDriveState.objectUrl = "";
   }
+});
+const pedMediaViewerModal = document.getElementById("pedMediaViewerModal");
+const pedMediaViewerStage = document.getElementById("pedMediaViewerStage");
+pedMediaViewerStage.addEventListener("wheel", (event) => {
+  if (pedMediaViewerState.type !== "image") return;
+  event.preventDefault();
+  const factor = event.deltaY < 0 ? 1.18 : 1 / 1.18;
+  setPedMediaViewerScale(pedMediaViewerState.scale * factor, event);
+}, { passive: false });
+pedMediaViewerStage.addEventListener("dblclick", (event) => {
+  if (pedMediaViewerState.type !== "image") return;
+  event.preventDefault();
+  setPedMediaViewerScale(pedMediaViewerState.scale > 1 ? 1 : 2.5, event);
+});
+pedMediaViewerStage.addEventListener("pointerdown", (event) => {
+  if (pedMediaViewerState.type !== "image" || pedMediaViewerState.scale <= 1 || !event.target.closest("[data-ped-viewer-image]")) return;
+  event.preventDefault();
+  pedMediaViewerState.pointerId = event.pointerId;
+  pedMediaViewerState.startX = event.clientX;
+  pedMediaViewerState.startY = event.clientY;
+  pedMediaViewerState.originX = pedMediaViewerState.x;
+  pedMediaViewerState.originY = pedMediaViewerState.y;
+  pedMediaViewerStage.setPointerCapture(event.pointerId);
+  pedMediaViewerStage.classList.add("is-dragging");
+});
+pedMediaViewerStage.addEventListener("pointermove", (event) => {
+  if (pedMediaViewerState.pointerId !== event.pointerId) return;
+  pedMediaViewerState.x = pedMediaViewerState.originX + event.clientX - pedMediaViewerState.startX;
+  pedMediaViewerState.y = pedMediaViewerState.originY + event.clientY - pedMediaViewerState.startY;
+  applyPedMediaViewerTransform();
+});
+const endPedMediaViewerDrag = (event) => {
+  if (pedMediaViewerState.pointerId !== event.pointerId) return;
+  if (pedMediaViewerStage.hasPointerCapture(event.pointerId)) pedMediaViewerStage.releasePointerCapture(event.pointerId);
+  pedMediaViewerState.pointerId = null;
+  pedMediaViewerStage.classList.remove("is-dragging");
+};
+pedMediaViewerStage.addEventListener("pointerup", endPedMediaViewerDrag);
+pedMediaViewerStage.addEventListener("pointercancel", endPedMediaViewerDrag);
+pedMediaViewerModal.addEventListener("close", () => {
+  pedMediaViewerState.loadId += 1;
+  pedMediaViewerStage.querySelector("video")?.pause();
+  pedMediaViewerStage.replaceChildren();
+  pedMediaViewerStage.className = "ped-media-viewer-stage";
+  pedMediaViewerState.type = "";
+  resetPedMediaViewerTransform({ render: false });
+});
+window.addEventListener("resize", () => {
+  if (pedMediaViewerModal.open && pedMediaViewerState.type === "image") applyPedMediaViewerTransform();
 });
 document.getElementById("syncClickUpButton").addEventListener("click", syncClientsFromClickUp);
 document.getElementById("syncTasksButton").addEventListener("click", syncTasksFromClickUp);

@@ -150,5 +150,13 @@ assert.match(htmlSource, /data-ped-used-toggle/, "il selettore deve offrire il c
 assert.match(styleSource, /\.ped-picker-entry:not\(\.is-folder\) \.ped-picker-media[\s\S]*?aspect-ratio: 4 \/ 5/, "le anteprime del selettore devono essere verticali");
 assert.match(styleSource, /\.ped-picker-entry:not\(\.is-folder\) \.ped-picker-media img[\s\S]*?object-fit: contain/, "le immagini del selettore devono essere mostrate per intero");
 assert.match(appSource, /Tutti i contenuti di questa cartella sono gia nel PED/, "il filtro deve spiegare quando tutti i file sono gia usati");
+assert.match(htmlSource, /id="pedMediaViewerModal"/, "il selettore deve includere un visualizzatore grande dedicato");
+assert.match(htmlSource, /data-ped-viewer-zoom-in/, "il visualizzatore deve offrire controlli zoom espliciti");
+assert.match(appSource, /data-ped-media-viewer/, "ogni contenuto visualizzabile deve avere un comando separato dalla selezione");
+assert.match(appSource, /const viewerSource = !file\.is_folder && previewType \? file\.content_url/, "il visualizzatore deve caricare il file originale e non la miniatura");
+assert.match(appSource, /PED_MEDIA_VIEWER_MAX_SCALE = 8/, "lo zoom deve consentire di ispezionare i dettagli ad alta risoluzione");
+assert.match(appSource, /setPointerCapture\(event\.pointerId\)/, "la foto ingrandita deve poter essere trascinata");
+assert.match(styleSource, /\.modal\.ped-media-viewer-modal[\s\S]*?width: min\(1560px, calc\(100vw - 20px\)\)/, "il visualizzatore deve occupare quasi tutto lo schermo desktop");
+assert.match(styleSource, /\.ped-media-viewer-media img[\s\S]*?object-fit: contain/, "la foto intera non deve essere ritagliata nel visualizzatore");
 
 console.log("PED carousel tests passed");
