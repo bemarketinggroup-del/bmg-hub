@@ -1103,6 +1103,24 @@
     </form>
   </dialog>
 
+  <dialog class="modal smart-off-detail-modal" id="smartOffDetailModal">
+    <div class="smart-off-detail-shell">
+      <div class="modal-head">
+        <div>
+          <p class="eyebrow">Dettaglio assenze</p>
+          <h2 id="smartOffDetailTitle">Giorni OFF</h2>
+          <p class="smart-off-detail-summary" id="smartOffDetailSummary"></p>
+        </div>
+        <button class="icon-button" id="smartOffDetailCloseButton" type="button" title="Chiudi" aria-label="Chiudi"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+      </div>
+      <div class="smart-off-detail-periods" role="tablist" aria-label="Periodo conteggio OFF">
+        <button type="button" data-smart-off-period="month">Mese <span id="smartOffDetailMonthCount">0</span></button>
+        <button type="button" data-smart-off-period="year">Anno <span id="smartOffDetailYearCount">0</span></button>
+      </div>
+      <div class="smart-off-detail-list" id="smartOffDetailList"></div>
+    </div>
+  </dialog>
+
   <dialog class="modal smart-entry-modal" id="smartEntryModal">
     <form id="smartEntryForm">
       <div class="modal-head">

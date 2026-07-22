@@ -41,19 +41,24 @@ const counters = buildOffCounters({
   employees: employees.slice(0, 2),
   month: "2026-07",
   entries: [
-    { employee_id: employees[0].id, date: "2026-07-01", type: "staff_leave", source: "bmg_hub" },
-    { employee_id: employees[0].id, date: "2026-07-01", type: "staff_leave", source: "google_calendar" },
-    { employee_id: employees[0].id, date: "2026-01-05", type: "staff_leave", source: "google_calendar" },
+    { employee_id: employees[0].id, date: "2026-07-01", type: "staff_leave", source: "bmg_hub", title: "Andry OFF", notes: "Ferie" },
+    { employee_id: employees[0].id, date: "2026-07-01", type: "staff_leave", source: "google_calendar", title: "Andry ferie Google", source_event_id: "g-1" },
+    { employee_id: employees[0].id, date: "2026-01-05", type: "staff_leave", source: "google_calendar", title: "Andry OFF gennaio", source_event_id: "g-2" },
     { employee_id: employees[0].id, date: "2026-07-04", type: "staff_leave", source: "bmg_hub" },
-    { employee_id: employees[1].id, date: "2026-07-02", type: "staff_leave", source: "bmg_hub" },
+    { employee_id: employees[1].id, date: "2026-07-02", type: "staff_leave", source: "bmg_hub", title: "Daniele OFF" },
     { employee_id: "unknown", date: "2026-07-03", type: "staff_leave", source: "bmg_hub" }
   ]
 });
 assert.equal(counters.month_total, 2);
 assert.equal(counters.year_total, 3);
 assert.deepEqual(counters.staff, [
-  { employee_id: employees[0].id, month_days: 1, year_days: 2 },
-  { employee_id: employees[1].id, month_days: 1, year_days: 1 }
+  { employee_id: employees[0].id, month_days: 1, year_days: 2, details: [
+    { date: "2026-01-05", title: "Andry OFF gennaio", sources: ["google_calendar"], notes: "", source_event_ids: ["g-2"] },
+    { date: "2026-07-01", title: "Andry OFF", sources: ["bmg_hub", "google_calendar"], notes: "Ferie", source_event_ids: ["g-1"] }
+  ] },
+  { employee_id: employees[1].id, month_days: 1, year_days: 1, details: [
+    { date: "2026-07-02", title: "Daniele OFF", sources: ["bmg_hub"], notes: "", source_event_ids: [] }
+  ] }
 ]);
 
 const calendarEntries = calendarOffEntries({
@@ -68,10 +73,10 @@ const calendarEntries = calendarOffEntries({
   ]
 });
 assert.deepEqual(calendarEntries, [
-  { employee_id: employees[2].id, date: "2026-07-06", type: "staff_leave", source: "google_calendar" },
-  { employee_id: employees[3].id, date: "2026-07-13", type: "staff_leave", source: "google_calendar" },
-  { employee_id: employees[3].id, date: "2026-07-14", type: "staff_leave", source: "google_calendar" },
-  { employee_id: employees[6].id, date: "2026-07-20", type: "staff_leave", source: "google_calendar" }
+  { employee_id: employees[2].id, date: "2026-07-06", type: "staff_leave", source: "google_calendar", title: "Fede OFF", notes: "", source_event_id: "" },
+  { employee_id: employees[3].id, date: "2026-07-13", type: "staff_leave", source: "google_calendar", title: "FRANCY FERIE", notes: "", source_event_id: "" },
+  { employee_id: employees[3].id, date: "2026-07-14", type: "staff_leave", source: "google_calendar", title: "FRANCY FERIE", notes: "", source_event_id: "" },
+  { employee_id: employees[6].id, date: "2026-07-20", type: "staff_leave", source: "google_calendar", title: "Assenza", notes: "", source_event_id: "" }
 ]);
 
 const ambiguousAbbreviationEntries = calendarOffEntries({

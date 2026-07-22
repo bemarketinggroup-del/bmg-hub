@@ -226,6 +226,8 @@ let personalAreaState = {
 let personalAreaTimer = null;
 let selectedSmartMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
 let selectedSmartDate = localDateKey(new Date());
+let selectedSmartOffEmployeeId = "";
+let selectedSmartOffPeriod = "month";
 let pendingSmartConflict = null;
 let selectedContentSection = "all";
 let authConfig = null;
@@ -3591,8 +3593,49 @@ function renderSmartOffCounters(data) {
 
   target.innerHTML = rows.map((row) => {
     const employee = staffById(data, row.employee_id);
-    return `<div class="smart-off-row"><strong>${escapeHtml(staffName(employee))}</strong><span>${Number(row.month_days) || 0}</span><span>${Number(row.year_days) || 0}</span></div>`;
+    const name = staffName(employee);
+    return `<button type="button" class="smart-off-row" data-smart-off-employee="${escapeHtml(row.employee_id)}" aria-label="Mostra il dettaglio degli OFF di ${escapeHtml(name)}"><strong><span class="smart-off-name">${escapeHtml(name)}</span><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></strong><span>${Number(row.month_days) || 0}</span><span>${Number(row.year_days) || 0}</span></button>`;
   }).join("") || smartEmpty("Nessun dipendente attivo disponibile per il conteggio.");
+}
+
+function smartOffSourceLabel(source) {
+  return { bmg_hub: "BMG Hub", google_calendar: "Google Calendar" }[source] || source || "Origine non indicata";
+}
+
+function renderSmartOffDetail() {
+  const data = state.smartWorking || {};
+  const counters = data.off_counters || {};
+  const row = (counters.staff || []).find((item) => item.employee_id === selectedSmartOffEmployeeId);
+  const employee = staffById(data, selectedSmartOffEmployeeId);
+  const details = (row?.details || []).filter((item) => selectedSmartOffPeriod === "year" || item.date.startsWith(`${counters.month}-`));
+  const monthDate = /^\d{4}-\d{2}$/.test(counters.month || "") ? new Date(`${counters.month}-01T12:00:00`) : selectedSmartMonth;
+  const monthName = new Intl.DateTimeFormat("it-IT", { month: "long", year: "numeric" }).format(monthDate);
+  const title = document.getElementById("smartOffDetailTitle");
+  const summary = document.getElementById("smartOffDetailSummary");
+  const list = document.getElementById("smartOffDetailList");
+
+  if (title) title.textContent = `OFF di ${staffName(employee)}`;
+  if (summary) summary.textContent = selectedSmartOffPeriod === "month" ? monthName : `Anno ${counters.year || monthDate.getFullYear()}`;
+  document.getElementById("smartOffDetailMonthCount").textContent = String(row?.month_days || 0);
+  document.getElementById("smartOffDetailYearCount").textContent = String(row?.year_days || 0);
+  document.querySelectorAll("[data-smart-off-period]").forEach((button) => button.classList.toggle("is-active", button.dataset.smartOffPeriod === selectedSmartOffPeriod));
+  if (!list) return;
+
+  list.innerHTML = details.map((item) => {
+    const sources = (item.sources || []).map((source) => `<span class="smart-off-source is-${escapeHtml(source)}">${escapeHtml(smartOffSourceLabel(source))}</span>`).join("");
+    return `<article class="smart-off-detail-item"><time datetime="${escapeHtml(item.date)}"><strong>${escapeHtml(new Intl.DateTimeFormat("it-IT", { day: "2-digit", month: "short" }).format(new Date(`${item.date}T12:00:00`)))}</strong><span>${escapeHtml(new Intl.DateTimeFormat("it-IT", { weekday: "long" }).format(new Date(`${item.date}T12:00:00`)))}</span></time><div><strong>${escapeHtml(item.title || "OFF / ferie")}</strong>${item.notes ? `<small>${escapeHtml(item.notes)}</small>` : ""}</div><div class="smart-off-sources">${sources}</div></article>`;
+  }).join("") || smartEmpty(`Nessun giorno OFF registrato per ${selectedSmartOffPeriod === "month" ? monthName : `il ${counters.year}`}.`);
+}
+
+function openSmartOffDetail(employeeId) {
+  selectedSmartOffEmployeeId = employeeId;
+  selectedSmartOffPeriod = "month";
+  renderSmartOffDetail();
+  document.getElementById("smartOffDetailModal").showModal();
+}
+
+function closeSmartOffDetail() {
+  document.getElementById("smartOffDetailModal").close();
 }
 
 function staffById(data, id) {
@@ -6344,6 +6387,11 @@ document.getElementById("smartRulesForm").addEventListener("submit", (event) => 
   saveSmartRules(event.currentTarget);
 });
 document.getElementById("smartView").addEventListener("click", (event) => {
+  const offRow = event.target.closest("[data-smart-off-employee]");
+  if (offRow) {
+    event.stopPropagation();
+    return openSmartOffDetail(offRow.dataset.smartOffEmployee);
+  }
   const addButton = event.target.closest("[data-smart-add]");
   if (addButton) {
     event.stopPropagation();
@@ -6369,6 +6417,13 @@ document.getElementById("smartEntryCancelButton").addEventListener("click", clos
 document.getElementById("smartEntryDeleteButton").addEventListener("click", deleteSmartEntry);
 document.getElementById("smartEntryForceButton").addEventListener("click", () => {
   if (pendingSmartConflict) submitSmartEntry(document.getElementById("smartEntryForm"), true);
+});
+document.getElementById("smartOffDetailCloseButton").addEventListener("click", closeSmartOffDetail);
+document.getElementById("smartOffDetailModal").addEventListener("click", (event) => {
+  const period = event.target.closest("[data-smart-off-period]");
+  if (!period) return;
+  selectedSmartOffPeriod = period.dataset.smartOffPeriod;
+  renderSmartOffDetail();
 });
 
 document.getElementById("calendarRefreshButton").addEventListener("click", () => {
