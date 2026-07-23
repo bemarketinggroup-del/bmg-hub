@@ -3374,9 +3374,34 @@ code { font-family: var(--font-mono); font-size: 12px; }
 .ped-caption-actions { justify-content: space-between; }
 
 @media (max-width: 680px) {
+  .ped-caption-modal {
+    width: calc(100vw - 16px);
+    max-width: calc(100vw - 16px);
+    max-height: calc(100vh - 16px);
+    max-height: calc(100dvh - 16px);
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+  .ped-caption-modal form,
+  .ped-caption-modal .modal-head > div,
+  .ped-caption-settings,
+  .ped-caption-settings label,
+  .ped-caption-editor,
+  .ped-caption-editor-shell,
+  .ped-caption-rich-input { min-width: 0; max-width: 100%; }
   .ped-caption-day-items { grid-template-columns: 1fr; }
   .ped-caption-settings { align-items: stretch; flex-direction: column; }
+  .ped-caption-settings label,
+  .ped-caption-settings select { width: 100%; }
   .ped-caption-preview-link { width: 100%; }
+  .ped-caption-toolbar { flex-wrap: wrap; }
+  .ped-caption-rich-input {
+    min-height: clamp(220px, 38dvh, 340px);
+    max-height: 48dvh;
+    font-size: 16px;
+  }
+  .ped-caption-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ped-caption-actions > button { min-width: 0; width: 100%; }
   .ped-carousel-preview-stage { min-height: 400px; }
   .ped-carousel-preview-footer { grid-template-columns: 1fr; gap: 8px; }
   .ped-carousel-preview-thumbs { justify-content: flex-start; }
@@ -4538,6 +4563,12 @@ code { font-family: var(--font-mono); font-size: 12px; }
 }
 
 @media (max-width: 640px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]),
+  textarea,
+  select,
+  [contenteditable="true"] {
+    font-size: 16px !important;
+  }
   .main { padding: 18px 16px 36px; }
   .topbar { flex-direction: column; align-items: flex-start; gap: 16px; }
   .topbar-actions { justify-content: flex-start; }
@@ -4660,6 +4691,7 @@ code { font-family: var(--font-mono); font-size: 12px; }
   .cms-media-field { grid-template-columns: 1fr; }
   .cms-media-field .ghost-button { width: 100%; }
   .modal form, .task-detail-shell { padding: 18px; }
+  .ped-caption-modal form { padding: 16px; }
   .task-detail-modal .modal-actions { align-items: stretch; flex-direction: column-reverse; }
   .task-detail-modal .modal-actions .ghost-button,
   .task-detail-modal .modal-actions .primary-button { width: 100%; }

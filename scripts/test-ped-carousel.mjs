@@ -156,6 +156,10 @@ assert.match(styleSource, /\.ped-agenda-item\[data-ped-publishing-tone="phone"\]
 assert.match(styleSource, /\.ped-agenda-item \{[\s\S]*?border-left: 4px solid var\(--ped-publishing-color\)[\s\S]*?background: var\(--ped-publishing-tint\)/, "la riga dell'agenda non deve più usare il colore della tipologia di post");
 assert.match(appSource, /data-ped-editor=/, "il clic su un contenuto del calendario deve aprire il pannello editoriale");
 assert.match(htmlSource, /contenteditable="true"/, "il copy deve usare una vera area rich text");
+assert.match(htmlSource, /name="viewport" content="width=device-width, initial-scale=1"/, "il layout mobile deve usare la larghezza reale del dispositivo");
+assert.match(styleSource, /\[contenteditable="true"\] \{\s*font-size: 16px !important;/, "Safari iOS non deve ingrandire la pagina quando il copy riceve il focus");
+assert.match(styleSource, /\.ped-caption-modal \{[\s\S]*?max-height: calc\(100dvh - 16px\);[\s\S]*?overflow-x: hidden;/, "il pannello copy deve restare nel viewport dinamico senza ritagli orizzontali");
+assert.match(styleSource, /\.ped-caption-rich-input \{[\s\S]*?max-height: 48dvh;[\s\S]*?font-size: 16px;/, "l'editor mobile deve adattarsi alla tastiera senza causare lo zoom automatico");
 assert.match(htmlSource, /data-ped-caption-command="bold"/, "l'editor deve offrire il grassetto");
 assert.match(htmlSource, /data-ped-caption-command="italic"/, "l'editor deve offrire il corsivo");
 assert.match(htmlSource, /data-ped-caption-command="strikeThrough"/, "l'editor deve offrire il barrato");
