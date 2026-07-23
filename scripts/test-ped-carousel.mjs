@@ -139,6 +139,11 @@ assert.match(htmlSource, /class="ped-publishing-legend"/, "sotto il calendario d
 assert.match(styleSource, /\.ped-content-card\[data-ped-publishing-tone="ped_only"\]/, "Solo PED deve colorare l'intera scheda");
 assert.match(styleSource, /\.ped-content-card\[data-ped-publishing-tone="meta"\]/, "Programmato Meta deve colorare l'intera scheda");
 assert.match(styleSource, /\.ped-content-card\[data-ped-publishing-tone="phone"\]/, "Programmato telefono deve colorare l'intera scheda");
+assert.match(appSource, /class="ped-agenda-item ped-type-\$\{format\.type\}" data-ped-publishing-tone="\$\{escapeHtml\(publishingStatus\)\}"/, "ogni riga dell'agenda deve ricevere il colore del metodo di programmazione");
+assert.match(styleSource, /\.ped-agenda-item\[data-ped-publishing-tone="ped_only"\]/, "Solo PED deve colorare l'intera riga dell'agenda");
+assert.match(styleSource, /\.ped-agenda-item\[data-ped-publishing-tone="meta"\]/, "Programmato Meta deve colorare l'intera riga dell'agenda");
+assert.match(styleSource, /\.ped-agenda-item\[data-ped-publishing-tone="phone"\]/, "Programmato telefono deve colorare l'intera riga dell'agenda");
+assert.match(styleSource, /\.ped-agenda-item \{[\s\S]*?border-left: 4px solid var\(--ped-publishing-color\)[\s\S]*?background: var\(--ped-publishing-tint\)/, "la riga dell'agenda non deve più usare il colore della tipologia di post");
 assert.match(appSource, /data-ped-editor=/, "il clic su un contenuto del calendario deve aprire il pannello editoriale");
 assert.match(htmlSource, /contenteditable="true"/, "il copy deve usare una vera area rich text");
 assert.match(htmlSource, /data-ped-caption-command="bold"/, "l'editor deve offrire il grassetto");

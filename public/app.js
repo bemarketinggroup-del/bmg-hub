@@ -2679,7 +2679,7 @@ function pedAgendaItemMarkup(item) {
     ? `<img src="${escapeHtml(previewUrl)}" alt="" loading="lazy" decoding="async">`
     : driveFileIcon({ is_folder: false, mime_type: mime });
   const publishingStatus = pedPublishingStatus(item.publishing_status);
-  return `<article class="ped-agenda-item ped-type-${format.type}">
+  return `<article class="ped-agenda-item ped-type-${format.type}" data-ped-publishing-tone="${escapeHtml(publishingStatus)}">
     <button class="ped-agenda-preview" data-ped-caption-preview="${escapeHtml(item.id)}" type="button" title="${files.length > 1 ? `Apri e scorri i ${files.length} contenuti del carosello` : "Apri anteprima"}">
       ${media}${isVideo ? `<span class="ped-video-mini"><svg class="lc" viewBox="0 0 24 24"><path d="m9 7 8 5-8 5z"/></svg></span>` : ""}${files.length > 1 ? `<b class="ped-carousel-count">${files.length}</b>` : ""}
     </button>
