@@ -74,6 +74,8 @@ assert.match(styleSource, /\.drive-transfer-center/, "il centro trasferimenti de
 assert.match(styleSource, /width: min\(280px, calc\(100vw - 24px\)\)/, "il centro trasferimenti deve restare compatto");
 assert.match(styleSource, /height: max-content !important/, "Safari non deve estendere il centro trasferimenti a tutta altezza");
 assert.match(styleSource, /\.media-load-progress/, "le anteprime devono avere una barra di caricamento");
+assert.match(appSource, /<div data-drive-preview-media><\/div>\$\{mediaProgressMarkup\("Caricamento anteprima"\)\}/, "la barra deve essere inserita dopo il player");
+assert.match(styleSource, /\.drive-preview-body > \.media-load-progress \{[\s\S]*?position: static;/, "la barra del video non deve sovrapporsi al player");
 assert.match(appSource, /const scheduledDays = \[\.\.\.grouped\.entries\(\)\]/, "l'agenda deve derivare i giorni dai contenuti programmati");
 assert.match(appSource, /\.filter\(\(\[dateKey, items\]\) => dateKey >= todayKey && items\.length\)/, "l'agenda deve partire dal giorno corrente");
 assert.match(appSource, /state\.pedAgendaItems/, "l'agenda deve usare i contenuti dei mesi futuri");

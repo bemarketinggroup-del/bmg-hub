@@ -3458,7 +3458,7 @@ async function openDriveFile(fileId, fileName, mimeType, contentUrl = "") {
     document.getElementById("drivePreviewTitle").textContent = fileName || "Anteprima file";
     const body = document.getElementById("drivePreviewBody");
     body.classList.remove("is-ped-carousel");
-    body.innerHTML = `${mediaProgressMarkup("Caricamento anteprima")}<div data-drive-preview-media></div>`;
+    body.innerHTML = `<div data-drive-preview-media></div>${mediaProgressMarkup("Caricamento anteprima")}`;
     document.getElementById("drivePreviewModal").showModal();
     const mediaRoot = body.querySelector("[data-drive-preview-media]");
     if (type.startsWith("image/")) {
