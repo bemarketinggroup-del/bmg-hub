@@ -174,6 +174,10 @@ assert.match(appSource, /data-ped-picker-library=/, "il selettore deve mostrare 
 assert.match(appSource, /data-ped-picker-library-source=/, "ogni accesso diretto deve conservare la propria raccolta Drive");
 assert.match(styleSource, /\.ped-picker-library\.is-graphics/, "la cartella grafiche deve avere uno stile dedicato");
 assert.match(styleSource, /\.ped-picker-library\.is-video/, "la cartella video deve avere uno stile dedicato");
+assert.match(appSource, /const PED_FOLDER_MONTHS = \[/, "le cartelle Drive devono riconoscere i mesi italiani");
+assert.match(appSource, /function sortPedPickerEntries\(files\)/, "le cartelle Drive devono avere un ordinamento mensile stabile");
+assert.match(appSource, /ped-picker-media-section-break/, "i file devono iniziare sotto le cartelle senza alterarne le righe");
+assert.match(styleSource, /\.ped-picker-entry\.is-folder \{[\s\S]*?height: 68px;[\s\S]*?max-height: 68px;/, "le cartelle normali devono avere tutte la stessa altezza");
 assert.match(appSource, /function fitPedMediaViewerImage\(\)/, "il 100% deve adattare la foto intera allo spazio disponibile");
 assert.match(appSource, /imageRatio >= stageRatio \? availableWidth : availableHeight \* imageRatio/, "il visualizzatore deve rispettare le proporzioni originali senza ritagli");
 assert.match(appSource, /setPointerCapture\(event\.pointerId\)/, "la foto ingrandita deve poter essere trascinata");

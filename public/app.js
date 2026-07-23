@@ -2883,6 +2883,46 @@ function isPedDriveFileUsed(file) {
   return !file?.is_folder && pedUsedFileIds.has(String(file.id));
 }
 
+const PED_FOLDER_MONTHS = [
+  "GENNAIO",
+  "FEBBRAIO",
+  "MARZO",
+  "APRILE",
+  "MAGGIO",
+  "GIUGNO",
+  "LUGLIO",
+  "AGOSTO",
+  "SETTEMBRE",
+  "OTTOBRE",
+  "NOVEMBRE",
+  "DICEMBRE"
+];
+
+function pedFolderMonthIndex(name) {
+  const normalized = String(name || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase();
+  return PED_FOLDER_MONTHS.findIndex((month) => new RegExp(`(^|[^A-Z])${month}([^A-Z]|$)`).test(normalized));
+}
+
+function sortPedPickerEntries(files) {
+  return [...files].sort((left, right) => {
+    if (Boolean(left.is_folder) !== Boolean(right.is_folder)) return left.is_folder ? -1 : 1;
+    if (left.is_folder && right.is_folder) {
+      const leftMonth = pedFolderMonthIndex(left.name);
+      const rightMonth = pedFolderMonthIndex(right.name);
+      if (leftMonth >= 0 && rightMonth >= 0 && leftMonth !== rightMonth) return leftMonth - rightMonth;
+      if (leftMonth >= 0 && rightMonth < 0) return -1;
+      if (leftMonth < 0 && rightMonth >= 0) return 1;
+    }
+    return String(left.name || "").localeCompare(String(right.name || ""), "it", {
+      numeric: true,
+      sensitivity: "base"
+    });
+  });
+}
+
 function renderPedPicker() {
   const breadcrumbs = document.getElementById("pedPickerBreadcrumbs");
   const grid = document.getElementById("pedPickerGrid");
@@ -2892,6 +2932,7 @@ function renderPedPicker() {
   const visibleFiles = pedPickerState.files.filter((file) => (
     file.is_folder || pedPickerState.showUsed || !isPedDriveFileUsed(file)
   ));
+  const sortedVisibleFiles = sortPedPickerEntries(visibleFiles);
   if (summary) {
     summary.textContent = pedPickerState.showUsed
       ? `${usedCount} contenuti gia inseriti visibili.`
@@ -2921,7 +2962,13 @@ function renderPedPicker() {
       ? `<span>${escapeHtml(item.name)}</span>`
       : `<button data-ped-picker-breadcrumb="${index}" type="button">${escapeHtml(item.name)}</button>`}`;
   }).join("");
-  grid.innerHTML = libraryCards + visibleFiles.map((file) => {
+  const hasVisibleFolders = sortedVisibleFiles.some((file) => file.is_folder);
+  let mediaSectionStarted = false;
+  grid.innerHTML = libraryCards + sortedVisibleFiles.map((file) => {
+    const sectionBreak = !file.is_folder && hasVisibleFolders && !mediaSectionStarted
+      ? `<div class="ped-picker-media-section-break" aria-hidden="true"></div>`
+      : "";
+    if (!file.is_folder) mediaSectionStarted = true;
     const isImage = String(file.mime_type || "").startsWith("image/");
     const isVideo = String(file.mime_type || "").startsWith("video/");
     const hasPreview = file.has_thumbnail && (isImage || isVideo);
@@ -2947,7 +2994,7 @@ function renderPedPicker() {
           <span>Visualizza grande</span>
         </button>`
       : `<span class="ped-picker-view-unavailable">Anteprima grande non disponibile</span>`;
-    return `<article class="ped-picker-file-card">${entry}${viewerButton}</article>`;
+    return `${sectionBreak}<article class="ped-picker-file-card">${entry}${viewerButton}</article>`;
   }).join("") || `<p class="ped-picker-empty">${pedPickerState.files.length && !pedPickerState.showUsed
     ? "Tutti i contenuti di questa cartella sono gia nel PED."
     : "Questa cartella e vuota."}</p>`;
