@@ -99,8 +99,15 @@ assert.match(htmlSource, /class="ped-instagram-grid"/, "il mockup deve includere
 assert.match(appSource, /function renderPedInstagramPreview\(\)/, "l'anteprima deve derivare i contenuti dallo stato PED corrente");
 assert.match(appSource, /pedContentType\(item\.content_type\) !== "story"/, "le stories devono restare separate dal feed principale");
 assert.match(appSource, /function pedInstagramDefaultFeedItems\(\)/, "la griglia profilo deve avere un ordinamento predefinito stabile");
+assert.match(appSource, /function pedFutureItems\(\)/, "agenda e anteprima Instagram devono condividere la stessa sorgente futura");
+assert.match(appSource, /function pedInstagramDefaultFeedItems\(\) \{\s*return pedFutureItems\(\)/, "la griglia Instagram deve includere i mesi successivi");
+assert.match(appSource, /const storyItems = futureItems/, "anche le storie future devono essere indipendenti dal mese aperto");
+assert.match(appSource, /Anteprima da oggi in poi/, "l'anteprima Instagram deve dichiarare il proprio intervallo futuro");
+assert.doesNotMatch(appSource, /Anteprima griglia \$\{monthLabel\}/, "l'anteprima Instagram non deve dipendere dal mese del calendario");
+assert.match(htmlSource, /id="pedInstagramSubtitle">Griglia da oggi in poi\./, "il testo iniziale del popup deve descrivere la panoramica futura");
 assert.match(appSource, /instagram_order: pedInstagramDraftOrder/, "l'ordine manuale del profilo deve essere salvato tramite API");
 assert.match(appSource, /item\.scheduled_date = assignment\.scheduled_date/, "il calendario locale deve ricevere le date allineate al feed");
+assert.match(appSource, /\[state\.pedItems, state\.pedAgendaItems\]/, "il riordino del feed deve aggiornare anche i mesi futuri in memoria");
 assert.match(appSource, /Feed Instagram e calendario allineati/, "l'interfaccia deve confermare l'allineamento dei due ordinamenti");
 assert.match(appSource, /function movePedInstagramDraftItem\(sourceId, targetId\)/, "i post devono essere riordinabili tramite trascinamento");
 assert.match(htmlSource, /id="pedInstagramOrderEdit"/, "il mockup deve offrire il comando Riordina");

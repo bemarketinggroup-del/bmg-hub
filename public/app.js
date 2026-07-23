@@ -2201,17 +2201,33 @@ function renderPedShareButton() {
   button.disabled = !selectedPedClient();
 }
 
+function pedFutureItems() {
+  const todayKey = localDateKey(new Date());
+  const futureById = new Map(
+    (state.pedAgendaItems || [])
+      .filter((item) => String(item.scheduled_date || "") >= todayKey)
+      .map((item) => [String(item.id), item])
+  );
+  for (const item of state.pedItems) {
+    const id = String(item.id);
+    if (String(item.scheduled_date || "") >= todayKey) futureById.set(id, item);
+    else futureById.delete(id);
+  }
+  return [...futureById.values()];
+}
+
 function renderPedInstagramPreviewAction() {
   const button = document.getElementById("pedFeedPreviewButton");
   const hint = document.getElementById("pedFeedPreviewHint");
   if (!button || !hint) return;
   const client = selectedPedClient();
-  const feedCount = state.pedItems.filter((item) => pedContentType(item.content_type) !== "story").length;
-  const storyCount = state.pedItems.filter((item) => pedContentType(item.content_type) === "story").length;
+  const futureItems = pedFutureItems();
+  const feedCount = futureItems.filter((item) => pedContentType(item.content_type) !== "story").length;
+  const storyCount = futureItems.filter((item) => pedContentType(item.content_type) === "story").length;
   button.disabled = !client;
   hint.textContent = !client
     ? "Seleziona un cliente per vedere l'anteprima."
-    : `${feedCount} ${feedCount === 1 ? "pubblicazione nel profilo" : "pubblicazioni nel profilo"}${storyCount ? ` · ${storyCount} ${storyCount === 1 ? "storia" : "storie"}` : ""}`;
+    : `${feedCount} ${feedCount === 1 ? "pubblicazione futura" : "pubblicazioni future"}${storyCount ? ` · ${storyCount} ${storyCount === 1 ? "storia" : "storie"}` : ""}`;
 }
 
 function formatPedInstagramDate(value) {
@@ -2232,7 +2248,7 @@ function pedInstagramHandle(name) {
 }
 
 function pedInstagramDefaultFeedItems() {
-  return [...state.pedItems]
+  return pedFutureItems()
     .filter((item) => pedContentType(item.content_type) !== "story")
     .sort((left, right) => {
       const dateOrder = String(right.scheduled_date || "").localeCompare(String(left.scheduled_date || ""));
@@ -2294,19 +2310,23 @@ function renderPedInstagramPreview() {
   const postCount = document.getElementById("pedInstagramPostCount");
   if (!client || !title || !subtitle || !stories || !feed || !summary || !stage || !tabAvatar || !profileAvatar || !profileName || !profileBio || !profileHandle || !postCount) return;
 
-  const monthLabel = new Intl.DateTimeFormat("it-IT", { month: "long", year: "numeric" }).format(selectedPedMonth);
-  const storyItems = [...state.pedItems]
+  const futureItems = pedFutureItems();
+  const storyItems = futureItems
     .filter((item) => pedContentType(item.content_type) === "story")
     .sort((left, right) => String(left.scheduled_date).localeCompare(String(right.scheduled_date)));
   const feedItems = pedInstagramOrderedFeedItems();
+  const futureMonthCount = new Set(futureItems.map((item) => String(item.scheduled_date || "").slice(0, 7)).filter(Boolean)).size;
+  const futureRangeLabel = futureMonthCount
+    ? `${futureMonthCount} ${futureMonthCount === 1 ? "mese" : "mesi"}`
+    : "nessun mese pianificato";
   title.textContent = `Profilo di ${client.name}`;
-  subtitle.textContent = `Anteprima griglia ${monthLabel}`;
+  subtitle.textContent = `Anteprima da oggi in poi · ${futureRangeLabel}`;
   stage.style.cssText = clientColorStyle(client);
   tabAvatar.textContent = initials(client.name);
   profileAvatar.textContent = initials(client.name);
   profileName.textContent = client.name;
   profileHandle.textContent = pedInstagramHandle(client.name);
-  profileBio.textContent = `Piano editoriale ${monthLabel} · ${feedItems.length} ${feedItems.length === 1 ? "contenuto programmato" : "contenuti programmati"}`;
+  profileBio.textContent = `Piano editoriale futuro · ${feedItems.length} ${feedItems.length === 1 ? "contenuto programmato" : "contenuti programmati"}`;
   postCount.textContent = String(feedItems.length);
 
   stories.innerHTML = storyItems.length
@@ -2333,7 +2353,7 @@ function renderPedInstagramPreview() {
   save?.classList.toggle("is-hidden", !pedInstagramOrderEditing);
   if (hint) hint.textContent = pedInstagramOrderEditing
     ? "Trascina i contenuti: salvando, il calendario usera lo stesso ordine di pubblicazione."
-    : "La griglia segue le date del calendario. Riordina per aggiornare insieme feed e programmazione.";
+    : "La griglia include tutte le uscite da oggi in poi, anche dei mesi successivi. Riordina per aggiornare insieme feed e programmazione.";
 }
 
 function openPedInstagramPreview() {
@@ -2383,13 +2403,15 @@ async function savePedInstagramOrder() {
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || "Impossibile salvare l'ordine del profilo");
     const assignments = new Map((data.assignments || []).map((assignment) => [String(assignment.id), assignment]));
-    state.pedItems.forEach((item) => {
-      const assignment = assignments.get(String(item.id));
-      if (!assignment) return;
-      item.scheduled_date = assignment.scheduled_date;
-      item.position = assignment.position;
-      item.instagram_position = assignment.instagram_position;
-    });
+    for (const collection of [state.pedItems, state.pedAgendaItems]) {
+      collection.forEach((item) => {
+        const assignment = assignments.get(String(item.id));
+        if (!assignment) return;
+        item.scheduled_date = assignment.scheduled_date;
+        item.position = assignment.position;
+        item.instagram_position = assignment.instagram_position;
+      });
+    }
     pedInstagramOrderEditing = false;
     pedInstagramDraftOrder = [];
     renderPed();
@@ -2651,13 +2673,7 @@ function renderPedAgenda() {
   if (!list || !summary) return;
 
   const todayKey = localDateKey(new Date());
-  const agendaById = new Map((state.pedAgendaItems || []).map((item) => [String(item.id), item]));
-  for (const item of state.pedItems) {
-    const id = String(item.id);
-    if (String(item.scheduled_date || "") >= todayKey) agendaById.set(id, item);
-    else agendaById.delete(id);
-  }
-  const grouped = [...agendaById.values()].reduce((map, item) => {
+  const grouped = pedFutureItems().reduce((map, item) => {
     const key = String(item.scheduled_date || "");
     if (!map.has(key)) map.set(key, []);
     map.get(key).push(item);
