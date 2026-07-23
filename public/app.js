@@ -159,6 +159,7 @@ const seed = {
   clickupTasks: [],
   clickupTaskLogs: [],
   pedItems: [],
+  pedAgendaItems: [],
   smartWorking: {
     month: "",
     range_start: "",
@@ -187,7 +188,6 @@ let clientDriveState = { clientId: "", path: [], objectUrl: "", thumbnailUrls: n
 let selectedPedClientId = "";
 let pedUsedFileIds = new Set();
 let selectedPedMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-let pedAgendaShowPrevious = false;
 let pedPickerState = { date: "", path: [], files: [], contentType: "post", caption: "", selectedFiles: [], showUsed: false };
 const DRIVE_FOLDER_BROWSER_CACHE_TTL = 2 * 60 * 1000;
 const driveFolderBrowserCache = new Map();
@@ -2124,6 +2124,21 @@ function pedItemTitle(item) {
     : item.drive_file_name;
 }
 
+function pedStateItem(id) {
+  const itemId = String(id);
+  return state.pedItems.find((item) => String(item.id) === itemId)
+    || (state.pedAgendaItems || []).find((item) => String(item.id) === itemId)
+    || null;
+}
+
+function pedStateItemsOnDate(date) {
+  const items = new Map();
+  for (const item of [...(state.pedAgendaItems || []), ...state.pedItems]) {
+    if (String(item.scheduled_date) === String(date)) items.set(String(item.id), item);
+  }
+  return [...items.values()];
+}
+
 function clientHasDrive(client) {
   return Boolean(client && /^https:\/\/drive\.google\.com\//i.test(String(client.drive || "")));
 }
@@ -2602,56 +2617,51 @@ function pedItemMarkup(item) {
 function renderPedAgenda() {
   const list = document.getElementById("pedAgendaList");
   const summary = document.getElementById("pedAgendaSummary");
-  const previousButton = document.getElementById("pedAgendaPrevious");
-  const previousLabel = document.getElementById("pedAgendaPreviousLabel");
-  if (!list || !summary || !previousButton || !previousLabel) return;
+  if (!list || !summary) return;
 
-  const monthStart = new Date(selectedPedMonth.getFullYear(), selectedPedMonth.getMonth(), 1, 12);
-  const monthKey = pedMonthKey(monthStart);
-  const grouped = state.pedItems.reduce((map, item) => {
+  const todayKey = localDateKey(new Date());
+  const agendaById = new Map((state.pedAgendaItems || []).map((item) => [String(item.id), item]));
+  for (const item of state.pedItems) {
+    const id = String(item.id);
+    if (String(item.scheduled_date || "") >= todayKey) agendaById.set(id, item);
+    else agendaById.delete(id);
+  }
+  const grouped = [...agendaById.values()].reduce((map, item) => {
     const key = String(item.scheduled_date || "");
     if (!map.has(key)) map.set(key, []);
     map.get(key).push(item);
     return map;
   }, new Map());
   const scheduledDays = [...grouped.entries()]
-    .filter(([dateKey, items]) => dateKey.startsWith(`${monthKey}-`) && items.length)
+    .filter(([dateKey, items]) => dateKey >= todayKey && items.length)
     .sort(([left], [right]) => left.localeCompare(right));
-  const todayKey = localDateKey(new Date());
-  const previousDays = scheduledDays.filter(([dateKey]) => dateKey < todayKey);
-  const upcomingDays = scheduledDays.filter(([dateKey]) => dateKey >= todayKey);
-  const visibleDays = pedAgendaShowPrevious ? scheduledDays : upcomingDays;
 
-  list.innerHTML = visibleDays.map(([dateKey, items]) => {
+  list.innerHTML = scheduledDays.map(([dateKey, items], index) => {
     const [year, month, day] = dateKey.split("-").map(Number);
     const date = new Date(year, month - 1, day, 12);
     const dayName = new Intl.DateTimeFormat("it-IT", { weekday: "short" }).format(date).replace(".", "");
     const monthName = new Intl.DateTimeFormat("it-IT", { month: "short" }).format(date).replace(".", "");
-    return `<section class="ped-agenda-day has-content" data-ped-agenda-day="${dateKey}">
+    const monthChanged = index === 0 || scheduledDays[index - 1][0].slice(0, 7) !== dateKey.slice(0, 7);
+    const monthLabel = new Intl.DateTimeFormat("it-IT", { month: "long", year: "numeric" }).format(date);
+    return `${monthChanged ? `<div class="ped-agenda-month-divider"><span>${escapeHtml(monthLabel)}</span></div>` : ""}<section class="ped-agenda-day has-content" data-ped-agenda-day="${dateKey}">
       <div class="ped-agenda-date">
         <span>${escapeHtml(dayName)}</span>
         <strong>${date.getDate()}</strong>
-        <small>${escapeHtml(monthName)}</small>
+        <small>${escapeHtml(monthName)} ${year}</small>
       </div>
       <div class="ped-agenda-entries">${[...items].sort((left, right) => Number(left.position || 0) - Number(right.position || 0)).map(pedAgendaItemMarkup).join("")}</div>
     </section>`;
   }).join("") || `<div class="ped-agenda-month-empty">
     <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg>
-    <strong>${previousDays.length && !pedAgendaShowPrevious ? "Nessuna uscita da oggi in poi" : "Nessun contenuto programmato"}</strong>
-    <span>${previousDays.length && !pedAgendaShowPrevious ? "Usa Carica precedenti per consultare lo storico." : "Quando aggiungi un contenuto al calendario, comparirà qui."}</span>
+    <strong>Nessuna uscita da oggi in poi</strong>
+    <span>I prossimi contenuti del PED compariranno qui, anche se appartengono ai mesi successivi.</span>
   </div>`;
 
-  const visibleItemsCount = visibleDays.reduce((total, [, items]) => total + items.length, 0);
+  const visibleItemsCount = scheduledDays.reduce((total, [, items]) => total + items.length, 0);
+  const monthCount = new Set(scheduledDays.map(([dateKey]) => dateKey.slice(0, 7))).size;
   summary.textContent = visibleItemsCount
-    ? `${visibleItemsCount} ${visibleItemsCount === 1 ? "uscita" : "uscite"} in ${visibleDays.length} ${visibleDays.length === 1 ? "giorno" : "giorni"}`
-    : previousDays.length && !pedAgendaShowPrevious
-      ? `${previousDays.length} ${previousDays.length === 1 ? "giorno precedente nascosto" : "giorni precedenti nascosti"}`
-      : "Nessuna uscita nel mese";
-  previousButton.classList.toggle("is-hidden", previousDays.length === 0);
-  previousButton.setAttribute("aria-expanded", String(pedAgendaShowPrevious));
-  previousLabel.textContent = pedAgendaShowPrevious
-    ? "Nascondi precedenti"
-    : `Carica precedenti (${previousDays.length})`;
+    ? `${visibleItemsCount} ${visibleItemsCount === 1 ? "uscita" : "uscite"} · ${monthCount} ${monthCount === 1 ? "mese" : "mesi"}`
+    : "Nessuna uscita futura";
 }
 
 function pedAgendaItemMarkup(item) {
@@ -2751,6 +2761,7 @@ async function loadPedCalendar() {
   ensurePedClientSelection();
   if (!selectedPedClientId) {
     state.pedItems = [];
+    state.pedAgendaItems = [];
     pedUsedFileIds = new Set();
     renderPed();
     return;
@@ -2760,17 +2771,23 @@ async function loadPedCalendar() {
   const grid = document.getElementById("pedCalendarGrid");
   if (grid) grid.innerHTML = `<div class="ped-loading"><span class="drive-spinner" aria-hidden="true"></span>Caricamento calendario...</div>`;
   try {
-    const params = new URLSearchParams({ client_id: selectedPedClientId, month: pedMonthKey() });
+    const params = new URLSearchParams({
+      client_id: selectedPedClientId,
+      month: pedMonthKey(),
+      agenda_from: localDateKey(new Date())
+    });
     const response = await apiFetch(`/api/ped?${params}`);
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || "PED non disponibile");
     if (pedLoadingKey !== key) return;
     state.pedItems = Array.isArray(data.items) ? data.items : [];
+    state.pedAgendaItems = Array.isArray(data.agenda_items) ? data.agenda_items : [];
     pedUsedFileIds = new Set((data.used_file_ids || []).map(String));
     renderPed();
   } catch (error) {
     if (pedLoadingKey !== key) return;
     state.pedItems = [];
+    state.pedAgendaItems = [];
     pedUsedFileIds = new Set();
     renderPed();
     if (grid) grid.innerHTML = `<div class="ped-error"><strong>Calendario non disponibile</strong><span>${escapeHtml(error.message)}</span></div>`;
@@ -2779,7 +2796,6 @@ async function loadPedCalendar() {
 
 function shiftPedMonth(delta) {
   selectedPedMonth = new Date(selectedPedMonth.getFullYear(), selectedPedMonth.getMonth() + delta, 1);
-  pedAgendaShowPrevious = false;
   loadPedCalendar();
 }
 
@@ -3127,7 +3143,7 @@ function attachPedDriveFile(fileId) {
 }
 
 async function updatePedItemType(id, nextType) {
-  const item = state.pedItems.find((entry) => String(entry.id) === String(id));
+  const item = pedStateItem(id);
   if (!item) return;
   const previousType = pedContentType(item.content_type);
   const previousCaption = item.caption;
@@ -3152,7 +3168,7 @@ async function updatePedItemType(id, nextType) {
 }
 
 async function updatePedPublishingStatus(id, nextStatus) {
-  const item = state.pedItems.find((entry) => String(entry.id) === String(id));
+  const item = pedStateItem(id);
   if (!item) return;
   const previousStatus = pedPublishingStatus(item.publishing_status);
   const publishingStatus = pedPublishingStatus(nextStatus);
@@ -3192,7 +3208,7 @@ function showPedMoveNotice(message, tone = "success") {
 }
 
 async function movePedItemToDate(id, scheduledDate) {
-  const item = state.pedItems.find((entry) => String(entry.id) === String(id));
+  const item = pedStateItem(id);
   if (!item || !scheduledDate || String(item.scheduled_date) === String(scheduledDate) || pedMoveRequests.has(String(id))) return;
   const previousDate = item.scheduled_date;
   pedMoveRequests.add(String(id));
@@ -3289,8 +3305,7 @@ function pedCaptionDateLabel(value) {
 }
 
 function renderPedCaptionDayItems(selectedItem) {
-  const dayItems = state.pedItems
-    .filter((entry) => String(entry.scheduled_date) === String(selectedItem.scheduled_date))
+  const dayItems = pedStateItemsOnDate(selectedItem.scheduled_date)
     .sort((left, right) => Number(left.position || 0) - Number(right.position || 0));
   document.getElementById("pedCaptionDayItems").innerHTML = dayItems.map((item) => {
     const format = pedTypeMeta(item.content_type);
@@ -3308,7 +3323,7 @@ function renderPedCaptionDayItems(selectedItem) {
 }
 
 function selectPedCaptionItem(id, { focus = false } = {}) {
-  const item = state.pedItems.find((entry) => String(entry.id) === String(id));
+  const item = pedStateItem(id);
   if (!item) return;
   editingPedCaptionId = String(item.id);
   const format = pedTypeMeta(item.content_type);
@@ -3333,7 +3348,7 @@ function selectPedCaptionItem(id, { focus = false } = {}) {
 }
 
 function openPedCaptionModal(id) {
-  const item = state.pedItems.find((entry) => String(entry.id) === String(id));
+  const item = pedStateItem(id);
   if (!item) return;
   selectPedCaptionItem(item.id);
   document.getElementById("pedCaptionModal").showModal();
@@ -3373,7 +3388,7 @@ async function savePedCaption(event) {
     document.getElementById("pedCaptionModal").close();
     return;
   }
-  const item = state.pedItems.find((entry) => String(entry.id) === editingPedCaptionId);
+  const item = pedStateItem(editingPedCaptionId);
   if (!item) return;
   const editor = document.getElementById("pedCaptionText");
   const message = document.getElementById("pedCaptionMessage");
@@ -3410,7 +3425,7 @@ async function savePedCaption(event) {
 }
 
 async function removePedItem(id) {
-  const item = state.pedItems.find((entry) => String(entry.id) === String(id));
+  const item = pedStateItem(id);
   const subject = item?.is_group ? "questo carosello e tutti i suoi collegamenti" : "questo contenuto";
   if (!confirm(`Rimuovere ${subject} dal PED? I file resteranno su Google Drive.`)) return;
   const response = await apiFetch(`/api/ped?id=${encodeURIComponent(id)}`, { method: "DELETE" });
@@ -3634,7 +3649,7 @@ function openPedCarouselPreview(item) {
 }
 
 function openPedContentPreview(id) {
-  const item = state.pedItems.find((entry) => String(entry.id) === String(id));
+  const item = pedStateItem(id);
   if (!item) return;
   const files = pedItemFiles(item);
   if (files.length > 1) return openPedCarouselPreview(item);
@@ -6331,7 +6346,6 @@ document.body.addEventListener("click", (event) => {
   const driveTrash = event.target.closest("[data-drive-trash]");
   const copyDriveLinkButton = event.target.closest("[data-copy-drive-link]");
   const pedClient = event.target.closest("[data-ped-client]");
-  const pedAgendaPrevious = event.target.closest("[data-ped-agenda-previous]");
   const pedAdd = event.target.closest("[data-ped-add]");
   const pedOpen = event.target.closest("[data-ped-open]");
   const pedEditor = event.target.closest("[data-ped-editor]");
@@ -6395,14 +6409,10 @@ document.body.addEventListener("click", (event) => {
   if (pedClient) {
     selectedPedClientId = pedClient.dataset.pedClient;
     state.pedItems = [];
+    state.pedAgendaItems = [];
     pedUsedFileIds = new Set();
     pedShareState = { active: false, shareUrl: "" };
-    pedAgendaShowPrevious = false;
     return loadPedCalendar();
-  }
-  if (pedAgendaPrevious) {
-    pedAgendaShowPrevious = !pedAgendaShowPrevious;
-    return renderPedAgenda();
   }
   if (pedAdd) return openPedDrivePicker(pedAdd.dataset.pedAdd);
   if (pedRemove) return removePedItem(pedRemove.dataset.pedRemove);
@@ -6788,7 +6798,6 @@ document.getElementById("pedPreviousMonth").addEventListener("click", () => shif
 document.getElementById("pedNextMonth").addEventListener("click", () => shiftPedMonth(1));
 document.getElementById("pedTodayButton").addEventListener("click", () => {
   selectedPedMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-  pedAgendaShowPrevious = false;
   loadPedCalendar();
 });
 document.getElementById("pedFeedPreviewButton").addEventListener("click", openPedInstagramPreview);

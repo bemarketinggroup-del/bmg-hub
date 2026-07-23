@@ -2713,25 +2713,24 @@ code { font-family: var(--font-mono); font-size: 12px; }
 .ped-agenda-head h3 { margin: 0; color: var(--ink); font-size: 19px; }
 .ped-agenda-head-meta { display: flex; align-items: center; justify-content: flex-end; gap: 12px; }
 .ped-agenda-head-meta > span { color: var(--muted); font-size: 12px; white-space: nowrap; }
-.ped-agenda-previous {
-  min-height: 36px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  padding: 8px 12px;
-  border: 1px solid var(--line-strong);
-  border-radius: 7px;
-  background: var(--surface);
-  color: var(--ink);
-  font: inherit;
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
-}
-.ped-agenda-previous:hover { border-color: var(--terracotta); color: var(--terracotta); background: var(--surface-tint); }
-.ped-agenda-previous .lc { width: 15px; height: 15px; }
 .ped-agenda-list { max-height: 660px; overflow-y: auto; scrollbar-width: thin; }
+.ped-agenda-month-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid var(--line-strong);
+  background: var(--surface-tint);
+  padding: 10px 18px;
+}
+.ped-agenda-month-divider::after { height: 1px; flex: 1 1 auto; background: var(--line-strong); content: ""; }
+.ped-agenda-month-divider span {
+  color: var(--terracotta);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
 .ped-agenda-day {
   min-height: 78px;
   display: grid;
