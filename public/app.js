@@ -7179,12 +7179,12 @@ document.getElementById("smartRulesForm").addEventListener("submit", (event) => 
   event.preventDefault();
   saveSmartRules(event.currentTarget);
 });
-document.getElementById("smartView").addEventListener("click", (event) => {
+document.getElementById("smartOffCounters").addEventListener("click", (event) => {
   const offRow = event.target.closest("[data-smart-off-employee]");
-  if (offRow) {
-    event.stopPropagation();
-    return openSmartOffDetail(offRow.dataset.smartOffEmployee);
-  }
+  if (!offRow) return;
+  openSmartOffDetail(offRow.dataset.smartOffEmployee);
+});
+document.getElementById("smartView").addEventListener("click", (event) => {
   const addButton = event.target.closest("[data-smart-add]");
   if (addButton) {
     event.stopPropagation();

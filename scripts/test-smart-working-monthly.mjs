@@ -254,6 +254,7 @@ assert.match(smartHtmlSource, /id="smartMonthStrip"/, "il calendario turni mobil
 assert.match(smartHtmlSource, /class="smart-month-weekdays"[\s\S]*?data-mobile-label="L"[\s\S]*?data-mobile-label="D"/, "i giorni dei turni devono avere etichette mobile compatte");
 assert.match(smartAppSource, /function renderSmartMonthStrip\(\)/, "i mesi rapidi dei turni devono seguire il mese selezionato");
 assert.match(smartAppSource, /data-smart-month="\$\{key\}"/, "ogni mese rapido dei turni deve essere selezionabile");
+assert.match(smartAppSource, /getElementById\("smartOffCounters"\)\.addEventListener\("click"[\s\S]*?openSmartOffDetail\(offRow\.dataset\.smartOffEmployee\)/, "il contatore OFF deve aprire il dettaglio dalla pagina Contatore");
 assert.match(smartStyleSource, /@media \(max-width: 640px\)[\s\S]*?\.smart-month-weekdays,[\s\S]*?\.smart-month-grid,[\s\S]*?\.smart-month-week-days \{ width: 100%; min-width: 0; \}/, "il calendario turni mobile deve mostrare tutte le sette colonne");
 assert.match(smartStyleSource, /\.smart-month-day \{[\s\S]*?min-height: 88px;[\s\S]*?padding: 3px 2px 4px;/, "i giorni del calendario turni mobile devono essere compatti");
 assert.match(smartStyleSource, /\.smart-multiday-event \{[\s\S]*?height: 18px;[\s\S]*?border-radius: 2px;/, "gli eventi turni di piu giorni devono restare continui e compatti");
