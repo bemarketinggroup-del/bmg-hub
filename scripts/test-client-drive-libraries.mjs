@@ -23,4 +23,12 @@ const libraries = await resolveClientDriveLibraries("ARTEMA", async () => files)
 assert.deepEqual(libraries.map((item) => item.source), ["graphics", "video"]);
 assert.ok(libraries.every((item) => item.id === "1"));
 
+let refreshCalls = 0;
+const refreshedLibraries = await resolveClientDriveLibraries("ARTEMA", async (_rootId, options = {}) => {
+  refreshCalls += 1;
+  return options.fresh ? files : [];
+});
+assert.equal(refreshCalls, 4, "ogni raccolta mancante deve essere riletta senza cache una sola volta");
+assert.deepEqual(refreshedLibraries.map((item) => item.source), ["graphics", "video"]);
+
 console.log("Client Drive library tests passed");
