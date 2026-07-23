@@ -4037,6 +4037,7 @@ code { font-family: var(--font-mono); font-size: 12px; }
 }
 .google-calendar-view-switch button.is-active { color: var(--ink); background: var(--surface-tint); box-shadow: inset 0 0 0 1px var(--line); }
 .google-calendar-status { justify-self: end; color: var(--muted); font-size: 12.5px; font-weight: 600; }
+.google-calendar-month-strip { display: none; }
 .google-calendar-error {
   margin: 16px 28px 0; padding: 12px 14px; border: 1px solid var(--red-line); border-radius: var(--r-sm);
   background: var(--red-tint); color: var(--red); font-size: 13px; font-weight: 600;
@@ -4664,6 +4665,100 @@ code { font-family: var(--font-mono); font-size: 12px; }
     max-height: 44px;
     flex: 0 0 44px;
   }
+  #calendarView { margin-right: -16px; margin-left: -16px; }
+  .google-calendar-workspace { border-right: 0; border-left: 0; border-radius: 0; }
+  .google-calendar-head { gap: 12px; padding: 14px 16px; }
+  .google-calendar-head h2 { margin: 0; font-size: 20px; line-height: 1.15; }
+  .google-calendar-head .eyebrow,
+  .google-calendar-head > div:first-child > span { display: none; }
+  .google-calendar-actions { gap: 7px; }
+  .google-calendar-actions button { min-height: 38px; padding: 0 12px; font-size: 12px; }
+  .google-calendar-toolbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+    padding: 9px 10px;
+  }
+  .google-calendar-navigation { width: auto; gap: 4px; }
+  .google-calendar-navigation .icon-button { width: 34px; height: 34px; }
+  .google-calendar-navigation h3 { min-width: 0; margin-left: 3px; font-size: 14px; white-space: nowrap; }
+  .calendar-today-button { min-height: 34px; padding: 0 10px; font-size: 11px; }
+  .google-calendar-view-switch { margin-left: 0; gap: 2px; padding: 2px; }
+  .google-calendar-view-switch button { min-height: 30px; padding: 0 9px; font-size: 10.5px; }
+  .google-calendar-month-strip {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    border-bottom: 1px solid var(--line);
+    background: var(--surface);
+    padding: 8px 10px;
+    scrollbar-width: none;
+  }
+  .google-calendar-month-strip::-webkit-scrollbar { display: none; }
+  .google-calendar-month-strip button {
+    min-width: 54px;
+    min-height: 32px;
+    flex: 0 0 auto;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--pill);
+    background: var(--surface);
+    color: var(--muted);
+    padding: 0 12px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: capitalize;
+  }
+  .google-calendar-month-strip button.is-active {
+    border-color: #9bc9e7;
+    background: #d8effc;
+    color: #245b7a;
+  }
+  .google-calendar-legend { display: none; }
+  .google-calendar-grid { width: 100%; min-height: 0; overflow: hidden; }
+  .google-calendar-grid.is-week { overflow-x: auto; }
+  .google-calendar-weekdays,
+  .google-calendar-month-grid { width: 100%; min-width: 0; }
+  .google-calendar-weekdays span {
+    min-width: 0;
+    padding: 7px 0;
+    font-size: 0;
+  }
+  .google-calendar-weekdays span::after {
+    content: attr(data-mobile-label);
+    font-size: 9px;
+    letter-spacing: 0;
+  }
+  .google-calendar-month-grid { grid-template-rows: repeat(6, minmax(88px, auto)); }
+  .google-calendar-day {
+    min-height: 88px;
+    overflow: visible;
+    padding: 3px 2px 4px;
+  }
+  .google-calendar-day-number {
+    width: 22px;
+    height: 22px;
+    margin: 0 auto 3px;
+    font-size: 10px;
+  }
+  .google-calendar-day-events { grid-auto-rows: 19px; gap: 2px; }
+  .google-calendar-event {
+    min-height: 19px;
+    gap: 2px;
+    overflow: hidden;
+    border-radius: 2px;
+    padding: 2px 3px;
+    box-shadow: none;
+  }
+  .google-calendar-day-events .google-calendar-event {
+    height: 19px;
+    min-height: 19px;
+    padding: 2px 3px;
+  }
+  .google-calendar-event strong { font-size: 8.5px; line-height: 1; }
+  .google-calendar-event.is-span-start { margin-right: -3px; border-radius: 2px 0 0 2px; }
+  .google-calendar-event.is-span-middle { margin-right: -3px; margin-left: -3px; }
+  .google-calendar-event.is-span-end { margin-left: -3px; border-radius: 0 2px 2px 0; }
+  .google-calendar-event-segment-filler { min-height: 10px; }
   .toolbar select { min-width: 0; }
   .metric-grid { grid-template-columns: 1fr 1fr; }
   .home-welcome { min-height: 0; padding: 26px 22px; }

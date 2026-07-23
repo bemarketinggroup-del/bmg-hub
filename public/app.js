@@ -6133,6 +6133,24 @@ function calendarEventChip(event, detailed = false, options = {}) {
     </button>`;
 }
 
+function renderGoogleCalendarMonthStrip() {
+  const strip = document.getElementById("googleCalendarMonthStrip");
+  if (!strip) return;
+  strip.hidden = googleCalendarState.mode !== "month";
+  if (strip.hidden) {
+    strip.innerHTML = "";
+    return;
+  }
+  const activeKey = `${googleCalendarState.anchor.getFullYear()}-${String(googleCalendarState.anchor.getMonth() + 1).padStart(2, "0")}`;
+  strip.innerHTML = Array.from({ length: 6 }, (_, index) => {
+    const date = new Date(googleCalendarState.anchor.getFullYear(), googleCalendarState.anchor.getMonth() + index, 1, 12);
+    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+    const label = new Intl.DateTimeFormat("it-IT", { month: "short" }).format(date).replace(".", "");
+    const title = new Intl.DateTimeFormat("it-IT", { month: "long", year: "numeric" }).format(date);
+    return `<button class="${key === activeKey ? "is-active" : ""}" data-calendar-month="${key}" type="button" title="${escapeHtml(title)}"${key === activeKey ? ' aria-current="date"' : ""}>${escapeHtml(label)}</button>`;
+  }).join("");
+}
+
 function renderGoogleCalendar() {
   const grid = document.getElementById("googleCalendarGrid");
   if (!grid) return;
@@ -6152,6 +6170,7 @@ function renderGoogleCalendar() {
   status.textContent = googleCalendarState.loading
     ? "Sincronizzazione in corso..."
     : `${googleCalendarState.events.length} event${googleCalendarState.events.length === 1 ? "o" : "i"}`;
+  renderGoogleCalendarMonthStrip();
 
   if (googleCalendarState.loading && !googleCalendarState.events.length) {
     grid.className = "google-calendar-grid is-loading";
@@ -6180,7 +6199,7 @@ function renderGoogleCalendar() {
       }).join("");
     }).join("");
     grid.className = "google-calendar-grid is-month";
-    grid.innerHTML = `<div class="google-calendar-weekdays">${weekdays.map((day) => `<span>${day}</span>`).join("")}</div><div class="google-calendar-month-grid">${cells}</div>`;
+    grid.innerHTML = `<div class="google-calendar-weekdays">${weekdays.map((day) => `<span data-mobile-label="${day.charAt(0)}">${day}</span>`).join("")}</div><div class="google-calendar-month-grid">${cells}</div>`;
     return;
   }
 
@@ -7188,6 +7207,15 @@ document.getElementById("calendarRefreshButton").addEventListener("click", () =>
   loadGoogleCalendar({ fresh: true });
 });
 document.getElementById("calendarNewEventButton").addEventListener("click", () => openGoogleCalendarEvent());
+document.getElementById("googleCalendarMonthStrip").addEventListener("click", (event) => {
+  const button = event.target.closest("[data-calendar-month]");
+  if (!button) return;
+  const [year, month] = button.dataset.calendarMonth.split("-").map(Number);
+  if (!year || !month) return;
+  googleCalendarState.mode = "month";
+  googleCalendarState.anchor = new Date(year, month - 1, 1, 12);
+  loadGoogleCalendar();
+});
 document.getElementById("calendarTodayButton").addEventListener("click", () => {
   googleCalendarState.anchor = googleCalendarState.mode === "month"
     ? new Date(new Date().getFullYear(), new Date().getMonth(), 1)
