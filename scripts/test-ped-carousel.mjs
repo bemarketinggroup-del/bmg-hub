@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { groupPedItems, sanitizeCaptionHtml } from "../lib/ped.js";
+import { carouselArchiveFilename, groupPedItems, sanitizeCaptionHtml } from "../lib/ped.js";
 
 function row(overrides = {}) {
   return {
@@ -35,6 +35,9 @@ assert.equal(grouped[0].item_count, 3);
 assert.equal(grouped[0].caption, "Copy unico");
 assert.equal(grouped[0].caption_html, "<strong>Copy dedicato</strong>");
 assert.deepEqual(grouped[0].files.map((file) => file.drive_file_name), ["uno.jpg", "due.jpg", "tre.jpg"]);
+assert.equal(carouselArchiveFilename("foto principale.jpg", 0), "01 - foto principale.jpg");
+assert.equal(carouselArchiveFilename("ultima foto.jpg", 19), "20 - ultima foto.jpg");
+assert.equal(carouselArchiveFilename("foto:non valida?.jpg", 2), "03 - fotonon valida.jpg");
 
 const singles = groupPedItems([
   row({ content_type: "post", caption: "Copy post" }),
@@ -64,6 +67,7 @@ assert.match(appSource, /readResponseBlobWithProgress/, "i download devono misur
 assert.match(appSource, /X-Archive-Source-Bytes/, "il download ZIP deve usare la dimensione sorgente per il progresso");
 assert.match(pedSource, /mapWithConcurrency\(rows, CAROUSEL_DOWNLOAD_CONCURRENCY/, "i file del carosello devono essere preparati in parallelo");
 assert.match(pedSource, /X-Archive-File-Count/, "lo ZIP deve comunicare quanti file contiene");
+assert.match(pedSource, /filename: carouselArchiveFilename\(download\.baseName, index\)/, "i file nello ZIP devono avere il prefisso numerico nell ordine del carosello");
 assert.match(appSource, /data-drive-download-url/, "i download Drive devono passare dal gestore tracciato");
 assert.doesNotMatch(styleSource, /\.ped-picker-hover-preview/, "gli stili della vecchia anteprima hover devono essere rimossi");
 assert.match(styleSource, /\.drive-transfer-center/, "il centro trasferimenti deve essere visibile sopra ai modal");
