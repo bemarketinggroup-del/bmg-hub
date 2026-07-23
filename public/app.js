@@ -2929,6 +2929,20 @@ function isPedDriveFileUsed(file) {
   return !file?.is_folder && pedUsedFileIds.has(String(file.id));
 }
 
+function isPedSpreadsheetFile(file) {
+  const mimeType = String(file?.mime_type || "").trim().toLowerCase();
+  const name = String(file?.name || "").trim();
+  return [
+    "application/vnd.google-apps.spreadsheet",
+    "application/vnd.ms-excel",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "application/vnd.ms-excel.sheet.macroenabled.12",
+    "application/vnd.oasis.opendocument.spreadsheet",
+    "text/csv",
+    "text/tab-separated-values"
+  ].includes(mimeType) || /\.(xlsx?|xlsm|ods|csv|tsv)$/i.test(name);
+}
+
 const PED_FOLDER_MONTHS = [
   "GENNAIO",
   "FEBBRAIO",
@@ -2976,7 +2990,7 @@ function renderPedPicker() {
   const usedToggle = document.getElementById("pedUsedMediaToggle");
   const usedCount = pedPickerState.files.filter(isPedDriveFileUsed).length;
   const visibleFiles = pedPickerState.files.filter((file) => (
-    file.is_folder || pedPickerState.showUsed || !isPedDriveFileUsed(file)
+    file.is_folder || (!isPedSpreadsheetFile(file) && (pedPickerState.showUsed || !isPedDriveFileUsed(file)))
   ));
   const sortedVisibleFiles = sortPedPickerEntries(visibleFiles);
   if (summary) {
@@ -3043,7 +3057,7 @@ function renderPedPicker() {
     return `${sectionBreak}<article class="ped-picker-file-card">${entry}${viewerButton}</article>`;
   }).join("") || `<p class="ped-picker-empty">${pedPickerState.files.length && !pedPickerState.showUsed
     ? "Tutti i contenuti di questa cartella sono gia nel PED."
-    : "Questa cartella e vuota."}</p>`;
+    : "Non ci sono foto o video selezionabili in questa cartella."}</p>`;
 }
 
 const PED_MEDIA_VIEWER_MIN_SCALE = 1;

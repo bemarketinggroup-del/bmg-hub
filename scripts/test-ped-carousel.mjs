@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { carouselArchiveFilename, groupPedItems, sanitizeCaptionHtml } from "../lib/ped.js";
+import { carouselArchiveFilename, groupPedItems, isPedSpreadsheetFile, sanitizeCaptionHtml } from "../lib/ped.js";
 
 function row(overrides = {}) {
   return {
@@ -38,6 +38,9 @@ assert.deepEqual(grouped[0].files.map((file) => file.drive_file_name), ["uno.jpg
 assert.equal(carouselArchiveFilename("foto principale.jpg", 0), "01 - foto principale.jpg");
 assert.equal(carouselArchiveFilename("ultima foto.jpg", 19), "20 - ultima foto.jpg");
 assert.equal(carouselArchiveFilename("foto:non valida?.jpg", 2), "03 - fotonon valida.jpg");
+assert.equal(isPedSpreadsheetFile({ name: "PED CLIENTE.xlsx", mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }), true);
+assert.equal(isPedSpreadsheetFile({ name: "PED CLIENTE", mimeType: "application/vnd.google-apps.spreadsheet" }), true);
+assert.equal(isPedSpreadsheetFile({ name: "foto.jpg", mimeType: "image/jpeg" }), false);
 
 const singles = groupPedItems([
   row({ content_type: "post", caption: "Copy post" }),
@@ -169,6 +172,9 @@ assert.match(pedSource, /allowedRootIds = \[rootId, \.\.\.libraryRoots/, "la val
 assert.match(appSource, /let pedUsedFileIds = new Set\(\)/, "il PED deve mantenere l'indice dei file gia usati");
 assert.match(appSource, /pedUsedFileIds\.has\(String\(file\.id\)\)/, "il selettore deve riconoscere i file Drive gia usati");
 assert.match(appSource, /pedPickerState\.showUsed/, "il filtro dei contenuti gia usati deve essere reversibile");
+assert.match(appSource, /function isPedSpreadsheetFile\(file\)/, "il selettore deve riconoscere e nascondere i fogli di calcolo");
+assert.match(appSource, /!isPedSpreadsheetFile\(file\)/, "i fogli di calcolo non devono essere selezionabili come contenuti PED");
+assert.match(pedSource, /Il foglio Excel o Google Sheets e solo un piano di riferimento/, "l'API deve rifiutare i fogli usati come media");
 assert.match(htmlSource, /data-ped-used-toggle/, "il selettore deve offrire il comando per mostrare i contenuti gia usati");
 assert.match(styleSource, /\.ped-picker-entry:not\(\.is-folder\) \.ped-picker-media[\s\S]*?aspect-ratio: 4 \/ 5/, "le anteprime del selettore devono essere verticali");
 assert.match(styleSource, /\.ped-picker-entry:not\(\.is-folder\) \.ped-picker-media img[\s\S]*?object-fit: contain/, "le immagini del selettore devono essere mostrate per intero");
