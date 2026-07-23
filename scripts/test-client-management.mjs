@@ -19,7 +19,8 @@ assert.match(driveSource, /ensureDriveServiceAccountPermission/, "la nuova carte
 assert.match(appSource, /Le cartelle Google Drive e ClickUp resteranno intatte/, "la conferma deve spiegare cosa resta conservato");
 assert.match(htmlSource, /id="clientCreateAutomation"/, "il modal deve spiegare la configurazione automatica");
 assert.match(htmlSource, /id="saveClientButton"/, "il salvataggio deve mostrare lo stato della creazione");
-assert.match(styleSource, /@media \(max-width: 640px\)[\s\S]*?\.client-grid \{[\s\S]*?grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/, "su smartphone i clienti devono essere disposti tre per riga");
-assert.match(styleSource, /\.client-folder \{[\s\S]*?aspect-ratio: 1;[\s\S]*?flex-direction: column;/, "le schede cliente mobile devono essere quadrate e compatte");
+assert.match(styleSource, /@media \(max-width: 640px\)[\s\S]*?\.client-grid \{[\s\S]*?grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/, "su smartphone i clienti devono essere disposti due per riga");
+assert.match(styleSource, /\.client-folder \{[\s\S]*?min-height: 72px;[\s\S]*?grid-template-columns: 34px minmax\(0, 1fr\) 13px;/, "le schede cliente mobile devono essere rettangolari e compatte");
+assert.match(styleSource, /\.client-folder-copy strong \{[\s\S]*?font-size: 13px;/, "i nomi cliente nella griglia mobile devono restare leggibili");
 
 console.log("Client management tests passed");
