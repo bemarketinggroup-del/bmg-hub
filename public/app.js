@@ -179,9 +179,10 @@ const seed = {
 };
 
 let state = loadState();
-let contentOnline = false;
-let clientsOnline = false;
-let clickupOnline = false;
+let contentOnline = null;
+let clientsOnline = null;
+let clickupOnline = null;
+const backendServiceErrors = { clients: "", clickup: "", site: "" };
 let selectedTeamMemberId = ALL_TEAM_TASKS_ID;
 let selectedClientId = "";
 let clientDriveState = { clientId: "", path: [], objectUrl: "", thumbnailUrls: new Set(), uploadEnabled: false };
@@ -865,11 +866,11 @@ async function loadContentFromBackend() {
     const rows = await response.json();
     state.content = rows.map(normalizeContent);
     contentOnline = true;
-    renderBackendStatus();
+    renderBackendStatus("", "site");
     renderAll();
   } catch (error) {
     contentOnline = false;
-    renderBackendStatus(error.message);
+    renderBackendStatus(error.message, "site");
     renderContent();
   }
 }
@@ -882,11 +883,11 @@ async function loadClientsFromBackend() {
     state.clients = rows.map(normalizeClient);
     ensurePedClientSelection();
     clientsOnline = true;
-    renderBackendStatus();
+    renderBackendStatus("", "clients");
     renderAll();
   } catch (error) {
     clientsOnline = false;
-    renderBackendStatus(error.message);
+    renderBackendStatus(error.message, "clients");
     renderClients();
   }
 }
@@ -911,12 +912,12 @@ async function loadClickUpTeam() {
     ensureTeamSelection();
     renderNewUserClickUpOptions();
     clickupOnline = true;
-    renderBackendStatus();
+    renderBackendStatus("", "clickup");
     renderHome();
     renderTeam();
   } catch (error) {
     clickupOnline = false;
-    renderBackendStatus(error.message);
+    renderBackendStatus(error.message, "clickup");
     renderTeam();
   }
 }
@@ -927,12 +928,12 @@ async function loadClickUpTasks({ sync = false } = {}) {
     if (!response.ok) throw new Error(`ClickUp tasks error ${response.status}`);
     state.clickupTasks = await response.json();
     clickupOnline = true;
-    renderBackendStatus();
+    renderBackendStatus("", "clickup");
     renderHome();
     renderTeam();
   } catch (error) {
     clickupOnline = false;
-    renderBackendStatus(error.message);
+    renderBackendStatus(error.message, "clickup");
     renderTeam();
   }
 }
@@ -1040,14 +1041,42 @@ async function smartWorkingAction(action, payload = {}, options = {}) {
   return data;
 }
 
-function renderBackendStatus(message = "") {
-  const footer = document.querySelector(".sidebar-footer span:last-child");
-  const dot = document.querySelector(".status-dot");
-  if (!footer || !dot) return;
-  const connected = clientsOnline && clickupOnline && (currentProfile?.role !== "admin" || contentOnline);
-  footer.textContent = connected ? "Sistemi collegati" : "Connessione parziale";
-  dot.style.background = connected ? "#7cc483" : "#d8a42f";
-  if (message) footer.title = message;
+function renderBackendStatus(message = "", serviceKey = "") {
+  const footer = document.querySelector(".sidebar-footer");
+  const container = document.getElementById("connectedServices");
+  if (!footer || !container) return;
+  if (serviceKey && Object.hasOwn(backendServiceErrors, serviceKey)) {
+    backendServiceErrors[serviceKey] = message;
+  } else if (message) {
+    footer.title = message;
+  }
+  const services = [
+    {
+      key: "clients",
+      label: "Clienti",
+      online: clientsOnline,
+      visible: canAccessModule("clients") || canAccessModule("ped") || canAccessModule("tasks")
+    },
+    {
+      key: "clickup",
+      label: "ClickUp",
+      online: clickupOnline,
+      visible: canAccessModule("tasks") || canAccessModule("smart_working")
+    },
+    {
+      key: "site",
+      label: "Sito",
+      online: contentOnline,
+      visible: canAccessModule("site_backend")
+    }
+  ].filter((service) => service.visible);
+  container.innerHTML = services.map((service) => {
+    const stateName = service.online === null ? "pending" : service.online ? "online" : "offline";
+    const stateLabel = stateName === "online" ? "collegato" : stateName === "offline" ? "non disponibile" : "verifica in corso";
+    const detail = backendServiceErrors[service.key];
+    const title = `${service.label}: ${stateLabel}${detail ? ` · ${detail}` : ""}`;
+    return `<span class="sidebar-service" data-service-state="${stateName}" title="${escapeHtml(title)}" aria-label="${escapeHtml(title)}"><i class="sidebar-service-dot" aria-hidden="true"></i><span>${service.label}</span></span>`;
+  }).join("");
 }
 
 function renderContent() {
