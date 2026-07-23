@@ -127,8 +127,12 @@ assert.match(appSource, /body: JSON\.stringify\(\{ id, publishing_status: publis
 assert.match(pedSource, /body\.publishing_status !== undefined/, "l'API PED deve accettare lo stato di programmazione");
 assert.match(publishingStatusMigration, /publishing_status text not null default 'ped_only'/, "il database deve usare Solo PED come stato iniziale");
 assert.match(publishingStatusMigration, /publishing_status in \('ped_only', 'meta', 'phone'\)/, "il database deve accettare solo i tre stati previsti");
-assert.match(appSource, /class="ped-publishing-dot"/, "il calendario deve mostrare un indicatore compatto dello stato");
-assert.match(styleSource, /\.ped-publishing-dot:hover \.ped-publishing-tooltip/, "l'etichetta dello stato deve apparire solo al passaggio");
+assert.match(appSource, /class="ped-content-card[\s\S]*?data-ped-publishing-tone=/, "la scheda del calendario deve ricevere il colore del suo stato");
+assert.doesNotMatch(appSource, /ped-content-copy[\s\S]{0,500}ped-publishing-tooltip/, "la scheda del calendario non deve più mostrare il pallino dello stato");
+assert.match(htmlSource, /class="ped-publishing-legend"/, "sotto il calendario deve comparire la legenda degli stati");
+assert.match(styleSource, /\.ped-content-card\[data-ped-publishing-tone="ped_only"\]/, "Solo PED deve colorare l'intera scheda");
+assert.match(styleSource, /\.ped-content-card\[data-ped-publishing-tone="meta"\]/, "Programmato Meta deve colorare l'intera scheda");
+assert.match(styleSource, /\.ped-content-card\[data-ped-publishing-tone="phone"\]/, "Programmato telefono deve colorare l'intera scheda");
 assert.match(appSource, /data-ped-editor=/, "il clic su un contenuto del calendario deve aprire il pannello editoriale");
 assert.match(htmlSource, /contenteditable="true"/, "il copy deve usare una vera area rich text");
 assert.match(htmlSource, /data-ped-caption-command="bold"/, "l'editor deve offrire il grassetto");

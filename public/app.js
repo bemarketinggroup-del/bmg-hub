@@ -2587,10 +2587,10 @@ function pedItemMarkup(item) {
   const typeLabel = files.length > 1 ? `${files.length} file` : isVideo ? "Video" : isImage ? "Immagine" : mime === "application/pdf" ? "PDF" : "File";
   const publishing = pedPublishingStatusMeta(item.publishing_status);
 
-  return `<article class="ped-content-card ped-type-${format.type}${files.length > 1 ? " is-carousel" : ""}" data-ped-content="${escapeHtml(item.id)}" draggable="true" aria-grabbed="false" tabindex="0" title="Trascina su un altro giorno per riprogrammare">
+  return `<article class="ped-content-card ped-type-${format.type}${files.length > 1 ? " is-carousel" : ""}" data-ped-content="${escapeHtml(item.id)}" data-ped-publishing-tone="${escapeHtml(publishing.value)}" draggable="true" aria-grabbed="false" tabindex="0" title="${escapeHtml(publishing.label)} · trascina su un altro giorno per riprogrammare">
     <button class="ped-content-main" data-ped-editor="${escapeHtml(item.id)}" type="button" title="Apri contenuti e copy del giorno">
       <span class="ped-content-thumb">${media}${isVideo ? `<span class="ped-video-mini"><svg class="lc" viewBox="0 0 24 24"><path d="m9 7 8 5-8 5z"/></svg></span>` : ""}${files.length > 1 ? `<b class="ped-carousel-count">${files.length}</b>` : ""}</span>
-      <span class="ped-content-copy"><strong>${escapeHtml(title)}</strong><small><span class="ped-type-dot" aria-hidden="true"></span>${format.label} · ${typeLabel}${format.type !== "story" && item.caption ? " · Copy pronto" : ""}<span class="ped-publishing-dot" data-ped-publishing-tone="${escapeHtml(publishing.value)}" tabindex="0" aria-label="${escapeHtml(publishing.label)}"><span class="ped-publishing-tooltip" role="tooltip">${escapeHtml(publishing.label)}</span></span></small></span>
+      <span class="ped-content-copy"><strong>${escapeHtml(title)}</strong><small><span class="ped-type-dot" aria-hidden="true"></span>${format.label} · ${typeLabel}${format.type !== "story" && item.caption ? " · Copy pronto" : ""}</small></span>
     </button>
     <button class="ped-content-remove" data-ped-remove="${escapeHtml(item.id)}" type="button" title="Rimuovi dal PED" aria-label="Rimuovi ${escapeHtml(title)} dal PED">
       <svg class="lc" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
