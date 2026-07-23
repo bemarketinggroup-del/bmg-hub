@@ -2092,7 +2092,20 @@ function pedTypeOptions(selected, { carouselOnly = false } = {}) {
 }
 
 function pedItemFiles(item) {
-  if (Array.isArray(item.files) && item.files.length) return item.files;
+  if (Array.isArray(item.files) && item.files.length) {
+    return item.files
+      .map((file, index) => ({ file, index }))
+      .sort((left, right) => {
+        const leftPosition = Number.isFinite(Number(left.file.group_position))
+          ? Number(left.file.group_position)
+          : left.index;
+        const rightPosition = Number.isFinite(Number(right.file.group_position))
+          ? Number(right.file.group_position)
+          : right.index;
+        return leftPosition - rightPosition || left.index - right.index;
+      })
+      .map(({ file }) => file);
+  }
   return [{
     id: item.database_id || item.id,
     drive_file_id: item.drive_file_id,
@@ -2208,9 +2221,13 @@ function pedInstagramGridItemMarkup(item, index) {
     : type === "reel"
       ? `<span class="ped-instagram-grid-type"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="m10 8 6 4-6 4z"/></svg></span>`
       : "";
+  const carouselCoverOrder = type === "carousel"
+    ? `<span class="ped-instagram-carousel-cover-order" title="Foto 1 · copertina del carosello">1</span>`
+    : "";
   return `<button class="ped-instagram-grid-item ped-type-${escapeHtml(type)}${pedInstagramOrderEditing ? " is-ordering" : ""}" data-ped-instagram-item="${escapeHtml(item.id)}" data-ped-open="${escapeHtml(file.drive_file_id)}" data-ped-name="${escapeHtml(file.drive_file_name)}" data-ped-mime="${escapeHtml(mime)}" data-ped-content-url="${escapeHtml(file.content_url || "")}" type="button" draggable="${pedInstagramOrderEditing ? "true" : "false"}" title="${pedInstagramOrderEditing ? `Posizione ${index + 1}: trascina per riordinare` : `${escapeHtml(formatPedInstagramDate(item.scheduled_date))} · ${escapeHtml(title)}`}">
     ${media}
     ${badge}
+    ${carouselCoverOrder}
     ${pedInstagramOrderEditing ? `<span class="ped-instagram-order-number">${index + 1}</span>` : ""}
   </button>`;
 }
@@ -2812,7 +2829,9 @@ function renderPedCarouselSelection() {
   const countLabel = document.getElementById("pedCarouselSelectionCount");
   const button = document.getElementById("pedCreateCarouselButton");
   if (!countLabel || !button) return;
-  countLabel.textContent = `${count} ${count === 1 ? "contenuto selezionato" : "contenuti selezionati"}`;
+  countLabel.textContent = count
+    ? `${count} ${count === 1 ? "contenuto selezionato" : "contenuti selezionati"} · la foto 1 sara la copertina`
+    : "0 contenuti selezionati";
   button.disabled = count < 2 || count > 20;
   button.textContent = count >= 2 ? `Crea carosello (${count})` : "Crea carosello";
 }
@@ -2865,6 +2884,7 @@ function renderPedPicker() {
     const label = usedToggle.querySelector("span");
     if (label) label.textContent = pedPickerState.showUsed ? "Nascondi gia utilizzati" : "Mostra gia utilizzati";
   }
+  const isCarouselSelection = pedContentType(pedPickerState.contentType) === "carousel";
   breadcrumbs.innerHTML = pedPickerState.path.map((item, index) => {
     const current = index === pedPickerState.path.length - 1;
     return `${index ? `<svg class="lc" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>` : ""}${current
@@ -2878,11 +2898,15 @@ function renderPedPicker() {
     const used = isPedDriveFileUsed(file);
     const previewType = !file.is_folder && isVideo ? "video" : (!file.is_folder && isImage ? "image" : "");
     const viewerSource = !file.is_folder && previewType ? file.content_url : "";
-    const selected = !file.is_folder && pedPickerState.selectedFiles.some((item) => String(item.id) === String(file.id));
-    const entry = `<button class="ped-picker-entry${file.is_folder ? " is-folder" : ""}${selected ? " is-selected" : ""}${used ? " is-used" : ""}" ${file.is_folder ? "data-ped-picker-folder" : "data-ped-picker-file"}="${escapeHtml(file.id)}" data-ped-picker-name="${escapeHtml(file.name)}" type="button"${file.is_folder ? "" : ` aria-pressed="${selected}"`}>
+    const selectionIndex = !file.is_folder
+      ? pedPickerState.selectedFiles.findIndex((item) => String(item.id) === String(file.id))
+      : -1;
+    const selected = selectionIndex >= 0;
+    const selectionOrder = selected ? selectionIndex + 1 : 0;
+    const entry = `<button class="ped-picker-entry${file.is_folder ? " is-folder" : ""}${selected ? " is-selected" : ""}${used ? " is-used" : ""}" ${file.is_folder ? "data-ped-picker-folder" : "data-ped-picker-file"}="${escapeHtml(file.id)}" data-ped-picker-name="${escapeHtml(file.name)}" type="button"${file.is_folder ? "" : ` aria-pressed="${selected}"${isCarouselSelection && selected ? ` aria-label="${escapeHtml(file.name)}, posizione ${selectionOrder} nel carosello${selectionOrder === 1 ? ", copertina del feed" : ""}"` : ""}`}>
       <span class="ped-picker-media">${hasPreview
         ? `<img src="${escapeHtml(file.thumbnail_url || "")}" alt="" loading="lazy">${isVideo ? `<span class="ped-video-mini"><svg class="lc" viewBox="0 0 24 24"><path d="m9 7 8 5-8 5z"/></svg></span>` : ""}`
-        : driveFileIcon(file)}${used ? `<span class="ped-picker-used-badge">Gia nel PED</span>` : ""}</span>
+        : driveFileIcon(file)}${used ? `<span class="ped-picker-used-badge">Gia nel PED</span>` : ""}${isCarouselSelection && selected ? `<strong class="ped-picker-order-badge" title="${selectionOrder === 1 ? "Copertina del carosello nel feed Instagram" : `Posizione ${selectionOrder} nel carosello`}">${selectionOrder}</strong>` : ""}</span>
       <span><strong>${escapeHtml(file.name)}</strong><small>${file.is_folder ? "Cartella" : [formatFileSize(file.size), formatDriveDate(file.modified_at)].filter(Boolean).join(" · ") || "File"}</small></span>
       ${file.is_folder ? `<svg class="lc ped-picker-arrow" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>` : `<span class="ped-picker-check" aria-hidden="true"><svg class="lc" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg></span>`}
     </button>`;
@@ -3576,9 +3600,15 @@ function openPedCarouselPreview(item) {
       button.append(image);
     } else {
       const label = document.createElement("span");
+      label.className = "ped-carousel-preview-thumb-fallback";
       label.textContent = String(index + 1);
       button.append(label);
     }
+    const orderBadge = document.createElement("b");
+    orderBadge.className = "ped-carousel-preview-thumb-order";
+    orderBadge.textContent = String(index + 1);
+    orderBadge.title = index === 0 ? "Copertina mostrata nel feed Instagram" : `Posizione ${index + 1} nel carosello`;
+    button.append(orderBadge);
     button.addEventListener("click", () => renderSlide(index));
     thumbnails.append(button);
     return button;
