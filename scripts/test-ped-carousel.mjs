@@ -117,6 +117,7 @@ assert.match(appSource, /data-ped-hover-slide/, "ogni contenuto del carosello de
 assert.match(appSource, /window\.setInterval\(\(\) => \{[\s\S]*?1500\)/, "l'anteprima carosello deve scorrere automaticamente");
 assert.match(htmlSource, /data-ped-caption-preview/, "il pannello editoriale deve aprire il visualizzatore interno");
 assert.match(appSource, /function openPedCarouselPreview\(item\)/, "il pannello editoriale deve mostrare tutti i contenuti del carosello");
+assert.match(appSource, /class="ped-agenda-preview" data-ped-caption-preview="\$\{escapeHtml\(item\.id\)\}"/, "la miniatura dell'agenda deve aprire il contenuto completo, inclusi i caroselli");
 assert.match(appSource, /position\.textContent = `\$\{activeIndex \+ 1\} \/ \$\{files\.length\}`/, "il visualizzatore deve indicare la posizione nel carosello");
 assert.match(styleSource, /\.ped-carousel-preview-thumbs/, "il visualizzatore deve mostrare le miniature di tutti i contenuti");
 assert.match(styleSource, /\.ped-hover-carousel-thumbs/, "l'anteprima carosello deve mostrare tutte le miniature");

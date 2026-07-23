@@ -2678,7 +2678,7 @@ function pedAgendaItemMarkup(item) {
     : driveFileIcon({ is_folder: false, mime_type: mime });
   const publishingStatus = pedPublishingStatus(item.publishing_status);
   return `<article class="ped-agenda-item ped-type-${format.type}">
-    <button class="ped-agenda-preview" data-ped-open="${escapeHtml(primary.drive_file_id)}" data-ped-name="${escapeHtml(primary.drive_file_name)}" data-ped-mime="${escapeHtml(mime)}" data-ped-content-url="${escapeHtml(primary.content_url || "")}" type="button" title="Apri anteprima">
+    <button class="ped-agenda-preview" data-ped-caption-preview="${escapeHtml(item.id)}" type="button" title="${files.length > 1 ? `Apri e scorri i ${files.length} contenuti del carosello` : "Apri anteprima"}">
       ${media}${isVideo ? `<span class="ped-video-mini"><svg class="lc" viewBox="0 0 24 24"><path d="m9 7 8 5-8 5z"/></svg></span>` : ""}${files.length > 1 ? `<b class="ped-carousel-count">${files.length}</b>` : ""}
     </button>
     <div class="ped-agenda-copy">
