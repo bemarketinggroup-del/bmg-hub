@@ -2929,7 +2929,7 @@ code { font-family: var(--font-mono); font-size: 12px; }
 .ped-picker-check .lc { width: 12px; height: 12px; stroke-width: 3; }
 .ped-picker-entry:not(.is-folder) .ped-picker-check { margin: 10px 10px 0 0; }
 .ped-picker-entry.is-selected .ped-picker-check { border-color: #4d795f; background: #4d795f; color: white; }
-.ped-picker-order-badge {
+.ped-picker-entry .ped-picker-order-badge {
   position: absolute;
   top: 9px;
   left: 9px;
