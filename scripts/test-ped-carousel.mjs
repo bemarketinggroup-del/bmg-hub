@@ -163,6 +163,10 @@ assert.match(htmlSource, /id="pedMediaViewerModal"/, "il selettore deve includer
 assert.match(htmlSource, /data-ped-viewer-zoom-in/, "il visualizzatore deve offrire controlli zoom espliciti");
 assert.match(appSource, /data-ped-media-viewer/, "ogni contenuto visualizzabile deve avere un comando separato dalla selezione");
 assert.match(appSource, /const viewerSource = !file\.is_folder && previewType \? file\.content_url/, "il visualizzatore deve caricare il file originale e non la miniatura");
+assert.match(appSource, /function preloadPedMediaImage\(source, \{ highPriority = false \} = \{\}\)/, "le foto originali devono essere precaricate senza bloccare il selettore");
+assert.match(appSource, /preview\.src = poster/, "il visualizzatore deve mostrare subito la miniatura disponibile");
+assert.match(appSource, /original\.promise\.then\(\(image\) =>/, "la piena risoluzione deve sostituire l'anteprima in background");
+assert.match(appSource, /PED_MEDIA_PREFETCH_LIMIT = 3/, "la cache delle foto originali deve restare limitata");
 assert.match(appSource, /PED_MEDIA_VIEWER_MAX_SCALE = 8/, "lo zoom deve consentire di ispezionare i dettagli ad alta risoluzione");
 assert.match(appSource, /function fitPedMediaViewerImage\(\)/, "il 100% deve adattare la foto intera allo spazio disponibile");
 assert.match(appSource, /imageRatio >= stageRatio \? availableWidth : availableHeight \* imageRatio/, "il visualizzatore deve rispettare le proporzioni originali senza ritagli");
