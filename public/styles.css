@@ -3951,6 +3951,7 @@ code { font-family: var(--font-mono); font-size: 12px; }
   background: var(--surface);
 }
 #smartPlanStatus { color: var(--ink); font-size: 12px; font-weight: 700; }
+#smartPastWeeksButton { flex: 0 0 auto; white-space: nowrap; }
 .smart-legend { flex-wrap: wrap; justify-content: flex-end; gap: 8px 16px; }
 .smart-legend span { display: inline-flex; align-items: center; gap: 7px; color: var(--muted); font-size: 11.5px; font-weight: 600; }
 .smart-legend i { width: 9px; height: 9px; border-radius: 50%; }

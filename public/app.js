@@ -238,6 +238,7 @@ let personalAreaState = {
 };
 let personalAreaTimer = null;
 let selectedSmartMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+let showPastSmartWeeks = false;
 let selectedSmartDate = localDateKey(new Date());
 let selectedSmartOffEmployeeId = "";
 let selectedSmartOffPeriod = "month";
@@ -3680,15 +3681,29 @@ function smartEntriesForDate(data, date) {
 
 function renderSmartMonth(data) {
   const target = document.getElementById("smartMonthGrid");
+  const pastWeeksButton = document.getElementById("smartPastWeeksButton");
   if (!target) return;
   const dates = data.grid_dates || [];
   if (!dates.length) {
+    pastWeeksButton?.classList.add("is-hidden");
     target.innerHTML = `<div class="smart-month-loading"><span class="smart-loading-spinner" aria-hidden="true"></span><strong>Caricamento calendario</strong><small>Recupero turni e appuntamenti salvati…</small></div>`;
     return;
   }
   const weeks = [];
   for (let index = 0; index < dates.length; index += 7) weeks.push(dates.slice(index, index + 7));
-  target.innerHTML = weeks.map((weekDates) => {
+  const today = localDateKey(new Date());
+  const currentMonth = today.slice(0, 7);
+  const currentWeek = smartWeekStart(today);
+  const hiddenPastWeeks = data.month === currentMonth ? weeks.filter((weekDates) => weekDates[0] < currentWeek) : [];
+  const visibleWeeks = hiddenPastWeeks.length && !showPastSmartWeeks
+    ? weeks.filter((weekDates) => weekDates[0] >= currentWeek)
+    : weeks;
+  if (pastWeeksButton) {
+    pastWeeksButton.classList.toggle("is-hidden", hiddenPastWeeks.length === 0);
+    pastWeeksButton.textContent = showPastSmartWeeks ? "Nascondi settimane precedenti" : `Mostra settimane precedenti (${hiddenPastWeeks.length})`;
+    pastWeeksButton.setAttribute("aria-expanded", showPastSmartWeeks ? "true" : "false");
+  }
+  target.innerHTML = visibleWeeks.map((weekDates) => {
     const summary = smartWeekSummary(data, weekDates);
     const eventBars = smartWeekEventBars(data, weekDates);
     return `<section class="smart-month-week${summary.future ? " is-future" : ""}">
@@ -3975,6 +3990,7 @@ function smartEmpty(text) {
 function shiftSmartMonth(offset) {
   selectedSmartMonth = new Date(selectedSmartMonth.getFullYear(), selectedSmartMonth.getMonth() + offset, 1);
   selectedSmartDate = `${smartMonthKey()}-01`;
+  showPastSmartWeeks = false;
   loadSmartWorking();
 }
 
@@ -6783,7 +6799,12 @@ document.getElementById("smartNextMonthButton").addEventListener("click", () => 
 document.getElementById("smartTodayButton").addEventListener("click", () => {
   selectedSmartMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
   selectedSmartDate = localDateKey(new Date());
+  showPastSmartWeeks = false;
   loadSmartWorking();
+});
+document.getElementById("smartPastWeeksButton").addEventListener("click", () => {
+  showPastSmartWeeks = !showPastSmartWeeks;
+  renderSmartMonth(state.smartWorking || {});
 });
 document.getElementById("syncCalendarButton").addEventListener("click", syncSmartCalendar);
 document.getElementById("generateSmartMonthButton").addEventListener("click", generateSmartMonth);
