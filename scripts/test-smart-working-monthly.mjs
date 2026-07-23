@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import {
   allocateWeek,
   buildOffCounters,
@@ -245,5 +246,16 @@ const mergedSmart = mergeSmartAssignments([
 ], calendarSmart);
 assert.equal(mergedSmart.length, 3);
 assert.equal(mergedSmart.find((entry) => entry.employee_id === employees[5].id).id, "hub-marzia");
+
+const smartHtmlSource = await readFile(new URL("../public/index.html", import.meta.url), "utf8");
+const smartAppSource = await readFile(new URL("../public/app.js", import.meta.url), "utf8");
+const smartStyleSource = await readFile(new URL("../public/styles.css", import.meta.url), "utf8");
+assert.match(smartHtmlSource, /id="smartMonthStrip"/, "il calendario turni mobile deve avere la navigazione rapida per mesi");
+assert.match(smartHtmlSource, /class="smart-month-weekdays"[\s\S]*?data-mobile-label="L"[\s\S]*?data-mobile-label="D"/, "i giorni dei turni devono avere etichette mobile compatte");
+assert.match(smartAppSource, /function renderSmartMonthStrip\(\)/, "i mesi rapidi dei turni devono seguire il mese selezionato");
+assert.match(smartAppSource, /data-smart-month="\$\{key\}"/, "ogni mese rapido dei turni deve essere selezionabile");
+assert.match(smartStyleSource, /@media \(max-width: 640px\)[\s\S]*?\.smart-month-weekdays,[\s\S]*?\.smart-month-grid,[\s\S]*?\.smart-month-week-days \{ width: 100%; min-width: 0; \}/, "il calendario turni mobile deve mostrare tutte le sette colonne");
+assert.match(smartStyleSource, /\.smart-month-day \{[\s\S]*?min-height: 88px;[\s\S]*?padding: 3px 2px 4px;/, "i giorni del calendario turni mobile devono essere compatti");
+assert.match(smartStyleSource, /\.smart-multiday-event \{[\s\S]*?height: 18px;[\s\S]*?border-radius: 2px;/, "gli eventi turni di piu giorni devono restare continui e compatti");
 
 console.log("Smart working monthly allocation tests passed.");

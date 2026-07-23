@@ -3899,10 +3899,24 @@ function smartMonthKey(value = selectedSmartMonth) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
 }
 
+function renderSmartMonthStrip() {
+  const strip = document.getElementById("smartMonthStrip");
+  if (!strip) return;
+  const activeKey = smartMonthKey();
+  strip.innerHTML = Array.from({ length: 6 }, (_, index) => {
+    const date = new Date(selectedSmartMonth.getFullYear(), selectedSmartMonth.getMonth() + index, 1, 12);
+    const key = smartMonthKey(date);
+    const label = new Intl.DateTimeFormat("it-IT", { month: "short" }).format(date).replace(".", "");
+    const title = new Intl.DateTimeFormat("it-IT", { month: "long", year: "numeric" }).format(date);
+    return `<button class="${key === activeKey ? "is-active" : ""}" data-smart-month="${key}" type="button" title="${escapeHtml(title)}"${key === activeKey ? ' aria-current="date"' : ""}>${escapeHtml(label)}</button>`;
+  }).join("");
+}
+
 function renderSmartWorking() {
   const data = state.smartWorking || seed.smartWorking || {};
   const title = document.getElementById("smartMonthTitle");
   if (title) title.textContent = new Intl.DateTimeFormat("it-IT", { month: "long", year: "numeric" }).format(selectedSmartMonth);
+  renderSmartMonthStrip();
   const status = document.getElementById("smartPlanStatus");
   const plans = data.plans || [];
   if (status) {
@@ -7138,6 +7152,16 @@ document.getElementById("taskStatusFilter").addEventListener("change", renderCli
 document.getElementById("taskClientFilter").addEventListener("change", renderClickUpTasks);
 document.getElementById("smartPreviousMonthButton").addEventListener("click", () => shiftSmartMonth(-1));
 document.getElementById("smartNextMonthButton").addEventListener("click", () => shiftSmartMonth(1));
+document.getElementById("smartMonthStrip").addEventListener("click", (event) => {
+  const button = event.target.closest("[data-smart-month]");
+  if (!button) return;
+  const [year, month] = button.dataset.smartMonth.split("-").map(Number);
+  if (!year || !month) return;
+  selectedSmartMonth = new Date(year, month - 1, 1, 12);
+  selectedSmartDate = `${button.dataset.smartMonth}-01`;
+  showPastSmartWeeks = false;
+  loadSmartWorking();
+});
 document.getElementById("smartTodayButton").addEventListener("click", () => {
   selectedSmartMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
   selectedSmartDate = localDateKey(new Date());

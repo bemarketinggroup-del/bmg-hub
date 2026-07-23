@@ -478,6 +478,7 @@
             <button class="primary-button" id="approveSmartMonthButton" type="button">Approva e pubblica</button>
           </div>
         </div>
+        <nav class="smart-month-strip" id="smartMonthStrip" aria-label="Navigazione rapida mesi turni"></nav>
 
         <div class="smart-plan-strip">
           <span id="smartPlanStatus">Nessuna bozza</span>
@@ -493,7 +494,7 @@
         <div class="smart-month-layout">
           <section class="panel smart-calendar-panel">
             <div class="smart-month-weekdays" aria-hidden="true">
-              <span>Lun</span><span>Mar</span><span>Mer</span><span>Gio</span><span>Ven</span><span>Sab</span><span>Dom</span>
+              <span data-mobile-label="L">Lun</span><span data-mobile-label="M">Mar</span><span data-mobile-label="M">Mer</span><span data-mobile-label="G">Gio</span><span data-mobile-label="V">Ven</span><span data-mobile-label="S">Sab</span><span data-mobile-label="D">Dom</span>
             </div>
             <div class="smart-month-grid" id="smartMonthGrid"></div>
           </section>
