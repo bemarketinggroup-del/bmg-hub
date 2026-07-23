@@ -4775,7 +4775,50 @@ code { font-family: var(--font-mono); font-size: 12px; }
   .team-details-panel summary { align-items: flex-start; flex-direction: column; padding-left: 44px; }
   .team-details-panel summary::before { position: absolute; margin-left: -26px; }
   .home-quick-grid { grid-template-columns: 1fr; }
-  .client-grid { grid-template-columns: 1fr; }
+  .client-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .client-grid > .lead-card { grid-column: 1 / -1; }
+  .client-folder {
+    aspect-ratio: 1;
+    min-height: 0;
+    display: flex;
+    align-items: flex-start;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 7px;
+    overflow: hidden;
+    padding: 10px;
+  }
+  .client-folder-icon {
+    width: 32px;
+    height: 32px;
+    flex: 0 0 auto;
+  }
+  .client-folder-icon .lc { width: 18px; height: 18px; }
+  .client-folder-copy {
+    width: 100%;
+    gap: 2px;
+  }
+  .client-folder-copy strong {
+    display: -webkit-box;
+    overflow: hidden;
+    font-size: 10.5px;
+    line-height: 1.16;
+    text-overflow: ellipsis;
+    white-space: normal;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+  .client-folder-copy small {
+    overflow: hidden;
+    font-size: 8.5px;
+    line-height: 1.15;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .client-folder-arrow { display: none; }
   .smart-month-toolbar { align-items: stretch; flex-direction: column; }
   .smart-month-navigation { display: grid; grid-template-columns: auto auto auto minmax(0, 1fr); }
   .smart-month-navigation h2 { min-width: 0; margin-left: 4px; font-size: 18px; text-align: right; }
