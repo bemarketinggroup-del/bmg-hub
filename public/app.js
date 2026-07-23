@@ -4152,6 +4152,7 @@ function renderSmartOffCounters(data) {
   const monthTotal = document.getElementById("smartOffMonthTotal");
   const yearTotal = document.getElementById("smartOffYearTotal");
   const target = document.getElementById("smartOffCounters");
+  const chart = document.getElementById("smartOffChart");
   const monthDate = /^\d{4}-\d{2}$/.test(counters.month || "") ? new Date(`${counters.month}-01T12:00:00`) : selectedSmartMonth;
 
   if (monthLabel) monthLabel.textContent = new Intl.DateTimeFormat("it-IT", { month: "long" }).format(monthDate);
@@ -4161,6 +4162,7 @@ function renderSmartOffCounters(data) {
   if (!target) return;
   if (smartWorkingLoading && !(counters.staff || []).length) {
     target.innerHTML = smartEmpty("Caricamento conteggi OFF…");
+    if (chart) chart.innerHTML = smartEmpty("Caricamento grafico assenze…");
     return;
   }
 
@@ -4169,6 +4171,37 @@ function renderSmartOffCounters(data) {
     const name = staffName(employee);
     return `<button type="button" class="smart-off-row" data-smart-off-employee="${escapeHtml(row.employee_id)}" aria-label="Mostra il dettaglio degli OFF di ${escapeHtml(name)}"><strong><span class="smart-off-name">${escapeHtml(name)}</span><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></strong><span>${Number(row.month_days) || 0}</span><span>${Number(row.year_days) || 0}</span></button>`;
   }).join("") || smartEmpty("Nessun dipendente attivo disponibile per il conteggio.");
+  renderSmartOffChart(data, rows);
+}
+
+function renderSmartOffChart(data, rows) {
+  const target = document.getElementById("smartOffChart");
+  if (!target) return;
+  if (!rows.length) {
+    target.innerHTML = smartEmpty("Nessun dato disponibile per il grafico assenze.");
+    target.style.removeProperty("--chart-columns");
+    target.style.removeProperty("--chart-min-width");
+    return;
+  }
+
+  const maximum = Math.max(1, ...rows.flatMap((row) => [Number(row.month_days) || 0, Number(row.year_days) || 0]));
+  target.style.setProperty("--chart-columns", String(rows.length));
+  target.style.setProperty("--chart-min-width", `${rows.length * 76}px`);
+  target.innerHTML = rows.map((row) => {
+    const employee = staffById(data, row.employee_id);
+    const name = staffName(employee);
+    const monthDays = Math.max(0, Number(row.month_days) || 0);
+    const yearDays = Math.max(0, Number(row.year_days) || 0);
+    const monthHeight = monthDays ? Math.max(4, (monthDays / maximum) * 100) : 1.5;
+    const yearHeight = yearDays ? Math.max(4, (yearDays / maximum) * 100) : 1.5;
+    return `<article class="smart-off-chart-person">
+      <div class="smart-off-chart-bars" role="img" aria-label="${escapeHtml(name)}: ${monthDays} giorni nel mese, ${yearDays} giorni nell'anno">
+        <span class="smart-off-chart-bar is-month"><strong>${monthDays}</strong><i style="--bar-height:${monthHeight}%"></i></span>
+        <span class="smart-off-chart-bar is-year"><strong>${yearDays}</strong><i style="--bar-height:${yearHeight}%"></i></span>
+      </div>
+      <span class="smart-off-chart-name" title="${escapeHtml(name)}">${escapeHtml(name)}</span>
+    </article>`;
+  }).join("");
 }
 
 function smartOffSourceLabel(source) {

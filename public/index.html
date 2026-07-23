@@ -520,6 +520,21 @@
             <div class="smart-off-table-body" id="smartOffCounters"></div>
           </div>
           <p class="smart-settings-note">I totali uniscono gli OFF inseriti nell'Hub e quelli sincronizzati da Google Calendar, senza duplicati. Apri una persona per confermare ogni giorno o escluderlo dal conteggio.</p>
+          <section class="smart-off-chart-section" aria-labelledby="smartOffChartTitle">
+            <div class="smart-off-chart-head">
+              <div>
+                <p class="eyebrow">Confronto assenze</p>
+                <h3 id="smartOffChartTitle">Assenze per persona</h3>
+              </div>
+              <div class="smart-off-chart-legend" aria-label="Legenda grafico assenze">
+                <span><i class="is-month"></i>Mese</span>
+                <span><i class="is-year"></i>Anno</span>
+              </div>
+            </div>
+            <div class="smart-off-chart-scroll">
+              <div class="smart-off-chart" id="smartOffChart" aria-live="polite"></div>
+            </div>
+          </section>
         </section>
 
         <section class="panel smart-settings-panel">
