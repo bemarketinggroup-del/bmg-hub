@@ -152,6 +152,8 @@ assert.equal(sanitizeCaptionHtml('<font color="#C95B32">BMG</font><span style="c
 assert.equal(sanitizeCaptionHtml('<span style="color:rgb(999, 0, 0)">No</span>'), '<span>No</span>');
 assert.equal(sanitizeCaptionHtml('<img src=x onerror=alert(1)><em>Test</em>'), '<em>Test</em>');
 assert.match(pedSource, /used_file_ids:/, "l'API PED deve restituire tutti i file gia usati dal cliente");
+assert.match(pedSource, /resolveClientDriveLibraries\(client\.name, listDriveFolder\)/, "il PED deve accettare file dalle raccolte grafiche e video del cliente");
+assert.match(pedSource, /allowedRootIds = \[rootId, \.\.\.libraryRoots/, "la validazione deve restare limitata alle cartelle autorizzate del cliente");
 assert.match(appSource, /let pedUsedFileIds = new Set\(\)/, "il PED deve mantenere l'indice dei file gia usati");
 assert.match(appSource, /pedUsedFileIds\.has\(String\(file\.id\)\)/, "il selettore deve riconoscere i file Drive gia usati");
 assert.match(appSource, /pedPickerState\.showUsed/, "il filtro dei contenuti gia usati deve essere reversibile");
@@ -168,6 +170,10 @@ assert.match(appSource, /preview\.src = poster/, "il visualizzatore deve mostrar
 assert.match(appSource, /original\.promise\.then\(\(image\) =>/, "la piena risoluzione deve sostituire l'anteprima in background");
 assert.match(appSource, /PED_MEDIA_PREFETCH_LIMIT = 3/, "la cache delle foto originali deve restare limitata");
 assert.match(appSource, /PED_MEDIA_VIEWER_MAX_SCALE = 8/, "lo zoom deve consentire di ispezionare i dettagli ad alta risoluzione");
+assert.match(appSource, /data-ped-picker-library=/, "il selettore deve mostrare gli accessi diretti a grafiche e video");
+assert.match(appSource, /data-ped-picker-library-source=/, "ogni accesso diretto deve conservare la propria raccolta Drive");
+assert.match(styleSource, /\.ped-picker-library\.is-graphics/, "la cartella grafiche deve avere uno stile dedicato");
+assert.match(styleSource, /\.ped-picker-library\.is-video/, "la cartella video deve avere uno stile dedicato");
 assert.match(appSource, /function fitPedMediaViewerImage\(\)/, "il 100% deve adattare la foto intera allo spazio disponibile");
 assert.match(appSource, /imageRatio >= stageRatio \? availableWidth : availableHeight \* imageRatio/, "il visualizzatore deve rispettare le proporzioni originali senza ritagli");
 assert.match(appSource, /setPointerCapture\(event\.pointerId\)/, "la foto ingrandita deve poter essere trascinata");

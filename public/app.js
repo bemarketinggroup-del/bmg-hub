@@ -188,7 +188,7 @@ let clientDriveState = { clientId: "", path: [], objectUrl: "", thumbnailUrls: n
 let selectedPedClientId = "";
 let pedUsedFileIds = new Set();
 let selectedPedMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-let pedPickerState = { date: "", path: [], files: [], contentType: "post", caption: "", selectedFiles: [], showUsed: false };
+let pedPickerState = { date: "", path: [], files: [], libraries: [], source: "", contentType: "post", caption: "", selectedFiles: [], showUsed: false };
 const DRIVE_FOLDER_BROWSER_CACHE_TTL = 2 * 60 * 1000;
 const driveFolderBrowserCache = new Map();
 const driveFolderBrowserRequests = new Map();
@@ -518,12 +518,12 @@ async function apiFetch(url, options = {}) {
   return response;
 }
 
-function driveFolderBrowserCacheKey(clientId, folderId = "") {
-  return `${String(clientId || "")}:${String(folderId || "root")}`;
+function driveFolderBrowserCacheKey(clientId, folderId = "", source = "") {
+  return `${String(clientId || "")}:${String(source || "client")}:${String(folderId || "root")}`;
 }
 
-function cachedDriveFolder(clientId, folderId = "") {
-  const key = driveFolderBrowserCacheKey(clientId, folderId);
+function cachedDriveFolder(clientId, folderId = "", source = "") {
+  const key = driveFolderBrowserCacheKey(clientId, folderId, source);
   const cached = driveFolderBrowserCache.get(key);
   if (!cached) return null;
   if (cached.expiresAt <= Date.now()) {
@@ -533,11 +533,11 @@ function cachedDriveFolder(clientId, folderId = "") {
   return cached.data;
 }
 
-function cacheDriveFolder(clientId, requestedFolderId, data) {
+function cacheDriveFolder(clientId, requestedFolderId, data, source = "") {
   const entry = { data, expiresAt: Date.now() + DRIVE_FOLDER_BROWSER_CACHE_TTL };
-  driveFolderBrowserCache.set(driveFolderBrowserCacheKey(clientId, requestedFolderId), entry);
+  driveFolderBrowserCache.set(driveFolderBrowserCacheKey(clientId, requestedFolderId, source), entry);
   if (data?.folder?.id) {
-    driveFolderBrowserCache.set(driveFolderBrowserCacheKey(clientId, data.folder.id), entry);
+    driveFolderBrowserCache.set(driveFolderBrowserCacheKey(clientId, data.folder.id, source), entry);
   }
   return data;
 }
@@ -555,10 +555,10 @@ function clearDriveFolderBrowserCache(clientId = "") {
   }
 }
 
-async function fetchDriveFolder(clientId, folderId = "", { fresh = false } = {}) {
-  const cacheKey = driveFolderBrowserCacheKey(clientId, folderId);
+async function fetchDriveFolder(clientId, folderId = "", { fresh = false, source = "" } = {}) {
+  const cacheKey = driveFolderBrowserCacheKey(clientId, folderId, source);
   if (!fresh) {
-    const cached = cachedDriveFolder(clientId, folderId);
+    const cached = cachedDriveFolder(clientId, folderId, source);
     if (cached) return { data: cached, cached: true };
     const pending = driveFolderBrowserRequests.get(cacheKey);
     if (pending) return { data: await pending, cached: false };
@@ -571,12 +571,13 @@ async function fetchDriveFolder(clientId, folderId = "", { fresh = false } = {})
   const request = (async () => {
     const params = new URLSearchParams({ client_id: clientId });
     if (folderId) params.set("folder_id", folderId);
+    if (source) params.set("source", source);
     if (fresh) params.set("refresh", "1");
     const response = await apiFetch(`/api/client-drive?${params}`);
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || "Google Drive non disponibile");
     if ((driveFolderBrowserVersions.get(normalizedClientId) || 0) === cacheVersion) {
-      cacheDriveFolder(clientId, folderId, data);
+      cacheDriveFolder(clientId, folderId, data, source);
     }
     return data;
   })();
@@ -604,11 +605,11 @@ function hideDriveFolderLoading(container) {
   container.querySelector("[data-drive-folder-loading]")?.remove();
 }
 
-function scheduleDriveFolderPrefetch(clientId, folderId) {
+function scheduleDriveFolderPrefetch(clientId, folderId, source = "") {
   window.clearTimeout(driveFolderPrefetchTimer);
-  if (!clientId || !folderId || cachedDriveFolder(clientId, folderId)) return;
+  if (!clientId || !folderId || cachedDriveFolder(clientId, folderId, source)) return;
   driveFolderPrefetchTimer = window.setTimeout(() => {
-    fetchDriveFolder(clientId, folderId).catch(() => {});
+    fetchDriveFolder(clientId, folderId, { source }).catch(() => {});
   }, 140);
 }
 
@@ -2805,7 +2806,7 @@ async function openPedDrivePicker(date) {
     alert("Collega prima la cartella Google Drive del cliente.");
     return;
   }
-  pedPickerState = { date, path: [], files: [], contentType: "post", caption: "", selectedFiles: [], showUsed: false };
+  pedPickerState = { date, path: [], files: [], libraries: [], source: "", contentType: "post", caption: "", selectedFiles: [], showUsed: false };
   document.getElementById("pedPickerTitle").textContent = `Contenuto per ${new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "long" }).format(new Date(`${date}T12:00:00`))}`;
   document.getElementById("pedPickerSubtitle").textContent = `${client.name} · scegli una foto, un video o una grafica dal Drive`;
   document.getElementById("pedPickerMessage").textContent = "";
@@ -2852,20 +2853,23 @@ function renderPedCarouselSelection() {
   button.textContent = count >= 2 ? `Crea carosello (${count})` : "Crea carosello";
 }
 
-async function loadPedPickerFolder(folderId = "", folderName = "") {
+async function loadPedPickerFolder(folderId = "", folderName = "", { source = pedPickerState.source, resetPath = false } = {}) {
   const grid = document.getElementById("pedPickerGrid");
   const loadId = ++pedPickerFolderLoadId;
-  const instantlyAvailable = cachedDriveFolder(selectedPedClientId, folderId);
+  const instantlyAvailable = cachedDriveFolder(selectedPedClientId, folderId, source);
   if (instantlyAvailable) hideDriveFolderLoading(grid);
   else showDriveFolderLoading(grid, "Apertura cartella");
   try {
-    const { data } = await fetchDriveFolder(selectedPedClientId, folderId);
+    const { data } = await fetchDriveFolder(selectedPedClientId, folderId, { source });
     if (loadId !== pedPickerFolderLoadId) return;
+    if (resetPath) pedPickerState.path = pedPickerState.path.slice(0, 1);
+    pedPickerState.source = source;
     const existingIndex = pedPickerState.path.findIndex((item) => item.id === data.folder.id);
     if (existingIndex >= 0) pedPickerState.path = pedPickerState.path.slice(0, existingIndex + 1);
-    else pedPickerState.path.push({ id: data.folder.id, name: folderName || data.folder.name });
+    else pedPickerState.path.push({ id: data.folder.id, name: folderName || data.folder.name, source });
     if (pedPickerState.path.length === 1) pedPickerState.path[0].name = data.client.name;
     pedPickerState.files = data.files || [];
+    if (!source && Array.isArray(data.libraries)) pedPickerState.libraries = data.libraries;
     hideDriveFolderLoading(grid);
     renderPedPicker();
   } catch (error) {
@@ -2901,13 +2905,23 @@ function renderPedPicker() {
     if (label) label.textContent = pedPickerState.showUsed ? "Nascondi gia utilizzati" : "Mostra gia utilizzati";
   }
   const isCarouselSelection = pedContentType(pedPickerState.contentType) === "carousel";
+  const libraryCards = !pedPickerState.source && pedPickerState.path.length === 1
+    ? pedPickerState.libraries.map((library) => `
+      <button class="ped-picker-library is-${escapeHtml(library.tone)}" data-ped-picker-library="${escapeHtml(library.id)}" data-ped-picker-library-source="${escapeHtml(library.source)}" data-ped-picker-name="${escapeHtml(library.name)}" type="button">
+        <span class="ped-picker-library-icon" aria-hidden="true">${library.source === "video"
+          ? `<svg class="lc" viewBox="0 0 24 24"><path d="M3 7h6l2 2h10v12H3z"/><path d="m10 11 6 3-6 3z"/></svg>`
+          : `<svg class="lc" viewBox="0 0 24 24"><path d="M3 7h6l2 2h10v12H3z"/><path d="m12 11 .8 1.8 1.9.2-1.4 1.3.4 1.9-1.7-.9-1.7.9.4-1.9L9.3 13l1.9-.2z"/></svg>`}</span>
+        <span><strong>${escapeHtml(library.name)}</strong><small>${escapeHtml(library.description)} · accesso diretto</small></span>
+        <svg class="lc ped-picker-library-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+      </button>`).join("")
+    : "";
   breadcrumbs.innerHTML = pedPickerState.path.map((item, index) => {
     const current = index === pedPickerState.path.length - 1;
     return `${index ? `<svg class="lc" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>` : ""}${current
       ? `<span>${escapeHtml(item.name)}</span>`
       : `<button data-ped-picker-breadcrumb="${index}" type="button">${escapeHtml(item.name)}</button>`}`;
   }).join("");
-  grid.innerHTML = visibleFiles.map((file) => {
+  grid.innerHTML = libraryCards + visibleFiles.map((file) => {
     const isImage = String(file.mime_type || "").startsWith("image/");
     const isVideo = String(file.mime_type || "").startsWith("video/");
     const hasPreview = file.has_thumbnail && (isImage || isVideo);
@@ -6422,6 +6436,7 @@ document.body.addEventListener("click", (event) => {
   const pedInstagramOrderItem = event.target.closest("[data-ped-instagram-item]");
   const pedRemove = event.target.closest("[data-ped-remove]");
   const pedPickerFolder = event.target.closest("[data-ped-picker-folder]");
+  const pedPickerLibrary = event.target.closest("[data-ped-picker-library]");
   const pedPickerFile = event.target.closest("[data-ped-picker-file]");
   const pedMediaViewer = event.target.closest("[data-ped-media-viewer]");
   const pedViewerClose = event.target.closest("[data-ped-viewer-close]");
@@ -6506,6 +6521,13 @@ document.body.addEventListener("click", (event) => {
   if (pedViewerZoomOut) return setPedMediaViewerScale(pedMediaViewerState.scale / 1.35);
   if (pedViewerZoomIn) return setPedMediaViewerScale(pedMediaViewerState.scale * 1.35);
   if (pedViewerReset) return resetPedMediaViewerTransform();
+  if (pedPickerLibrary) {
+    return loadPedPickerFolder(
+      pedPickerLibrary.dataset.pedPickerLibrary,
+      pedPickerLibrary.dataset.pedPickerName,
+      { source: pedPickerLibrary.dataset.pedPickerLibrarySource, resetPath: true }
+    );
+  }
   if (pedPickerFolder) return loadPedPickerFolder(pedPickerFolder.dataset.pedPickerFolder, pedPickerFolder.dataset.pedPickerName);
   if (pedPickerFile) return pedContentType(pedPickerState.contentType) === "carousel"
     ? togglePedCarouselFile(pedPickerFile.dataset.pedPickerFile)
@@ -6514,7 +6536,7 @@ document.body.addEventListener("click", (event) => {
   if (pedPickerBreadcrumb) {
     const index = Number(pedPickerBreadcrumb.dataset.pedPickerBreadcrumb);
     const target = pedPickerState.path[index];
-    if (target) return loadPedPickerFolder(target.id, target.name);
+    if (target) return loadPedPickerFolder(target.id, target.name, { source: target.source || "", resetPath: index === 0 });
   }
   if (pedPickerClose) return document.getElementById("pedDrivePickerModal").close();
   if (pedCaption) return openPedCaptionModal(pedCaption.dataset.pedCaption);
@@ -6833,8 +6855,15 @@ document.body.addEventListener("pointerout", (event) => {
 
 document.body.addEventListener("pointerover", (event) => {
   const pedFolder = event.target.closest?.("[data-ped-picker-folder]");
+  const pedLibrary = event.target.closest?.("[data-ped-picker-library]");
   const clientFolder = event.target.closest?.("[data-drive-folder]");
-  if (pedFolder && !pedFolder.contains(event.relatedTarget)) {
+  if (pedLibrary && !pedLibrary.contains(event.relatedTarget)) {
+    scheduleDriveFolderPrefetch(
+      selectedPedClientId,
+      pedLibrary.dataset.pedPickerLibrary,
+      pedLibrary.dataset.pedPickerLibrarySource
+    );
+  } else if (pedFolder && !pedFolder.contains(event.relatedTarget)) {
     scheduleDriveFolderPrefetch(selectedPedClientId, pedFolder.dataset.pedPickerFolder);
   } else if (clientFolder && !clientFolder.contains(event.relatedTarget)) {
     scheduleDriveFolderPrefetch(clientDriveState.clientId, clientFolder.dataset.driveFolder);
@@ -6842,7 +6871,7 @@ document.body.addEventListener("pointerover", (event) => {
 });
 
 document.body.addEventListener("pointerout", (event) => {
-  const folder = event.target.closest?.("[data-ped-picker-folder], [data-drive-folder]");
+  const folder = event.target.closest?.("[data-ped-picker-library], [data-ped-picker-folder], [data-drive-folder]");
   if (folder && !folder.contains(event.relatedTarget)) window.clearTimeout(driveFolderPrefetchTimer);
 });
 
