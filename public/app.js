@@ -1370,6 +1370,7 @@ function clientDetailMarkup(client) {
         <span class="client-status is-${normalizeIdentity(client.status)}">${escapeHtml(labelClientStatus(client.status))}</span>
       </div>
       <div class="client-detail-actions">
+        ${currentProfile?.role === "admin" ? `<button class="danger-button" data-client-delete="${client.id}" type="button"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="m19 6-1 14H6L5 6"/><path d="M10 11v5M14 11v5"/></svg>Elimina</button>` : ""}
         <button class="ghost-button" data-client-edit="${client.id}" type="button"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>Modifica</button>
         ${clickup ? `<a class="ghost-button" href="${escapeHtml(clickup)}" target="_blank" rel="noreferrer"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>ClickUp</a>` : ""}
         ${drive ? `<button class="primary-button client-drive-button" data-client-drive="${client.id}" type="button"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h6l2 2h10v10H3z"/><path d="M3 7V5h6l2 2"/></svg>Apri Google Drive</button>` : `<button class="primary-button" data-client-edit="${client.id}" type="button">Aggiungi Drive</button>`}
@@ -5715,30 +5716,63 @@ function openClientModal(clientId = "") {
   form.elements.clickup_url.value = safeExternalUrl(client?.clickup) || "";
   form.elements.notes.value = client?.notes || "";
   document.getElementById("clientModalTitle").textContent = client ? `Modifica ${client.name}` : "Nuovo cliente";
-  document.getElementById("clientCreateClickUpRow").classList.toggle("is-hidden", Boolean(client));
+  document.getElementById("clientCreateAutomation").classList.toggle("is-hidden", Boolean(client));
+  document.getElementById("clientDriveUrlRow").classList.toggle("is-hidden", !client);
+  document.getElementById("clientClickUpUrlRow").classList.toggle("is-hidden", !client);
+  document.getElementById("saveClientButton").textContent = client ? "Salva cliente" : "Crea cliente e cartelle";
   document.getElementById("clientModal").showModal();
 }
 
 async function submitClient(form) {
   const data = Object.fromEntries(new FormData(form).entries());
   const isUpdate = Boolean(data.id);
-  data.create_clickup = data.create_clickup === "on";
+  const submit = document.getElementById("saveClientButton");
+  const idleLabel = submit.textContent;
+  submit.disabled = true;
+  submit.textContent = isUpdate ? "Salvataggio..." : "Creo Drive e ClickUp...";
   try {
     const response = await apiFetch("/api/clients", {
       method: isUpdate ? "PATCH" : "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data)
     });
-    if (!response.ok) throw new Error(`Clients backend error ${response.status}`);
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || `Clients backend error ${response.status}`);
     clientsOnline = true;
     form.reset();
+    document.getElementById("clientModal").close();
     await loadClientsFromBackend();
     if (isUpdate) selectedClientId = data.id;
     renderClients();
   } catch (error) {
     clientsOnline = false;
     renderBackendStatus(error.message);
-    alert("Non riesco a salvare il cliente. Controlla la configurazione backend/ClickUp.");
+    alert(error.message || "Non riesco a salvare il cliente. Controlla Google Drive e ClickUp.");
+  } finally {
+    submit.disabled = false;
+    submit.textContent = idleLabel;
+  }
+}
+
+async function deleteClient(clientId) {
+  const client = state.clients.find((item) => String(item.id) === String(clientId));
+  if (!client) return;
+  const confirmed = confirm(
+    `Eliminare ${client.name} dal gestionale?\n\n`
+    + "Il cliente non sara piu visibile e non verra ricreato dalla sincronizzazione. "
+    + "Le cartelle Google Drive e ClickUp resteranno intatte."
+  );
+  if (!confirmed) return;
+  try {
+    const response = await apiFetch(`/api/clients?id=${encodeURIComponent(client.id)}`, { method: "DELETE" });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || "Eliminazione cliente non riuscita");
+    selectedClientId = "";
+    resetDriveBrowser();
+    await loadClientsFromBackend();
+    renderClients();
+  } catch (error) {
+    alert(error.message || "Non riesco a eliminare il cliente.");
   }
 }
 
@@ -6462,6 +6496,7 @@ document.body.addEventListener("click", (event) => {
   const editTask = event.target.closest("[data-edit-task]");
   const openClient = event.target.closest("[data-client-open]");
   const editClient = event.target.closest("[data-client-edit]");
+  const deleteClientButton = event.target.closest("[data-client-delete]");
   const backClient = event.target.closest("[data-client-back]");
   const openClientDriveButton = event.target.closest("[data-client-drive]");
   const driveFolder = event.target.closest("[data-drive-folder]");
@@ -6513,6 +6548,7 @@ document.body.addEventListener("click", (event) => {
   if (editTask) return openTaskModal(selectedTeamMemberId, editTask.dataset.editTask);
   if (openClient) return openClientDetails(openClient.dataset.clientOpen);
   if (editClient) return openClientModal(editClient.dataset.clientEdit);
+  if (deleteClientButton) return deleteClient(deleteClientButton.dataset.clientDelete);
   if (backClient) return closeClientDetails();
   if (openClientDriveButton) return openClientDrive(openClientDriveButton.dataset.clientDrive);
   if (driveFolder) return loadClientDriveFolder(driveFolder.dataset.driveFolder, driveFolder.dataset.driveName);
@@ -7230,7 +7266,6 @@ document.getElementById("clientForm").addEventListener("submit", (event) => {
   if (event.submitter?.value === "cancel") return;
   event.preventDefault();
   submitClient(event.currentTarget);
-  document.getElementById("clientModal").close();
 });
 
 document.getElementById("clientAliasForm").addEventListener("submit", (event) => {

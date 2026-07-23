@@ -11,6 +11,7 @@
     "test:ai-task-assist": "node scripts/test-ai-task-assist.mjs",
     "test:ped-carousel": "node scripts/test-ped-carousel.mjs",
     "test:client-drive-libraries": "node scripts/test-client-drive-libraries.mjs",
+    "test:client-management": "node scripts/test-client-management.mjs",
     "test:permissions": "node scripts/test-staff-permissions.mjs",
     "test:google-calendar": "node scripts/test-google-calendar.mjs",
     "test:smart-working": "node scripts/test-smart-working-monthly.mjs",

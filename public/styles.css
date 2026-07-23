@@ -1379,6 +1379,18 @@ code { font-family: var(--font-mono); font-size: 12px; }
   gap: 10px;
 }
 
+.client-create-automation {
+  display: grid;
+  gap: 4px;
+  border: 1px solid rgba(77, 121, 95, .28);
+  border-radius: var(--r-sm);
+  background: rgba(77, 121, 95, .08);
+  color: var(--ink);
+  padding: 14px;
+}
+.client-create-automation strong { font-size: 12px; }
+.client-create-automation span { color: var(--muted); font-size: 11px; line-height: 1.5; }
+
 .client-folder {
   min-width: 0;
   min-height: 62px;

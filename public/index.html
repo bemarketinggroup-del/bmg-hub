@@ -778,17 +778,17 @@
           <option value="archiviato">Archiviato</option>
         </select></label>
         <label>Servizi<input name="services" placeholder="Sito, social, advertising"></label>
-        <label class="full">Google Drive<input name="drive_url" type="url" placeholder="https://drive.google.com/..."></label>
-        <label class="full">ClickUp<input name="clickup_url" type="url" placeholder="https://app.clickup.com/..."></label>
+        <div class="full client-create-automation" id="clientCreateAutomation">
+          <strong>Configurazione automatica</strong>
+          <span>Creeremo la cartella cliente su Google Drive, le cartelle GRAFICHE e VIDEO e la cartella cliente su ClickUp.</span>
+        </div>
+        <label class="full" id="clientDriveUrlRow">Google Drive<input name="drive_url" type="url" placeholder="https://drive.google.com/..."></label>
+        <label class="full" id="clientClickUpUrlRow">ClickUp<input name="clickup_url" type="url" placeholder="https://app.clickup.com/..."></label>
         <label class="full">Note<textarea name="notes" rows="3"></textarea></label>
-        <label class="full checkbox-row" id="clientCreateClickUpRow">
-          <input name="create_clickup" type="checkbox" checked>
-          <span>Crea anche cartella cliente su ClickUp</span>
-        </label>
       </div>
       <div class="modal-actions">
         <button class="ghost-button" value="cancel" type="submit" formnovalidate>Annulla</button>
-        <button class="primary-button" value="default" type="submit">Salva cliente</button>
+        <button class="primary-button" id="saveClientButton" value="default" type="submit">Salva cliente</button>
       </div>
     </form>
   </dialog>
