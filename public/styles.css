@@ -4658,6 +4658,12 @@ code { font-family: var(--font-mono); font-size: 12px; }
   .topbar-heading h1 { overflow-wrap: anywhere; font-size: 25px; }
   .topbar-actions { justify-content: flex-start; }
   .toolbar { flex-direction: column; }
+  .client-toolbar .search {
+    width: 100%;
+    min-height: 44px;
+    max-height: 44px;
+    flex: 0 0 44px;
+  }
   .toolbar select { min-width: 0; }
   .metric-grid { grid-template-columns: 1fr 1fr; }
   .home-welcome { min-height: 0; padding: 26px 22px; }
