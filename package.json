@@ -13,6 +13,7 @@
     "test:client-drive-libraries": "node scripts/test-client-drive-libraries.mjs",
     "test:client-management": "node scripts/test-client-management.mjs",
     "test:connected-services": "node scripts/test-connected-services.mjs",
+    "test:mobile-navigation": "node scripts/test-mobile-navigation.mjs",
     "test:permissions": "node scripts/test-staff-permissions.mjs",
     "test:google-calendar": "node scripts/test-google-calendar.mjs",
     "test:smart-working": "node scripts/test-smart-working-monthly.mjs",

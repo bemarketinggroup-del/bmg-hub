@@ -28,7 +28,10 @@
   </section>
 
   <div class="app-shell is-hidden" id="appShell">
-    <aside class="sidebar" aria-label="Navigazione BMG Hub">
+    <aside class="sidebar" id="appSidebar" aria-label="Navigazione BMG Hub">
+      <button class="icon-button mobile-nav-close" id="mobileNavClose" type="button" aria-label="Chiudi menu">
+        <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </button>
       <div class="brand">
         <span class="brand-logo"><img src="logo.svg" alt="BMG · be marketing group"></span>
         <div>
@@ -90,11 +93,18 @@
       </div>
     </aside>
 
+    <button class="mobile-nav-backdrop" id="mobileNavBackdrop" type="button" tabindex="-1" aria-label="Chiudi menu" aria-hidden="true"></button>
+
     <main class="main">
       <header class="topbar">
-        <div>
-          <p class="eyebrow" id="viewKicker">BMG Internal OS</p>
-          <h1 id="viewTitle">Home</h1>
+        <div class="topbar-heading">
+          <button class="icon-button mobile-nav-toggle" id="mobileNavToggle" type="button" aria-label="Apri menu" aria-controls="appSidebar" aria-expanded="false">
+            <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h16"/></svg>
+          </button>
+          <div>
+            <p class="eyebrow" id="viewKicker">BMG Internal OS</p>
+            <h1 id="viewTitle">Home</h1>
+          </div>
         </div>
         <div class="topbar-actions">
           <span class="session-badge" id="sessionBadge">Sessione</span>

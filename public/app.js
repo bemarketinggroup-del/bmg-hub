@@ -768,6 +768,7 @@ function consumeRecoverySessionFromUrl() {
 
 function setView(view) {
   if (!canAccessView(view)) view = "dashboard";
+  setMobileNavOpen(false);
   document.querySelectorAll(".nav-item").forEach((item) => item.classList.toggle("is-active", item.dataset.view === view));
   document.querySelectorAll("[data-view-panel]").forEach((panel) => panel.classList.toggle("is-active", panel.dataset.viewPanel === view));
   const titles = {
@@ -792,6 +793,32 @@ function setView(view) {
   }
   if (view === "calendar") loadGoogleCalendar();
   if (view === "personal") loadPersonalArea();
+}
+
+const mobileNavigationMedia = window.matchMedia("(max-width: 640px)");
+
+function setMobileNavOpen(open, { restoreFocus = false } = {}) {
+  const sidebar = document.getElementById("appSidebar");
+  const toggle = document.getElementById("mobileNavToggle");
+  const backdrop = document.getElementById("mobileNavBackdrop");
+  if (!sidebar || !toggle || !backdrop) return;
+  const shouldOpen = Boolean(open && mobileNavigationMedia.matches);
+  sidebar.classList.toggle("is-mobile-open", shouldOpen);
+  backdrop.classList.toggle("is-active", shouldOpen);
+  backdrop.setAttribute("aria-hidden", shouldOpen ? "false" : "true");
+  toggle.setAttribute("aria-expanded", shouldOpen ? "true" : "false");
+  document.body.classList.toggle("mobile-nav-open", shouldOpen);
+  sidebar.inert = mobileNavigationMedia.matches && !shouldOpen;
+  if (shouldOpen) {
+    requestAnimationFrame(() => sidebar.querySelector(".nav-item.is-active:not(.is-hidden), .nav-item:not(.is-hidden)")?.focus());
+  } else if (restoreFocus) {
+    toggle.focus();
+  }
+}
+
+function syncMobileNavigation() {
+  setMobileNavOpen(false);
+  document.getElementById("appSidebar").inert = mobileNavigationMedia.matches;
 }
 
 function mondayOf(value = new Date()) {
@@ -6529,6 +6556,11 @@ document.getElementById("navList").addEventListener("click", (event) => {
   const button = event.target.closest("[data-view]");
   if (button) setView(button.dataset.view);
 });
+document.getElementById("mobileNavToggle").addEventListener("click", () => setMobileNavOpen(true));
+document.getElementById("mobileNavClose").addEventListener("click", () => setMobileNavOpen(false, { restoreFocus: true }));
+document.getElementById("mobileNavBackdrop").addEventListener("click", () => setMobileNavOpen(false, { restoreFocus: true }));
+mobileNavigationMedia.addEventListener?.("change", syncMobileNavigation);
+syncMobileNavigation();
 
 document.body.addEventListener("click", (event) => {
   if (Date.now() < pedDragSuppressClickUntil && event.target.closest("[data-ped-content]")) {
@@ -6956,6 +6988,10 @@ document.getElementById("driveManageForm").addEventListener("submit", (event) =>
 });
 
 document.body.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && document.getElementById("appSidebar")?.classList.contains("is-mobile-open")) {
+    setMobileNavOpen(false, { restoreFocus: true });
+    return;
+  }
   const taskRow = event.target.closest("[data-task-detail]");
   if (!taskRow || event.target.closest("button, a, input, select, textarea")) return;
   if (event.key === "Enter" || event.key === " ") {
