@@ -39,6 +39,7 @@ const VIEW_MODULES = Object.freeze({
   calendar: "calendar",
   team: "tasks",
   smart: "smart_working",
+  counter: "smart_working",
   users: "users",
   settings: "settings"
 });
@@ -632,6 +633,7 @@ function canAccessModule(moduleKey) {
 }
 
 function canAccessView(view) {
+  if (view === "counter") return currentProfile?.role === "admin";
   return view === "dashboard" || view === "personal" || canAccessModule(VIEW_MODULES[view]);
 }
 
@@ -774,6 +776,7 @@ function setView(view) {
     calendar: ["Agenda condivisa", "Calendario"],
     team: ["ClickUp operativo", "Task del team"],
     smart: ["Turni interni", "Turni / Smart Working"],
+    counter: ["Amministrazione turni", "Contatore"],
     users: ["Accessi interni", "Utenti"],
     settings: ["Setup tecnico", "Configurazione"]
   };

@@ -70,6 +70,10 @@
           <span class="icon"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3.5"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h5"/><circle cx="16" cy="16" r="6"/><path d="M16 14v2l1.5 1"/></svg></span>
           <span>Turni / Smart Working</span>
         </button>
+        <button class="nav-item admin-only" data-view="counter" type="button">
+          <span class="icon"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V9"/><path d="M10 19V5"/><path d="M16 19v-7"/><path d="M22 19V3"/><path d="M2 19h22"/></svg></span>
+          <span>Contatore</span>
+        </button>
         <button class="nav-item" data-view="users" data-module="users" type="button">
           <span class="icon"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
           <span>Utenti</span>
@@ -480,8 +484,10 @@
           </section>
           <aside class="panel smart-day-panel" id="smartDayPanel"></aside>
         </div>
+      </section>
 
-        <section class="panel smart-off-summary admin-only">
+      <section class="view admin-only" id="counterView" data-view-panel="counter">
+        <section class="panel smart-off-summary">
           <div class="smart-off-summary-head">
             <div>
               <p class="eyebrow">Assenze</p>
@@ -500,11 +506,11 @@
           <p class="smart-settings-note">I totali uniscono gli OFF inseriti nell'Hub e quelli sincronizzati da Google Calendar, senza duplicati. Apri una persona per confermare ogni giorno o escluderlo dal conteggio.</p>
         </section>
 
-        <section class="panel smart-settings-panel admin-only">
+        <section class="panel smart-settings-panel">
           <div>
             <p class="eyebrow">Regole</p>
             <h2>Rotazione automatica</h2>
-            <form class="smart-settings admin-only" id="smartRulesForm">
+            <form class="smart-settings" id="smartRulesForm">
               <label>Massimo persone in smart al giorno<input name="max_remote_per_day" type="number" min="1" max="2" value="2"></label>
               <label>Giorni smart a settimana<input name="remote_days_per_employee" type="number" value="1" disabled></label>
               <button class="ghost-button" type="submit">Salva regole</button>
