@@ -4742,11 +4742,29 @@ code { font-family: var(--font-mono); font-size: 12px; }
   .client-detail-actions > * { flex: 1 1 auto; justify-content: center; }
   .client-info-section, .client-links-section { padding: 20px; }
   .client-info-list > div { grid-template-columns: 1fr; gap: 5px; }
-  .client-drive-panel { padding: 20px; }
+  .client-drive-panel { padding: 16px 12px 20px; }
   .drive-browser-head { align-items: flex-start; }
   .drive-browser-actions { align-items: flex-end; flex-direction: column; }
   .drive-browser-head { align-items: flex-start; flex-direction: column; gap: 8px; }
-  .drive-file-grid { grid-template-columns: 1fr; }
+  .drive-file-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .drive-entry.has-thumbnail { padding: 8px 8px 9px; }
+  .drive-entry-preview {
+    width: calc(100% + 16px);
+    aspect-ratio: 4 / 3;
+    margin: -8px -8px 3px;
+  }
+  .drive-entry-preview img { object-fit: contain; object-position: center; }
+  .drive-entry-copy strong { font-size: 10.5px; }
+  .drive-entry-copy small { overflow: hidden; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+  .drive-entry-arrow { display: none; }
+  .drive-entry.has-thumbnail { grid-template-columns: minmax(0, 1fr); }
+  .drive-content-actions { grid-template-columns: minmax(0, 1fr) 28px 28px; gap: 4px; padding: 6px 6px 0; }
+  .drive-manage-button { width: 28px; height: 28px; }
+  .drive-download-button { min-height: 28px; font-size: 9px; }
+  .drive-content-link { grid-template-columns: minmax(0, 1fr) 28px; gap: 4px; padding: 6px; }
+  .drive-content-link input,
+  .drive-content-link button { height: 28px; }
+  .drive-content-link button { width: 28px; }
   .drive-preview-body { min-height: 420px; }
   .lead-card, .content-row, .image-card, .form-grid, .compact-toolbar,
   .user-row, .sync-log-row, .ai-result-row { grid-template-columns: 1fr; }

@@ -11,6 +11,8 @@ assert.match(htmlSource, /id="mobileNavBackdrop"/, "il menu deve chiudersi anche
 assert.match(styleSource, /@media \(max-width: 640px\)[\s\S]*?\.sidebar \{[\s\S]*?position: fixed;[\s\S]*?transform: translateX\(-105%\);/, "su smartphone la sidebar deve diventare un drawer laterale");
 assert.match(styleSource, /\.sidebar\.is-mobile-open \{ transform: translateX\(0\); \}/, "il drawer aperto deve entrare completamente nello schermo");
 assert.match(styleSource, /\.mobile-nav-backdrop\.is-active \{ opacity: 1; pointer-events: auto; \}/, "lo sfondo deve intercettare il tocco solo a menu aperto");
+assert.match(styleSource, /@media \(max-width: 640px\)[\s\S]*?\.drive-file-grid \{ grid-template-columns: repeat\(2, minmax\(0, 1fr\)\);/, "su smartphone il Drive deve mostrare due elementi per riga");
+assert.match(styleSource, /@media \(max-width: 640px\)[\s\S]*?\.drive-entry-preview img \{ object-fit: contain; object-position: center; \}/, "le foto del Drive mobile devono restare interamente visibili");
 assert.match(appSource, /function setMobileNavOpen\(open, \{ restoreFocus = false \} = \{\}\)/, "il menu mobile deve avere uno stato centralizzato");
 assert.match(appSource, /sidebar\.inert = mobileNavigationMedia\.matches && !shouldOpen/, "il menu chiuso non deve restare raggiungibile da tastiera");
 assert.match(appSource, /event\.key === "Escape"[\s\S]*?setMobileNavOpen\(false, \{ restoreFocus: true \}\)/, "Escape deve chiudere il menu e restituire il focus");
