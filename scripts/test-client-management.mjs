@@ -25,7 +25,7 @@ assert.doesNotMatch(appSource, /Apri Google Drive/, "la scheda cliente non deve 
 assert.doesNotMatch(appSource, /aria-label="Apri ClickUp"/, "la scheda cliente non deve rimandare al sito ClickUp");
 assert.match(htmlSource, /id="clientCreateAutomation"/, "il modal deve spiegare la configurazione automatica");
 assert.match(htmlSource, /id="saveClientButton"/, "il salvataggio deve mostrare lo stato della creazione");
-assert.match(styleSource, /@media \(max-width: 640px\)[\s\S]*?\.client-grid \{[\s\S]*?grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/, "su smartphone i clienti devono essere disposti due per riga");
+assert.match(styleSource, /@media \(max-width: 980px\)[\s\S]*?\.client-grid \{[\s\S]*?grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/, "su smartphone i clienti devono essere disposti due per riga");
 assert.match(styleSource, /\.client-folder \{[\s\S]*?min-height: 72px;[\s\S]*?grid-template-columns: 34px minmax\(0, 1fr\) 13px;/, "le schede cliente mobile devono essere rettangolari e compatte");
 assert.match(styleSource, /\.client-folder-copy strong \{[\s\S]*?font-size: 13px;/, "i nomi cliente nella griglia mobile devono restare leggibili");
 assert.match(styleSource, /\.drive-library-grid \{[\s\S]*?grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/, "GRAFICHE e VIDEO devono apparire affiancate e in evidenza");

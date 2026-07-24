@@ -308,7 +308,7 @@ svg.lc {
 .sidebar-service[data-service-state="offline"] { color: #c84d45; }
 .sidebar-service[data-service-state="pending"] { color: #b58a25; }
 
-.mobile-nav-toggle,
+.icon-button.mobile-nav-toggle,
 .mobile-nav-backdrop { display: none; }
 
 /* --- Main --- */
@@ -4670,7 +4670,7 @@ code { font-family: var(--font-mono); font-size: 12px; }
   .client-links-section { border-top: 1px solid var(--line); border-left: 0; }
 }
 
-@media (max-width: 640px) and (hover: none) and (pointer: coarse) {
+@media (max-width: 980px) {
   input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]),
   textarea,
   select,
@@ -4724,7 +4724,7 @@ code { font-family: var(--font-mono); font-size: 12px; }
     font-size: 15px;
     white-space: normal;
   }
-  .mobile-nav-toggle {
+  .icon-button.mobile-nav-toggle {
     width: 42px;
     height: 42px;
     display: grid;

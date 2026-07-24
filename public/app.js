@@ -795,7 +795,7 @@ function setView(view) {
   if (view === "personal") loadPersonalArea();
 }
 
-const mobileNavigationMedia = window.matchMedia("(max-width: 640px) and (hover: none) and (pointer: coarse)");
+const mobileNavigationMedia = window.matchMedia("(max-width: 980px)");
 
 function setMobileNavOpen(open, { restoreFocus = false } = {}) {
   const sidebar = document.getElementById("appSidebar");
