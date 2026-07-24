@@ -1428,8 +1428,7 @@ function clientDetailMarkup(client) {
       <div class="client-detail-actions">
         ${currentProfile?.role === "admin" ? `<button class="danger-button" data-client-delete="${client.id}" type="button"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="m19 6-1 14H6L5 6"/><path d="M10 11v5M14 11v5"/></svg>Elimina</button>` : ""}
         <button class="ghost-button" data-client-edit="${client.id}" type="button"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>Modifica</button>
-        ${clickup ? `<a class="ghost-button" href="${escapeHtml(clickup)}" target="_blank" rel="noreferrer"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>ClickUp</a>` : ""}
-        ${drive ? `<button class="primary-button client-drive-button" data-client-drive="${client.id}" type="button"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h6l2 2h10v10H3z"/><path d="M3 7V5h6l2 2"/></svg>Apri Google Drive</button>` : `<button class="primary-button" data-client-edit="${client.id}" type="button">Aggiungi Drive</button>`}
+        ${drive ? "" : `<button class="primary-button" data-client-edit="${client.id}" type="button">Aggiungi Drive</button>`}
       </div>
     </div>
     <div class="client-detail-body">
@@ -1442,20 +1441,20 @@ function clientDetailMarkup(client) {
         </dl>
       </section>
       <aside class="client-links-section">
-        <p class="eyebrow">Collegamenti</p>
+        <p class="eyebrow">Sistemi interni</p>
         <div class="client-link-row ${drive ? "" : "is-missing"}">
           <span class="client-link-icon"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h6l2 2h10v10H3z"/><path d="M3 7V5h6l2 2"/></svg></span>
-          <div><strong>Google Drive</strong><small>${drive ? "Cartella cliente collegata" : "Collegamento da aggiungere"}</small></div>
-          ${drive ? `<button class="client-link-open" data-client-drive="${client.id}" type="button" aria-label="Apri Google Drive integrato"><svg class="lc" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></button>` : ""}
+          <div><strong>Drive</strong><small>${drive ? "Cartelle aperte qui sotto" : "Collegamento da aggiungere"}</small></div>
+          ${drive ? `<span class="client-link-state">Interno</span>` : ""}
         </div>
         <div class="client-link-row ${clickup ? "" : "is-missing"}">
           <span class="client-link-icon"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 9h8M8 13h5M5 4h14v16H5z"/></svg></span>
-          <div><strong>ClickUp</strong><small>${clickup ? "Spazio cliente collegato" : "Collegamento da aggiungere"}</small></div>
-          ${clickup ? `<a href="${escapeHtml(clickup)}" target="_blank" rel="noreferrer" aria-label="Apri ClickUp"><svg class="lc" viewBox="0 0 24 24"><path d="M15 3h6v6"/><path d="M10 14 21 3"/></svg></a>` : ""}
+          <div><strong>Task</strong><small>${clickup ? "Sincronizzazione attiva nel gestionale" : "Collegamento da aggiungere"}</small></div>
+          ${clickup ? `<span class="client-link-state">Interno</span>` : ""}
         </div>
       </aside>
     </div>
-    ${drive ? `<section class="client-drive-panel is-hidden" data-client-drive-panel></section>` : ""}
+    ${drive ? `<section class="client-drive-panel" data-client-drive-panel aria-live="polite"></section>` : ""}
   `;
 }
 
@@ -1474,9 +1473,12 @@ function safeExternalUrl(value) {
   }
 }
 
-function openClientDetails(clientId) {
+async function openClientDetails(clientId) {
+  resetDriveBrowser();
   selectedClientId = String(clientId || "");
   renderClients();
+  const client = state.clients.find((item) => String(item.id) === selectedClientId);
+  if (clientHasDrive(client)) await openClientDrive(selectedClientId);
 }
 
 function closeClientDetails() {
@@ -1486,6 +1488,7 @@ function closeClientDetails() {
 }
 
 function resetDriveBrowser() {
+  clientDriveFolderLoadId += 1;
   if (clientDriveState.objectUrl) URL.revokeObjectURL(clientDriveState.objectUrl);
   clearDriveThumbnailUrls();
   clientDriveState = { clientId: "", path: [], objectUrl: "", thumbnailUrls: new Set(), uploadEnabled: false };
@@ -5000,7 +5003,6 @@ function taskRowMarkup(task) {
       <span class="task-priority ${priorityClass(task.priority)}">${task.priority || "Nessuna"}</span>
       <div class="clickup-task-actions">
         <button class="task-icon-action" data-edit-task="${task.clickup_task_id || task.id}" type="button" title="Modifica task" aria-label="Modifica task"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
-        <a class="task-icon-action" href="${task.url}" target="_blank" rel="noreferrer" title="Apri in ClickUp" aria-label="Apri in ClickUp"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg></a>
       </div>
       ${warnings.length ? `<div class="clickup-row-warning">${warnings.join(" · ")}</div>` : ""}
     </article>
@@ -5542,8 +5544,6 @@ function openTaskDetailModal(taskId) {
   document.getElementById("taskDetailDueDate").textContent = due ? `Scadenza: ${formatContentDate(due)}` : "Senza scadenza";
   document.getElementById("taskDetailAssignees").textContent = assigneeLabels(task).join(", ") || "Nessun assegnatario";
   document.getElementById("taskDetailDescription").textContent = String(task.description || "").trim() || "Nessuna descrizione disponibile.";
-  const clickupLink = document.getElementById("taskDetailClickUpLink");
-  clickupLink.href = task.url || `https://app.clickup.com/t/${taskDetailTaskId}`;
   document.getElementById("taskDetailModal").showModal();
 }
 
@@ -6515,6 +6515,30 @@ async function loadPersonalArea({ quiet = false } = {}) {
   renderNotifications();
 }
 
+async function openPersonalTask(taskId) {
+  if (!taskId || !canAccessView("team")) {
+    alert("Non hai accesso alla sezione Task del team.");
+    return;
+  }
+  setView("team");
+  if (currentProfile?.role === "admin") selectedTeamMemberId = ALL_TEAM_TASKS_ID;
+  else ensureTeamSelection();
+  ["taskSearch", "taskAssigneeFilter", "taskStatusFilter", "taskClientFilter"].forEach((id) => {
+    const field = document.getElementById(id);
+    if (field) field.value = "";
+  });
+  if (!findTask(taskId)) await loadClickUpTasks();
+  renderTeam();
+  if (!findTask(taskId)) {
+    alert("La task non è ancora disponibile nel gestionale. Prova a sincronizzare le task.");
+    return;
+  }
+  requestAnimationFrame(() => {
+    document.querySelector(`[data-task-detail="${CSS.escape(String(taskId))}"]`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    openTaskDetailModal(taskId);
+  });
+}
+
 function renderPersonalArea() {
   const taskList = document.getElementById("personalTaskList");
   const eventList = document.getElementById("personalEventList");
@@ -6536,14 +6560,14 @@ function renderPersonalArea() {
 
   const tasks = [...personalAreaState.tasks].sort(compareTaskDueDate);
   taskList.innerHTML = tasks.length ? tasks.map((task) => {
-    const link = safeExternalUrl(task.clickup_url);
+    const taskId = String(task.clickup_task_id || task.id || "");
     const due = task.due_date_ms ? formatPersonalDate(task.due_date_ms, false) : "Senza scadenza";
     const group = taskStatusGroup(task);
-    return `<article class="personal-item personal-task-item">
+    return `<article class="personal-item personal-task-item" data-personal-task="${escapeHtml(taskId)}" tabindex="0" role="button" aria-label="Apri la task ${escapeHtml(task.name)} nel gestionale">
       <span class="personal-item-marker is-${escapeHtml(group.id)}" aria-hidden="true"></span>
       <div class="personal-item-body"><strong>${escapeHtml(task.name)}</strong><span>${escapeHtml(task.client_tag || "Cliente non indicato")} · ${escapeHtml(task.status || group.label)}</span></div>
       <time class="personal-date">${escapeHtml(due)}</time>
-      ${link ? `<a class="icon-button" href="${escapeHtml(link)}" target="_blank" rel="noopener" title="Apri in ClickUp" aria-label="Apri in ClickUp"><svg class="lc" viewBox="0 0 24 24"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg></a>` : ""}
+      <svg class="lc personal-item-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
     </article>`;
   }).join("") : `<div class="personal-empty"><strong>Nessuna task attiva</strong><span>Le nuove assegnazioni ClickUp compariranno qui.</span></div>`;
 
@@ -6567,9 +6591,13 @@ function renderNotifications() {
   badge.classList.toggle("is-hidden", !notifications.length);
   list.innerHTML = notifications.length ? notifications.map((item) => {
     const link = safeExternalUrl(item.link);
+    const isTask = item.source_type === "task" && item.source_id;
+    const title = isTask
+      ? `<button type="button" data-personal-task="${escapeHtml(item.source_id)}"><strong>${escapeHtml(item.title)}</strong></button>`
+      : link ? `<a href="${escapeHtml(link)}" target="_blank" rel="noopener"><strong>${escapeHtml(item.title)}</strong></a>` : `<strong>${escapeHtml(item.title)}</strong>`;
     return `<article class="notification-item" data-notification-type="${escapeHtml(item.source_type)}">
       <span class="notification-type is-${escapeHtml(item.source_type)}" aria-hidden="true"></span>
-      <div class="notification-item-body">${link ? `<a href="${escapeHtml(link)}" target="_blank" rel="noopener"><strong>${escapeHtml(item.title)}</strong></a>` : `<strong>${escapeHtml(item.title)}</strong>`}<span>${escapeHtml(item.message || "")}</span><small>${escapeHtml(formatPersonalDate(item.occurred_at))}</small></div>
+      <div class="notification-item-body">${title}<span>${escapeHtml(item.message || "")}</span><small>${escapeHtml(formatPersonalDate(item.occurred_at))}</small></div>
       <button class="icon-button notification-dismiss" data-notification-dismiss="${escapeHtml(item.id)}" type="button" title="Chiudi notifica" aria-label="Chiudi notifica"><svg class="lc" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
     </article>`;
   }).join("") : `<div class="notification-empty"><strong>Nessuna nuova notifica</strong><span>Sei aggiornato.</span></div>`;
@@ -6699,6 +6727,8 @@ document.body.addEventListener("click", (event) => {
   const personalRefresh = event.target.closest("[data-personal-refresh]");
   if (notificationDismiss) return dismissPersonalNotification(notificationDismiss.dataset.notificationDismiss);
   if (personalRefresh) return loadPersonalArea();
+  const personalTask = event.target.closest("[data-personal-task]");
+  if (personalTask) return openPersonalTask(personalTask.dataset.personalTask);
   if (jump) return setView(jump.dataset.jump);
   if (teamMember) return selectTeamMember(teamMember.dataset.teamMember);
   if (newTaskFor) return openTaskModal(newTaskFor.dataset.newTaskFor);
@@ -7056,6 +7086,12 @@ document.getElementById("driveManageForm").addEventListener("submit", (event) =>
 document.body.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && document.getElementById("appSidebar")?.classList.contains("is-mobile-open")) {
     setMobileNavOpen(false, { restoreFocus: true });
+    return;
+  }
+  const personalTask = event.target.closest("[data-personal-task]");
+  if (personalTask && !event.target.closest("button, a, input, select, textarea") && (event.key === "Enter" || event.key === " ")) {
+    event.preventDefault();
+    openPersonalTask(personalTask.dataset.personalTask);
     return;
   }
   const taskRow = event.target.closest("[data-task-detail]");

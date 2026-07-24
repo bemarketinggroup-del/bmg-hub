@@ -17,6 +17,10 @@ assert.match(apiSource, /status: "archiviato"/, "la rimozione deve impedire la r
 assert.doesNotMatch(apiSource, /trashDriveFile/, "la rimozione cliente non deve eliminare cartelle Drive");
 assert.match(driveSource, /ensureDriveServiceAccountPermission/, "la nuova cartella deve essere accessibile al gestionale");
 assert.match(appSource, /Le cartelle Google Drive e ClickUp resteranno intatte/, "la conferma deve spiegare cosa resta conservato");
+assert.match(appSource, /async function openClientDetails\(clientId\)[\s\S]*?openClientDrive\(selectedClientId\)/, "aprendo un cliente deve aprirsi automaticamente il Drive interno");
+assert.match(appSource, /class="client-drive-panel" data-client-drive-panel aria-live="polite"/, "il browser Drive del cliente deve essere subito visibile");
+assert.doesNotMatch(appSource, /Apri Google Drive/, "la scheda cliente non deve rimandare al sito Google Drive");
+assert.doesNotMatch(appSource, /aria-label="Apri ClickUp"/, "la scheda cliente non deve rimandare al sito ClickUp");
 assert.match(htmlSource, /id="clientCreateAutomation"/, "il modal deve spiegare la configurazione automatica");
 assert.match(htmlSource, /id="saveClientButton"/, "il salvataggio deve mostrare lo stato della creazione");
 assert.match(styleSource, /@media \(max-width: 640px\)[\s\S]*?\.client-grid \{[\s\S]*?grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/, "su smartphone i clienti devono essere disposti due per riga");

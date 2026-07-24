@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import { eventIncludesProfile, isCompletedTaskStatus, taskAssignedToProfile } from "../lib/personal-area.js";
 
 const profile = {
@@ -15,5 +16,12 @@ assert.equal(isCompletedTaskStatus("Completato"), true);
 assert.equal(isCompletedTaskStatus("In corso"), false);
 assert.equal(eventIncludesProfile({ attendees: [{ email: "MARTA@bemarketinggroup.it" }] }, profile), true);
 assert.equal(eventIncludesProfile({ attendees: [{ email: "altro@example.com" }] }, profile), false);
+
+const appSource = await readFile(new URL("../public/app.js", import.meta.url), "utf8");
+const htmlSource = await readFile(new URL("../public/index.html", import.meta.url), "utf8");
+assert.match(appSource, /data-personal-task="\$\{escapeHtml\(taskId\)\}"/, "le task personali devono essere selezionabili nel gestionale");
+assert.match(appSource, /async function openPersonalTask\(taskId\)[\s\S]*?setView\("team"\)[\s\S]*?openTaskDetailModal\(taskId\)/, "una task personale deve aprire la vista e il dettaglio interni");
+assert.doesNotMatch(appSource, /Apri in ClickUp/, "l'interfaccia non deve rimandare l'utente a ClickUp");
+assert.doesNotMatch(htmlSource, /taskDetailClickUpLink/, "il dettaglio task non deve contenere collegamenti esterni");
 
 console.log("Personal area tests passed");
