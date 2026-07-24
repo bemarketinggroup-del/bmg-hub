@@ -6020,6 +6020,12 @@ function googleCalendarRangeKey(range = googleCalendarRange()) {
   return `${googleCalendarState.mode}:${gcDateKey(range.start)}:${gcDateKey(range.end)}`;
 }
 
+function setGoogleCalendarMode(mode) {
+  googleCalendarState.mode = mode === "week" ? "week" : "month";
+  if (googleCalendarState.mode === "week") googleCalendarState.anchor = new Date();
+  loadGoogleCalendar();
+}
+
 function calendarApiIso(date) {
   const localMidnight = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0, 0);
   return localMidnight.toISOString();
@@ -7370,8 +7376,7 @@ document.getElementById("calendarNextButton").addEventListener("click", () => {
 });
 document.querySelectorAll("[data-calendar-mode]").forEach((button) => {
   button.addEventListener("click", () => {
-    googleCalendarState.mode = button.dataset.calendarMode;
-    loadGoogleCalendar();
+    setGoogleCalendarMode(button.dataset.calendarMode);
   });
 });
 document.getElementById("googleCalendarGrid").addEventListener("click", (event) => {

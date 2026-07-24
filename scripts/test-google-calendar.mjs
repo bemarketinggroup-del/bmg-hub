@@ -141,8 +141,10 @@ const styleSource = await readFile(new URL("../public/styles.css", import.meta.u
 assert.match(htmlSource, /id="googleCalendarMonthStrip"/, "il calendario mobile deve avere una navigazione rapida per mesi");
 assert.match(appSource, /function renderGoogleCalendarMonthStrip\(\)/, "i mesi rapidi devono seguire il periodo selezionato");
 assert.match(appSource, /data-calendar-month="\$\{key\}"/, "ogni mese rapido deve essere selezionabile");
+assert.match(appSource, /function setGoogleCalendarMode\(mode\) \{[\s\S]*?googleCalendarState\.mode = mode === "week" \? "week" : "month";[\s\S]*?if \(googleCalendarState\.mode === "week"\) googleCalendarState\.anchor = new Date\(\);[\s\S]*?loadGoogleCalendar\(\);[\s\S]*?\}/, "selezionando la vista settimanale il calendario deve partire dalla settimana corrente");
+assert.match(appSource, /button\.addEventListener\("click", \(\) => \{[\s\S]*?setGoogleCalendarMode\(button\.dataset\.calendarMode\);[\s\S]*?\}\);/, "i controlli Mese e Settimana devono usare il cambio vista centralizzato");
 assert.match(appSource, /data-mobile-label="\$\{day\.charAt\(0\)\}"/, "i giorni della settimana devono avere etichette compatte su smartphone");
-assert.match(styleSource, /@media \(max-width: 640px\)[\s\S]*?\.google-calendar-weekdays,[\s\S]*?\.google-calendar-month-grid \{ width: 100%; min-width: 0; \}/, "la vista mensile mobile deve mostrare tutte le sette colonne senza scorrimento orizzontale");
+assert.match(styleSource, /@media \(max-width: 980px\)[\s\S]*?\.google-calendar-weekdays,[\s\S]*?\.google-calendar-month-grid \{ width: 100%; min-width: 0; \}/, "la vista mensile mobile deve mostrare tutte le sette colonne senza scorrimento orizzontale");
 assert.match(styleSource, /\.google-calendar-month-grid \{ grid-template-rows: repeat\(6, minmax\(88px, auto\)\); \}/, "le settimane mobile devono essere compatte");
 assert.match(styleSource, /\.google-calendar-day-events \{ grid-auto-rows: 19px; gap: 2px; \}/, "gli eventi mobile devono avere la densita del calendario Google");
 
