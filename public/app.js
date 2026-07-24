@@ -174,7 +174,8 @@ const seed = {
     leave_entries: [],
     busy_entries: [],
     events: [],
-    can_manage: false
+    can_manage: false,
+    can_move_smart: false
   }
 };
 
@@ -4230,7 +4231,7 @@ function smartMonthChip(item, type, data) {
   const externalCalendar = item.source === "google_calendar";
   const editable = type !== "busy" && data.can_manage && !externalCalendar;
   const proposal = type === "smart" && item.status === "suggested" && item.source === "auto";
-  const draggable = proposal && data.can_manage && smartWeekStart(item.date) > smartWeekStart(localDateKey(new Date()));
+  const draggable = proposal && data.can_move_smart && smartWeekStart(item.date) > smartWeekStart(localDateKey(new Date()));
   const title = externalCalendar
     ? "Importato da Google Calendar. Modificalo dal calendario."
     : item.reason || item.notes || item.title || label;
