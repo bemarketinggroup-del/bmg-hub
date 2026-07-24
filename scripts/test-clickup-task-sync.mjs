@@ -11,6 +11,8 @@ assert.match(api, /CLICKUP_WEBHOOK_SECRET/);
 assert.match(api, /timingSafeEqual/);
 assert.match(api, /clickup_task_sync_events/);
 assert.match(api, /clickup_task_sync_logs/);
+assert.match(api, /CLICKUP_DEFAULT_TASK_LIST_ID = process\.env\.CLICKUP_DEFAULT_TASK_LIST_ID \|\| "901523571965"/);
+assert.match(api, /Collegamento ClickUp scaduto o non valido/);
 assert.match(api, /method === "PATCH"/);
 assert.match(api, /client_tag/);
 assert.match(api, /url\.searchParams\.get\("sync"\) === "1"/);

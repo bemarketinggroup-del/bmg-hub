@@ -5,7 +5,7 @@ import { taskAssignedToClickUpId } from "../lib/clickup-identity.js";
 
 const CLICKUP_API_TOKEN = process.env.CLICKUP_API_TOKEN;
 const CLICKUP_WORKSPACE_ID = process.env.CLICKUP_WORKSPACE_ID || "90152036988";
-const CLICKUP_DEFAULT_TASK_LIST_ID = process.env.CLICKUP_DEFAULT_TASK_LIST_ID;
+const CLICKUP_DEFAULT_TASK_LIST_ID = process.env.CLICKUP_DEFAULT_TASK_LIST_ID || "901523571965";
 const CLICKUP_WEBHOOK_SECRET = process.env.CLICKUP_WEBHOOK_SECRET;
 const CLICKUP_API = "https://api.clickup.com/api/v2";
 
@@ -24,6 +24,14 @@ function json(response, status, body, customHeaders = headers()) {
 
 function clean(value) {
   return String(value || "").trim();
+}
+
+function clickUpApiError(data, status, fallback) {
+  const message = clean(data?.err || data?.error || data?.message);
+  if (Number(status) === 401) {
+    return "Collegamento ClickUp scaduto o non valido. Aggiorna CLICKUP_API_TOKEN nelle impostazioni Vercel.";
+  }
+  return message || fallback || `Errore ClickUp ${status}`;
 }
 
 function normalizeName(value) {
@@ -257,7 +265,6 @@ async function logs() {
 
 async function createTask(body, session, clientRows) {
   const listId = clean(body.list_id || CLICKUP_DEFAULT_TASK_LIST_ID);
-  if (!listId) return { status: 400, body: { error: "Missing CLICKUP_DEFAULT_TASK_LIST_ID or list_id" } };
   if (!body.name) return { status: 400, body: { error: "name is required" } };
 
   const clientMatch = validateClientTag(body.client_tag, clientRows);
@@ -278,7 +285,12 @@ async function createTask(body, session, clientRows) {
 
   const result = await clickupFetch(`/list/${listId}/task`, { method: "POST", body: JSON.stringify(payload) });
   const data = await result.json().catch(() => ({}));
-  if (!result.ok) return { status: result.status, body: data };
+  if (!result.ok) {
+    return {
+      status: result.status,
+      body: { ...data, error: clickUpApiError(data, result.status, "Creazione task ClickUp non riuscita") }
+    };
+  }
   await logSync(data.id, "hub", "create", "success", "Task creata dal gestionale");
   const row = await upsertTask({ ...data, tags: [{ name: clientMatch.tag }] }, clientRows);
   return { status: 200, body: taskFromRow(row) };
