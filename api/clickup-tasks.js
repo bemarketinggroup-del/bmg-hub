@@ -166,6 +166,20 @@ function validateClientTag(tag, clientRows) {
   return match ? { status: "ok", tag: match.name, client: match } : null;
 }
 
+function normalizedClientText(value) {
+  return normalizeName(value).replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function clientFromTaskText(body, clientRows) {
+  const text = ` ${normalizedClientText(`${body.name || ""} ${body.description || ""}`)} `;
+  const match = [...clientRows]
+    .map((client) => ({ client, term: normalizedClientText(client.name) }))
+    .filter((item) => item.term)
+    .sort((left, right) => right.term.length - left.term.length)
+    .find((item) => text.includes(` ${item.term} `));
+  return match ? { status: "ok", tag: match.client.name, client: match.client } : null;
+}
+
 async function upsertTask(task, clientRows) {
   const match = clientFromTag(normalizeTags(task), clientRows);
   const payload = taskPayload(task, match);
@@ -267,7 +281,7 @@ async function createTask(body, session, clientRows) {
   const listId = clean(body.list_id || CLICKUP_DEFAULT_TASK_LIST_ID);
   if (!body.name) return { status: 400, body: { error: "name is required" } };
 
-  const clientMatch = validateClientTag(body.client_tag, clientRows);
+  const clientMatch = validateClientTag(body.client_tag, clientRows) || clientFromTaskText(body, clientRows);
   if (!clientMatch) return { status: 400, body: { error: "Cliente non riconosciuto: scegli un tag cliente valido" } };
 
   const assignees = session.profile.role === "staff"
@@ -279,6 +293,7 @@ async function createTask(body, session, clientRows) {
     description: clean(body.description),
     assignees,
     tags: [clientMatch.tag],
+    status: "to do",
     due_date: body.due_date ? new Date(body.due_date).getTime() : undefined,
     priority: priorityValue(body.priority)
   };

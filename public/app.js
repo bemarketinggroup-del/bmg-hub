@@ -5359,22 +5359,116 @@ function isSubtask(task) {
   return Boolean(task.is_subtask || task.parent_id);
 }
 
-function renderTaskAssigneeOptions() {
-  const select = document.getElementById("taskAssignees");
-  if (!select) return;
-  const selected = new Set([...select.selectedOptions].map((option) => option.value));
-  select.innerHTML = teamMembers().filter((user) => clickupUserId(user)).map((user) => `
-    <option value="${clickupUserId(user)}" ${selected.has(String(clickupUserId(user))) ? "selected" : ""}>${user.name}</option>
-  `).join("");
+function renderTaskAssigneeOptions(selectedIds = []) {
+  const list = document.getElementById("taskAssignees");
+  if (!list) return;
+  const selected = new Set([...selectedIds].map(String));
+  const members = teamMembers().filter((user) => clickupUserId(user));
+  list.innerHTML = members.map((user) => {
+    const userId = String(clickupUserId(user));
+    const avatar = safeExternalUrl(user.avatar || user.profile_picture);
+    return `<label class="task-assignee-option">
+      <input name="assignees" type="checkbox" value="${escapeHtml(userId)}" ${selected.has(userId) ? "checked" : ""}>
+      <span class="task-assignee-option-avatar">${avatar ? `<img src="${escapeHtml(avatar)}" alt="">` : escapeHtml(initials(user.name))}</span>
+      <span class="task-assignee-option-copy"><strong>${escapeHtml(user.name)}</strong>${user.email ? `<small>${escapeHtml(user.email)}</small>` : ""}</span>
+      <span class="task-assignee-option-check" aria-hidden="true"><svg class="lc" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg></span>
+    </label>`;
+  }).join("") || `<div class="task-assignee-empty">Nessun utente ClickUp disponibile.</div>`;
 }
 
-function renderTaskClientOptions(selectedClient = "") {
-  const select = document.getElementById("taskClientTag");
-  if (!select) return;
-  const selected = normalizeClientLabel(selectedClient);
-  select.innerHTML = `<option value="">Scegli cliente</option>${state.clients.map((client) => `
-    <option value="${client.name}" ${normalizeClientLabel(client.name) === selected ? "selected" : ""}>${client.name}</option>
-  `).join("")}`;
+function normalizedClientSearch(value) {
+  return normalizeIdentity(value).replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function taskClientByName(value) {
+  const selected = normalizeClientLabel(value);
+  return state.clients.find((client) => normalizeClientLabel(client.name) === selected) || null;
+}
+
+function renderTaskClientSearchResults(query = "") {
+  const results = document.getElementById("taskClientResults");
+  const search = document.getElementById("taskClientSearch");
+  if (!results || !search) return;
+  const normalizedQuery = normalizedClientSearch(query);
+  const matches = state.clients
+    .filter((client) => !normalizedQuery || normalizedClientSearch(client.name).includes(normalizedQuery))
+    .slice(0, 12);
+  results.innerHTML = matches.length ? matches.map((client) => `
+    <button data-task-client-option="${escapeHtml(client.id)}" type="button" role="option">
+      <span class="client-folder-swatch" style="${clientColorStyle(client)}" aria-hidden="true">${escapeHtml(initials(client.name))}</span>
+      <span><strong>${escapeHtml(client.name)}</strong><small>${escapeHtml(labelClientStatus(client.status))}</small></span>
+      <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+    </button>
+  `).join("") : `<div class="task-client-no-results">Nessun cliente trovato.</div>`;
+  results.classList.remove("is-hidden");
+  search.setAttribute("aria-expanded", "true");
+}
+
+function closeTaskClientResults() {
+  document.getElementById("taskClientResults")?.classList.add("is-hidden");
+  document.getElementById("taskClientSearch")?.setAttribute("aria-expanded", "false");
+}
+
+function setTaskClientSelection(client, source = "manual") {
+  const tag = document.getElementById("taskClientTag");
+  const search = document.getElementById("taskClientSearch");
+  const selection = document.getElementById("taskClientSelection");
+  const clear = document.getElementById("taskClientClear");
+  const hint = document.getElementById("taskClientHint");
+  if (!tag || !search || !selection || !clear || !client) return;
+  tag.value = client.name;
+  tag.dataset.selectionSource = source;
+  search.value = client.name;
+  selection.innerHTML = `<span>Cliente selezionato</span><strong>${escapeHtml(client.name)}</strong>${source === "auto" ? `<em>Riconosciuto automaticamente</em>` : ""}`;
+  selection.classList.remove("is-hidden");
+  clear.classList.remove("is-hidden");
+  if (hint) {
+    hint.classList.remove("is-error");
+    hint.textContent = "Puoi cercarlo qui oppure scriverlo nel titolo o nella descrizione: verrà riconosciuto automaticamente.";
+  }
+  closeTaskClientResults();
+}
+
+function clearTaskClientSelection({ preserveSearch = false } = {}) {
+  const tag = document.getElementById("taskClientTag");
+  const search = document.getElementById("taskClientSearch");
+  const selection = document.getElementById("taskClientSelection");
+  const clear = document.getElementById("taskClientClear");
+  if (!tag || !search || !selection || !clear) return;
+  tag.value = "";
+  tag.dataset.selectionSource = "";
+  if (!preserveSearch) search.value = "";
+  selection.replaceChildren();
+  selection.classList.add("is-hidden");
+  clear.classList.add("is-hidden");
+}
+
+function renderTaskClientOptions(selectedClient = "", source = "existing") {
+  const client = taskClientByName(selectedClient);
+  clearTaskClientSelection();
+  if (client) setTaskClientSelection(client, source);
+}
+
+function taskClientMention() {
+  const form = document.getElementById("taskForm");
+  if (!form) return null;
+  const text = ` ${normalizedClientSearch(`${form.elements.name.value} ${form.elements.description.value}`)} `;
+  if (!text.trim()) return null;
+  const candidates = state.clients.flatMap((client) => {
+    const aliases = (state.clientAliases || [])
+      .filter((alias) => String(alias.client_id) === String(client.id))
+      .map((alias) => alias.alias);
+    return [client.name, ...aliases].map((term) => ({ client, term: normalizedClientSearch(term) }));
+  }).filter((item) => item.term).sort((left, right) => right.term.length - left.term.length);
+  return candidates.find((item) => text.includes(` ${item.term} `))?.client || null;
+}
+
+function autoSelectTaskClient() {
+  const tag = document.getElementById("taskClientTag");
+  if (!tag || ["manual", "existing"].includes(tag.dataset.selectionSource)) return;
+  const client = taskClientMention();
+  if (client) setTaskClientSelection(client, "auto");
+  else if (tag.dataset.selectionSource === "auto") clearTaskClientSelection();
 }
 
 function normalizeClientLabel(value) {
@@ -5641,18 +5735,24 @@ function openTaskModal(userId = selectedTeamMemberId, taskId = "") {
   form.reset();
   form.elements.clickup_task_id.value = task?.clickup_task_id || task?.id || "";
   form.elements.name.value = task?.name || "";
-  form.elements.status.value = task?.status || "";
+  form.elements.status.value = task?.status || "to do";
   form.elements.priority.value = task?.priority || "";
   form.elements.description.value = task?.description || "";
   form.elements.due_date.value = task?.due_date ? new Date(Number(task.due_date)).toISOString().slice(0, 10) : "";
-  renderTaskAssigneeOptions();
-  renderTaskClientOptions(task?.client_tag || "");
-  [...form.elements.assignees.options].forEach((option) => {
-    option.selected = task
-      ? (task.assignees || []).some((assignee) => String(assignee.id) === String(option.value))
-      : userId !== ALL_TEAM_TASKS_ID && userId !== UNASSIGNED_TASKS_ID && String(option.value) === String(userId || "");
-  });
-  document.getElementById("taskModalTitle").textContent = task ? "Modifica task ClickUp" : "Nuova task ClickUp";
+  const selectedAssigneeIds = task
+    ? (task.assignees || []).map(clickupUserId).filter(Boolean)
+    : userId !== ALL_TEAM_TASKS_ID && userId !== UNASSIGNED_TASKS_ID
+      ? [String(userId || "")]
+      : [];
+  renderTaskAssigneeOptions(selectedAssigneeIds);
+  renderTaskClientOptions(task?.client_tag || "", task ? "existing" : "");
+  if (!task) autoSelectTaskClient();
+  const clientHint = document.getElementById("taskClientHint");
+  if (clientHint) {
+    clientHint.classList.remove("is-error");
+    clientHint.textContent = "Puoi cercarlo qui oppure scriverlo nel titolo o nella descrizione: verrà riconosciuto automaticamente.";
+  }
+  document.getElementById("taskModalTitle").textContent = task ? "Modifica task" : "Nuova task";
   document.getElementById("saveTaskButton").textContent = task ? "Salva modifiche" : "Crea task";
   document.getElementById("taskModal").showModal();
 }
@@ -5960,6 +6060,22 @@ async function submitTask(form) {
   const data = Object.fromEntries(formData.entries());
   data.assignees = formData.getAll("assignees");
   const isUpdate = Boolean(data.clickup_task_id);
+  const saveButton = document.getElementById("saveTaskButton");
+  const clientHint = document.getElementById("taskClientHint");
+  if (!data.client_tag) {
+    if (clientHint) {
+      clientHint.classList.add("is-error");
+      clientHint.textContent = "Seleziona un cliente oppure scrivilo nel titolo o nella descrizione.";
+    }
+    const search = document.getElementById("taskClientSearch");
+    search?.focus();
+    renderTaskClientSearchResults(search?.value || "");
+    return false;
+  }
+  if (saveButton) {
+    saveButton.disabled = true;
+    saveButton.textContent = isUpdate ? "Salvataggio…" : "Creazione…";
+  }
   try {
     const response = await apiFetch("/api/clickup/tasks", {
       method: isUpdate ? "PATCH" : "POST",
@@ -5972,10 +6088,17 @@ async function submitTask(form) {
     form.reset();
     await loadClickUpTasks();
     await loadClickUpTaskLogs();
+    return true;
   } catch (error) {
     clickupOnline = false;
     renderBackendStatus(error.message);
     alert(error.message || "Non riesco a sincronizzare la task su ClickUp.");
+    return false;
+  } finally {
+    if (saveButton) {
+      saveButton.disabled = false;
+      saveButton.textContent = isUpdate ? "Salva modifiche" : "Crea task";
+    }
   }
 }
 
@@ -7553,11 +7676,56 @@ document.getElementById("clientAliasForm").addEventListener("submit", (event) =>
   submitClientAlias(event.currentTarget);
 });
 
-document.getElementById("taskForm").addEventListener("submit", (event) => {
+const taskClientSearch = document.getElementById("taskClientSearch");
+const taskClientResults = document.getElementById("taskClientResults");
+taskClientSearch.addEventListener("focus", () => renderTaskClientSearchResults(taskClientSearch.value));
+taskClientSearch.addEventListener("input", () => {
+  const tag = document.getElementById("taskClientTag");
+  if (tag?.value && normalizeClientLabel(taskClientSearch.value) !== normalizeClientLabel(tag.value)) {
+    clearTaskClientSelection({ preserveSearch: true });
+  }
+  const exactClient = taskClientByName(taskClientSearch.value);
+  if (exactClient) {
+    setTaskClientSelection(exactClient, "manual");
+    return;
+  }
+  renderTaskClientSearchResults(taskClientSearch.value);
+});
+taskClientSearch.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    closeTaskClientResults();
+    return;
+  }
+  if (event.key === "Enter") {
+    const firstOption = taskClientResults.querySelector("[data-task-client-option]");
+    if (firstOption) {
+      event.preventDefault();
+      firstOption.click();
+    }
+  }
+});
+taskClientResults.addEventListener("click", (event) => {
+  const option = event.target.closest("[data-task-client-option]");
+  if (!option) return;
+  const client = state.clients.find((item) => String(item.id) === String(option.dataset.taskClientOption));
+  if (client) setTaskClientSelection(client, "manual");
+});
+document.getElementById("taskClientClear").addEventListener("click", () => {
+  clearTaskClientSelection();
+  taskClientSearch.focus();
+  renderTaskClientSearchResults("");
+});
+document.querySelector('#taskForm [name="name"]').addEventListener("input", autoSelectTaskClient);
+document.querySelector('#taskForm [name="description"]').addEventListener("input", autoSelectTaskClient);
+document.addEventListener("click", (event) => {
+  if (!event.target.closest(".task-client-picker")) closeTaskClientResults();
+});
+
+document.getElementById("taskForm").addEventListener("submit", async (event) => {
   if (event.submitter?.value === "cancel") return;
   event.preventDefault();
-  submitTask(event.currentTarget);
-  document.getElementById("taskModal").close();
+  const saved = await submitTask(event.currentTarget);
+  if (saved) document.getElementById("taskModal").close();
 });
 
 document.getElementById("userCreateForm").addEventListener("submit", (event) => {

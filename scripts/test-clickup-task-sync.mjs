@@ -6,6 +6,7 @@ const vercel = readFileSync("vercel.json", "utf8");
 const migration = readFileSync("supabase/20260604_clickup_task_sync.sql", "utf8");
 const envExample = readFileSync(".env.example", "utf8");
 const app = readFileSync("public/app.js", "utf8");
+const html = readFileSync("public/index.html", "utf8");
 
 assert.match(api, /CLICKUP_WEBHOOK_SECRET/);
 assert.match(api, /timingSafeEqual/);
@@ -15,6 +16,8 @@ assert.match(api, /CLICKUP_DEFAULT_TASK_LIST_ID = process\.env\.CLICKUP_DEFAULT_
 assert.match(api, /Collegamento ClickUp scaduto o non valido/);
 assert.match(api, /method === "PATCH"/);
 assert.match(api, /client_tag/);
+assert.match(api, /function clientFromTaskText/);
+assert.match(api, /status: "to do"/);
 assert.match(api, /url\.searchParams\.get\("sync"\) === "1"/);
 
 assert.match(vercel, /\/api\/clickup\/webhook/);
@@ -46,6 +49,11 @@ assert.match(app, /taskClientFilter/);
 assert.match(app, /ensureTeamSelection/);
 assert.match(app, /mini-avatar/);
 assert.match(app, /Priorit/);
-assert.match(readFileSync("public/index.html", "utf8"), /task-workspace/);
+assert.match(app, /function autoSelectTaskClient/);
+assert.match(app, /data-task-client-option/);
+assert.match(html, /task-workspace/);
+assert.match(html, /task-assignee-checklist/);
+assert.match(html, /id="taskClientSearch"/);
+assert.match(html, /name="status" type="hidden" value="to do"/);
 
 console.log("ClickUp task sync checks passed");
