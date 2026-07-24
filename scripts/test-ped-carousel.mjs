@@ -190,6 +190,10 @@ assert.match(appSource, /Tutti i contenuti di questa cartella sono gia nel PED/,
 assert.match(htmlSource, /id="pedMediaViewerModal"/, "il selettore deve includere un visualizzatore grande dedicato");
 assert.match(htmlSource, /data-ped-viewer-zoom-in/, "il visualizzatore deve offrire controlli zoom espliciti");
 assert.match(appSource, /data-ped-media-viewer/, "ogni contenuto visualizzabile deve avere un comando separato dalla selezione");
+assert.match(appSource, /class="ped-picker-media is-viewer" data-ped-media-viewer/, "il click sulla foto deve aprire il visualizzatore grande");
+assert.match(appSource, /<span>\$\{insertLabel\}<\/span>/, "il comando sotto la foto deve inserire il contenuto nel PED");
+assert.match(appSource, /const insertLabel = isCarouselSelection && selected \? "Rimuovi dal carosello" : "Inserisci nel PED"/, "il comando di inserimento deve essere esplicito");
+assert.doesNotMatch(appSource, /<span>Visualizza grande<\/span>/, "il vecchio comando separato Visualizza grande non deve comparire");
 assert.match(appSource, /const viewerSource = !file\.is_folder && previewType \? file\.content_url/, "il visualizzatore deve caricare il file originale e non la miniatura");
 assert.match(appSource, /function preloadPedMediaImage\(source, \{ highPriority = false \} = \{\}\)/, "le foto originali devono essere precaricate senza bloccare il selettore");
 assert.match(appSource, /preview\.src = poster/, "il visualizzatore deve mostrare subito la miniatura disponibile");

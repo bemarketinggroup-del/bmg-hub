@@ -3398,21 +3398,33 @@ function renderPedPicker() {
       : -1;
     const selected = selectionIndex >= 0;
     const selectionOrder = selected ? selectionIndex + 1 : 0;
-    const entry = `<button class="ped-picker-entry${file.is_folder ? " is-folder" : ""}${selected ? " is-selected" : ""}${used ? " is-used" : ""}" ${file.is_folder ? "data-ped-picker-folder" : "data-ped-picker-file"}="${escapeHtml(file.id)}" data-ped-picker-name="${escapeHtml(file.name)}" type="button"${file.is_folder ? "" : ` aria-pressed="${selected}"${isCarouselSelection && selected ? ` aria-label="${escapeHtml(file.name)}, posizione ${selectionOrder} nel carosello${selectionOrder === 1 ? ", copertina del feed" : ""}"` : ""}`}>
-      <span class="ped-picker-media">${hasPreview
-        ? `<img src="${escapeHtml(file.thumbnail_url || "")}" alt="" loading="lazy">${isVideo ? `<span class="ped-video-mini"><svg class="lc" viewBox="0 0 24 24"><path d="m9 7 8 5-8 5z"/></svg></span>` : ""}`
-        : driveFileIcon(file)}${used ? `<span class="ped-picker-used-badge">Gia nel PED</span>` : ""}${isCarouselSelection && selected ? `<strong class="ped-picker-order-badge" title="${selectionOrder === 1 ? "Copertina del carosello nel feed Instagram" : `Posizione ${selectionOrder} nel carosello`}">${selectionOrder}</strong>` : ""}</span>
-      <span><strong>${escapeHtml(file.name)}</strong><small>${file.is_folder ? "Cartella" : [formatFileSize(file.size), formatDriveDate(file.modified_at)].filter(Boolean).join(" · ") || "File"}</small></span>
-      ${file.is_folder ? `<svg class="lc ped-picker-arrow" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>` : `<span class="ped-picker-check" aria-hidden="true"><svg class="lc" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg></span>`}
-    </button>`;
-    if (file.is_folder) return entry;
-    const viewerButton = viewerSource
-      ? `<button class="ped-picker-view-button" data-ped-media-viewer data-ped-viewer-file="${escapeHtml(file.id)}" data-ped-viewer-name="${escapeHtml(file.name)}" data-ped-viewer-type="${previewType}" data-ped-viewer-src="${escapeHtml(viewerSource)}" data-ped-viewer-poster="${escapeHtml(file.thumbnail_url || "")}" type="button">
-          <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>
-          <span>Visualizza grande</span>
+    const mediaContent = `${hasPreview
+      ? `<img src="${escapeHtml(file.thumbnail_url || "")}" alt="" loading="lazy">${isVideo ? `<span class="ped-video-mini"><svg class="lc" viewBox="0 0 24 24"><path d="m9 7 8 5-8 5z"/></svg></span>` : ""}`
+      : driveFileIcon(file)}${used ? `<span class="ped-picker-used-badge">Gia nel PED</span>` : ""}${isCarouselSelection && selected ? `<strong class="ped-picker-order-badge" title="${selectionOrder === 1 ? "Copertina del carosello nel feed Instagram" : `Posizione ${selectionOrder} nel carosello`}">${selectionOrder}</strong>` : ""}`;
+    if (file.is_folder) {
+      return `<button class="ped-picker-entry is-folder${used ? " is-used" : ""}" data-ped-picker-folder="${escapeHtml(file.id)}" data-ped-picker-name="${escapeHtml(file.name)}" type="button">
+        <span class="ped-picker-media">${mediaContent}</span>
+        <span><strong>${escapeHtml(file.name)}</strong><small>Cartella</small></span>
+        <svg class="lc ped-picker-arrow" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>
+      </button>`;
+    }
+    const media = viewerSource
+      ? `<button class="ped-picker-media is-viewer" data-ped-media-viewer data-ped-viewer-file="${escapeHtml(file.id)}" data-ped-viewer-name="${escapeHtml(file.name)}" data-ped-viewer-type="${previewType}" data-ped-viewer-src="${escapeHtml(viewerSource)}" data-ped-viewer-poster="${escapeHtml(file.thumbnail_url || "")}" type="button" aria-label="Visualizza ${escapeHtml(file.name)} in grande">
+          ${mediaContent}
+          <span class="ped-picker-zoom-hint" aria-hidden="true"><svg class="lc" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></span>
         </button>`
-      : `<span class="ped-picker-view-unavailable">Anteprima grande non disponibile</span>`;
-    return `${sectionBreak}<article class="ped-picker-file-card">${entry}${viewerButton}</article>`;
+      : `<span class="ped-picker-media">${mediaContent}</span>`;
+    const entry = `<div class="ped-picker-entry${selected ? " is-selected" : ""}${used ? " is-used" : ""}">
+      ${media}
+      <span><strong>${escapeHtml(file.name)}</strong><small>${[formatFileSize(file.size), formatDriveDate(file.modified_at)].filter(Boolean).join(" · ") || "File"}</small></span>
+      <span class="ped-picker-check" aria-hidden="true"><svg class="lc" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg></span>
+    </div>`;
+    const insertLabel = isCarouselSelection && selected ? "Rimuovi dal carosello" : "Inserisci nel PED";
+    const insertButton = `<button class="ped-picker-view-button${selected ? " is-selected" : ""}" data-ped-picker-file="${escapeHtml(file.id)}" type="button" aria-pressed="${selected}"${isCarouselSelection && selected ? ` aria-label="${escapeHtml(file.name)}, posizione ${selectionOrder} nel carosello. Rimuovi dal carosello"` : ` aria-label="Inserisci ${escapeHtml(file.name)} nel PED"`}>
+      <svg class="lc" viewBox="0 0 24 24" aria-hidden="true">${selected ? `<path d="m5 12 4 4L19 6"/>` : `<path d="M12 5v14M5 12h14"/>`}</svg>
+      <span>${insertLabel}</span>
+    </button>`;
+    return `${sectionBreak}<article class="ped-picker-file-card">${entry}${insertButton}</article>`;
   }).join("") || `<p class="ped-picker-empty">${pedPickerState.files.length && !pedPickerState.showUsed
     ? "Tutti i contenuti di questa cartella sono gia nel PED."
     : "Non ci sono foto o video selezionabili in questa cartella."}</p>`;

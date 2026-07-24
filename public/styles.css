@@ -3158,6 +3158,34 @@ code { font-family: var(--font-mono); font-size: 12px; }
 .ped-picker-entry:not(.is-folder) .ped-picker-media { grid-column: 1 / -1; width: 100%; height: auto; aspect-ratio: 4 / 5; border-radius: 7px 7px 0 0; background: #ebe8e2; }
 .ped-picker-media img { width: 100%; height: 100%; object-fit: cover; }
 .ped-picker-entry:not(.is-folder) .ped-picker-media img { object-fit: contain; }
+.ped-picker-media.is-viewer {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  cursor: zoom-in;
+}
+.ped-picker-media.is-viewer img { transition: transform .18s ease; }
+.ped-picker-media.is-viewer:hover img { transform: scale(1.015); }
+.ped-picker-zoom-hint {
+  position: absolute;
+  right: 9px;
+  bottom: 9px;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, .7);
+  border-radius: 50%;
+  background: rgba(20, 16, 12, .72);
+  color: #fff;
+  opacity: 0;
+  transform: translateY(3px);
+  transition: opacity .18s ease, transform .18s ease;
+  pointer-events: none;
+}
+.ped-picker-zoom-hint .lc { width: 16px; height: 16px; }
+.ped-picker-media.is-viewer:hover .ped-picker-zoom-hint,
+.ped-picker-media.is-viewer:focus-visible .ped-picker-zoom-hint { opacity: 1; transform: translateY(0); }
 .ped-picker-media > .lc { width: 22px; height: 22px; }
 .ped-picker-entry > span:nth-child(2) { min-width: 0; display: grid; }
 .ped-picker-entry:not(.is-folder) > span:nth-child(2) { padding: 10px 10px 0; }
@@ -3204,15 +3232,16 @@ code { font-family: var(--font-mono); font-size: 12px; }
   align-items: center;
   justify-content: center;
   gap: 7px;
-  border: 1px solid var(--line-strong);
+  border: 1px solid var(--terra-line);
   border-radius: 7px;
-  background: var(--surface);
+  background: var(--terra-tint);
   margin-top: 6px;
-  color: var(--ink);
+  color: var(--terra-deep);
   font-size: 10.5px;
   font-weight: 800;
 }
-.ped-picker-view-button:hover { border-color: var(--terra-line); background: var(--terra-tint); color: var(--terra-deep); }
+.ped-picker-view-button:hover { border-color: var(--terracotta); background: var(--terracotta); color: white; }
+.ped-picker-view-button.is-selected { border-color: #4d795f; background: #4d795f; color: white; }
 .ped-picker-view-button .lc { width: 15px; height: 15px; }
 .ped-picker-view-unavailable { display: block; min-height: 30px; margin-top: 6px; color: var(--subtle); font-size: 9px; text-align: center; }
 .ped-picker-used-badge {
