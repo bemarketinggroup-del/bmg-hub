@@ -46,5 +46,6 @@ assert.match(googleDriveSource, /export async function moveDriveFile/, "Google D
 assert.match(appSource, /data-drive-move=/, "ogni elemento del Drive interno deve avere il comando Sposta");
 assert.match(appSource, /function loadDriveMoveFolder/, "il gestionale deve mostrare un selettore interno della destinazione");
 assert.match(htmlSource, /data-ped-create-folder/, "il selettore Drive del PED deve consentire la creazione di cartelle");
+assert.match(htmlSource, /drive-manage-name-field/, "creazione e rinomina devono usare un campo nome ampio e dedicato");
 
 console.log("Client Drive library tests passed");

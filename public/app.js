@@ -1696,11 +1696,13 @@ function openDriveManageModal(action, fileId = "", name = "", isFolder = false, 
   const title = document.getElementById("driveManageTitle");
   const description = document.getElementById("driveManageDescription");
   const nameField = document.getElementById("driveManageNameField");
+  const nameLabel = document.getElementById("driveManageNameLabel");
+  const nameHint = document.getElementById("driveManageNameHint");
   const nameInput = document.getElementById("driveManageName");
   const moveField = document.getElementById("driveManageMoveField");
   const submit = document.getElementById("driveManageSubmit");
   const message = document.getElementById("driveManageMessage");
-  if (!modal || !form || !title || !description || !nameField || !nameInput || !moveField || !submit || !message || !context?.folder) return;
+  if (!modal || !form || !title || !description || !nameField || !nameLabel || !nameHint || !nameInput || !moveField || !submit || !message || !context?.folder) return;
 
   driveManageContext = context;
   driveMoveFolderLoadId += 1;
@@ -1717,15 +1719,21 @@ function openDriveManageModal(action, fileId = "", name = "", isFolder = false, 
     title.textContent = "Nuova cartella";
     description.textContent = "La cartella sarà creata nel percorso attualmente aperto.";
     nameField.classList.remove("is-hidden");
+    nameLabel.textContent = "Nome della nuova cartella";
+    nameHint.textContent = "La cartella verrà creata nel percorso che stai visualizzando.";
     nameInput.required = true;
     nameInput.value = "";
+    nameInput.placeholder = "Es. Foto agosto 2026";
     submit.textContent = "Crea cartella";
   } else if (action === "rename") {
     title.textContent = isFolder ? "Rinomina cartella" : "Rinomina file";
     description.textContent = `Modifica il nome di “${name}”.`;
     nameField.classList.remove("is-hidden");
+    nameLabel.textContent = isFolder ? "Nuovo nome della cartella" : "Nuovo nome del file";
+    nameHint.textContent = "Il contenuto e la posizione su Drive resteranno invariati.";
     nameInput.required = true;
     nameInput.value = name;
+    nameInput.placeholder = isFolder ? "Scrivi il nuovo nome della cartella" : "Scrivi il nuovo nome del file";
     submit.textContent = "Salva nome";
   } else if (action === "move") {
     title.textContent = isFolder ? "Sposta cartella" : "Sposta file";

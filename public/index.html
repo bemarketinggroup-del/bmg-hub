@@ -1186,7 +1186,11 @@
         <button class="icon-button" value="cancel" type="submit" formnovalidate title="Chiudi"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
       </div>
       <p class="drive-manage-description" id="driveManageDescription"></p>
-      <label class="full" id="driveManageNameField">Nome<input id="driveManageName" name="drive_name" maxlength="240" autocomplete="off"></label>
+      <label class="drive-manage-name-field full" id="driveManageNameField">
+        <span id="driveManageNameLabel">Nome</span>
+        <input id="driveManageName" name="drive_name" maxlength="240" autocomplete="off" placeholder="Scrivi il nome">
+        <small id="driveManageNameHint">Inserisci un nome chiaro e riconoscibile.</small>
+      </label>
       <div class="drive-move-field is-hidden" id="driveManageMoveField">
         <div class="drive-move-current">
           <span>Destinazione scelta</span>

@@ -3553,8 +3553,46 @@ code { font-family: var(--font-mono); font-size: 12px; }
   box-shadow: 0 1px 5px rgba(0, 0, 0, .36);
   pointer-events: none;
 }
-.drive-manage-modal { width: min(540px, calc(100vw - 28px)); }
-.drive-manage-description { margin: 0 0 18px; color: var(--muted); line-height: 1.55; }
+.drive-manage-modal { width: min(640px, calc(100vw - 28px)); }
+.drive-manage-modal form { padding: 28px 30px 30px; }
+.drive-manage-description {
+  margin: 0 0 22px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--surface-soft);
+  color: var(--muted);
+  padding: 13px 15px;
+  font-size: 13px;
+  line-height: 1.55;
+}
+.drive-manage-name-field {
+  display: grid;
+  gap: 9px;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 700;
+}
+.drive-manage-name-field input {
+  width: 100%;
+  min-height: 58px;
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--ink);
+  padding: 0 17px;
+  font-size: 17px;
+  font-weight: 600;
+  transition: border-color .15s, box-shadow .15s, background .15s;
+}
+.drive-manage-name-field input::placeholder { color: var(--subtle); font-weight: 500; }
+.drive-manage-name-field input:focus {
+  outline: 0;
+  border-color: var(--terracotta);
+  background: #fff;
+  box-shadow: 0 0 0 4px var(--terra-tint);
+}
+.drive-manage-name-field small { color: var(--muted); font-size: 11px; font-weight: 500; line-height: 1.45; }
+.drive-manage-modal .modal-actions button { min-height: 44px; padding-inline: 20px; }
 .drive-move-field { display: grid; gap: 10px; }
 .drive-move-current {
   display: flex;
