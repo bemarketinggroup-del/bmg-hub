@@ -1783,6 +1783,16 @@ code { font-family: var(--font-mono); font-size: 12px; }
   gap: 9px;
   transition: opacity .14s ease;
 }
+.drive-library-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.drive-library-grid .ped-picker-library {
+  width: 100%;
+  grid-column: auto;
+}
 .drive-entry-card {
   min-width: 0;
   align-self: start;
@@ -5046,6 +5056,7 @@ code { font-family: var(--font-mono); font-size: 12px; }
   .client-info-section, .client-links-section { padding: 20px; }
   .client-info-list > div { grid-template-columns: 1fr; gap: 5px; }
   .client-drive-panel { padding: 16px 12px 20px; }
+  .drive-library-grid { grid-template-columns: 1fr; }
   .drive-browser-head { align-items: flex-start; }
   .drive-browser-actions { align-items: flex-end; flex-direction: column; }
   .drive-browser-head { align-items: flex-start; flex-direction: column; gap: 8px; }

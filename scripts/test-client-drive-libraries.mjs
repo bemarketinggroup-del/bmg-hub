@@ -4,6 +4,7 @@ import {
   normalizeDriveLibraryName,
   resolveClientDriveLibraries
 } from "../lib/client-drive-libraries.js";
+import { readFile } from "node:fs/promises";
 
 const folder = (id, name) => ({ id, name, mimeType: "application/vnd.google-apps.folder" });
 const files = [
@@ -30,5 +31,10 @@ const refreshedLibraries = await resolveClientDriveLibraries("ARTEMA", async (_r
 });
 assert.equal(refreshCalls, 4, "ogni raccolta mancante deve essere riletta senza cache una sola volta");
 assert.deepEqual(refreshedLibraries.map((item) => item.source), ["graphics", "video"]);
+
+const driveApiSource = await readFile(new URL("../lib/client-drive-api.js", import.meta.url), "utf8");
+assert.match(driveApiSource, /authorizedRootId = clientLibrary\.id/, "le raccolte speciali devono usare la cartella cliente come radice autorizzata");
+assert.match(driveApiSource, /createFolder\(request, response, authorizedRootId\)/, "la gestione cartelle deve funzionare anche dentro GRAFICHE e VIDEO");
+assert.match(driveApiSource, /createUploadSession\(request, response, authorizedRootId\)/, "il caricamento deve funzionare anche dentro GRAFICHE e VIDEO");
 
 console.log("Client Drive library tests passed");

@@ -185,7 +185,7 @@ let clickupOnline = null;
 const backendServiceErrors = { clients: "", clickup: "", site: "" };
 let selectedTeamMemberId = ALL_TEAM_TASKS_ID;
 let selectedClientId = "";
-let clientDriveState = { clientId: "", path: [], objectUrl: "", thumbnailUrls: new Set(), uploadEnabled: false };
+let clientDriveState = { clientId: "", path: [], libraries: [], source: "", objectUrl: "", thumbnailUrls: new Set(), uploadEnabled: false };
 let selectedPedClientId = "";
 let pedUsedFileIds = new Set();
 let selectedPedMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
@@ -1491,41 +1491,47 @@ function resetDriveBrowser() {
   clientDriveFolderLoadId += 1;
   if (clientDriveState.objectUrl) URL.revokeObjectURL(clientDriveState.objectUrl);
   clearDriveThumbnailUrls();
-  clientDriveState = { clientId: "", path: [], objectUrl: "", thumbnailUrls: new Set(), uploadEnabled: false };
+  clientDriveState = { clientId: "", path: [], libraries: [], source: "", objectUrl: "", thumbnailUrls: new Set(), uploadEnabled: false };
 }
 
 async function openClientDrive(clientId) {
   const client = state.clients.find((item) => String(item.id) === String(clientId));
   if (!client) return;
   clearDriveThumbnailUrls();
-  clientDriveState = { clientId: String(clientId), path: [], objectUrl: "", thumbnailUrls: new Set(), uploadEnabled: false };
-  await loadClientDriveFolder("", client.name);
+  clientDriveState = { clientId: String(clientId), path: [], libraries: [], source: "", objectUrl: "", thumbnailUrls: new Set(), uploadEnabled: false };
+  await loadClientDriveFolder("", client.name, { source: "" });
 }
 
-async function loadClientDriveFolder(folderId = "", folderName = "", { fresh = false } = {}) {
+async function loadClientDriveFolder(folderId = "", folderName = "", { fresh = false, source = clientDriveState.source } = {}) {
   const panel = document.querySelector("[data-client-drive-panel]");
   if (!panel) return;
   const loadId = ++clientDriveFolderLoadId;
-  const instantlyAvailable = !fresh && cachedDriveFolder(clientDriveState.clientId, folderId);
+  const normalizedSource = String(source || "");
+  const instantlyAvailable = !fresh && cachedDriveFolder(clientDriveState.clientId, folderId, normalizedSource);
   panel.classList.remove("is-hidden");
   if (instantlyAvailable) hideDriveFolderLoading(panel);
   else showDriveFolderLoading(panel, fresh ? "Aggiornamento cartella" : "Apertura cartella");
 
   try {
-    const { data } = await fetchDriveFolder(clientDriveState.clientId, folderId, { fresh });
+    const { data } = await fetchDriveFolder(clientDriveState.clientId, folderId, { fresh, source: normalizedSource });
     if (loadId !== clientDriveFolderLoadId) return;
 
     const existingIndex = clientDriveState.path.findIndex((item) => item.id === data.folder.id);
     if (existingIndex >= 0) {
       clientDriveState.path = clientDriveState.path.slice(0, existingIndex + 1);
     } else {
-      clientDriveState.path.push({ id: data.folder.id, name: folderName || data.folder.name });
+      clientDriveState.path.push({ id: data.folder.id, name: folderName || data.folder.name, source: normalizedSource });
     }
-    if (clientDriveState.path.length === 1) clientDriveState.path[0].name = data.client.name;
+    if (clientDriveState.path.length === 1) {
+      clientDriveState.path[0].name = data.client.name;
+      clientDriveState.path[0].source = "";
+    }
+    clientDriveState.source = String(data.source || normalizedSource);
+    if (Array.isArray(data.libraries) && data.libraries.length) clientDriveState.libraries = data.libraries;
     clientDriveState.uploadEnabled = Boolean(data.upload_enabled);
     clearDriveThumbnailUrls();
     hideDriveFolderLoading(panel);
-    panel.innerHTML = driveBrowserMarkup(data.files || [], clientDriveState.uploadEnabled);
+    panel.innerHTML = driveBrowserMarkup(data.files || [], clientDriveState.uploadEnabled, clientDriveState.libraries);
     hydrateDriveThumbnails(panel);
     panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
   } catch (error) {
@@ -1539,13 +1545,24 @@ async function loadClientDriveFolder(folderId = "", folderName = "", { fresh = f
   }
 }
 
-function driveBrowserMarkup(files, uploadEnabled) {
+function driveBrowserMarkup(files, uploadEnabled, libraries = []) {
+  const sortedFiles = sortPedPickerEntries(files);
   const breadcrumbs = clientDriveState.path.map((item, index) => {
     const current = index === clientDriveState.path.length - 1;
     return current
       ? `<span>${escapeHtml(item.name)}</span>`
       : `<button data-drive-breadcrumb="${index}" type="button">${escapeHtml(item.name)}</button>`;
   }).join(`<svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>`);
+  const libraryCards = !clientDriveState.source && clientDriveState.path.length === 1
+    ? libraries.map((library) => `
+      <button class="ped-picker-library is-${escapeHtml(library.tone)}" data-drive-library="${escapeHtml(library.id)}" data-drive-library-source="${escapeHtml(library.source)}" data-drive-name="${escapeHtml(library.name)}" type="button">
+        <span class="ped-picker-library-icon" aria-hidden="true">${library.source === "video"
+          ? `<svg class="lc" viewBox="0 0 24 24"><path d="M3 7h6l2 2h10v12H3z"/><path d="m10 11 6 3-6 3z"/></svg>`
+          : `<svg class="lc" viewBox="0 0 24 24"><path d="M3 7h6l2 2h10v12H3z"/><path d="m12 11 .8 1.8 1.9.2-1.4 1.3.4 1.9-1.7-.9-1.7.9.4-1.9L9.3 13l1.9-.2z"/></svg>`}</span>
+        <span><strong>${escapeHtml(library.name)}</strong><small>${escapeHtml(library.description)} · accesso diretto</small></span>
+        <svg class="lc ped-picker-library-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+      </button>`).join("")
+    : "";
 
   return `
     <div class="drive-browser-head">
@@ -1567,6 +1584,7 @@ function driveBrowserMarkup(files, uploadEnabled) {
       </div>
     </div>
     <div class="drive-upload-status is-hidden" data-drive-upload-status role="status"></div>
+    ${libraryCards ? `<div class="drive-library-grid" aria-label="Raccolte del cliente">${libraryCards}</div>` : ""}
     <div class="drive-drop-zone${uploadEnabled ? "" : " is-disabled"}" data-drive-drop-zone data-drive-write-enabled="${uploadEnabled ? "1" : "0"}">
       <div class="drive-drop-overlay" aria-hidden="true">
         <span class="drive-drop-icon">
@@ -1576,7 +1594,7 @@ function driveBrowserMarkup(files, uploadEnabled) {
         <span>Verranno caricati nella cartella aperta</span>
       </div>
       <div class="drive-file-grid">
-        ${files.map((file) => driveEntryMarkup(file, uploadEnabled)).join("") || `<div class="drive-empty">Questa cartella è vuota. Trascina qui i file da caricare.</div>`}
+        ${sortedFiles.map((file) => driveEntryMarkup(file, uploadEnabled)).join("") || `<div class="drive-empty">Questa cartella è vuota. Trascina qui i file da caricare.</div>`}
       </div>
     </div>`;
 }
@@ -1698,7 +1716,12 @@ async function submitDriveManageAction(form) {
   submit.disabled = true;
   message.textContent = action === "trash" ? "Spostamento in corso..." : "Salvataggio in corso...";
   try {
-    const response = await apiFetch(`/api/client-drive?client_id=${encodeURIComponent(clientDriveState.clientId)}&action=${encodeURIComponent(action)}`, {
+    const params = new URLSearchParams({
+      client_id: clientDriveState.clientId,
+      action
+    });
+    if (clientDriveState.source) params.set("source", clientDriveState.source);
+    const response = await apiFetch(`/api/client-drive?${params}`, {
       method: requestConfig.method,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(requestConfig.body)
@@ -1706,7 +1729,7 @@ async function submitDriveManageAction(form) {
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || "Operazione Google Drive non riuscita");
     modal.close();
-    await loadClientDriveFolder(folder.id, folder.name, { fresh: true });
+    await loadClientDriveFolder(folder.id, folder.name, { fresh: true, source: clientDriveState.source });
   } catch (error) {
     message.textContent = error.message || "Operazione non riuscita";
     submit.disabled = false;
@@ -1761,7 +1784,9 @@ async function uploadDriveFiles(files) {
     for (let index = 0; index < selectedFiles.length; index += 1) {
       const file = selectedFiles[index];
       showProgress(`Preparazione ${file.name}`, completedBytes);
-      const response = await apiFetch(`/api/client-drive?client_id=${encodeURIComponent(clientDriveState.clientId)}`, {
+      const params = new URLSearchParams({ client_id: clientDriveState.clientId });
+      if (clientDriveState.source) params.set("source", clientDriveState.source);
+      const response = await apiFetch(`/api/client-drive?${params}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1781,7 +1806,7 @@ async function uploadDriveFiles(files) {
     }
     showProgress(`${selectedFiles.length} ${selectedFiles.length === 1 ? "file caricato" : "file caricati"}`, totalBytes);
     transfer.complete("Upload completato");
-    await loadClientDriveFolder(folder.id, folder.name, { fresh: true });
+    await loadClientDriveFolder(folder.id, folder.name, { fresh: true, source: clientDriveState.source });
   } catch (error) {
     showProgress(error.message || "Caricamento non riuscito", completedBytes, true);
     transfer.fail(error.message || "Caricamento non riuscito");
@@ -6683,6 +6708,7 @@ document.body.addEventListener("click", (event) => {
   const deleteClientButton = event.target.closest("[data-client-delete]");
   const backClient = event.target.closest("[data-client-back]");
   const openClientDriveButton = event.target.closest("[data-client-drive]");
+  const driveLibrary = event.target.closest("[data-drive-library]");
   const driveFolder = event.target.closest("[data-drive-folder]");
   const driveBreadcrumb = event.target.closest("[data-drive-breadcrumb]");
   const driveFile = event.target.closest("[data-drive-file]");
@@ -6737,11 +6763,16 @@ document.body.addEventListener("click", (event) => {
   if (deleteClientButton) return deleteClient(deleteClientButton.dataset.clientDelete);
   if (backClient) return closeClientDetails();
   if (openClientDriveButton) return openClientDrive(openClientDriveButton.dataset.clientDrive);
-  if (driveFolder) return loadClientDriveFolder(driveFolder.dataset.driveFolder, driveFolder.dataset.driveName);
+  if (driveLibrary) {
+    return loadClientDriveFolder(driveLibrary.dataset.driveLibrary, driveLibrary.dataset.driveName, {
+      source: driveLibrary.dataset.driveLibrarySource
+    });
+  }
+  if (driveFolder) return loadClientDriveFolder(driveFolder.dataset.driveFolder, driveFolder.dataset.driveName, { source: clientDriveState.source });
   if (driveBreadcrumb) {
     const index = Number(driveBreadcrumb.dataset.driveBreadcrumb);
     const target = clientDriveState.path[index];
-    if (target) return loadClientDriveFolder(target.id, target.name);
+    if (target) return loadClientDriveFolder(target.id, target.name, { source: target.source || "" });
   }
   if (driveDownload) {
     return downloadDriveResource(
@@ -7135,8 +7166,15 @@ document.body.addEventListener("pointerout", (event) => {
 document.body.addEventListener("pointerover", (event) => {
   const pedFolder = event.target.closest?.("[data-ped-picker-folder]");
   const pedLibrary = event.target.closest?.("[data-ped-picker-library]");
+  const driveLibrary = event.target.closest?.("[data-drive-library]");
   const clientFolder = event.target.closest?.("[data-drive-folder]");
-  if (pedLibrary && !pedLibrary.contains(event.relatedTarget)) {
+  if (driveLibrary && !driveLibrary.contains(event.relatedTarget)) {
+    scheduleDriveFolderPrefetch(
+      clientDriveState.clientId,
+      driveLibrary.dataset.driveLibrary,
+      driveLibrary.dataset.driveLibrarySource
+    );
+  } else if (pedLibrary && !pedLibrary.contains(event.relatedTarget)) {
     scheduleDriveFolderPrefetch(
       selectedPedClientId,
       pedLibrary.dataset.pedPickerLibrary,
@@ -7145,12 +7183,12 @@ document.body.addEventListener("pointerover", (event) => {
   } else if (pedFolder && !pedFolder.contains(event.relatedTarget)) {
     scheduleDriveFolderPrefetch(selectedPedClientId, pedFolder.dataset.pedPickerFolder);
   } else if (clientFolder && !clientFolder.contains(event.relatedTarget)) {
-    scheduleDriveFolderPrefetch(clientDriveState.clientId, clientFolder.dataset.driveFolder);
+    scheduleDriveFolderPrefetch(clientDriveState.clientId, clientFolder.dataset.driveFolder, clientDriveState.source);
   }
 });
 
 document.body.addEventListener("pointerout", (event) => {
-  const folder = event.target.closest?.("[data-ped-picker-library], [data-ped-picker-folder], [data-drive-folder]");
+  const folder = event.target.closest?.("[data-ped-picker-library], [data-ped-picker-folder], [data-drive-library], [data-drive-folder]");
   if (folder && !folder.contains(event.relatedTarget)) window.clearTimeout(driveFolderPrefetchTimer);
 });
 
