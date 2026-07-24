@@ -21,6 +21,12 @@ const appSource = await readFile(new URL("../public/app.js", import.meta.url), "
 const htmlSource = await readFile(new URL("../public/index.html", import.meta.url), "utf8");
 assert.match(appSource, /data-personal-task="\$\{escapeHtml\(taskId\)\}"/, "le task personali devono essere selezionabili nel gestionale");
 assert.match(appSource, /async function openPersonalTask\(taskId\)[\s\S]*?setView\("team"\)[\s\S]*?openTaskDetailModal\(taskId\)/, "una task personale deve aprire la vista e il dettaglio interni");
+assert.match(appSource, /function personalTaskOwner\(task\)[\s\S]*?taskAssignedTo\(task, currentUser\)[\s\S]*?users\.find\(\(user\) => taskAssignedTo\(task, user\)\)/, "la task personale deve aprire la vista del rispettivo assegnatario");
+const personalTaskNavigationSource = appSource.slice(
+  appSource.indexOf("async function openPersonalTask"),
+  appSource.indexOf("function personalTaskOwner")
+);
+assert.doesNotMatch(personalTaskNavigationSource, /selectedTeamMemberId = ALL_TEAM_TASKS_ID/, "la task personale non deve aprire la vista generale del team");
 assert.doesNotMatch(appSource, /Apri in ClickUp/, "l'interfaccia non deve rimandare l'utente a ClickUp");
 assert.doesNotMatch(htmlSource, /taskDetailClickUpLink/, "il dettaglio task non deve contenere collegamenti esterni");
 

@@ -6546,22 +6546,38 @@ async function openPersonalTask(taskId) {
     return;
   }
   setView("team");
-  if (currentProfile?.role === "admin") selectedTeamMemberId = ALL_TEAM_TASKS_ID;
-  else ensureTeamSelection();
   ["taskSearch", "taskAssigneeFilter", "taskStatusFilter", "taskClientFilter"].forEach((id) => {
     const field = document.getElementById(id);
     if (field) field.value = "";
   });
   if (!findTask(taskId)) await loadClickUpTasks();
-  renderTeam();
-  if (!findTask(taskId)) {
+  const task = findTask(taskId);
+  if (!task) {
     alert("La task non è ancora disponibile nel gestionale. Prova a sincronizzare le task.");
     return;
   }
+  const owner = personalTaskOwner(task);
+  if (owner) selectedTeamMemberId = teamMemberKey(owner);
+  else ensureTeamSelection();
+  renderTeam();
   requestAnimationFrame(() => {
     document.querySelector(`[data-task-detail="${CSS.escape(String(taskId))}"]`)?.scrollIntoView({ behavior: "smooth", block: "center" });
     openTaskDetailModal(taskId);
   });
+}
+
+function personalTaskOwner(task) {
+  const users = teamMembers();
+  const currentClickUpId = String(currentProfile?.clickup_user_id || "");
+  const currentEmail = normalizeIdentity(currentProfile?.email);
+  const currentName = normalizeIdentity(currentProfile?.full_name);
+  const currentUser = users.find((user) => (
+    (currentClickUpId && clickupUserId(user) === currentClickUpId)
+    || (currentEmail && normalizeIdentity(user.email) === currentEmail)
+    || (currentName && normalizeIdentity(user.name) === currentName)
+  ));
+  if (currentUser && taskAssignedTo(task, currentUser)) return currentUser;
+  return users.find((user) => taskAssignedTo(task, user)) || null;
 }
 
 function renderPersonalArea() {
