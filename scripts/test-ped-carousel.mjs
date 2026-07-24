@@ -180,6 +180,10 @@ assert.match(appSource, /function isPedSpreadsheetFile\(file\)/, "il selettore d
 assert.match(appSource, /!isPedSpreadsheetFile\(file\)/, "i fogli di calcolo non devono essere selezionabili come contenuti PED");
 assert.match(pedSource, /Il foglio Excel o Google Sheets e solo un piano di riferimento/, "l'API deve rifiutare i fogli usati come media");
 assert.match(htmlSource, /data-ped-used-toggle/, "il selettore deve offrire il comando per mostrare i contenuti gia usati");
+assert.match(htmlSource, /class="ped-picker-setup"/, "formato e copy devono condividere una testata compatta");
+assert.match(htmlSource, /class="ped-picker-browser-bar"/, "percorso e comandi Drive devono condividere una barra compatta");
+assert.match(styleSource, /\.ped-picker-caption-field textarea \{[\s\S]*?height: 38px;/, "il copy del selettore non deve sottrarre spazio ai contenuti");
+assert.match(styleSource, /\.ped-picker-grid \{[\s\S]*?max-height: min\(760px, calc\(94vh - 190px\)\)/, "la griglia deve usare più altezza disponibile del modal");
 assert.match(styleSource, /\.ped-picker-entry:not\(\.is-folder\) \.ped-picker-media[\s\S]*?aspect-ratio: 4 \/ 5/, "le anteprime del selettore devono essere verticali");
 assert.match(styleSource, /\.ped-picker-entry:not\(\.is-folder\) \.ped-picker-media img[\s\S]*?object-fit: contain/, "le immagini del selettore devono essere mostrate per intero");
 assert.match(appSource, /Tutti i contenuti di questa cartella sono gia nel PED/, "il filtro deve spiegare quando tutti i file sono gia usati");

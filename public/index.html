@@ -957,29 +957,33 @@
         </div>
         <button class="icon-button" data-ped-picker-close type="button" title="Chiudi" aria-label="Chiudi"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
       </div>
-      <div class="ped-format-picker" id="pedFormatPicker" role="group" aria-label="Formato del contenuto">
-        <span>Formato</span>
-        <button class="is-active" data-ped-picker-type="post" type="button">Post</button>
-        <button data-ped-picker-type="story" type="button">Storia</button>
-        <button data-ped-picker-type="reel" type="button">Reel</button>
-        <button data-ped-picker-type="carousel" type="button">Carosello</button>
+      <div class="ped-picker-setup">
+        <div class="ped-format-picker" id="pedFormatPicker" role="group" aria-label="Formato del contenuto">
+          <span>Formato</span>
+          <button class="is-active" data-ped-picker-type="post" type="button">Post</button>
+          <button data-ped-picker-type="story" type="button">Storia</button>
+          <button data-ped-picker-type="reel" type="button">Reel</button>
+          <button data-ped-picker-type="carousel" type="button">Carosello</button>
+        </div>
+        <label class="ped-picker-caption-field" id="pedPickerCaptionField" for="pedPickerCaption">
+          <span><strong id="pedPickerCaptionLabel">Copy Instagram</strong><small id="pedPickerCaptionHint">Facoltativo, potrai modificarlo anche in seguito.</small></span>
+          <textarea id="pedPickerCaption" maxlength="10000" rows="1" placeholder="Scrivi copy, hashtag e call to action..."></textarea>
+        </label>
       </div>
-      <label class="ped-picker-caption-field" id="pedPickerCaptionField" for="pedPickerCaption">
-        <span><strong id="pedPickerCaptionLabel">Copy Instagram</strong><small id="pedPickerCaptionHint">Facoltativo, potrai modificarlo anche in seguito.</small></span>
-        <textarea id="pedPickerCaption" maxlength="10000" rows="3" placeholder="Scrivi la descrizione del contenuto, gli hashtag e le eventuali call to action..."></textarea>
-      </label>
-      <nav class="ped-picker-breadcrumbs" id="pedPickerBreadcrumbs" aria-label="Percorso Google Drive"></nav>
-      <div class="ped-picker-tools">
-        <span id="pedUnusedMediaSummary">Mostro solo i contenuti non ancora usati.</span>
-        <div class="ped-picker-tool-actions">
-          <button class="secondary-button ped-create-folder-button" id="pedCreateFolderButton" data-ped-create-folder type="button" title="Crea una cartella nel percorso aperto">
-            <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h6l2 2h10v10H3z"/><path d="M12 12v5M9.5 14.5h5"/></svg>
-            <span>Nuova cartella</span>
-          </button>
-          <button class="secondary-button ped-used-media-toggle" id="pedUsedMediaToggle" data-ped-used-toggle type="button" aria-pressed="false">
-            <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>
-            <span>Mostra gia utilizzati</span>
-          </button>
+      <div class="ped-picker-browser-bar">
+        <nav class="ped-picker-breadcrumbs" id="pedPickerBreadcrumbs" aria-label="Percorso Google Drive"></nav>
+        <div class="ped-picker-tools">
+          <span id="pedUnusedMediaSummary">Mostro solo i contenuti non ancora usati.</span>
+          <div class="ped-picker-tool-actions">
+            <button class="secondary-button ped-create-folder-button" id="pedCreateFolderButton" data-ped-create-folder type="button" title="Crea una cartella nel percorso aperto">
+              <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h6l2 2h10v10H3z"/><path d="M12 12v5M9.5 14.5h5"/></svg>
+              <span>Nuova cartella</span>
+            </button>
+            <button class="secondary-button ped-used-media-toggle" id="pedUsedMediaToggle" data-ped-used-toggle type="button" aria-pressed="false">
+              <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>
+              <span>Mostra gia utilizzati</span>
+            </button>
+          </div>
         </div>
       </div>
       <div class="ped-picker-grid" id="pedPickerGrid"></div>
