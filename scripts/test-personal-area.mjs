@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { eventIncludesProfile, isCompletedTaskStatus, taskAssignedToProfile } from "../lib/personal-area.js";
+import {
+  eventIncludesProfile,
+  filterActiveNotifications,
+  isCompletedTaskStatus,
+  taskAssignedToProfile
+} from "../lib/personal-area.js";
 
 const profile = {
   id: "11111111-1111-4111-8111-111111111111",
@@ -16,6 +21,14 @@ assert.equal(isCompletedTaskStatus("Completato"), true);
 assert.equal(isCompletedTaskStatus("In corso"), false);
 assert.equal(eventIncludesProfile({ attendees: [{ email: "MARTA@bemarketinggroup.it" }] }, profile), true);
 assert.equal(eventIncludesProfile({ attendees: [{ email: "altro@example.com" }] }, profile), false);
+assert.deepEqual(filterActiveNotifications([
+  { id: "notification-active", source_type: "task", source_id: "task-active" },
+  { id: "notification-completed", source_type: "task", source_id: "task-completed" },
+  { id: "notification-event", source_type: "event", source_id: "event-1" }
+], [{ clickup_task_id: "task-active", status: "in progress" }]).map((item) => item.id), [
+  "notification-active",
+  "notification-event"
+]);
 
 const appSource = await readFile(new URL("../public/app.js", import.meta.url), "utf8");
 const htmlSource = await readFile(new URL("../public/index.html", import.meta.url), "utf8");
