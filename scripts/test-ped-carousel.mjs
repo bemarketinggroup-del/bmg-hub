@@ -211,7 +211,8 @@ assert.match(styleSource, /\.ped-picker-entry\.is-folder \{[\s\S]*?height: 68px;
 assert.match(appSource, /function fitPedMediaViewerImage\(\)/, "il 100% deve adattare la foto intera allo spazio disponibile");
 assert.match(appSource, /imageRatio >= stageRatio \? availableWidth : availableHeight \* imageRatio/, "il visualizzatore deve rispettare le proporzioni originali senza ritagli");
 assert.match(appSource, /setPointerCapture\(event\.pointerId\)/, "la foto ingrandita deve poter essere trascinata");
-assert.match(styleSource, /\.modal\.ped-media-viewer-modal[\s\S]*?width: min\(1380px, calc\(100vw - 72px\)\)/, "il visualizzatore deve essere ampio ma lasciare margine sul desktop");
+assert.match(styleSource, /\.modal\.ped-media-viewer-modal[\s\S]*?width: calc\(100vw - 20px\)/, "il visualizzatore deve occupare quasi tutta la larghezza desktop");
+assert.match(styleSource, /\.ped-media-viewer-shell[\s\S]*?height: calc\(100dvh - 20px\)/, "il visualizzatore deve usare quasi tutta l'altezza disponibile per le foto verticali");
 assert.match(styleSource, /\.ped-media-viewer-media img[\s\S]*?object-fit: contain/, "la foto intera non deve essere ritagliata nel visualizzatore");
 
 console.log("PED carousel tests passed");
