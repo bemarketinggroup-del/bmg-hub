@@ -2344,7 +2344,7 @@ function selectedPedClient() {
 function renderPedShareButton() {
   const button = document.getElementById("pedShareButton");
   if (!button) return;
-  const visible = currentProfile?.role === "admin";
+  const visible = canAccessModule("ped");
   button.classList.toggle("is-hidden", !visible);
   button.disabled = !selectedPedClient();
 }
