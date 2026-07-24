@@ -28,6 +28,7 @@ const MODULE_DEFINITIONS = Object.freeze([
   { key: "ped", label: "PED" },
   { key: "clients", label: "Clienti" },
   { key: "calendar", label: "Calendario" },
+  { key: "chat", label: "Chat" },
   { key: "site_backend", label: "Backend sito" },
   { key: "users", label: "Utenti" },
   { key: "smart_working", label: "Turni" },
@@ -38,6 +39,7 @@ const VIEW_MODULES = Object.freeze({
   clients: "clients",
   ped: "ped",
   calendar: "calendar",
+  chat: "chat",
   team: "tasks",
   smart: "smart_working",
   counter: "smart_working",
@@ -249,6 +251,18 @@ let personalAreaState = {
   error: ""
 };
 let personalAreaTimer = null;
+let teamChatState = {
+  profile: null,
+  team: [],
+  conversations: [],
+  messages: [],
+  selectedConversation: "general",
+  totalUnread: 0,
+  loading: false,
+  loaded: false,
+  error: ""
+};
+let teamChatTimer = null;
 let selectedSmartMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
 let showPastSmartWeeks = false;
 let selectedSmartDate = localDateKey(new Date());
@@ -483,6 +497,7 @@ function auditMetadata(url, method, options = {}) {
     if (endpoint === "/api/ped") return method === "POST" ? "create_ped_content" : method === "DELETE" ? "remove_ped_content" : "update_ped_content";
     if (endpoint === "/api/ped-share") return method === "DELETE" ? "disable_ped_share" : "create_ped_share";
     if (endpoint === "/api/google-calendar") return method === "POST" ? "create_calendar_event" : method === "PATCH" ? "update_calendar_event" : method === "DELETE" ? "delete_calendar_event" : "sync_calendar_events";
+    if (endpoint === "/api/team-chat") return "send_chat_message";
     if (endpoint === "/api/site-media") return "upload_site_media";
     if (endpoint === "/api/site-content") return method === "POST" ? "create_site_content" : method === "DELETE" ? "delete_site_content" : "update_site_content";
     if (endpoint === "/api/smart-working") return "smart_working_operation";
@@ -505,6 +520,7 @@ function auditMetadata(url, method, options = {}) {
   const entityId = body.id || body.clickup_task_id || body.client_id || body.file_id || requestUrl.searchParams.get("id") || requestUrl.searchParams.get("client_id") || "";
   const entityType = endpoint.includes("clickup/tasks") ? "task"
     : endpoint.includes("client") ? "client"
+      : endpoint.includes("team-chat") ? "chat"
       : endpoint.includes("google-calendar") ? "calendar_event"
       : endpoint.includes("ped") ? "ped_content"
         : endpoint.includes("site-content") ? "site_content"
@@ -742,8 +758,20 @@ async function logout() {
   }
   stopActivityTracker();
   stopPersonalAreaUpdates();
+  stopTeamChatUpdates();
   currentProfile = null;
   personalAreaState = { team: [], tasks: [], events: [], notifications: [], loading: false, loaded: false, error: "" };
+  teamChatState = {
+    profile: null,
+    team: [],
+    conversations: [],
+    messages: [],
+    selectedConversation: "general",
+    totalUnread: 0,
+    loading: false,
+    loaded: false,
+    error: ""
+  };
   saveAuthSession(null);
   showLogin();
 }
@@ -840,6 +868,7 @@ function setView(view) {
   const titles = {
     dashboard: ["BMG Internal OS", "Home"],
     personal: ["Spazio personale", "La mia area"],
+    chat: ["Comunicazione interna", "Chat"],
     content: ["CMS leggero", "Backend sito"],
     clients: ["Gestionale interno", "Clienti"],
     ped: ["Piano editoriale", "PED"],
@@ -859,6 +888,12 @@ function setView(view) {
   }
   if (view === "calendar") loadGoogleCalendar();
   if (view === "personal") loadPersonalArea();
+  if (view === "chat") {
+    loadTeamChat();
+    startTeamChatUpdates();
+  } else {
+    stopTeamChatUpdates();
+  }
 }
 
 const mobileNavigationMedia = window.matchMedia("(max-width: 980px)");
@@ -7237,8 +7272,11 @@ function renderNotifications() {
   list.innerHTML = notifications.length ? notifications.map((item) => {
     const link = safeExternalUrl(item.link);
     const isTask = item.source_type === "task" && item.source_id;
+    const isChat = item.source_type === "chat" && item.source_id;
     const title = isTask
       ? `<button type="button" data-personal-task="${escapeHtml(item.source_id)}"><strong>${escapeHtml(item.title)}</strong></button>`
+      : isChat
+        ? `<button type="button" data-chat-open="${escapeHtml(item.source_id)}"><strong>${escapeHtml(item.title)}</strong></button>`
       : link ? `<a href="${escapeHtml(link)}" target="_blank" rel="noopener"><strong>${escapeHtml(item.title)}</strong></a>` : `<strong>${escapeHtml(item.title)}</strong>`;
     return `<article class="notification-item" data-notification-type="${escapeHtml(item.source_type)}">
       <span class="notification-type is-${escapeHtml(item.source_type)}" aria-hidden="true"></span>
@@ -7246,6 +7284,7 @@ function renderNotifications() {
       <button class="icon-button notification-dismiss" data-notification-dismiss="${escapeHtml(item.id)}" type="button" title="Chiudi notifica" aria-label="Chiudi notifica"><svg class="lc" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
     </article>`;
   }).join("") : `<div class="notification-empty"><strong>Nessuna nuova notifica</strong><span>Sei aggiornato.</span></div>`;
+  renderChatNavBadge();
 }
 
 async function dismissPersonalNotification(notificationId) {
@@ -7279,6 +7318,183 @@ function stopPersonalAreaUpdates() {
   personalAreaTimer = null;
 }
 
+function chatInitials(value) {
+  const words = String(value || "Utente").trim().split(/\s+/).filter(Boolean);
+  return (words.length > 1 ? `${words[0][0]}${words.at(-1)[0]}` : words[0]?.slice(0, 2) || "UT").toUpperCase();
+}
+
+function selectedChatConversation() {
+  return teamChatState.conversations.find((item) => item.key === teamChatState.selectedConversation)
+    || teamChatState.conversations[0]
+    || { key: "general", kind: "general", profile: null, unread_count: 0 };
+}
+
+async function loadTeamChat({ quiet = false } = {}) {
+  if (teamChatState.loading || !currentProfile || !canAccessModule("chat")) return;
+  teamChatState.loading = true;
+  if (!quiet) renderTeamChat();
+  try {
+    const params = new URLSearchParams({ conversation: teamChatState.selectedConversation || "general" });
+    const response = await apiFetch(`/api/team-chat?${params}`);
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "Chat non disponibile");
+    teamChatState = {
+      profile: data.profile || null,
+      team: Array.isArray(data.team) ? data.team : [],
+      conversations: Array.isArray(data.conversations) ? data.conversations : [],
+      messages: Array.isArray(data.messages) ? data.messages : [],
+      selectedConversation: data.selected_conversation || "general",
+      totalUnread: Number(data.total_unread || 0),
+      loading: false,
+      loaded: true,
+      error: ""
+    };
+    personalAreaState.notifications = personalAreaState.notifications.filter((item) => (
+      item.source_type !== "chat" || item.source_id !== teamChatState.selectedConversation
+    ));
+    renderNotifications();
+  } catch (error) {
+    teamChatState.loading = false;
+    teamChatState.error = error.message;
+  }
+  renderTeamChat({ quiet });
+}
+
+function renderTeamChat({ quiet = false } = {}) {
+  const conversations = document.getElementById("chatConversationList");
+  const messages = document.getElementById("chatMessageList");
+  const search = document.getElementById("chatSearch");
+  if (!conversations || !messages) return;
+  const searchTerm = String(search?.value || "").trim().toLowerCase();
+  const filteredConversations = teamChatState.conversations.filter((conversation) => {
+    if (!searchTerm || conversation.kind === "general") return true;
+    return `${conversation.profile?.full_name || ""} ${conversation.profile?.email || ""}`.toLowerCase().includes(searchTerm);
+  });
+  conversations.innerHTML = filteredConversations.length ? filteredConversations.map((conversation) => {
+    const isGeneral = conversation.kind === "general";
+    const title = isGeneral ? "Chat generale" : conversation.profile?.full_name || "Utente";
+    const preview = conversation.last_message?.body || (isGeneral ? "Messaggi visibili a tutto il team" : "Inizia una conversazione privata");
+    const active = conversation.key === teamChatState.selectedConversation;
+    const unread = Number(conversation.unread_count || 0);
+    return `<button class="team-chat-conversation${active ? " is-active" : ""}" data-chat-conversation="${escapeHtml(conversation.key)}" type="button" aria-current="${active ? "page" : "false"}">
+      <span class="team-chat-avatar${isGeneral ? " is-general" : ""}" aria-hidden="true">${isGeneral ? "BMG" : escapeHtml(chatInitials(title))}</span>
+      <span class="team-chat-conversation-copy"><strong>${escapeHtml(title)}</strong><small>${escapeHtml(preview)}</small></span>
+      ${unread ? `<span class="team-chat-unread">${unread > 99 ? "99+" : unread}</span>` : ""}
+    </button>`;
+  }).join("") : `<div class="team-chat-empty is-compact">Nessuna persona trovata.</div>`;
+
+  const selected = selectedChatConversation();
+  const isGeneral = selected.kind === "general";
+  const roomTitle = isGeneral ? "Chat generale" : selected.profile?.full_name || "Conversazione privata";
+  document.getElementById("chatRoomTitle").textContent = roomTitle;
+  document.getElementById("chatRoomSubtitle").textContent = isGeneral ? "Tutto il team" : "Conversazione privata";
+  const avatar = document.getElementById("chatRoomAvatar");
+  avatar.textContent = isGeneral ? "BMG" : chatInitials(roomTitle);
+  avatar.classList.toggle("is-general", isGeneral);
+  document.getElementById("chatMessageInput").placeholder = isGeneral
+    ? "Scrivi un messaggio al team…"
+    : `Scrivi a ${roomTitle}…`;
+
+  const nearBottom = messages.scrollHeight - messages.scrollTop - messages.clientHeight < 90;
+  messages.setAttribute("aria-busy", String(teamChatState.loading));
+  if (teamChatState.loading && !teamChatState.loaded) {
+    messages.innerHTML = `<div class="team-chat-empty"><span class="drive-folder-spinner" aria-hidden="true"></span><strong>Carico i messaggi…</strong></div>`;
+  } else if (teamChatState.error && !teamChatState.loaded) {
+    messages.innerHTML = `<div class="team-chat-empty is-error"><strong>${escapeHtml(teamChatState.error)}</strong><button class="text-button" data-chat-retry type="button">Riprova</button></div>`;
+  } else if (teamChatState.messages.length) {
+    messages.innerHTML = teamChatState.messages.map((message) => {
+      const mine = String(message.sender_profile_id) === String(teamChatState.profile?.id || currentProfile?.id);
+      const senderName = message.sender?.full_name || "Utente";
+      return `<article class="team-chat-bubble-row${mine ? " is-mine" : ""}">
+        ${mine ? "" : `<span class="team-chat-avatar" aria-hidden="true">${escapeHtml(chatInitials(senderName))}</span>`}
+        <div class="team-chat-bubble">
+          ${mine ? "" : `<strong>${escapeHtml(senderName)}</strong>`}
+          <p>${escapeHtml(message.body)}</p>
+          <time datetime="${escapeHtml(message.created_at)}">${escapeHtml(formatPersonalDate(message.created_at))}</time>
+        </div>
+      </article>`;
+    }).join("");
+  } else {
+    messages.innerHTML = `<div class="team-chat-empty"><span class="team-chat-empty-icon" aria-hidden="true"><svg class="lc" viewBox="0 0 24 24"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/></svg></span><strong>Nessun messaggio</strong><span>Scrivi il primo messaggio di questa conversazione.</span></div>`;
+  }
+  if (!quiet || nearBottom) requestAnimationFrame(() => { messages.scrollTop = messages.scrollHeight; });
+  renderChatNavBadge();
+}
+
+function renderChatNavBadge() {
+  const badge = document.getElementById("chatNavBadge");
+  if (!badge) return;
+  const notificationUnread = personalAreaState.notifications.filter((item) => item.source_type === "chat").length;
+  const unread = Math.max(notificationUnread, Number(teamChatState.totalUnread || 0));
+  badge.textContent = unread > 99 ? "99+" : String(unread);
+  badge.classList.toggle("is-hidden", !unread);
+}
+
+async function selectTeamChatConversation(conversationKey) {
+  if (!conversationKey || conversationKey === teamChatState.selectedConversation) return;
+  teamChatState.selectedConversation = conversationKey;
+  teamChatState.messages = [];
+  teamChatState.loaded = false;
+  teamChatState.error = "";
+  renderTeamChat();
+  await loadTeamChat();
+  document.getElementById("chatMessageInput")?.focus();
+}
+
+async function openTeamChatConversation(conversationKey = "general") {
+  if (!canAccessModule("chat")) return;
+  teamChatState.selectedConversation = conversationKey || "general";
+  teamChatState.messages = [];
+  teamChatState.loaded = false;
+  teamChatState.error = "";
+  document.getElementById("notificationPanel")?.classList.add("is-hidden");
+  document.getElementById("notificationButton")?.setAttribute("aria-expanded", "false");
+  setView("chat");
+  await loadTeamChat();
+  document.getElementById("chatMessageInput")?.focus();
+}
+
+async function sendTeamChatMessage(form) {
+  const input = document.getElementById("chatMessageInput");
+  const button = document.getElementById("chatSendButton");
+  const status = document.getElementById("chatFormMessage");
+  const message = String(input.value || "").trim();
+  if (!message) return;
+  button.disabled = true;
+  status.textContent = "";
+  try {
+    const response = await apiFetch("/api/team-chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ conversation: teamChatState.selectedConversation, message })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "Messaggio non inviato");
+    form.reset();
+    input.style.height = "";
+    await loadTeamChat({ quiet: true });
+    input.focus();
+    void loadPersonalArea({ quiet: true });
+  } catch (error) {
+    status.textContent = error.message;
+  } finally {
+    button.disabled = false;
+  }
+}
+
+function startTeamChatUpdates() {
+  stopTeamChatUpdates();
+  teamChatTimer = window.setInterval(() => {
+    const active = document.querySelector("[data-view-panel='chat'].is-active");
+    if (active && document.visibilityState === "visible") void loadTeamChat({ quiet: true });
+  }, 6000);
+}
+
+function stopTeamChatUpdates() {
+  window.clearInterval(teamChatTimer);
+  teamChatTimer = null;
+}
+
 function renderAll() {
   renderHome();
   renderContent();
@@ -7287,6 +7503,7 @@ function renderAll() {
   renderGoogleCalendar();
   renderPersonalArea();
   renderNotifications();
+  renderTeamChat();
   renderTeam();
   renderSmartWorking();
   renderUsers();
@@ -7380,8 +7597,14 @@ document.body.addEventListener("click", (event) => {
   const deleteAlias = event.target.closest("[data-delete-alias]");
   const notificationDismiss = event.target.closest("[data-notification-dismiss]");
   const personalRefresh = event.target.closest("[data-personal-refresh]");
+  const chatConversation = event.target.closest("[data-chat-conversation]");
+  const chatRetry = event.target.closest("[data-chat-retry]");
+  const chatOpen = event.target.closest("[data-chat-open]");
   if (notificationDismiss) return dismissPersonalNotification(notificationDismiss.dataset.notificationDismiss);
   if (personalRefresh) return loadPersonalArea();
+  if (chatConversation) return selectTeamChatConversation(chatConversation.dataset.chatConversation);
+  if (chatRetry) return loadTeamChat();
+  if (chatOpen) return openTeamChatConversation(chatOpen.dataset.chatOpen);
   const personalTask = event.target.closest("[data-personal-task]");
   if (personalTask) return openPersonalTask(personalTask.dataset.personalTask);
   if (jump) return setView(jump.dataset.jump);
@@ -7900,6 +8123,12 @@ document.getElementById("notificationPanel").addEventListener("click", (event) =
   if (personalTask) {
     event.preventDefault();
     void openPersonalTask(personalTask.dataset.personalTask);
+    return;
+  }
+  const chatOpen = event.target.closest("[data-chat-open]");
+  if (chatOpen) {
+    event.preventDefault();
+    void openTeamChatConversation(chatOpen.dataset.chatOpen);
   }
 });
 document.addEventListener("click", () => {
@@ -7916,6 +8145,22 @@ document.getElementById("contentPageFilter").addEventListener("change", () => {
 document.getElementById("contentStatusFilter").addEventListener("change", renderContent);
 document.getElementById("contentSearch").addEventListener("input", renderContent);
 document.getElementById("clientSearch").addEventListener("input", renderClients);
+document.getElementById("chatSearch").addEventListener("input", () => renderTeamChat({ quiet: true }));
+document.getElementById("chatComposer").addEventListener("submit", (event) => {
+  event.preventDefault();
+  void sendTeamChatMessage(event.currentTarget);
+});
+document.getElementById("chatMessageInput").addEventListener("input", (event) => {
+  const input = event.currentTarget;
+  input.style.height = "auto";
+  input.style.height = `${Math.min(input.scrollHeight, 132)}px`;
+});
+document.getElementById("chatMessageInput").addEventListener("keydown", (event) => {
+  if (event.key !== "Enter" || event.shiftKey || event.isComposing) return;
+  event.preventDefault();
+  if (!event.currentTarget.value.trim()) return;
+  event.currentTarget.form?.requestSubmit();
+});
 document.getElementById("pedPreviousMonth").addEventListener("click", () => shiftPedMonth(-1));
 document.getElementById("pedNextMonth").addEventListener("click", () => shiftPedMonth(1));
 document.getElementById("pedTodayButton").addEventListener("click", () => {
@@ -8346,6 +8591,7 @@ document.addEventListener("visibilitychange", () => {
   } else {
     void sendActivityEvent("resume");
     void loadPersonalArea({ quiet: true });
+    if (document.querySelector("[data-view-panel='chat'].is-active")) void loadTeamChat({ quiet: true });
   }
 });
 

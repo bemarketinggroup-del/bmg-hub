@@ -10,6 +10,7 @@ Object.assign(process.env, env);
 const { handleSmartWorking } = await import("../lib/smart-working.js");
 const { handleGoogleCalendar } = await import("../lib/google-calendar.js");
 const { handlePersonalArea } = await import("../lib/personal-area.js");
+const { handleTeamChat } = await import("../lib/team-chat.js");
 const { default: handleClients } = await import("../api/clients.js");
 const { default: handleClientDrive } = await import("../lib/client-drive-api.js");
 const { default: handlePed, handlePedCarouselDownload } = await import("../lib/ped.js");
@@ -133,6 +134,10 @@ createServer(async (request, response) => {
     }
     if (url.pathname === "/api/personal-area") {
       await handlePersonalArea(request, response);
+      return;
+    }
+    if (url.pathname === "/api/team-chat") {
+      await handleTeamChat(request, response);
       return;
     }
 

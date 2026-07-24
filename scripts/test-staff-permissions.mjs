@@ -13,6 +13,7 @@ assert.equal(defaults.tasks, true);
 assert.equal(defaults.ped, true);
 assert.equal(defaults.clients, true);
 assert.equal(defaults.calendar, true);
+assert.equal(defaults.chat, true);
 assert.equal(defaults.site_backend, false);
 assert.equal(defaults.users, false);
 assert.equal(defaults.smart_working, true);

@@ -57,6 +57,7 @@ const MODULE_LABELS = Object.freeze({
   clients: "Clienti",
   ped: "PED",
   calendar: "Calendario",
+  chat: "Chat",
   tasks: "Task del team",
   smart_working: "Turni / Smart Working",
   users: "Utenti",
@@ -72,6 +73,7 @@ const ENDPOINT_MODULES = Object.freeze({
   "/api/clients/sync-clickup": "clients",
   "/api/ped": "ped",
   "/api/google-calendar": "calendar",
+  "/api/team-chat": "chat",
   "/api/clickup/tasks": "tasks",
   "/api/ai/task-assist": "tasks",
   "/api/smart-working": "smart_working",
@@ -108,7 +110,8 @@ const ACTION_LABELS = Object.freeze({
   smart_working_operation: "Ha modificato il piano Smart Working",
   ai_task_operation: "Ha usato Task Assist AI",
   create_client_alias: "Ha creato un alias cliente",
-  delete_client_alias: "Ha eliminato un alias cliente"
+  delete_client_alias: "Ha eliminato un alias cliente",
+  send_chat_message: "Ha inviato un messaggio nella chat interna"
 });
 
 async function recordAccess(request, response, session) {
