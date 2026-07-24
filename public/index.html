@@ -971,10 +971,16 @@
       <nav class="ped-picker-breadcrumbs" id="pedPickerBreadcrumbs" aria-label="Percorso Google Drive"></nav>
       <div class="ped-picker-tools">
         <span id="pedUnusedMediaSummary">Mostro solo i contenuti non ancora usati.</span>
-        <button class="secondary-button ped-used-media-toggle" id="pedUsedMediaToggle" data-ped-used-toggle type="button" aria-pressed="false">
-          <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>
-          <span>Mostra gia utilizzati</span>
-        </button>
+        <div class="ped-picker-tool-actions">
+          <button class="secondary-button ped-create-folder-button" id="pedCreateFolderButton" data-ped-create-folder type="button" title="Crea una cartella nel percorso aperto">
+            <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h6l2 2h10v10H3z"/><path d="M12 12v5M9.5 14.5h5"/></svg>
+            <span>Nuova cartella</span>
+          </button>
+          <button class="secondary-button ped-used-media-toggle" id="pedUsedMediaToggle" data-ped-used-toggle type="button" aria-pressed="false">
+            <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>
+            <span>Mostra gia utilizzati</span>
+          </button>
+        </div>
       </div>
       <div class="ped-picker-grid" id="pedPickerGrid"></div>
       <div class="ped-carousel-selection is-hidden" id="pedCarouselSelection">
@@ -1181,6 +1187,14 @@
       </div>
       <p class="drive-manage-description" id="driveManageDescription"></p>
       <label class="full" id="driveManageNameField">Nome<input id="driveManageName" name="drive_name" maxlength="240" autocomplete="off"></label>
+      <div class="drive-move-field is-hidden" id="driveManageMoveField">
+        <div class="drive-move-current">
+          <span>Destinazione scelta</span>
+          <strong id="driveMoveCurrentFolder">Seleziona una cartella</strong>
+        </div>
+        <nav class="drive-move-breadcrumbs" id="driveMoveBreadcrumbs" aria-label="Percorso destinazione"></nav>
+        <div class="drive-move-folder-list" id="driveMoveFolderList" aria-live="polite"></div>
+      </div>
       <p class="form-message" id="driveManageMessage" role="status"></p>
       <div class="modal-actions">
         <button class="ghost-button" value="cancel" type="submit" formnovalidate>Annulla</button>

@@ -185,11 +185,14 @@ let clickupOnline = null;
 const backendServiceErrors = { clients: "", clickup: "", site: "" };
 let selectedTeamMemberId = ALL_TEAM_TASKS_ID;
 let selectedClientId = "";
-let clientDriveState = { clientId: "", path: [], libraries: [], source: "", objectUrl: "", thumbnailUrls: new Set(), uploadEnabled: false };
+let clientDriveState = { clientId: "", path: [], libraries: [], source: "", rootId: "", objectUrl: "", thumbnailUrls: new Set(), uploadEnabled: false };
 let selectedPedClientId = "";
 let pedUsedFileIds = new Set();
 let selectedPedMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-let pedPickerState = { date: "", path: [], files: [], libraries: [], source: "", contentType: "post", caption: "", selectedFiles: [], showUsed: false };
+let pedPickerState = { date: "", path: [], files: [], libraries: [], source: "", rootId: "", uploadEnabled: false, contentType: "post", caption: "", selectedFiles: [], showUsed: false };
+let driveManageContext = { surface: "client", clientId: "", source: "", folder: null };
+let driveMoveState = { path: [], folder: null, sourceFileId: "", sourceName: "", sourceIsFolder: false };
+let driveMoveFolderLoadId = 0;
 const DRIVE_FOLDER_BROWSER_CACHE_TTL = 2 * 60 * 1000;
 const driveFolderBrowserCache = new Map();
 const driveFolderBrowserRequests = new Map();
@@ -430,6 +433,7 @@ function auditMetadata(url, method, options = {}) {
       const action = requestUrl.searchParams.get("action");
       if (action === "create-folder") return "create_drive_folder";
       if (action === "rename") return "rename_drive_item";
+      if (action === "move") return "move_drive_item";
       if (action === "trash") return "trash_drive_item";
       return method === "POST" ? "upload_drive_file" : "post_operation";
     }
@@ -1465,14 +1469,14 @@ function resetDriveBrowser() {
   clientDriveFolderLoadId += 1;
   if (clientDriveState.objectUrl) URL.revokeObjectURL(clientDriveState.objectUrl);
   clearDriveThumbnailUrls();
-  clientDriveState = { clientId: "", path: [], libraries: [], source: "", objectUrl: "", thumbnailUrls: new Set(), uploadEnabled: false };
+  clientDriveState = { clientId: "", path: [], libraries: [], source: "", rootId: "", objectUrl: "", thumbnailUrls: new Set(), uploadEnabled: false };
 }
 
 async function openClientDrive(clientId) {
   const client = state.clients.find((item) => String(item.id) === String(clientId));
   if (!client) return;
   clearDriveThumbnailUrls();
-  clientDriveState = { clientId: String(clientId), path: [], libraries: [], source: "", objectUrl: "", thumbnailUrls: new Set(), uploadEnabled: false };
+  clientDriveState = { clientId: String(clientId), path: [], libraries: [], source: "", rootId: "", objectUrl: "", thumbnailUrls: new Set(), uploadEnabled: false };
   await loadClientDriveFolder("", client.name, { source: "" });
 }
 
@@ -1501,6 +1505,7 @@ async function loadClientDriveFolder(folderId = "", folderName = "", { fresh = f
       clientDriveState.path[0].source = "";
     }
     clientDriveState.source = String(data.source || normalizedSource);
+    clientDriveState.rootId = String(data.root_id || "");
     if (Array.isArray(data.libraries) && data.libraries.length) clientDriveState.libraries = data.libraries;
     clientDriveState.uploadEnabled = Boolean(data.upload_enabled);
     clearDriveThumbnailUrls();
@@ -1601,6 +1606,9 @@ function driveEntryMarkup(file, writeEnabled) {
             <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5"/><path d="M5 20h14"/></svg>
             Scarica
           </button>` : `<span class="drive-folder-actions-label">Gestisci cartella</span>`}
+        <button class="drive-manage-button" data-drive-move="${escapeHtml(file.id)}" data-drive-name="${escapeHtml(file.name)}" data-drive-is-folder="${file.is_folder ? "1" : "0"}" type="button" title="Sposta" aria-label="Sposta ${escapeHtml(file.name)}" ${writeEnabled ? "" : "disabled"}>
+          <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h6l2 2h10v10H3z"/><path d="m10 13 2-2 2 2M12 11v6"/></svg>
+        </button>
         <button class="drive-manage-button" data-drive-rename="${escapeHtml(file.id)}" data-drive-name="${escapeHtml(file.name)}" data-drive-is-folder="${file.is_folder ? "1" : "0"}" type="button" title="Rinomina" aria-label="Rinomina ${escapeHtml(file.name)}" ${writeEnabled ? "" : "disabled"}>
           <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4z"/></svg>
         </button>
@@ -1619,21 +1627,88 @@ function driveEntryMarkup(file, writeEnabled) {
     </article>`;
 }
 
-function openDriveManageModal(action, fileId = "", name = "", isFolder = false) {
+function currentDriveManageContext(surface = "client") {
+  if (surface === "ped") {
+    return {
+      surface: "ped",
+      clientId: String(selectedPedClientId || ""),
+      source: String(pedPickerState.source || ""),
+      folder: pedPickerState.path[pedPickerState.path.length - 1] || null
+    };
+  }
+  return {
+    surface: "client",
+    clientId: String(clientDriveState.clientId || ""),
+    source: String(clientDriveState.source || ""),
+    folder: clientDriveState.path[clientDriveState.path.length - 1] || null
+  };
+}
+
+async function loadDriveMoveFolder(folderId = "", folderName = "") {
+  const list = document.getElementById("driveMoveFolderList");
+  const breadcrumbs = document.getElementById("driveMoveBreadcrumbs");
+  const current = document.getElementById("driveMoveCurrentFolder");
+  const submit = document.getElementById("driveManageSubmit");
+  const message = document.getElementById("driveManageMessage");
+  if (!list || !breadcrumbs || !current || !submit || !message || !driveManageContext.clientId) return;
+  const loadId = ++driveMoveFolderLoadId;
+  list.innerHTML = `<div class="drive-move-loading"><span class="drive-folder-spinner" aria-hidden="true"></span>Caricamento cartelle…</div>`;
+  submit.disabled = true;
+  try {
+    const { data } = await fetchDriveFolder(driveManageContext.clientId, folderId, {
+      source: driveManageContext.source
+    });
+    if (loadId !== driveMoveFolderLoadId) return;
+    const existingIndex = driveMoveState.path.findIndex((item) => item.id === data.folder.id);
+    if (existingIndex >= 0) driveMoveState.path = driveMoveState.path.slice(0, existingIndex + 1);
+    else driveMoveState.path.push({ id: data.folder.id, name: folderName || data.folder.name });
+    driveMoveState.folder = { id: data.folder.id, name: folderName || data.folder.name };
+    current.textContent = driveMoveState.folder.name;
+    breadcrumbs.innerHTML = driveMoveState.path.map((item, index) => {
+      const isCurrent = index === driveMoveState.path.length - 1;
+      return `${index ? `<svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>` : ""}${isCurrent
+        ? `<span>${escapeHtml(item.name)}</span>`
+        : `<button data-drive-move-breadcrumb="${index}" type="button">${escapeHtml(item.name)}</button>`}`;
+    }).join("");
+    const folders = sortPedPickerEntries((data.files || []).filter((item) => (
+      item.is_folder && String(item.id) !== String(driveMoveState.sourceFileId)
+    )));
+    list.innerHTML = folders.map((folder) => `
+      <button data-drive-move-folder="${escapeHtml(folder.id)}" data-drive-move-folder-name="${escapeHtml(folder.name)}" type="button">
+        <span class="drive-entry-icon" aria-hidden="true">${driveFileIcon(folder)}</span>
+        <span><strong>${escapeHtml(folder.name)}</strong><small>Apri cartella</small></span>
+        <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+      </button>
+    `).join("") || `<p>Nessuna sottocartella. Puoi comunque spostare qui l’elemento.</p>`;
+    const isOriginalFolder = String(driveMoveState.folder.id) === String(driveManageContext.folder?.id || "");
+    submit.disabled = isOriginalFolder;
+    message.textContent = isOriginalFolder ? "Apri una cartella diversa per scegliere la destinazione." : "";
+  } catch (error) {
+    if (loadId !== driveMoveFolderLoadId) return;
+    list.innerHTML = `<p class="is-error">${escapeHtml(error.message || "Cartelle non disponibili")}</p>`;
+    message.textContent = error.message || "Destinazione non disponibile";
+  }
+}
+
+function openDriveManageModal(action, fileId = "", name = "", isFolder = false, context = currentDriveManageContext()) {
   const modal = document.getElementById("driveManageModal");
   const form = document.getElementById("driveManageForm");
   const title = document.getElementById("driveManageTitle");
   const description = document.getElementById("driveManageDescription");
   const nameField = document.getElementById("driveManageNameField");
   const nameInput = document.getElementById("driveManageName");
+  const moveField = document.getElementById("driveManageMoveField");
   const submit = document.getElementById("driveManageSubmit");
   const message = document.getElementById("driveManageMessage");
-  if (!modal || !form || !title || !description || !nameField || !nameInput || !submit || !message) return;
+  if (!modal || !form || !title || !description || !nameField || !nameInput || !moveField || !submit || !message || !context?.folder) return;
 
+  driveManageContext = context;
+  driveMoveFolderLoadId += 1;
   form.dataset.action = action;
   form.dataset.fileId = fileId;
   form.dataset.isFolder = isFolder ? "1" : "0";
   message.textContent = "";
+  moveField.classList.add("is-hidden");
   submit.disabled = false;
   submit.classList.toggle("danger-button", action === "trash");
   submit.classList.toggle("primary-button", action !== "trash");
@@ -1652,6 +1727,22 @@ function openDriveManageModal(action, fileId = "", name = "", isFolder = false) 
     nameInput.required = true;
     nameInput.value = name;
     submit.textContent = "Salva nome";
+  } else if (action === "move") {
+    title.textContent = isFolder ? "Sposta cartella" : "Sposta file";
+    description.textContent = `Scegli in quale cartella spostare “${name}”.`;
+    nameField.classList.add("is-hidden");
+    moveField.classList.remove("is-hidden");
+    nameInput.required = false;
+    nameInput.value = "";
+    submit.textContent = "Sposta qui";
+    submit.disabled = true;
+    driveMoveState = {
+      path: [],
+      folder: null,
+      sourceFileId: String(fileId || ""),
+      sourceName: String(name || ""),
+      sourceIsFolder: Boolean(isFolder)
+    };
   } else {
     title.textContent = "Sposta nel cestino";
     description.textContent = `“${name}” sarà spostato nel Cestino di Google Drive e potrà essere ripristinato.`;
@@ -1662,7 +1753,8 @@ function openDriveManageModal(action, fileId = "", name = "", isFolder = false) 
   }
 
   modal.showModal();
-  if (action !== "trash") window.setTimeout(() => nameInput.focus(), 50);
+  if (action === "move") void loadDriveMoveFolder();
+  else if (action !== "trash") window.setTimeout(() => nameInput.focus(), 50);
 }
 
 async function submitDriveManageAction(form) {
@@ -1672,12 +1764,16 @@ async function submitDriveManageAction(form) {
   const submit = document.getElementById("driveManageSubmit");
   const message = document.getElementById("driveManageMessage");
   const modal = document.getElementById("driveManageModal");
-  const folder = clientDriveState.path[clientDriveState.path.length - 1];
+  const folder = driveManageContext.folder;
   if (!folder || !submit || !message || !modal) return;
 
   const name = String(nameInput?.value || "").trim();
-  if (action !== "trash" && !name) {
+  if (!["trash", "move"].includes(action) && !name) {
     message.textContent = "Inserisci un nome.";
+    return;
+  }
+  if (action === "move" && !driveMoveState.folder?.id) {
+    message.textContent = "Scegli la cartella di destinazione.";
     return;
   }
 
@@ -1685,16 +1781,18 @@ async function submitDriveManageAction(form) {
     ? { method: "POST", body: { parent_id: folder.id, name } }
     : action === "rename"
       ? { method: "PATCH", body: { file_id: fileId, name } }
+      : action === "move"
+        ? { method: "PATCH", body: { file_id: fileId, target_parent_id: driveMoveState.folder.id } }
       : { method: "DELETE", body: { file_id: fileId } };
 
   submit.disabled = true;
-  message.textContent = action === "trash" ? "Spostamento in corso..." : "Salvataggio in corso...";
+  message.textContent = ["trash", "move"].includes(action) ? "Spostamento in corso..." : "Salvataggio in corso...";
   try {
     const params = new URLSearchParams({
-      client_id: clientDriveState.clientId,
+      client_id: driveManageContext.clientId,
       action
     });
-    if (clientDriveState.source) params.set("source", clientDriveState.source);
+    if (driveManageContext.source) params.set("source", driveManageContext.source);
     const response = await apiFetch(`/api/client-drive?${params}`, {
       method: requestConfig.method,
       headers: { "Content-Type": "application/json" },
@@ -1703,7 +1801,20 @@ async function submitDriveManageAction(form) {
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || "Operazione Google Drive non riuscita");
     modal.close();
-    await loadClientDriveFolder(folder.id, folder.name, { fresh: true, source: clientDriveState.source });
+    clearDriveFolderBrowserCache(driveManageContext.clientId);
+    if (driveManageContext.surface === "ped") {
+      const currentFolder = pedPickerState.path[pedPickerState.path.length - 1] || folder;
+      await loadPedPickerFolder(currentFolder.id, currentFolder.name, {
+        fresh: true,
+        source: pedPickerState.source
+      });
+    } else {
+      const currentFolder = clientDriveState.path[clientDriveState.path.length - 1] || folder;
+      await loadClientDriveFolder(currentFolder.id, currentFolder.name, {
+        fresh: true,
+        source: clientDriveState.source
+      });
+    }
   } catch (error) {
     message.textContent = error.message || "Operazione non riuscita";
     submit.disabled = false;
@@ -2881,7 +2992,7 @@ async function openPedDrivePicker(date) {
     alert("Collega prima la cartella Google Drive del cliente.");
     return;
   }
-  pedPickerState = { date, path: [], files: [], libraries: [], source: "", contentType: "post", caption: "", selectedFiles: [], showUsed: false };
+  pedPickerState = { date, path: [], files: [], libraries: [], source: "", rootId: "", uploadEnabled: false, contentType: "post", caption: "", selectedFiles: [], showUsed: false };
   document.getElementById("pedPickerTitle").textContent = `Contenuto per ${new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "long" }).format(new Date(`${date}T12:00:00`))}`;
   document.getElementById("pedPickerSubtitle").textContent = `${client.name} · scegli una foto, un video o una grafica dal Drive`;
   document.getElementById("pedPickerMessage").textContent = "";
@@ -2928,14 +3039,14 @@ function renderPedCarouselSelection() {
   button.textContent = count >= 2 ? `Crea carosello (${count})` : "Crea carosello";
 }
 
-async function loadPedPickerFolder(folderId = "", folderName = "", { source = pedPickerState.source, resetPath = false } = {}) {
+async function loadPedPickerFolder(folderId = "", folderName = "", { source = pedPickerState.source, resetPath = false, fresh = false } = {}) {
   const grid = document.getElementById("pedPickerGrid");
   const loadId = ++pedPickerFolderLoadId;
   const instantlyAvailable = cachedDriveFolder(selectedPedClientId, folderId, source);
   if (instantlyAvailable) hideDriveFolderLoading(grid);
   else showDriveFolderLoading(grid, "Apertura cartella");
   try {
-    const { data } = await fetchDriveFolder(selectedPedClientId, folderId, { source });
+    const { data } = await fetchDriveFolder(selectedPedClientId, folderId, { source, fresh });
     if (loadId !== pedPickerFolderLoadId) return;
     if (resetPath) pedPickerState.path = pedPickerState.path.slice(0, 1);
     pedPickerState.source = source;
@@ -2944,6 +3055,8 @@ async function loadPedPickerFolder(folderId = "", folderName = "", { source = pe
     else pedPickerState.path.push({ id: data.folder.id, name: folderName || data.folder.name, source });
     if (pedPickerState.path.length === 1) pedPickerState.path[0].name = data.client.name;
     pedPickerState.files = data.files || [];
+    pedPickerState.rootId = String(data.root_id || "");
+    pedPickerState.uploadEnabled = Boolean(data.upload_enabled);
     if (!source && Array.isArray(data.libraries)) pedPickerState.libraries = data.libraries;
     hideDriveFolderLoading(grid);
     renderPedPicker();
@@ -3017,6 +3130,7 @@ function renderPedPicker() {
   const grid = document.getElementById("pedPickerGrid");
   const summary = document.getElementById("pedUnusedMediaSummary");
   const usedToggle = document.getElementById("pedUsedMediaToggle");
+  const createFolderButton = document.getElementById("pedCreateFolderButton");
   const usedCount = pedPickerState.files.filter(isPedDriveFileUsed).length;
   const visibleFiles = pedPickerState.files.filter((file) => (
     file.is_folder || (!isPedSpreadsheetFile(file) && (pedPickerState.showUsed || !isPedDriveFileUsed(file)))
@@ -3033,6 +3147,12 @@ function renderPedPicker() {
     usedToggle.setAttribute("aria-pressed", String(pedPickerState.showUsed));
     const label = usedToggle.querySelector("span");
     if (label) label.textContent = pedPickerState.showUsed ? "Nascondi gia utilizzati" : "Mostra gia utilizzati";
+  }
+  if (createFolderButton) {
+    createFolderButton.disabled = !pedPickerState.uploadEnabled;
+    createFolderButton.title = pedPickerState.uploadEnabled
+      ? "Crea una cartella nel percorso aperto"
+      : "Autorizzazione Google Drive necessaria";
   }
   const isCarouselSelection = pedContentType(pedPickerState.contentType) === "carousel";
   const libraryCards = !pedPickerState.source && pedPickerState.path.length === 1
@@ -6856,6 +6976,9 @@ document.body.addEventListener("click", (event) => {
   const driveDownload = event.target.closest("[data-drive-download-url]");
   const driveUpload = event.target.closest("[data-drive-upload]");
   const driveCreateFolder = event.target.closest("[data-drive-create-folder]");
+  const driveMove = event.target.closest("[data-drive-move]");
+  const driveMoveFolder = event.target.closest("[data-drive-move-folder]");
+  const driveMoveBreadcrumb = event.target.closest("[data-drive-move-breadcrumb]");
   const driveRename = event.target.closest("[data-drive-rename]");
   const driveTrash = event.target.closest("[data-drive-trash]");
   const copyDriveLinkButton = event.target.closest("[data-copy-drive-link]");
@@ -6880,6 +7003,7 @@ document.body.addEventListener("click", (event) => {
   const pedPickerBreadcrumb = event.target.closest("[data-ped-picker-breadcrumb]");
   const pedPickerClose = event.target.closest("[data-ped-picker-close]");
   const pedUsedToggle = event.target.closest("[data-ped-used-toggle]");
+  const pedCreateFolder = event.target.closest("[data-ped-create-folder]");
   const pedCreateCarousel = event.target.closest("[data-ped-create-carousel]");
   const pedCarouselDownload = event.target.closest("[data-ped-carousel-download]");
   const pedCaption = event.target.closest("[data-ped-caption]");
@@ -6927,6 +7051,13 @@ document.body.addEventListener("click", (event) => {
   if (driveFile) return openDriveFile(driveFile.dataset.driveFile, driveFile.dataset.driveName, driveFile.dataset.driveMime, driveFile.dataset.driveContentUrl);
   if (driveUpload) return document.querySelector("[data-drive-upload-input]")?.click();
   if (driveCreateFolder) return openDriveManageModal("create-folder");
+  if (driveMoveFolder) return loadDriveMoveFolder(driveMoveFolder.dataset.driveMoveFolder, driveMoveFolder.dataset.driveMoveFolderName);
+  if (driveMoveBreadcrumb) {
+    const index = Number(driveMoveBreadcrumb.dataset.driveMoveBreadcrumb);
+    const target = driveMoveState.path[index];
+    if (target) return loadDriveMoveFolder(target.id, target.name);
+  }
+  if (driveMove) return openDriveManageModal("move", driveMove.dataset.driveMove, driveMove.dataset.driveName, driveMove.dataset.driveIsFolder === "1");
   if (driveRename) return openDriveManageModal("rename", driveRename.dataset.driveRename, driveRename.dataset.driveName, driveRename.dataset.driveIsFolder === "1");
   if (driveTrash) return openDriveManageModal("trash", driveTrash.dataset.driveTrash, driveTrash.dataset.driveName, driveTrash.dataset.driveIsFolder === "1");
   if (copyDriveLinkButton) return copyDriveLink(copyDriveLinkButton);
@@ -6958,6 +7089,7 @@ document.body.addEventListener("click", (event) => {
     renderPedPicker();
     return;
   }
+  if (pedCreateFolder) return openDriveManageModal("create-folder", "", "", false, currentDriveManageContext("ped"));
   if (pedMediaViewer) return openPedMediaViewer(pedMediaViewer);
   if (pedViewerClose) return closePedMediaViewer();
   if (pedViewerZoomOut) return setPedMediaViewerScale(pedMediaViewerState.scale / 1.35);
