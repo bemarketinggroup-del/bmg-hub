@@ -1560,7 +1560,49 @@ code { font-family: var(--font-mono); font-size: 12px; }
 .drive-breadcrumbs .lc { width: 13px; height: 13px; color: var(--subtle); }
 .drive-breadcrumbs span { color: var(--ink); }
 .drive-item-count { color: var(--muted); font-size: 11px; white-space: nowrap; }
-.drive-browser-actions { display: flex; align-items: center; gap: 10px; }
+.drive-browser-actions { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 10px; }
+.drive-bulk-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-soft);
+  padding: 4px;
+}
+.drive-bulk-actions > span {
+  min-width: 72px;
+  color: var(--muted);
+  padding: 0 6px;
+  font-size: 10px;
+  font-weight: 700;
+  text-align: center;
+  white-space: nowrap;
+}
+.drive-bulk-button {
+  min-height: 28px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--stone);
+  padding: 0 9px;
+  font-size: 9px;
+  font-weight: 800;
+}
+.drive-bulk-button:hover:not(:disabled) { border-color: var(--client-accent); color: var(--client-accent); }
+.drive-bulk-button.is-primary { border-color: var(--client-accent); background: var(--client-accent); color: #fff; }
+.drive-bulk-button:disabled { cursor: not-allowed; opacity: .45; }
+.drive-bulk-message {
+  margin: -4px 0 14px;
+  border: 1px solid var(--client-line);
+  border-radius: 7px;
+  background: var(--client-tint);
+  color: var(--ink);
+  padding: 10px 12px;
+  font-size: 10px;
+  font-weight: 650;
+  line-height: 1.5;
+}
 .drive-upload-button,
 .drive-create-folder-button {
   height: 36px;
@@ -1720,6 +1762,7 @@ code { font-family: var(--font-mono); font-size: 12px; }
   grid-column: auto;
 }
 .drive-entry-card {
+  position: relative;
   min-width: 0;
   align-self: start;
   overflow: hidden;
@@ -1729,6 +1772,45 @@ code { font-family: var(--font-mono); font-size: 12px; }
   transition: border-color .14s, background .14s, transform .12s;
 }
 .drive-entry-card:hover { border-color: var(--line-strong); background: var(--surface); transform: translateY(-1px); }
+.drive-entry-card.is-selected {
+  border-color: var(--client-accent);
+  background: var(--client-tint);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--client-accent) 18%, transparent);
+}
+.drive-select-control {
+  position: absolute;
+  z-index: 5;
+  top: 7px;
+  left: 7px;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+.drive-select-control input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+}
+.drive-select-control > span:not(.sr-only) {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border: 2px solid rgba(255, 255, 255, .92);
+  border-radius: 7px;
+  background: rgba(28, 25, 22, .72);
+  color: transparent;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, .22);
+  transition: background .14s, color .14s, transform .14s;
+}
+.drive-select-control .lc { width: 14px; height: 14px; stroke-width: 3; }
+.drive-select-control:hover > span:not(.sr-only) { transform: scale(1.06); }
+.drive-select-control input:focus-visible + span { outline: 3px solid var(--client-tint); outline-offset: 2px; }
+.drive-select-control input:checked + span { background: var(--client-accent); color: #fff; }
 .drive-entry {
   width: 100%;
   min-width: 0;
@@ -5268,6 +5350,12 @@ code { font-family: var(--font-mono); font-size: 12px; }
   .drive-browser-head { align-items: flex-start; }
   .drive-browser-actions { align-items: flex-end; flex-direction: column; }
   .drive-browser-head { align-items: flex-start; flex-direction: column; gap: 8px; }
+  .drive-browser-actions { width: 100%; align-items: stretch; }
+  .drive-bulk-actions { width: 100%; display: grid; grid-template-columns: 1fr 1fr; }
+  .drive-bulk-actions > span { grid-column: 1 / -1; text-align: left; }
+  .drive-bulk-button { min-height: 34px; padding-inline: 6px; }
+  .drive-upload-button,
+  .drive-create-folder-button { justify-content: center; }
   .drive-file-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
   .drive-entry.has-thumbnail { padding: 8px 8px 9px; }
   .drive-entry-preview {

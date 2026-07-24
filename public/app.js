@@ -187,14 +187,15 @@ let clickupOnline = null;
 const backendServiceErrors = { clients: "", clickup: "", site: "" };
 let selectedTeamMemberId = ALL_TEAM_TASKS_ID;
 let selectedClientId = "";
-let clientDriveState = { clientId: "", path: [], libraries: [], source: "", rootId: "", objectUrl: "", thumbnailUrls: new Set(), uploadEnabled: false };
+let clientDriveState = { clientId: "", path: [], files: [], libraries: [], source: "", rootId: "", objectUrl: "", thumbnailUrls: new Set(), uploadEnabled: false, bulkMessage: "" };
+let clientDriveSelection = new Map();
 let selectedPedClientId = "";
 let pedUsedFileIds = new Set();
 let selectedPedMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
 let pedPickerState = { date: "", path: [], files: [], libraries: [], source: "", rootId: "", uploadEnabled: false, contentType: "post", caption: "", selectedFiles: [], showUsed: false };
 let pedPickerLocations = loadPedPickerLocations();
 let driveManageContext = { surface: "client", clientId: "", source: "", folder: null };
-let driveMoveState = { path: [], folder: null, sourceFileId: "", sourceName: "", sourceIsFolder: false };
+let driveMoveState = { path: [], folder: null, sourceFileId: "", sourceName: "", sourceIsFolder: false, sourceItems: [] };
 let driveMoveFolderLoadId = 0;
 const DRIVE_FOLDER_BROWSER_CACHE_TTL = 2 * 60 * 1000;
 const driveFolderBrowserCache = new Map();
@@ -490,6 +491,7 @@ function auditMetadata(url, method, options = {}) {
       if (action === "create-folder") return "create_drive_folder";
       if (action === "rename") return "rename_drive_item";
       if (action === "move") return "move_drive_item";
+      if (action === "move-batch") return "move_drive_items";
       if (action === "trash") return "trash_drive_item";
       return method === "POST" ? "upload_drive_file" : "post_operation";
     }
@@ -1525,14 +1527,16 @@ function resetDriveBrowser() {
   clientDriveFolderLoadId += 1;
   if (clientDriveState.objectUrl) URL.revokeObjectURL(clientDriveState.objectUrl);
   clearDriveThumbnailUrls();
-  clientDriveState = { clientId: "", path: [], libraries: [], source: "", rootId: "", objectUrl: "", thumbnailUrls: new Set(), uploadEnabled: false };
+  clientDriveSelection.clear();
+  clientDriveState = { clientId: "", path: [], files: [], libraries: [], source: "", rootId: "", objectUrl: "", thumbnailUrls: new Set(), uploadEnabled: false, bulkMessage: "" };
 }
 
 async function openClientDrive(clientId) {
   const client = state.clients.find((item) => String(item.id) === String(clientId));
   if (!client) return;
   clearDriveThumbnailUrls();
-  clientDriveState = { clientId: String(clientId), path: [], libraries: [], source: "", rootId: "", objectUrl: "", thumbnailUrls: new Set(), uploadEnabled: false };
+  clientDriveSelection.clear();
+  clientDriveState = { clientId: String(clientId), path: [], files: [], libraries: [], source: "", rootId: "", objectUrl: "", thumbnailUrls: new Set(), uploadEnabled: false, bulkMessage: "" };
   await loadClientDriveFolder("", client.name, { source: "" });
 }
 
@@ -1541,6 +1545,15 @@ async function loadClientDriveFolder(folderId = "", folderName = "", { fresh = f
   if (!panel) return;
   const loadId = ++clientDriveFolderLoadId;
   const normalizedSource = String(source || "");
+  const currentFolderId = String(clientDriveState.path[clientDriveState.path.length - 1]?.id || "");
+  const isNavigation = Boolean(currentFolderId) && (
+    (folderId && String(folderId) !== currentFolderId)
+    || normalizedSource !== String(clientDriveState.source || "")
+  );
+  if (isNavigation) {
+    clientDriveSelection.clear();
+    clientDriveState.bulkMessage = "";
+  }
   const instantlyAvailable = !fresh && cachedDriveFolder(clientDriveState.clientId, folderId, normalizedSource);
   panel.classList.remove("is-hidden");
   if (instantlyAvailable) hideDriveFolderLoading(panel);
@@ -1563,6 +1576,7 @@ async function loadClientDriveFolder(folderId = "", folderName = "", { fresh = f
     clientDriveState.source = String(data.source || normalizedSource);
     clientDriveState.rootId = String(data.root_id || "");
     if (Array.isArray(data.libraries) && data.libraries.length) clientDriveState.libraries = data.libraries;
+    clientDriveState.files = data.files || [];
     clientDriveState.uploadEnabled = Boolean(data.upload_enabled);
     clearDriveThumbnailUrls();
     hideDriveFolderLoading(panel);
@@ -1607,6 +1621,13 @@ function driveBrowserMarkup(files, uploadEnabled, libraries = []) {
       </div>
       <div class="drive-browser-actions">
         <span class="drive-item-count">${files.length} ${files.length === 1 ? "elemento" : "elementi"}</span>
+        ${uploadEnabled ? `
+          <div class="drive-bulk-actions" data-drive-bulk-actions>
+            <span data-drive-selection-count>${clientDriveSelection.size} selezionati</span>
+            <button class="drive-bulk-button" data-drive-select-all type="button">Seleziona tutto</button>
+            <button class="drive-bulk-button is-primary" data-drive-bulk-move type="button" ${clientDriveSelection.size ? "" : "disabled"}>Sposta selezionati</button>
+            <button class="drive-bulk-button" data-drive-clear-selection type="button" ${clientDriveSelection.size ? "" : "disabled"}>Annulla</button>
+          </div>` : ""}
         <input class="is-hidden" data-drive-upload-input type="file" multiple>
         <button class="drive-create-folder-button" data-drive-create-folder type="button" ${uploadEnabled ? "" : "disabled"} title="Crea una nuova cartella">
           <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h6l2 2h10v10H3z"/><path d="M3 7V5h6l2 2M12 12v5M9.5 14.5h5"/></svg>
@@ -1619,6 +1640,7 @@ function driveBrowserMarkup(files, uploadEnabled, libraries = []) {
       </div>
     </div>
     <div class="drive-upload-status is-hidden" data-drive-upload-status role="status"></div>
+    ${clientDriveState.bulkMessage ? `<div class="drive-bulk-message" data-drive-bulk-message role="status">${escapeHtml(clientDriveState.bulkMessage)}</div>` : ""}
     ${libraryCards ? `<div class="drive-library-grid" aria-label="Raccolte del cliente">${libraryCards}</div>` : ""}
     <div class="drive-drop-zone${uploadEnabled ? "" : " is-disabled"}" data-drive-drop-zone data-drive-write-enabled="${uploadEnabled ? "1" : "0"}">
       <div class="drive-drop-overlay" aria-hidden="true">
@@ -1644,8 +1666,15 @@ function driveEntryMarkup(file, writeEnabled) {
   const meta = file.is_folder
     ? "Cartella"
     : [formatFileSize(file.size), formatDriveDate(file.modified_at)].filter(Boolean).join(" · ") || "File";
+  const selected = clientDriveSelection.has(String(file.id));
   return `
-    <article class="drive-entry-card ${hasThumbnail ? "has-thumbnail" : ""}">
+    <article class="drive-entry-card ${hasThumbnail ? "has-thumbnail" : ""}${selected ? " is-selected" : ""}" data-drive-entry-id="${escapeHtml(file.id)}">
+      ${writeEnabled ? `
+        <label class="drive-select-control" title="Seleziona ${escapeHtml(file.name)}">
+          <input data-drive-select="${escapeHtml(file.id)}" data-drive-name="${escapeHtml(file.name)}" data-drive-is-folder="${file.is_folder ? "1" : "0"}" type="checkbox" ${selected ? "checked" : ""}>
+          <span aria-hidden="true"><svg class="lc" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg></span>
+          <span class="sr-only">Seleziona ${escapeHtml(file.name)}</span>
+        </label>` : ""}
       <button class="drive-entry ${file.is_folder ? "is-folder" : "is-file"} ${hasThumbnail ? "has-thumbnail" : ""}" ${action}="${escapeHtml(file.id)}" data-drive-name="${escapeHtml(file.name)}" data-drive-mime="${escapeHtml(file.mime_type || "")}" data-drive-content-url="${escapeHtml(file.content_url || "")}" type="button">
       ${hasThumbnail ? `
         <span class="drive-entry-preview">
@@ -1681,6 +1710,70 @@ function driveEntryMarkup(file, writeEnabled) {
           </button>
         </div>` : ""}` : ""}
     </article>`;
+}
+
+function updateClientDriveSelectionUi() {
+  const panel = document.querySelector("[data-client-drive-panel]");
+  if (!panel) return;
+  const selectedIds = new Set(clientDriveSelection.keys());
+  panel.querySelectorAll("[data-drive-select]").forEach((input) => {
+    const selected = selectedIds.has(String(input.dataset.driveSelect || ""));
+    input.checked = selected;
+    input.closest(".drive-entry-card")?.classList.toggle("is-selected", selected);
+  });
+  const count = panel.querySelector("[data-drive-selection-count]");
+  if (count) count.textContent = `${clientDriveSelection.size} ${clientDriveSelection.size === 1 ? "selezionato" : "selezionati"}`;
+  panel.querySelector("[data-drive-bulk-move]")?.toggleAttribute("disabled", !clientDriveSelection.size);
+  panel.querySelector("[data-drive-clear-selection]")?.toggleAttribute("disabled", !clientDriveSelection.size);
+  const selectableCount = panel.querySelectorAll("[data-drive-select]").length;
+  const selectAll = panel.querySelector("[data-drive-select-all]");
+  if (selectAll) selectAll.textContent = selectableCount > 0 && clientDriveSelection.size === selectableCount ? "Deseleziona tutto" : "Seleziona tutto";
+}
+
+function toggleClientDriveSelection(input) {
+  const id = String(input?.dataset.driveSelect || "");
+  if (!id) return;
+  if (input.checked) {
+    clientDriveSelection.set(id, {
+      id,
+      name: String(input.dataset.driveName || "Elemento"),
+      isFolder: input.dataset.driveIsFolder === "1"
+    });
+  } else {
+    clientDriveSelection.delete(id);
+  }
+  clientDriveState.bulkMessage = "";
+  document.querySelector("[data-drive-bulk-message]")?.remove();
+  updateClientDriveSelectionUi();
+}
+
+function toggleAllClientDriveEntries() {
+  const panel = document.querySelector("[data-client-drive-panel]");
+  if (!panel) return;
+  const inputs = [...panel.querySelectorAll("[data-drive-select]")];
+  const selectAll = inputs.some((input) => !input.checked);
+  if (!selectAll) clientDriveSelection.clear();
+  inputs.forEach((input) => {
+    input.checked = selectAll;
+    const id = String(input.dataset.driveSelect || "");
+    if (selectAll && id) {
+      clientDriveSelection.set(id, {
+        id,
+        name: String(input.dataset.driveName || "Elemento"),
+        isFolder: input.dataset.driveIsFolder === "1"
+      });
+    }
+  });
+  clientDriveState.bulkMessage = "";
+  document.querySelector("[data-drive-bulk-message]")?.remove();
+  updateClientDriveSelectionUi();
+}
+
+function clearClientDriveSelection() {
+  clientDriveSelection.clear();
+  clientDriveState.bulkMessage = "";
+  document.querySelector("[data-drive-bulk-message]")?.remove();
+  updateClientDriveSelectionUi();
 }
 
 function currentDriveManageContext(surface = "client") {
@@ -1726,8 +1819,12 @@ async function loadDriveMoveFolder(folderId = "", folderName = "") {
         ? `<span>${escapeHtml(item.name)}</span>`
         : `<button data-drive-move-breadcrumb="${index}" type="button">${escapeHtml(item.name)}</button>`}`;
     }).join("");
+    const excludedFolderIds = new Set((driveMoveState.sourceItems || [])
+      .filter((item) => item.isFolder)
+      .map((item) => String(item.id)));
+    if (driveMoveState.sourceIsFolder && driveMoveState.sourceFileId) excludedFolderIds.add(String(driveMoveState.sourceFileId));
     const folders = sortPedPickerEntries((data.files || []).filter((item) => (
-      item.is_folder && String(item.id) !== String(driveMoveState.sourceFileId)
+      item.is_folder && !excludedFolderIds.has(String(item.id))
     )));
     list.innerHTML = folders.map((folder) => `
       <button data-drive-move-folder="${escapeHtml(folder.id)}" data-drive-move-folder-name="${escapeHtml(folder.name)}" type="button">
@@ -1791,9 +1888,16 @@ function openDriveManageModal(action, fileId = "", name = "", isFolder = false, 
     nameInput.value = name;
     nameInput.placeholder = isFolder ? "Scrivi il nuovo nome della cartella" : "Scrivi il nuovo nome del file";
     submit.textContent = "Salva nome";
-  } else if (action === "move") {
-    title.textContent = isFolder ? "Sposta cartella" : "Sposta file";
-    description.textContent = `Scegli in quale cartella spostare “${name}”.`;
+  } else if (action === "move" || action === "move-batch") {
+    const sourceItems = action === "move-batch"
+      ? [...clientDriveSelection.values()]
+      : [{ id: String(fileId || ""), name: String(name || ""), isFolder: Boolean(isFolder) }];
+    title.textContent = action === "move-batch"
+      ? `Sposta ${sourceItems.length} elementi`
+      : isFolder ? "Sposta cartella" : "Sposta file";
+    description.textContent = action === "move-batch"
+      ? `Scegli la cartella di destinazione per i ${sourceItems.length} elementi selezionati.`
+      : `Scegli in quale cartella spostare “${name}”.`;
     nameField.classList.add("is-hidden");
     moveField.classList.remove("is-hidden");
     nameInput.required = false;
@@ -1805,7 +1909,8 @@ function openDriveManageModal(action, fileId = "", name = "", isFolder = false, 
       folder: null,
       sourceFileId: String(fileId || ""),
       sourceName: String(name || ""),
-      sourceIsFolder: Boolean(isFolder)
+      sourceIsFolder: Boolean(isFolder),
+      sourceItems
     };
   } else {
     title.textContent = "Sposta nel cestino";
@@ -1817,7 +1922,7 @@ function openDriveManageModal(action, fileId = "", name = "", isFolder = false, 
   }
 
   modal.showModal();
-  if (action === "move") void loadDriveMoveFolder();
+  if (action === "move" || action === "move-batch") void loadDriveMoveFolder();
   else if (action !== "trash") window.setTimeout(() => nameInput.focus(), 50);
 }
 
@@ -1832,12 +1937,16 @@ async function submitDriveManageAction(form) {
   if (!folder || !submit || !message || !modal) return;
 
   const name = String(nameInput?.value || "").trim();
-  if (!["trash", "move"].includes(action) && !name) {
+  if (!["trash", "move", "move-batch"].includes(action) && !name) {
     message.textContent = "Inserisci un nome.";
     return;
   }
-  if (action === "move" && !driveMoveState.folder?.id) {
+  if (["move", "move-batch"].includes(action) && !driveMoveState.folder?.id) {
     message.textContent = "Scegli la cartella di destinazione.";
+    return;
+  }
+  if (action === "move-batch" && !driveMoveState.sourceItems.length) {
+    message.textContent = "Seleziona almeno un elemento.";
     return;
   }
 
@@ -1847,10 +1956,12 @@ async function submitDriveManageAction(form) {
       ? { method: "PATCH", body: { file_id: fileId, name } }
       : action === "move"
         ? { method: "PATCH", body: { file_id: fileId, target_parent_id: driveMoveState.folder.id } }
+        : action === "move-batch"
+          ? { method: "PATCH", body: { file_ids: driveMoveState.sourceItems.map((item) => item.id), target_parent_id: driveMoveState.folder.id } }
       : { method: "DELETE", body: { file_id: fileId } };
 
   submit.disabled = true;
-  message.textContent = ["trash", "move"].includes(action) ? "Spostamento in corso..." : "Salvataggio in corso...";
+  message.textContent = ["trash", "move", "move-batch"].includes(action) ? "Spostamento in corso..." : "Salvataggio in corso...";
   try {
     const params = new URLSearchParams({
       client_id: driveManageContext.clientId,
@@ -1864,6 +1975,15 @@ async function submitDriveManageAction(form) {
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || "Operazione Google Drive non riuscita");
+    if (action === "move-batch") {
+      const failedIds = new Set((data.errors || []).map((item) => String(item.file_id || "")));
+      clientDriveSelection = new Map([...clientDriveSelection].filter(([id]) => failedIds.has(String(id))));
+      const movedCount = Number(data.moved?.length || 0);
+      const failedCount = Number(data.errors?.length || 0);
+      clientDriveState.bulkMessage = failedCount
+        ? `${movedCount} elementi spostati. ${failedCount} non spostati e ancora selezionati: ${(data.errors || []).map((item) => item.name || "Elemento").join(", ")}.`
+        : `${movedCount} ${movedCount === 1 ? "elemento spostato" : "elementi spostati"} correttamente.`;
+    }
     modal.close();
     clearDriveFolderBrowserCache(driveManageContext.clientId);
     if (driveManageContext.surface === "ped") {
@@ -7065,6 +7185,10 @@ document.body.addEventListener("click", (event) => {
   const driveDownload = event.target.closest("[data-drive-download-url]");
   const driveUpload = event.target.closest("[data-drive-upload]");
   const driveCreateFolder = event.target.closest("[data-drive-create-folder]");
+  const driveSelect = event.target.closest("[data-drive-select]");
+  const driveSelectAll = event.target.closest("[data-drive-select-all]");
+  const driveBulkMove = event.target.closest("[data-drive-bulk-move]");
+  const driveClearSelection = event.target.closest("[data-drive-clear-selection]");
   const driveMove = event.target.closest("[data-drive-move]");
   const driveMoveFolder = event.target.closest("[data-drive-move-folder]");
   const driveMoveBreadcrumb = event.target.closest("[data-drive-move-breadcrumb]");
@@ -7140,6 +7264,10 @@ document.body.addEventListener("click", (event) => {
   if (driveFile) return openDriveFile(driveFile.dataset.driveFile, driveFile.dataset.driveName, driveFile.dataset.driveMime, driveFile.dataset.driveContentUrl);
   if (driveUpload) return document.querySelector("[data-drive-upload-input]")?.click();
   if (driveCreateFolder) return openDriveManageModal("create-folder");
+  if (driveSelect) return toggleClientDriveSelection(driveSelect);
+  if (driveSelectAll) return toggleAllClientDriveEntries();
+  if (driveBulkMove) return openDriveManageModal("move-batch");
+  if (driveClearSelection) return clearClientDriveSelection();
   if (driveMoveFolder) return loadDriveMoveFolder(driveMoveFolder.dataset.driveMoveFolder, driveMoveFolder.dataset.driveMoveFolderName);
   if (driveMoveBreadcrumb) {
     const index = Number(driveMoveBreadcrumb.dataset.driveMoveBreadcrumb);

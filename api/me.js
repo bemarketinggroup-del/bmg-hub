@@ -99,6 +99,7 @@ const ACTION_LABELS = Object.freeze({
   create_drive_folder: "Ha creato una cartella su Google Drive",
   rename_drive_item: "Ha rinominato un elemento su Google Drive",
   move_drive_item: "Ha spostato un elemento su Google Drive",
+  move_drive_items: "Ha spostato più elementi su Google Drive",
   trash_drive_item: "Ha spostato un elemento nel cestino di Google Drive",
   create_site_content: "Ha creato un contenuto del sito",
   update_site_content: "Ha modificato un contenuto del sito",
