@@ -47,5 +47,8 @@ assert.match(appSource, /data-drive-move=/, "ogni elemento del Drive interno dev
 assert.match(appSource, /function loadDriveMoveFolder/, "il gestionale deve mostrare un selettore interno della destinazione");
 assert.match(htmlSource, /data-ped-create-folder/, "il selettore Drive del PED deve consentire la creazione di cartelle");
 assert.match(htmlSource, /drive-manage-name-field/, "creazione e rinomina devono usare un campo nome ampio e dedicato");
+assert.match(appSource, /PED_PICKER_LOCATIONS_KEY/, "il PED deve conservare l'ultima cartella aperta");
+assert.match(appSource, /rememberPedPickerLocation\(\)/, "ogni navigazione nel Drive PED deve aggiornare la cartella ricordata");
+assert.match(appSource, /lastPedPickerLocation\(selectedPedClientId\)/, "il nuovo contenuto PED deve riaprire l'ultima cartella del cliente");
 
 console.log("Client Drive library tests passed");

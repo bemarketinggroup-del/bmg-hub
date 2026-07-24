@@ -1,5 +1,6 @@
 const STORAGE_KEY = "bmg-hub-v1";
 const PASSWORD_RECOVERY_KEY = "bmg-password-recovery";
+const PED_PICKER_LOCATIONS_KEY = "bmg-hub-ped-picker-locations-v1";
 const ALL_TEAM_TASKS_ID = "__all";
 const UNASSIGNED_TASKS_ID = "__unassigned";
 const TEAM_TASK_LIST_NAME = "task del team";
@@ -191,6 +192,7 @@ let selectedPedClientId = "";
 let pedUsedFileIds = new Set();
 let selectedPedMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
 let pedPickerState = { date: "", path: [], files: [], libraries: [], source: "", rootId: "", uploadEnabled: false, contentType: "post", caption: "", selectedFiles: [], showUsed: false };
+let pedPickerLocations = loadPedPickerLocations();
 let driveManageContext = { surface: "client", clientId: "", source: "", folder: null };
 let driveMoveState = { path: [], folder: null, sourceFileId: "", sourceName: "", sourceIsFolder: false };
 let driveMoveFolderLoadId = 0;
@@ -279,6 +281,59 @@ function loadState() {
 
 function saveState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function loadPedPickerLocations() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(PED_PICKER_LOCATIONS_KEY) || "{}");
+    return saved && typeof saved === "object" && !Array.isArray(saved) ? saved : {};
+  } catch {
+    return {};
+  }
+}
+
+function pedPickerLocationKey(clientId) {
+  return `${currentProfile?.id || currentProfile?.user_id || "staff"}:${String(clientId || "")}`;
+}
+
+function lastPedPickerLocation(clientId) {
+  const saved = pedPickerLocations[pedPickerLocationKey(clientId)];
+  if (!saved || !Array.isArray(saved.path) || !saved.path.length || !saved.folder?.id) return null;
+  return {
+    source: String(saved.source || ""),
+    folder: { id: String(saved.folder.id), name: String(saved.folder.name || "") },
+    path: saved.path
+      .filter((item) => item?.id)
+      .map((item) => ({ id: String(item.id), name: String(item.name || ""), source: String(item.source || "") }))
+  };
+}
+
+function rememberPedPickerLocation() {
+  const folder = pedPickerState.path[pedPickerState.path.length - 1];
+  if (!selectedPedClientId || !folder?.id) return;
+  pedPickerLocations[pedPickerLocationKey(selectedPedClientId)] = {
+    source: String(pedPickerState.source || ""),
+    folder: { id: String(folder.id), name: String(folder.name || "") },
+    path: pedPickerState.path.map((item) => ({
+      id: String(item.id),
+      name: String(item.name || ""),
+      source: String(item.source || "")
+    }))
+  };
+  try {
+    localStorage.setItem(PED_PICKER_LOCATIONS_KEY, JSON.stringify(pedPickerLocations));
+  } catch {
+    // La memoria del percorso resta valida per la sessione corrente.
+  }
+}
+
+function forgetPedPickerLocation(clientId) {
+  delete pedPickerLocations[pedPickerLocationKey(clientId)];
+  try {
+    localStorage.setItem(PED_PICKER_LOCATIONS_KEY, JSON.stringify(pedPickerLocations));
+  } catch {
+    // Nessuna azione necessaria: il percorso non valido e' gia stato rimosso in memoria.
+  }
 }
 
 function loadAuthSession() {
@@ -3001,13 +3056,35 @@ async function openPedDrivePicker(date) {
     alert("Collega prima la cartella Google Drive del cliente.");
     return;
   }
-  pedPickerState = { date, path: [], files: [], libraries: [], source: "", rootId: "", uploadEnabled: false, contentType: "post", caption: "", selectedFiles: [], showUsed: false };
+  const remembered = lastPedPickerLocation(selectedPedClientId);
+  pedPickerState = {
+    date,
+    path: remembered?.path || [],
+    files: [],
+    libraries: [],
+    source: remembered?.source || "",
+    rootId: "",
+    uploadEnabled: false,
+    contentType: "post",
+    caption: "",
+    selectedFiles: [],
+    showUsed: false
+  };
   document.getElementById("pedPickerTitle").textContent = `Contenuto per ${new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "long" }).format(new Date(`${date}T12:00:00`))}`;
   document.getElementById("pedPickerSubtitle").textContent = `${client.name} · scegli una foto, un video o una grafica dal Drive`;
   document.getElementById("pedPickerMessage").textContent = "";
   document.getElementById("pedPickerCaption").value = "";
   document.getElementById("pedDrivePickerModal").showModal();
   renderPedPickerFormat();
+  if (remembered?.folder?.id) {
+    const restored = await loadPedPickerFolder(remembered.folder.id, remembered.folder.name, {
+      source: remembered.source
+    });
+    if (restored) return;
+    forgetPedPickerLocation(selectedPedClientId);
+    pedPickerState.path = [];
+    pedPickerState.source = "";
+  }
   await loadPedPickerFolder("", client.name);
 }
 
@@ -3067,12 +3144,15 @@ async function loadPedPickerFolder(folderId = "", folderName = "", { source = pe
     pedPickerState.rootId = String(data.root_id || "");
     pedPickerState.uploadEnabled = Boolean(data.upload_enabled);
     if (!source && Array.isArray(data.libraries)) pedPickerState.libraries = data.libraries;
+    rememberPedPickerLocation();
     hideDriveFolderLoading(grid);
     renderPedPicker();
+    return true;
   } catch (error) {
     if (loadId !== pedPickerFolderLoadId) return;
     hideDriveFolderLoading(grid);
     grid.innerHTML = `<div class="ped-picker-error"><strong>Drive non disponibile</strong><span>${escapeHtml(error.message)}</span></div>`;
+    return false;
   }
 }
 
