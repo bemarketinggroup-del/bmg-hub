@@ -3874,6 +3874,15 @@ code { font-family: var(--font-mono); font-size: 12px; }
 .user-access-fields label { display: grid; gap: 6px; color: var(--muted); font-size: 12px; font-weight: 700; }
 .user-access-fields input,
 .user-access-fields select { width: 100%; }
+.user-create-note {
+  margin: 0;
+  border-radius: 8px;
+  background: var(--green-tint);
+  color: var(--green);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 10px 12px;
+}
 .user-clickup-link-status {
   margin: -6px 0 0;
   border-radius: 7px;
@@ -3902,7 +3911,7 @@ code { font-family: var(--font-mono); font-size: 12px; }
 }
 .permission-toggle:has(input:checked) { border-color: var(--terra-line); background: var(--terra-tint); }
 .permission-toggle:has(input:disabled) { cursor: default; }
-.user-access-actions { justify-content: flex-end; }
+.user-access-actions { justify-content: flex-end; gap: 10px; }
 
 @media (max-width: 760px) {
   .users-heading { align-items: stretch; flex-direction: column; }
@@ -5090,7 +5099,9 @@ code { font-family: var(--font-mono); font-size: 12px; }
   .user-create-actions { align-items: stretch; flex-direction: column; }
   .user-create-actions .primary-button { width: 100%; }
   .user-access-fields label:last-child { grid-column: auto; }
-  .user-access-actions .primary-button { width: 100%; }
+  .user-access-actions { align-items: stretch; flex-direction: column-reverse; }
+  .user-access-actions .primary-button,
+  .user-access-actions .danger-button { width: 100%; }
   .lead-card { gap: 12px; }
   .mode-tabs { display: grid; grid-template-columns: 1fr 1fr; }
   .cms-heading, .cms-browser { padding: 18px; }

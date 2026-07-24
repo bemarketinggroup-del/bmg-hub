@@ -592,21 +592,20 @@
           </div>
           <form class="user-create-form admin-only" id="userCreateForm">
             <div class="user-create-fields">
-              <label>Nome e cognome
-                <input name="full_name" autocomplete="name" placeholder="Compilato da ClickUp" readonly required>
+              <label>Nome
+                <input name="first_name" autocomplete="given-name" placeholder="Nome" required>
+              </label>
+              <label>Cognome
+                <input name="last_name" autocomplete="family-name" placeholder="Cognome" required>
               </label>
               <label>Email personale
-                <input name="email" type="email" autocomplete="email" placeholder="Compilata da ClickUp" readonly required>
+                <input name="email" type="email" autocomplete="email" placeholder="nome@azienda.it" required>
               </label>
-              <label>Password temporanea
+              <label>Password
                 <input name="password" type="password" autocomplete="new-password" minlength="12" placeholder="Minimo 12 caratteri" required>
               </label>
-              <label>Utente ClickUp
-                <select name="clickup_user_id" id="newUserClickUpMember" required>
-                  <option value="">Caricamento membri ClickUp...</option>
-                </select>
-              </label>
             </div>
+            <p class="user-create-note">La persona ricevera anche l’invito al workspace ClickUp con la stessa email.</p>
             <fieldset class="user-create-permissions">
               <legend>Funzioni iniziali</legend>
               <label class="permission-toggle"><input name="module_tasks" type="checkbox" checked><span>Task</span></label>
@@ -620,7 +619,7 @@
             </fieldset>
             <div class="user-create-actions">
               <p id="userCreateMessage" role="status"></p>
-              <button class="primary-button" type="submit">Crea accesso</button>
+              <button class="primary-button" type="submit">Crea utente e invita</button>
             </div>
           </form>
           <section class="user-provision-result admin-only" id="provisionUsersResult" aria-live="polite" hidden></section>

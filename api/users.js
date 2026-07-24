@@ -1,10 +1,10 @@
 import crypto from "node:crypto";
 import { jsonHeaders, readJson, requireUser, supabaseFetch } from "./_auth.js";
 import { normalizeModulePermissions, profileWithPermissions } from "../lib/staff-permissions.js";
-import { fetchClickUpMembers } from "../lib/clickup-members.js";
+import { ensureClickUpWorkspaceMember, fetchClickUpMembers } from "../lib/clickup-members.js";
 import { normalizedEmail, profileEmailMatchesMember, profileMatchesClickUpMember } from "../lib/clickup-identity.js";
 
-const headers = jsonHeaders("GET,POST,PATCH,OPTIONS");
+const headers = jsonHeaders("GET,POST,PATCH,DELETE,OPTIONS");
 const noStoreHeaders = { ...headers, "Cache-Control": "no-store, max-age=0" };
 
 function adminAuthHeaders(includeJson = false) {
@@ -89,6 +89,10 @@ export default async function handler(request, response) {
     const body = await readJson(request);
     if (body.action === "provision_clickup_members") {
       await provisionClickUpMembers(response);
+      return;
+    }
+    if (body.action === "create_workspace_user") {
+      await createWorkspaceUser(response, body);
       return;
     }
 
@@ -196,8 +200,177 @@ export default async function handler(request, response) {
     return;
   }
 
+  if (request.method === "DELETE") {
+    if (session.profile.role !== "admin") {
+      response.writeHead(403, headers);
+      response.end(JSON.stringify({ error: "Solo gli admin possono eliminare gli utenti" }));
+      return;
+    }
+    const body = await readJson(request);
+    await deleteStaffUser(response, session, String(body.id || "").trim());
+    return;
+  }
+
   response.writeHead(405, headers);
   response.end(JSON.stringify({ error: "Method not allowed" }));
+}
+
+async function createWorkspaceUser(response, body) {
+  const firstName = String(body.first_name || "").trim();
+  const lastName = String(body.last_name || "").trim();
+  const fullName = [firstName, lastName].filter(Boolean).join(" ");
+  const email = normalizedEmail(body.email);
+  const password = String(body.password || "");
+  if (!firstName || !lastName) {
+    response.writeHead(400, headers);
+    response.end(JSON.stringify({ error: "Inserisci nome e cognome" }));
+    return;
+  }
+  if (!/^\S+@\S+\.\S+$/.test(email)) {
+    response.writeHead(400, headers);
+    response.end(JSON.stringify({ error: "Inserisci un indirizzo email valido" }));
+    return;
+  }
+  if (password.length < 12) {
+    response.writeHead(400, headers);
+    response.end(JSON.stringify({ error: "La password deve contenere almeno 12 caratteri" }));
+    return;
+  }
+
+  const duplicateResult = await supabaseFetch(`/staff_profiles?select=id&email=eq.${encodeURIComponent(email)}&limit=1`);
+  const duplicate = duplicateResult.ok ? (await duplicateResult.json())[0] : null;
+  if (duplicate) {
+    response.writeHead(409, headers);
+    response.end(JSON.stringify({ error: "Esiste già un utente con questa email" }));
+    return;
+  }
+
+  const authResult = await adminAuthFetch("/users", {
+    method: "POST",
+    body: JSON.stringify({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: { full_name: fullName }
+    })
+  });
+  const authBody = await authResult.json().catch(() => ({}));
+  const authUser = authBody.user || authBody;
+  if (!authResult.ok || !authUser.id) {
+    response.writeHead(authResult.status || 400, headers);
+    response.end(JSON.stringify({ error: authBody.message || authBody.msg || "Creazione account non riuscita" }));
+    return;
+  }
+
+  const profileResult = await supabaseFetch("/staff_profiles", {
+    method: "POST",
+    headers: { Prefer: "return=representation" },
+    body: JSON.stringify({
+      user_id: authUser.id,
+      email,
+      full_name: fullName,
+      role: "staff",
+      clickup_user_id: null,
+      active: true,
+      module_permissions: normalizeModulePermissions(body.module_permissions, "staff")
+    })
+  });
+  if (!profileResult.ok) {
+    await adminAuthFetch(`/users/${encodeURIComponent(authUser.id)}`, { method: "DELETE" });
+    response.writeHead(profileResult.status, headers);
+    response.end(JSON.stringify({ error: "Profilo staff non creato; account annullato" }));
+    return;
+  }
+
+  const profile = (await profileResult.json())[0];
+  const clickUpResult = await ensureClickUpWorkspaceMember(email);
+  if (!clickUpResult.ok) {
+    await rollbackCreatedUser(authUser.id, profile?.id);
+    response.writeHead(502, headers);
+    response.end(JSON.stringify({ error: clickUpResult.error || "Invito ClickUp non riuscito; account annullato" }));
+    return;
+  }
+
+  if (clickUpResult.member?.id) {
+    const linkedResult = await supabaseFetch(`/staff_profiles?select=id&clickup_user_id=eq.${encodeURIComponent(clickUpResult.member.id)}&limit=1`);
+    const linkedProfile = linkedResult.ok ? (await linkedResult.json())[0] : null;
+    if (linkedProfile && linkedProfile.id !== profile.id) {
+      await rollbackCreatedUser(authUser.id, profile.id);
+      response.writeHead(409, headers);
+      response.end(JSON.stringify({ error: "L'utente ClickUp è già collegato a un altro accesso" }));
+      return;
+    }
+    const linkResult = await supabaseFetch(`/staff_profiles?id=eq.${encodeURIComponent(profile.id)}`, {
+      method: "PATCH",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({ clickup_user_id: clickUpResult.member.id })
+    });
+    if (!linkResult.ok) {
+      await rollbackCreatedUser(authUser.id, profile.id);
+      response.writeHead(502, headers);
+      response.end(JSON.stringify({ error: "Utente invitato su ClickUp, ma collegamento al gestionale non riuscito" }));
+      return;
+    }
+    Object.assign(profile, (await linkResult.json())[0]);
+  }
+
+  response.writeHead(201, noStoreHeaders);
+  response.end(JSON.stringify({
+    ...profileWithPermissions(profile),
+    clickup_invited: clickUpResult.invited,
+    clickup_pending: clickUpResult.pending
+  }));
+}
+
+async function rollbackCreatedUser(userId, profileId = "") {
+  const authDelete = await adminAuthFetch(`/users/${encodeURIComponent(userId)}`, { method: "DELETE" });
+  if (!authDelete.ok && profileId) {
+    await supabaseFetch(`/staff_profiles?id=eq.${encodeURIComponent(profileId)}`, { method: "DELETE" });
+  }
+}
+
+async function deleteStaffUser(response, session, profileId) {
+  if (!profileId) {
+    response.writeHead(400, headers);
+    response.end(JSON.stringify({ error: "Seleziona l'utente da eliminare" }));
+    return;
+  }
+  if (profileId === session.profile.id) {
+    response.writeHead(400, headers);
+    response.end(JSON.stringify({ error: "Non puoi eliminare il tuo account amministratore" }));
+    return;
+  }
+
+  const profileResult = await supabaseFetch(`/staff_profiles?select=id,user_id,email,full_name,clickup_user_id&id=eq.${encodeURIComponent(profileId)}&limit=1`);
+  const profile = profileResult.ok ? (await profileResult.json())[0] : null;
+  if (!profile) {
+    response.writeHead(404, headers);
+    response.end(JSON.stringify({ error: "Utente non trovato" }));
+    return;
+  }
+
+  if (profile.user_id) {
+    const authDelete = await adminAuthFetch(`/users/${encodeURIComponent(profile.user_id)}`, { method: "DELETE" });
+    if (!authDelete.ok && authDelete.status !== 404) {
+      const authBody = await authDelete.json().catch(() => ({}));
+      response.writeHead(502, headers);
+      response.end(JSON.stringify({ error: authBody.message || "Eliminazione account non riuscita" }));
+      return;
+    }
+  }
+  const profileDelete = await supabaseFetch(`/staff_profiles?id=eq.${encodeURIComponent(profileId)}`, { method: "DELETE" });
+  if (!profileDelete.ok) {
+    response.writeHead(502, headers);
+    response.end(JSON.stringify({ error: "Account eliminato, ma pulizia del profilo non completata" }));
+    return;
+  }
+
+  response.writeHead(200, noStoreHeaders);
+  response.end(JSON.stringify({
+    ok: true,
+    deleted: { id: profile.id, email: profile.email, full_name: profile.full_name },
+    clickup_membership_preserved: Boolean(profile.clickup_user_id)
+  }));
 }
 
 async function validateClickUpIdentity(payload, requestedEmail, currentProfileId = "") {
