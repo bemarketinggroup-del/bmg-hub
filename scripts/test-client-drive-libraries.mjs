@@ -55,6 +55,7 @@ assert.match(styleSource, /\.drive-select-control input:checked \+ span \{[\s\S]
 assert.match(styleSource, /\.drive-bulk-button\.is-primary \{[\s\S]*?background: var\(--terracotta\)/, "Sposta selezionati deve avere un pulsante arancione ben visibile");
 assert.match(appSource, /function driveImageViewerGallery\(fileId, fileName, sourceUrl\)/, "il Drive deve creare una galleria con le foto della cartella aperta");
 assert.match(appSource, /data-drive-file\]\[data-drive-mime\^='image\/'/, "la barra spaziatrice deve aprire la foto Drive con il focus");
+assert.match(appSource, /\.drive-entry-card\[data-drive-entry-id\]/, "dopo la chiusura il Drive deve ritrovare la scheda dell'ultima foto visualizzata");
 assert.match(appSource, /action === "move-batch"/, "l'interfaccia deve inviare lo spostamento multiplo");
 assert.match(appSource, /clientDriveSelection = new Map/, "la selezione deve conservare i dati degli elementi");
 assert.match(appSource, /function loadDriveMoveFolder/, "il gestionale deve mostrare un selettore interno della destinazione");

@@ -212,6 +212,11 @@ assert.match(appSource, /function fitPedMediaViewerImage\(\)/, "il 100% deve ada
 assert.match(appSource, /imageRatio >= stageRatio \? availableWidth : availableHeight \* imageRatio/, "il visualizzatore deve rispettare le proporzioni originali senza ritagli");
 assert.match(appSource, /setPointerCapture\(event\.pointerId\)/, "la foto ingrandita deve poter essere trascinata");
 assert.match(appSource, /function navigatePedMediaViewer\(direction\)/, "le frecce devono navigare tra le foto aperte del PED");
+assert.match(appSource, /const lastViewedEntry = pedMediaViewerState\.gallery\[pedMediaViewerState\.galleryIndex\] \|\| null/, "la chiusura deve ricordare la foto effettivamente raggiunta nella galleria");
+assert.match(appSource, /function markLastViewedMedia\(entry, fallbackOpener = null\)/, "la foto vista per ultima deve essere ritrovata dopo la chiusura");
+assert.match(appSource, /badge\.textContent = "Ultima visualizzata"/, "la scheda deve indicare chiaramente l'ultima foto visualizzata");
+assert.match(appSource, /Ultima foto visualizzata: \$\{entry\.name\}/, "alla chiusura deve comparire anche il nome dell'ultima foto");
+assert.match(styleSource, /\.media-last-viewed-badge \{/, "l'ultima foto visualizzata deve avere un badge dedicato");
 assert.match(appSource, /event\.key === "ArrowLeft" \|\| event\.key === "ArrowRight"/, "il visualizzatore deve intercettare le frecce della tastiera");
 assert.match(appSource, /event\.key === " " && !event\.repeat/, "la barra spaziatrice deve aprire o chiudere le foto");
 assert.match(htmlSource, /Frecce ← → per navigare · Spazio per chiudere/, "il visualizzatore deve spiegare i comandi da tastiera");

@@ -3710,6 +3710,55 @@ function navigatePedMediaViewer(direction) {
   });
 }
 
+function findLastViewedMediaTarget(entry) {
+  if (!entry?.file) return null;
+  const fileId = String(entry.file);
+  const pedButton = [...document.querySelectorAll("[data-ped-media-viewer][data-ped-viewer-file]")]
+    .find((button) => String(button.dataset.pedViewerFile) === fileId);
+  if (pedButton) {
+    return {
+      card: pedButton.closest(".ped-picker-entry"),
+      focusTarget: pedButton
+    };
+  }
+  const driveCard = [...document.querySelectorAll(".drive-entry-card[data-drive-entry-id]")]
+    .find((card) => String(card.dataset.driveEntryId) === fileId);
+  if (driveCard) {
+    return {
+      card: driveCard,
+      focusTarget: driveCard.querySelector("[data-drive-file]")
+    };
+  }
+  return null;
+}
+
+function markLastViewedMedia(entry, fallbackOpener = null) {
+  document.querySelectorAll(".ped-picker-entry.is-last-viewed, .drive-entry-card.is-last-viewed")
+    .forEach((card) => card.classList.remove("is-last-viewed"));
+  document.querySelectorAll("[data-last-viewed-badge]").forEach((badge) => badge.remove());
+  if (!entry) {
+    if (fallbackOpener?.isConnected) fallbackOpener.focus?.();
+    return;
+  }
+
+  showPedMoveNotice(`Ultima foto visualizzata: ${entry.name}`, "success");
+  const target = findLastViewedMediaTarget(entry);
+  if (!target?.card) {
+    if (fallbackOpener?.isConnected) fallbackOpener.focus?.();
+    return;
+  }
+
+  const badge = document.createElement("span");
+  badge.className = "media-last-viewed-badge";
+  badge.dataset.lastViewedBadge = "";
+  badge.setAttribute("role", "status");
+  badge.textContent = "Ultima visualizzata";
+  target.card.classList.add("is-last-viewed");
+  target.card.appendChild(badge);
+  target.focusTarget?.focus?.({ preventScroll: true });
+  target.card.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
+}
+
 function closePedMediaViewer() {
   document.getElementById("pedMediaViewerModal")?.close();
 }
@@ -8140,6 +8189,7 @@ pedMediaViewerStage.addEventListener("pointerup", endPedMediaViewerDrag);
 pedMediaViewerStage.addEventListener("pointercancel", endPedMediaViewerDrag);
 pedMediaViewerModal.addEventListener("close", () => {
   const opener = pedMediaViewerState.opener;
+  const lastViewedEntry = pedMediaViewerState.gallery[pedMediaViewerState.galleryIndex] || null;
   pedMediaViewerState.loadId += 1;
   pedMediaViewerStage.querySelector("video")?.pause();
   pedMediaViewerStage.replaceChildren();
@@ -8149,7 +8199,7 @@ pedMediaViewerModal.addEventListener("close", () => {
   pedMediaViewerState.galleryIndex = -1;
   pedMediaViewerState.opener = null;
   resetPedMediaViewerTransform({ render: false });
-  window.setTimeout(() => opener?.isConnected && opener.focus?.(), 0);
+  window.setTimeout(() => markLastViewedMedia(lastViewedEntry, opener), 0);
 });
 window.addEventListener("resize", () => {
   if (pedMediaViewerModal.open && pedMediaViewerState.type === "image") {

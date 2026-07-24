@@ -1794,6 +1794,38 @@ code { font-family: var(--font-mono); font-size: 12px; }
   background: var(--client-tint);
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--client-accent) 18%, transparent);
 }
+.drive-entry-card.is-last-viewed,
+.ped-picker-entry.is-last-viewed {
+  border-color: var(--terracotta);
+  box-shadow: 0 0 0 3px var(--terra-tint), 0 8px 20px rgba(185, 84, 44, .18);
+}
+.media-last-viewed-badge {
+  position: absolute;
+  z-index: 6;
+  top: 8px;
+  right: 8px;
+  max-width: calc(100% - 54px);
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, .62);
+  border-radius: var(--pill);
+  background: var(--terracotta);
+  color: #fff;
+  padding: 5px 8px;
+  box-shadow: 0 4px 12px rgba(45, 25, 18, .24);
+  font-size: 8.5px;
+  font-weight: 900;
+  letter-spacing: .04em;
+  line-height: 1;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+  pointer-events: none;
+  animation: media-last-viewed-pulse .55s ease-out both;
+}
+@keyframes media-last-viewed-pulse {
+  0% { opacity: 0; transform: translateY(-4px) scale(.94); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
 .drive-select-control {
   position: absolute;
   z-index: 5;
