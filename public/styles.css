@@ -5057,7 +5057,27 @@ code { font-family: var(--font-mono); font-size: 12px; }
 
 .notification-center { position: relative; }
 
-.notification-button { position: relative; }
+.notification-button {
+  position: relative;
+  transition: color .18s ease, background .18s ease, border-color .18s ease, box-shadow .18s ease;
+}
+
+.notification-button.has-notifications {
+  border-color: var(--terra-line);
+  background: var(--terra-tint);
+  color: var(--terracotta);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--terracotta) 9%, transparent);
+}
+
+.notification-button.has-notifications:hover {
+  border-color: var(--terracotta);
+  background: color-mix(in srgb, var(--terracotta) 16%, var(--surface));
+}
+
+.notification-button.has-notifications > .lc {
+  transform-origin: 50% 12%;
+  animation: notification-bell-reminder 9s ease-in-out infinite;
+}
 
 .notification-badge {
   position: absolute;
@@ -5075,6 +5095,27 @@ code { font-family: var(--font-mono); font-size: 12px; }
   font-size: 10px;
   font-weight: 800;
   line-height: 1;
+}
+
+.notification-button.has-notifications .notification-badge {
+  animation: notification-badge-reminder 9s ease-in-out infinite;
+}
+
+@keyframes notification-bell-reminder {
+  0%, 72%, 84%, 100% { transform: rotate(0); }
+  75% { transform: rotate(13deg); }
+  78% { transform: rotate(-11deg); }
+  81% { transform: rotate(7deg); }
+}
+
+@keyframes notification-badge-reminder {
+  0%, 72%, 84%, 100% { box-shadow: 0 0 0 0 rgba(185, 84, 44, 0); }
+  77% { box-shadow: 0 0 0 7px rgba(185, 84, 44, .20); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .notification-button.has-notifications > .lc,
+  .notification-button.has-notifications .notification-badge { animation: none; }
 }
 
 .notification-panel {

@@ -6619,10 +6619,16 @@ function renderPersonalArea() {
 }
 
 function renderNotifications() {
+  const button = document.getElementById("notificationButton");
   const badge = document.getElementById("notificationBadge");
   const list = document.getElementById("notificationList");
-  if (!badge || !list) return;
+  if (!button || !badge || !list) return;
   const notifications = personalAreaState.notifications;
+  button.classList.toggle("has-notifications", Boolean(notifications.length));
+  button.title = notifications.length === 1
+    ? "1 notifica da leggere"
+    : notifications.length ? `${notifications.length} notifiche da leggere` : "Nessuna nuova notifica";
+  button.setAttribute("aria-label", button.title);
   badge.textContent = notifications.length > 99 ? "99+" : String(notifications.length);
   badge.classList.toggle("is-hidden", !notifications.length);
   list.innerHTML = notifications.length ? notifications.map((item) => {
@@ -6651,9 +6657,10 @@ async function dismissPersonalNotification(notificationId) {
       body: JSON.stringify({ notification_id: notificationId })
     });
     if (!response.ok) throw new Error("Notifica non aggiornata");
-  } catch {
+  } catch (error) {
     personalAreaState.notifications.unshift(notification);
     renderNotifications();
+    alert(error.message || "Non sono riuscito a chiudere la notifica. Riprova.");
   }
 }
 
@@ -7210,7 +7217,20 @@ document.getElementById("notificationButton").addEventListener("click", (event) 
   panel.classList.toggle("is-hidden", !willOpen);
   button.setAttribute("aria-expanded", String(willOpen));
 });
-document.getElementById("notificationPanel").addEventListener("click", (event) => event.stopPropagation());
+document.getElementById("notificationPanel").addEventListener("click", (event) => {
+  event.stopPropagation();
+  const dismissButton = event.target.closest("[data-notification-dismiss]");
+  if (dismissButton) {
+    event.preventDefault();
+    void dismissPersonalNotification(dismissButton.dataset.notificationDismiss);
+    return;
+  }
+  const personalTask = event.target.closest("[data-personal-task]");
+  if (personalTask) {
+    event.preventDefault();
+    void openPersonalTask(personalTask.dataset.personalTask);
+  }
+});
 document.addEventListener("click", () => {
   const panel = document.getElementById("notificationPanel");
   if (!panel || panel.classList.contains("is-hidden")) return;
