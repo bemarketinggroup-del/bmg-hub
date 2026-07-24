@@ -214,8 +214,12 @@ let pedMediaViewerState = {
   originX: 0,
   originY: 0,
   type: "",
-  loadId: 0
+  loadId: 0,
+  gallery: [],
+  galleryIndex: -1,
+  opener: null
 };
+let drivePreviewKeyboardState = { isPhoto: false, navigate: null };
 let pedShareState = { active: false, shareUrl: "" };
 let pedLoadingKey = "";
 let editingPedCaptionId = "";
@@ -3548,29 +3552,76 @@ function setPedMediaViewerScale(nextScale, anchor = null) {
   applyPedMediaViewerTransform();
 }
 
-function openPedMediaViewer(button) {
+function pedMediaViewerEntry(button) {
+  const dataset = button?.dataset || {};
+  return {
+    file: String(dataset.pedViewerFile || ""),
+    name: String(dataset.pedViewerName || "Contenuto Drive"),
+    type: String(dataset.pedViewerType || ""),
+    src: String(dataset.pedViewerSrc || ""),
+    poster: String(dataset.pedViewerPoster || "")
+  };
+}
+
+function pedMediaViewerButton(entry) {
+  return {
+    dataset: {
+      pedViewerFile: entry.file,
+      pedViewerName: entry.name,
+      pedViewerType: entry.type,
+      pedViewerSrc: entry.src,
+      pedViewerPoster: entry.poster
+    }
+  };
+}
+
+function pedMediaViewerGallery(button, currentEntry) {
+  const picker = button?.closest?.("#pedDrivePickerModal");
+  if (!picker || currentEntry.type !== "image") return [currentEntry];
+  const entries = [...picker.querySelectorAll("[data-ped-media-viewer][data-ped-viewer-type='image']")]
+    .map(pedMediaViewerEntry)
+    .filter((entry) => entry.src);
+  return entries.length ? entries : [currentEntry];
+}
+
+function openPedMediaViewer(button, options = {}) {
   const modal = document.getElementById("pedMediaViewerModal");
   const stage = document.getElementById("pedMediaViewerStage");
   const title = document.getElementById("pedMediaViewerTitle");
   const meta = document.getElementById("pedMediaViewerMeta");
   const help = document.getElementById("pedMediaViewerHelp");
-  const source = button?.dataset.pedViewerSrc || "";
-  const poster = button?.dataset.pedViewerPoster || "";
-  const type = button?.dataset.pedViewerType || "";
-  const name = button?.dataset.pedViewerName || "Contenuto Drive";
+  const entry = pedMediaViewerEntry(button);
+  const source = entry.src;
+  const poster = entry.poster;
+  const type = entry.type;
+  const name = entry.name;
   if (!modal || !stage || !source || !["image", "video"].includes(type)) return;
 
+  const gallery = Array.isArray(options.gallery) && options.gallery.length
+    ? options.gallery
+    : pedMediaViewerGallery(button, entry);
+  const matchedIndex = gallery.findIndex((item) => (
+    (entry.file && String(item.file) === entry.file)
+    || String(item.src) === entry.src
+  ));
+  const galleryIndex = Number.isInteger(options.galleryIndex) && options.galleryIndex >= 0
+    ? options.galleryIndex
+    : Math.max(0, matchedIndex);
+  const wasOpen = modal.open;
   pedMediaViewerState.loadId += 1;
   const loadId = pedMediaViewerState.loadId;
   pedMediaViewerState.type = type;
+  pedMediaViewerState.gallery = gallery;
+  pedMediaViewerState.galleryIndex = galleryIndex;
+  if (!wasOpen) pedMediaViewerState.opener = options.opener || document.activeElement;
   resetPedMediaViewerTransform({ render: false });
-  title.textContent = name;
+  title.textContent = gallery.length > 1 ? `${name} · ${galleryIndex + 1}/${gallery.length}` : name;
   meta.textContent = type === "image" ? "File originale da Google Drive · caricamento piena risoluzione" : "Video originale da Google Drive";
   help.classList.toggle("is-hidden", type !== "image");
   document.getElementById("pedMediaViewerZoomControls")?.classList.toggle("is-hidden", type !== "image");
   stage.className = "ped-media-viewer-stage is-loading";
   stage.innerHTML = `${mediaProgressMarkup(type === "image" ? "Caricamento foto originale" : "Preparazione video")}<div class="ped-media-viewer-media" data-ped-viewer-media></div>`;
-  modal.showModal();
+  if (!wasOpen) modal.showModal();
   applyPedMediaViewerTransform();
 
   const mediaRoot = stage.querySelector("[data-ped-viewer-media]");
@@ -3644,6 +3695,19 @@ function openPedMediaViewer(button) {
     video.src = source;
     video.load();
   }
+}
+
+function navigatePedMediaViewer(direction) {
+  const modal = document.getElementById("pedMediaViewerModal");
+  const gallery = pedMediaViewerState.gallery;
+  if (!modal?.open || !Array.isArray(gallery) || gallery.length < 2) return;
+  const nextIndex = (pedMediaViewerState.galleryIndex + direction + gallery.length) % gallery.length;
+  const entry = gallery[nextIndex];
+  openPedMediaViewer(pedMediaViewerButton(entry), {
+    gallery,
+    galleryIndex: nextIndex,
+    opener: pedMediaViewerState.opener
+  });
 }
 
 function closePedMediaViewer() {
@@ -3995,6 +4059,29 @@ async function removePedItem(id) {
   await loadPedCalendar();
 }
 
+function driveImageViewerGallery(fileId, fileName, sourceUrl) {
+  const imageFiles = sortPedPickerEntries(clientDriveState.files.filter((file) => (
+    !file.is_folder && String(file.mime_type || "").startsWith("image/") && file.content_url
+  )));
+  const currentInDrive = imageFiles.some((file) => String(file.id) === String(fileId));
+  if (!currentInDrive) {
+    return [{
+      file: String(fileId || ""),
+      name: String(fileName || "Anteprima file"),
+      type: "image",
+      src: String(sourceUrl || ""),
+      poster: ""
+    }];
+  }
+  return imageFiles.map((file) => ({
+    file: String(file.id || ""),
+    name: String(file.name || "Anteprima file"),
+    type: "image",
+    src: String(file.content_url || ""),
+    poster: String(file.thumbnail_url || "")
+  }));
+}
+
 async function openDriveFile(fileId, fileName, mimeType, contentUrl = "") {
   try {
     const sourceUrl = contentUrl || `/api/client-drive?${new URLSearchParams({
@@ -4012,25 +4099,24 @@ async function openDriveFile(fileId, fileName, mimeType, contentUrl = "") {
     if (!previewable) {
       return downloadDriveResource(sourceUrl, fileName || "file").catch((error) => alert(error.message));
     }
+    if (type.startsWith("image/")) {
+      const gallery = driveImageViewerGallery(fileId, fileName, sourceUrl);
+      const galleryIndex = Math.max(0, gallery.findIndex((item) => String(item.file) === String(fileId)));
+      return openPedMediaViewer(pedMediaViewerButton(gallery[galleryIndex]), {
+        gallery,
+        galleryIndex,
+        opener: document.activeElement
+      });
+    }
 
     document.getElementById("drivePreviewTitle").textContent = fileName || "Anteprima file";
     const body = document.getElementById("drivePreviewBody");
     body.classList.remove("is-ped-carousel");
     body.innerHTML = `<div data-drive-preview-media></div>${mediaProgressMarkup("Caricamento anteprima")}`;
+    drivePreviewKeyboardState = { isPhoto: false, navigate: null };
     document.getElementById("drivePreviewModal").showModal();
     const mediaRoot = body.querySelector("[data-drive-preview-media]");
-    if (type.startsWith("image/")) {
-      const image = new Image();
-      image.alt = fileName || "Anteprima file";
-      image.addEventListener("load", () => {
-        updateMediaProgress(body, 100, "Anteprima pronta");
-        window.setTimeout(() => body.querySelector("[data-media-progress]")?.classList.add("is-hidden"), 400);
-      }, { once: true });
-      image.addEventListener("error", () => failMediaProgress(body, "Immagine non disponibile o formato non supportato."), { once: true });
-      mediaRoot.append(image);
-      updateMediaProgress(body, 8, "Caricamento immagine", "Lettura da Google Drive...");
-      image.src = sourceUrl;
-    } else if (type.startsWith("video/")) {
+    if (type.startsWith("video/")) {
       const video = document.createElement("video");
       video.controls = true;
       video.preload = "metadata";
@@ -4202,6 +4288,10 @@ function openPedCarouselPreview(item) {
 
   previous.addEventListener("click", () => renderSlide(activeIndex - 1));
   next.addEventListener("click", () => renderSlide(activeIndex + 1));
+  drivePreviewKeyboardState = {
+    isPhoto: files.some((file) => String(file.drive_mime_type || "").startsWith("image/")),
+    navigate: (direction) => renderSlide(activeIndex + direction)
+  };
   renderSlide(0);
   modal.showModal();
 }
@@ -7617,6 +7707,54 @@ document.body.addEventListener("keydown", (event) => {
     setMobileNavOpen(false, { restoreFocus: true });
     return;
   }
+  const editingTarget = event.target.closest?.("input, textarea, select, [contenteditable='true']");
+  if (!editingTarget) {
+    const pedViewerModal = document.getElementById("pedMediaViewerModal");
+    const drivePreviewModal = document.getElementById("drivePreviewModal");
+    if (pedViewerModal?.open) {
+      if (event.key === " " && !event.repeat) {
+        event.preventDefault();
+        closePedMediaViewer();
+        return;
+      }
+      if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+        event.preventDefault();
+        navigatePedMediaViewer(event.key === "ArrowLeft" ? -1 : 1);
+        return;
+      }
+    }
+    if (drivePreviewModal?.open && drivePreviewKeyboardState.isPhoto) {
+      if (event.key === " " && !event.repeat) {
+        event.preventDefault();
+        drivePreviewModal.close();
+        return;
+      }
+      if ((event.key === "ArrowLeft" || event.key === "ArrowRight") && drivePreviewKeyboardState.navigate) {
+        event.preventDefault();
+        drivePreviewKeyboardState.navigate(event.key === "ArrowLeft" ? -1 : 1);
+        return;
+      }
+    }
+    if (event.key === " " && !event.repeat) {
+      const pedPhoto = event.target.closest?.("[data-ped-media-viewer][data-ped-viewer-type='image']");
+      if (pedPhoto) {
+        event.preventDefault();
+        openPedMediaViewer(pedPhoto);
+        return;
+      }
+      const drivePhoto = event.target.closest?.("[data-drive-file][data-drive-mime^='image/']");
+      if (drivePhoto) {
+        event.preventDefault();
+        openDriveFile(
+          drivePhoto.dataset.driveFile,
+          drivePhoto.dataset.driveName,
+          drivePhoto.dataset.driveMime,
+          drivePhoto.dataset.driveContentUrl
+        );
+        return;
+      }
+    }
+  }
   const personalTask = event.target.closest("[data-personal-task]");
   if (personalTask && !event.target.closest("button, a, input, select, textarea") && (event.key === "Enter" || event.key === " ")) {
     event.preventDefault();
@@ -7956,6 +8094,7 @@ document.getElementById("drivePreviewModal").addEventListener("close", () => {
   const body = document.getElementById("drivePreviewBody");
   body.replaceChildren();
   body.classList.remove("is-ped-carousel");
+  drivePreviewKeyboardState = { isPhoto: false, navigate: null };
   if (clientDriveState.objectUrl) {
     URL.revokeObjectURL(clientDriveState.objectUrl);
     clientDriveState.objectUrl = "";
@@ -8000,12 +8139,17 @@ const endPedMediaViewerDrag = (event) => {
 pedMediaViewerStage.addEventListener("pointerup", endPedMediaViewerDrag);
 pedMediaViewerStage.addEventListener("pointercancel", endPedMediaViewerDrag);
 pedMediaViewerModal.addEventListener("close", () => {
+  const opener = pedMediaViewerState.opener;
   pedMediaViewerState.loadId += 1;
   pedMediaViewerStage.querySelector("video")?.pause();
   pedMediaViewerStage.replaceChildren();
   pedMediaViewerStage.className = "ped-media-viewer-stage";
   pedMediaViewerState.type = "";
+  pedMediaViewerState.gallery = [];
+  pedMediaViewerState.galleryIndex = -1;
+  pedMediaViewerState.opener = null;
   resetPedMediaViewerTransform({ render: false });
+  window.setTimeout(() => opener?.isConnected && opener.focus?.(), 0);
 });
 window.addEventListener("resize", () => {
   if (pedMediaViewerModal.open && pedMediaViewerState.type === "image") {
