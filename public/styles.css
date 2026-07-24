@@ -309,7 +309,6 @@ svg.lc {
 .sidebar-service[data-service-state="pending"] { color: #b58a25; }
 
 .mobile-nav-toggle,
-.mobile-nav-close,
 .mobile-nav-backdrop { display: none; }
 
 /* --- Main --- */
@@ -4652,7 +4651,7 @@ code { font-family: var(--font-mono); font-size: 12px; }
   .client-links-section { border-top: 1px solid var(--line); border-left: 0; }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 640px) and (hover: none) and (pointer: coarse) {
   input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]),
   textarea,
   select,
@@ -4705,14 +4704,6 @@ code { font-family: var(--font-mono); font-size: 12px; }
     padding: 0 13px;
     font-size: 15px;
     white-space: normal;
-  }
-  .mobile-nav-close {
-    position: absolute;
-    z-index: 2;
-    top: max(14px, env(safe-area-inset-top));
-    right: 14px;
-    display: grid;
-    background: var(--surface);
   }
   .mobile-nav-toggle {
     width: 42px;

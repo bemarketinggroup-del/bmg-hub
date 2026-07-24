@@ -795,7 +795,7 @@ function setView(view) {
   if (view === "personal") loadPersonalArea();
 }
 
-const mobileNavigationMedia = window.matchMedia("(max-width: 640px)");
+const mobileNavigationMedia = window.matchMedia("(max-width: 640px) and (hover: none) and (pointer: coarse)");
 
 function setMobileNavOpen(open, { restoreFocus = false } = {}) {
   const sidebar = document.getElementById("appSidebar");
@@ -6651,7 +6651,6 @@ document.getElementById("navList").addEventListener("click", (event) => {
   if (button) setView(button.dataset.view);
 });
 document.getElementById("mobileNavToggle").addEventListener("click", () => setMobileNavOpen(true));
-document.getElementById("mobileNavClose").addEventListener("click", () => setMobileNavOpen(false, { restoreFocus: true }));
 document.getElementById("mobileNavBackdrop").addEventListener("click", () => setMobileNavOpen(false, { restoreFocus: true }));
 mobileNavigationMedia.addEventListener?.("change", syncMobileNavigation);
 syncMobileNavigation();
