@@ -1413,8 +1413,6 @@ function clientColorStyle(client) {
 
 function clientDetailMarkup(client) {
   const drive = safeExternalUrl(client.drive);
-  const clickup = safeExternalUrl(client.clickup);
-  const services = String(client.services || "").split(",").map((service) => service.trim()).filter(Boolean);
   return `
     <div class="client-detail-head" style="${clientColorStyle(client)}">
       <button class="icon-button client-back" data-client-back type="button" title="Torna ai clienti" aria-label="Torna ai clienti"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
@@ -1429,29 +1427,6 @@ function clientDetailMarkup(client) {
         <button class="ghost-button" data-client-edit="${client.id}" type="button"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>Modifica</button>
         ${drive ? "" : `<button class="primary-button" data-client-edit="${client.id}" type="button">Aggiungi Drive</button>`}
       </div>
-    </div>
-    <div class="client-detail-body">
-      <section class="client-info-section">
-        <p class="eyebrow">Informazioni</p>
-        <dl class="client-info-list">
-          <div><dt>Stato</dt><dd>${escapeHtml(labelClientStatus(client.status))}</dd></div>
-          <div><dt>Servizi</dt><dd>${services.length ? services.map((service) => `<span class="client-service">${escapeHtml(service)}</span>`).join("") : "Nessun servizio indicato"}</dd></div>
-          <div><dt>Note</dt><dd>${client.notes ? escapeHtml(client.notes) : "Nessuna nota inserita"}</dd></div>
-        </dl>
-      </section>
-      <aside class="client-links-section">
-        <p class="eyebrow">Sistemi interni</p>
-        <div class="client-link-row ${drive ? "" : "is-missing"}">
-          <span class="client-link-icon"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h6l2 2h10v10H3z"/><path d="M3 7V5h6l2 2"/></svg></span>
-          <div><strong>Drive</strong><small>${drive ? "Cartelle aperte qui sotto" : "Collegamento da aggiungere"}</small></div>
-          ${drive ? `<span class="client-link-state">Interno</span>` : ""}
-        </div>
-        <div class="client-link-row ${clickup ? "" : "is-missing"}">
-          <span class="client-link-icon"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 9h8M8 13h5M5 4h14v16H5z"/></svg></span>
-          <div><strong>Task</strong><small>${clickup ? "Sincronizzazione attiva nel gestionale" : "Collegamento da aggiungere"}</small></div>
-          ${clickup ? `<span class="client-link-state">Interno</span>` : ""}
-        </div>
-      </aside>
     </div>
     ${drive ? `<section class="client-drive-panel" data-client-drive-panel aria-live="polite"></section>` : ""}
   `;

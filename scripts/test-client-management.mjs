@@ -19,6 +19,8 @@ assert.match(driveSource, /ensureDriveServiceAccountPermission/, "la nuova carte
 assert.match(appSource, /Le cartelle Google Drive e ClickUp resteranno intatte/, "la conferma deve spiegare cosa resta conservato");
 assert.match(appSource, /async function openClientDetails\(clientId\)[\s\S]*?openClientDrive\(selectedClientId\)/, "aprendo un cliente deve aprirsi automaticamente il Drive interno");
 assert.match(appSource, /class="client-drive-panel" data-client-drive-panel aria-live="polite"/, "il browser Drive del cliente deve essere subito visibile");
+assert.doesNotMatch(appSource, /class="client-detail-body"/, "la scheda cliente non deve mostrare il blocco informazioni");
+assert.doesNotMatch(appSource, />Sistemi interni</, "la scheda cliente non deve mostrare il riepilogo dei sistemi");
 assert.match(appSource, /data-drive-library=/, "il Drive interno deve mostrare gli accessi diretti GRAFICHE e VIDEO");
 assert.match(appSource, /data-drive-library-source=/, "ogni raccolta speciale deve conservare la propria origine Drive");
 assert.doesNotMatch(appSource, /Apri Google Drive/, "la scheda cliente non deve rimandare al sito Google Drive");
