@@ -1672,7 +1672,7 @@ function driveEntryMarkup(file, writeEnabled) {
     : [formatFileSize(file.size), formatDriveDate(file.modified_at)].filter(Boolean).join(" · ") || "File";
   const selected = clientDriveSelection.has(String(file.id));
   return `
-    <article class="drive-entry-card ${hasThumbnail ? "has-thumbnail" : ""}${selected ? " is-selected" : ""}" data-drive-entry-id="${escapeHtml(file.id)}">
+    <article class="drive-entry-card ${hasThumbnail ? "has-thumbnail" : ""}${writeEnabled ? " has-selection-control" : ""}${selected ? " is-selected" : ""}" data-drive-entry-id="${escapeHtml(file.id)}">
       ${writeEnabled ? `
         <label class="drive-select-control" title="Seleziona ${escapeHtml(file.name)}">
           <input data-drive-select="${escapeHtml(file.id)}" data-drive-name="${escapeHtml(file.name)}" data-drive-is-folder="${file.is_folder ? "1" : "0"}" type="checkbox" ${selected ? "checked" : ""}>

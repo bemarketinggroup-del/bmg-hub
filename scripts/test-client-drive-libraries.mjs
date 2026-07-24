@@ -50,6 +50,9 @@ assert.match(driveApiSource, /isInsideDriveRoot\(targetParentId, fileId, target\
 assert.match(googleDriveSource, /export async function moveDriveFile/, "Google Drive deve aggiornare i genitori di file e cartelle");
 assert.match(appSource, /data-drive-move=/, "ogni elemento del Drive interno deve avere il comando Sposta");
 assert.match(appSource, /data-drive-select=/, "ogni elemento del Drive interno deve poter essere selezionato");
+assert.match(appSource, /has-selection-control/, "le schede Drive modificabili devono riservare uno spazio al selettore");
+assert.match(styleSource, /\.drive-select-control \{[\s\S]*?right: 7px;/, "il selettore deve stare sul lato opposto rispetto all'icona della cartella");
+assert.match(styleSource, /\.drive-entry-card\.has-selection-control \.drive-entry:not\(\.has-thumbnail\)[\s\S]*?padding-right: 44px;/, "il contenuto della cartella non deve sovrapporsi al selettore");
 assert.match(appSource, /data-drive-bulk-move/, "il Drive interno deve offrire lo spostamento in blocco");
 assert.match(styleSource, /\.drive-select-control input:checked \+ span \{[\s\S]*?background: var\(--terracotta\)/, "la selezione Drive deve essere evidenziata in arancione");
 assert.match(styleSource, /\.drive-bulk-button\.is-primary \{[\s\S]*?background: var\(--terracotta\)/, "Sposta selezionati deve avere un pulsante arancione ben visibile");

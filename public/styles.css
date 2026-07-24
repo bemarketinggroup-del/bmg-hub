@@ -1830,7 +1830,7 @@ code { font-family: var(--font-mono); font-size: 12px; }
   position: absolute;
   z-index: 5;
   top: 7px;
-  left: 7px;
+  right: 7px;
   width: 28px;
   height: 28px;
   display: grid;
@@ -1881,6 +1881,11 @@ code { font-family: var(--font-mono); font-size: 12px; }
   transition: background .14s;
 }
 .drive-entry:hover { background: rgba(255, 255, 255, .42); }
+.drive-entry-card.has-selection-control .drive-entry:not(.has-thumbnail) {
+  grid-template-columns: 34px minmax(0, 1fr);
+  padding-right: 44px;
+}
+.drive-entry-card.has-selection-control .drive-entry:not(.has-thumbnail) .drive-entry-arrow { display: none; }
 .drive-entry.has-thumbnail {
   min-height: 0;
   grid-template-columns: minmax(0, 1fr) 16px;
