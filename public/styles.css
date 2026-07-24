@@ -1590,7 +1590,24 @@ code { font-family: var(--font-mono); font-size: 12px; }
   font-weight: 800;
 }
 .drive-bulk-button:hover:not(:disabled) { border-color: var(--client-accent); color: var(--client-accent); }
-.drive-bulk-button.is-primary { border-color: var(--client-accent); background: var(--client-accent); color: #fff; }
+.drive-bulk-button.is-primary {
+  border-color: var(--terracotta);
+  background: var(--terracotta);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(185, 84, 44, .24);
+}
+.drive-bulk-button.is-primary:hover:not(:disabled) {
+  border-color: var(--terra-deep);
+  background: var(--terra-deep);
+  color: #fff;
+}
+.drive-bulk-button.is-primary:disabled {
+  border-color: var(--terra-line);
+  background: var(--terra-tint);
+  color: var(--terra-deep);
+  box-shadow: none;
+  opacity: 1;
+}
 .drive-bulk-button:disabled { cursor: not-allowed; opacity: .45; }
 .drive-bulk-message {
   margin: -4px 0 14px;
@@ -1800,17 +1817,22 @@ code { font-family: var(--font-mono); font-size: 12px; }
   height: 24px;
   display: grid;
   place-items: center;
-  border: 2px solid rgba(255, 255, 255, .92);
+  border: 2px solid var(--terracotta);
   border-radius: 7px;
-  background: rgba(28, 25, 22, .72);
+  background: #fff;
   color: transparent;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, .22);
+  box-shadow: 0 2px 9px rgba(185, 84, 44, .28);
   transition: background .14s, color .14s, transform .14s;
 }
 .drive-select-control .lc { width: 14px; height: 14px; stroke-width: 3; }
 .drive-select-control:hover > span:not(.sr-only) { transform: scale(1.06); }
-.drive-select-control input:focus-visible + span { outline: 3px solid var(--client-tint); outline-offset: 2px; }
-.drive-select-control input:checked + span { background: var(--client-accent); color: #fff; }
+.drive-select-control input:focus-visible + span { outline: 3px solid var(--terra-tint); outline-offset: 2px; }
+.drive-select-control input:checked + span {
+  border-color: var(--terracotta);
+  background: var(--terracotta);
+  color: #fff;
+  box-shadow: 0 3px 11px rgba(185, 84, 44, .38);
+}
 .drive-entry {
   width: 100%;
   min-width: 0;

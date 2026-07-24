@@ -36,6 +36,7 @@ const driveApiSource = await readFile(new URL("../lib/client-drive-api.js", impo
 const googleDriveSource = await readFile(new URL("../lib/google-drive.js", import.meta.url), "utf8");
 const appSource = await readFile(new URL("../public/app.js", import.meta.url), "utf8");
 const htmlSource = await readFile(new URL("../public/index.html", import.meta.url), "utf8");
+const styleSource = await readFile(new URL("../public/styles.css", import.meta.url), "utf8");
 assert.match(driveApiSource, /authorizedRootId = clientLibrary\.id/, "le raccolte speciali devono usare la cartella cliente come radice autorizzata");
 assert.match(driveApiSource, /createFolder\(request, response, authorizedRootId\)/, "la gestione cartelle deve funzionare anche dentro GRAFICHE e VIDEO");
 assert.match(driveApiSource, /createUploadSession\(request, response, authorizedRootId\)/, "il caricamento deve funzionare anche dentro GRAFICHE e VIDEO");
@@ -50,6 +51,8 @@ assert.match(googleDriveSource, /export async function moveDriveFile/, "Google D
 assert.match(appSource, /data-drive-move=/, "ogni elemento del Drive interno deve avere il comando Sposta");
 assert.match(appSource, /data-drive-select=/, "ogni elemento del Drive interno deve poter essere selezionato");
 assert.match(appSource, /data-drive-bulk-move/, "il Drive interno deve offrire lo spostamento in blocco");
+assert.match(styleSource, /\.drive-select-control input:checked \+ span \{[\s\S]*?background: var\(--terracotta\)/, "la selezione Drive deve essere evidenziata in arancione");
+assert.match(styleSource, /\.drive-bulk-button\.is-primary \{[\s\S]*?background: var\(--terracotta\)/, "Sposta selezionati deve avere un pulsante arancione ben visibile");
 assert.match(appSource, /action === "move-batch"/, "l'interfaccia deve inviare lo spostamento multiplo");
 assert.match(appSource, /clientDriveSelection = new Map/, "la selezione deve conservare i dati degli elementi");
 assert.match(appSource, /function loadDriveMoveFolder/, "il gestionale deve mostrare un selettore interno della destinazione");
