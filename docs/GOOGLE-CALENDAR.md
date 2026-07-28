@@ -51,6 +51,19 @@ Per usare l'account di servizio, condividere il calendario con l'indirizzo
 
 - Il frontend non riceve mai access token o refresh token Google.
 - Le operazioni Calendar passano esclusivamente da `/api/google-calendar`.
+- Il controllo operativo autenticato passa da `/api/health` e non espone credenziali.
 - L'API applica autenticazione Supabase e permessi modulo lato server.
 - Il ruolo admin gestisce i permessi Calendario dalla pagina Utenti.
 - Gli errori restituiti all'interfaccia non contengono credenziali Google.
+
+## Continuita operativa
+
+- Le richieste Google hanno un timeout controllato, due tentativi automatici e fallback
+  dall'OAuth all'account di servizio.
+- Un aggiornamento fallito non svuota gli eventi gia caricati nell'interfaccia.
+- Il gestionale controlla realmente Calendar all'accesso, al ritorno sulla scheda e ogni
+  cinque minuti; lo stato e visibile tra i servizi nella barra laterale.
+- Il risultato del controllo e conservato per un minuto lato server per evitare consumo
+  inutile delle quote Google.
+- Un errore temporaneo viene distinto da configurazione API, autorizzazione o condivisione
+  del calendario, così l'intervento richiesto resta identificabile.

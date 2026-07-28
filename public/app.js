@@ -186,7 +186,9 @@ let state = loadState();
 let contentOnline = null;
 let clientsOnline = null;
 let clickupOnline = null;
-const backendServiceErrors = { clients: "", clickup: "", site: "" };
+let calendarOnline = null;
+let serviceHealthTimer = null;
+const backendServiceErrors = { clients: "", clickup: "", site: "", calendar: "" };
 let selectedTeamMemberId = ALL_TEAM_TASKS_ID;
 let selectedClientId = "";
 let clientDriveState = { clientId: "", path: [], files: [], libraries: [], source: "", rootId: "", objectUrl: "", thumbnailUrls: new Set(), uploadEnabled: false, bulkMessage: "" };
@@ -759,6 +761,7 @@ async function logout() {
   stopActivityTracker();
   stopPersonalAreaUpdates();
   stopTeamChatUpdates();
+  stopServiceHealthUpdates();
   currentProfile = null;
   personalAreaState = { team: [], tasks: [], events: [], notifications: [], loading: false, loaded: false, error: "" };
   teamChatState = {
@@ -1195,6 +1198,12 @@ function renderBackendStatus(message = "", serviceKey = "") {
       label: "Sito",
       online: contentOnline,
       visible: canAccessModule("site_backend")
+    },
+    {
+      key: "calendar",
+      label: "Calendar",
+      online: calendarOnline,
+      visible: canAccessModule("calendar") || canAccessModule("smart_working")
     }
   ].filter((service) => service.visible);
   container.innerHTML = services.map((service) => {
@@ -1204,6 +1213,38 @@ function renderBackendStatus(message = "", serviceKey = "") {
     const title = `${service.label}: ${stateLabel}${detail ? ` · ${detail}` : ""}`;
     return `<span class="sidebar-service" data-service-state="${stateName}" title="${escapeHtml(title)}" aria-label="${escapeHtml(title)}"><i class="sidebar-service-dot" aria-hidden="true"></i><span>${service.label}</span></span>`;
   }).join("");
+}
+
+async function loadServiceHealth({ quiet = false } = {}) {
+  if (!currentProfile || (!canAccessModule("calendar") && !canAccessModule("smart_working"))) return;
+  try {
+    const response = await apiFetch("/api/health");
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || `Controllo servizi non disponibile (${response.status})`);
+    const calendar = data.services?.calendar || {};
+    calendarOnline = calendar.status === "online";
+    const detail = calendarOnline
+      ? ""
+      : calendar.code === "calendar_temporarily_unavailable"
+        ? "Servizio temporaneamente non disponibile; nuovo tentativo automatico"
+        : "Collegamento da verificare in amministrazione";
+    renderBackendStatus(detail, "calendar");
+  } catch (error) {
+    calendarOnline = false;
+    renderBackendStatus(quiet ? "Controllo non riuscito; nuovo tentativo automatico" : error.message, "calendar");
+  }
+}
+
+function startServiceHealthUpdates() {
+  stopServiceHealthUpdates();
+  serviceHealthTimer = window.setInterval(() => {
+    if (document.visibilityState === "visible" && currentProfile) void loadServiceHealth({ quiet: true });
+  }, 5 * 60 * 1000);
+}
+
+function stopServiceHealthUpdates() {
+  window.clearInterval(serviceHealthTimer);
+  serviceHealthTimer = null;
 }
 
 function renderContent() {
@@ -6696,6 +6737,8 @@ async function loadGoogleCalendar(options = {}) {
     googleCalendarState.events = Array.isArray(data.events) ? data.events.filter((event) => event.status !== "cancelled") : [];
     googleCalendarState.calendar = data.calendar || null;
     googleCalendarState.loadedRange = rangeKey;
+    calendarOnline = true;
+    renderBackendStatus("", "calendar");
     document.getElementById("googleCalendarAccount").textContent = data.calendar?.id
       ? `${data.calendar.name || "Calendario condiviso"} · ${data.calendar.id}`
       : "Appuntamenti, shooting e impegni condivisi del team";
@@ -6704,6 +6747,8 @@ async function loadGoogleCalendar(options = {}) {
       googleCalendarState.events = [];
       googleCalendarState.loadedRange = "";
     }
+    calendarOnline = false;
+    renderBackendStatus(error.message, "calendar");
     setGoogleCalendarError(error.message);
   } finally {
     googleCalendarState.loading = false;
@@ -8582,9 +8627,11 @@ async function bootApp() {
     if (canAccessModule("users")) loaders.push(loadUsersFromBackend());
     if (canAccessModule("smart_working")) loaders.push(loadSmartWorking());
     if (canAccessModule("site_backend")) loaders.push(loadContentFromBackend());
+    if (canAccessModule("calendar") || canAccessModule("smart_working")) loaders.push(loadServiceHealth({ quiet: true }));
     loaders.push(loadPersonalArea({ quiet: true }));
     await Promise.all(loaders);
     startPersonalAreaUpdates();
+    startServiceHealthUpdates();
     renderHome();
   } catch (error) {
     showLogin(error.message);
@@ -8598,6 +8645,7 @@ document.addEventListener("visibilitychange", () => {
   } else {
     void sendActivityEvent("resume");
     void loadPersonalArea({ quiet: true });
+    void loadServiceHealth({ quiet: true });
     if (document.querySelector("[data-view-panel='chat'].is-active")) void loadTeamChat({ quiet: true });
   }
 });
