@@ -19,10 +19,15 @@ GOOGLE_CALENDAR_NAME=BeViral Agency
 GOOGLE_CALENDAR_OAUTH_CLIENT_ID=
 GOOGLE_CALENDAR_OAUTH_CLIENT_SECRET=
 GOOGLE_CALENDAR_OAUTH_REFRESH_TOKEN=
+GOOGLE_CALENDAR_SERVICE_ACCOUNT_JSON=
+GOOGLE_CALENDAR_SUBJECT=
 ```
 
 Le tre variabili OAuth dedicate hanno la precedenza. In loro assenza il modulo prova
 temporaneamente a riusare le corrispondenti variabili `GOOGLE_DRIVE_OAUTH_*`.
+Se OAuth risulta scaduto o revocato, il modulo passa automaticamente all'account
+di servizio Calendar o, in sua assenza, a quello già configurato per Google Drive.
+In questo modo il calendario non dipende dalla durata dei refresh token OAuth.
 
 I valori OAuth devono essere configurati come variabili sensibili per Production e Preview.
 Non devono essere salvati nel repository o inviati al browser.
@@ -38,6 +43,9 @@ https://www.googleapis.com/auth/calendar.events
 Il redirect URI usato per generare il refresh token deve essere presente tra gli URI
 autorizzati del client OAuth Google. Se il client viene eliminato o ricreato, aggiornare
 insieme ID client, secret e refresh token: i token del vecchio client non sono riutilizzabili.
+
+Per usare l'account di servizio, condividere il calendario con l'indirizzo
+`client_email` presente nel JSON e assegnargli il permesso di modifica degli eventi.
 
 ## Sicurezza
 

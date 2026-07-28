@@ -138,6 +138,7 @@ assert.throws(() => buildGoogleEvent({ title: "Test", start_date: "2026-07-22", 
 const htmlSource = await readFile(new URL("../public/index.html", import.meta.url), "utf8");
 const appSource = await readFile(new URL("../public/app.js", import.meta.url), "utf8");
 const styleSource = await readFile(new URL("../public/styles.css", import.meta.url), "utf8");
+const calendarSource = await readFile(new URL("../lib/google-calendar.js", import.meta.url), "utf8");
 assert.match(htmlSource, /id="googleCalendarMonthStrip"/, "il calendario mobile deve avere una navigazione rapida per mesi");
 assert.match(appSource, /function renderGoogleCalendarMonthStrip\(\)/, "i mesi rapidi devono seguire il periodo selezionato");
 assert.match(appSource, /data-calendar-month="\$\{key\}"/, "ogni mese rapido deve essere selezionabile");
@@ -147,5 +148,8 @@ assert.match(appSource, /data-mobile-label="\$\{day\.charAt\(0\)\}"/, "i giorni 
 assert.match(styleSource, /@media \(max-width: 980px\)[\s\S]*?\.google-calendar-weekdays,[\s\S]*?\.google-calendar-month-grid \{ width: 100%; min-width: 0; \}/, "la vista mensile mobile deve mostrare tutte le sette colonne senza scorrimento orizzontale");
 assert.match(styleSource, /\.google-calendar-month-grid \{ grid-template-rows: repeat\(6, minmax\(88px, auto\)\); \}/, "le settimane mobile devono essere compatte");
 assert.match(styleSource, /\.google-calendar-day-events \{ grid-auto-rows: 19px; gap: 2px; \}/, "gli eventi mobile devono avere la densita del calendario Google");
+assert.match(calendarSource, /GOOGLE_CALENDAR_SERVICE_ACCOUNT_JSON[\s\S]*GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON/, "Calendar deve riusare l'account di servizio Drive come fallback");
+assert.match(calendarSource, /catch \(error\) \{[\s\S]*oauthError = error;[\s\S]*googleCalendarServiceAccount\(\)/, "un refresh token OAuth revocato deve attivare il fallback stabile");
+assert.match(calendarSource, /scope: "https:\/\/www\.googleapis\.com\/auth\/calendar\.events"/, "l'account di servizio deve richiedere lo scope eventi");
 
 console.log("Google Calendar payload tests passed.");
