@@ -6678,6 +6678,7 @@ async function loadGoogleCalendar(options = {}) {
     return;
   }
   googleCalendarState.loading = true;
+  const hasCurrentRange = googleCalendarState.loadedRange === rangeKey;
   setGoogleCalendarError("");
   renderGoogleCalendar();
   try {
@@ -6685,7 +6686,11 @@ async function loadGoogleCalendar(options = {}) {
       time_min: calendarApiIso(range.start),
       time_max: calendarApiIso(range.end)
     });
-    const response = await apiFetch(`/api/google-calendar?${params}`);
+    let response = await apiFetch(`/api/google-calendar?${params}`);
+    if (!response.ok && [429, 502, 503, 504].includes(response.status)) {
+      await new Promise((resolve) => setTimeout(resolve, 900));
+      response = await apiFetch(`/api/google-calendar?${params}`);
+    }
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || "Google Calendar non disponibile");
     googleCalendarState.events = Array.isArray(data.events) ? data.events.filter((event) => event.status !== "cancelled") : [];
@@ -6695,8 +6700,10 @@ async function loadGoogleCalendar(options = {}) {
       ? `${data.calendar.name || "Calendario condiviso"} · ${data.calendar.id}`
       : "Appuntamenti, shooting e impegni condivisi del team";
   } catch (error) {
-    googleCalendarState.events = [];
-    googleCalendarState.loadedRange = "";
+    if (!hasCurrentRange) {
+      googleCalendarState.events = [];
+      googleCalendarState.loadedRange = "";
+    }
     setGoogleCalendarError(error.message);
   } finally {
     googleCalendarState.loading = false;

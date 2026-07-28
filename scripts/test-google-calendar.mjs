@@ -153,5 +153,10 @@ assert.match(calendarSource, /catch \(error\) \{[\s\S]*oauthError = error;[\s\S]
 assert.match(calendarSource, /scope: "https:\/\/www\.googleapis\.com\/auth\/calendar\.events"/, "l'account di servizio deve richiedere lo scope eventi");
 assert.match(calendarSource, /logGoogleCalendarError\(error, request\)/, "gli errori Calendar devono lasciare una diagnostica sicura nei log");
 assert.match(calendarSource, /error\.reason === "accessNotConfigured"[\s\S]*Google Calendar API non e attiva/, "un'API disabilitata deve avere un messaggio distinto dal calendario non condiviso");
+assert.match(calendarSource, /CALENDAR_RETRY_DELAYS_MS[\s\S]*isRetryableGoogleError\(error\)/, "gli errori temporanei Google devono essere ritentati automaticamente");
+assert.match(calendarSource, /error\.authSource === "oauth"[\s\S]*forceServiceAccount = true/, "un OAuth senza permessi deve usare automaticamente l'account di servizio");
+assert.match(calendarSource, /code: googleErrorCode\(error\)[\s\S]*retryable: isRetryableGoogleError\(error\)/, "le risposte devono distinguere gli errori recuperabili");
+assert.match(appSource, /const hasCurrentRange = googleCalendarState\.loadedRange === rangeKey[\s\S]*if \(!hasCurrentRange\) \{[\s\S]*googleCalendarState\.events = \[\]/, "un errore di aggiornamento non deve svuotare un calendario gia caricato");
+assert.match(appSource, /\[429, 502, 503, 504\]\.includes\(response\.status\)[\s\S]*setTimeout\(resolve, 900\)/, "il browser deve ritentare una sincronizzazione temporaneamente fallita");
 
 console.log("Google Calendar payload tests passed.");
