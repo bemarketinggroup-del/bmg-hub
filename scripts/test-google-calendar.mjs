@@ -151,5 +151,7 @@ assert.match(styleSource, /\.google-calendar-day-events \{ grid-auto-rows: 19px;
 assert.match(calendarSource, /GOOGLE_CALENDAR_SERVICE_ACCOUNT_JSON[\s\S]*GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON/, "Calendar deve riusare l'account di servizio Drive come fallback");
 assert.match(calendarSource, /catch \(error\) \{[\s\S]*oauthError = error;[\s\S]*googleCalendarServiceAccount\(\)/, "un refresh token OAuth revocato deve attivare il fallback stabile");
 assert.match(calendarSource, /scope: "https:\/\/www\.googleapis\.com\/auth\/calendar\.events"/, "l'account di servizio deve richiedere lo scope eventi");
+assert.match(calendarSource, /logGoogleCalendarError\(error, request\)/, "gli errori Calendar devono lasciare una diagnostica sicura nei log");
+assert.match(calendarSource, /error\.reason === "accessNotConfigured"[\s\S]*Google Calendar API non e attiva/, "un'API disabilitata deve avere un messaggio distinto dal calendario non condiviso");
 
 console.log("Google Calendar payload tests passed.");
