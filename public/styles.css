@@ -4347,6 +4347,39 @@ code { font-family: var(--font-mono); font-size: 12px; }
   position: relative;
   min-width: 0;
 }
+.graphics-drive-client-search {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 42px;
+  margin: 0 10px 10px 4px;
+  padding: 0 13px;
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  background: var(--surface);
+  transition: border-color .16s, box-shadow .16s;
+}
+.graphics-drive-client-search:focus-within {
+  border-color: var(--terracotta);
+  box-shadow: 0 0 0 3px rgba(193, 79, 43, .1);
+}
+.graphics-drive-client-search .lc {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  color: var(--muted);
+}
+.graphics-drive-client-search input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+}
+.graphics-drive-client-search input::placeholder { color: var(--muted); }
 .graphics-drive-client-grid {
   display: grid;
   max-height: 214px;

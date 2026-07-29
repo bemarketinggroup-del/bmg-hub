@@ -7739,28 +7739,33 @@ function updateGraphicsDriveScrollHint() {
 
 function renderGraphicsDriveClients() {
   const grid = document.getElementById("graphicsDriveClientGrid");
+  const search = document.getElementById("graphicsDriveClientSearch");
   const placeholder = document.getElementById("graphicsDrivePlaceholder");
   const openBar = document.getElementById("graphicsDriveOpenBar");
   const openLabel = document.getElementById("graphicsDriveOpenLabel");
   const panel = document.querySelector("[data-graphics-drive-panel]");
-  if (!grid || !placeholder || !openBar || !openLabel || !panel) return;
+  if (!grid || !search || !placeholder || !openBar || !openLabel || !panel) return;
 
-  const clients = state.clients
+  const allClients = state.clients
     .filter(clientHasDrive)
     .sort((a, b) => String(a.name).localeCompare(String(b.name), "it", { sensitivity: "base" }));
-  if (!clients.some((client) => String(client.id) === String(graphicsDriveClientId))) {
+  if (!allClients.some((client) => String(client.id) === String(graphicsDriveClientId))) {
     graphicsDriveClientId = "";
     if (clientDriveState.surface === "graphics") resetDriveBrowser("graphics");
   }
 
-  const selectedClient = clients.find((client) => String(client.id) === String(graphicsDriveClientId));
+  const query = normalizeIdentity(search.value);
+  const clients = query
+    ? allClients.filter((client) => normalizeIdentity(client.name).includes(query))
+    : allClients;
+  const selectedClient = allClients.find((client) => String(client.id) === String(graphicsDriveClientId));
   grid.innerHTML = clients.length ? clients.map((client) => {
     const active = String(client.id) === String(selectedClient?.id);
     return `<button class="graphics-drive-client-tile${active ? " is-active" : ""}" data-graphics-drive-client="${escapeHtml(client.id)}" type="button" role="listitem" style="${clientColorStyle(client)}" aria-label="Apri la cartella GRAFICHE di ${escapeHtml(client.name)}"${active ? ' aria-current="true"' : ""}>
       <span class="graphics-drive-client-square" aria-hidden="true"><svg class="lc" viewBox="0 0 24 24"><path d="M3 7h6l2 2h10v10H3z"/><path d="M3 7V5h6l2 2"/></svg></span>
       <strong title="${escapeHtml(client.name)}">${escapeHtml(client.name)}</strong>
     </button>`;
-  }).join("") : `<div class="graphics-drive-client-empty">Nessuna cartella GRAFICHE disponibile.</div>`;
+  }).join("") : `<div class="graphics-drive-client-empty">${query ? "Nessun cliente corrisponde alla ricerca." : "Nessuna cartella GRAFICHE disponibile."}</div>`;
 
   const isOpen = clientDriveState.surface === "graphics"
     && String(clientDriveState.clientId) === String(graphicsDriveClientId)
@@ -9691,6 +9696,10 @@ document.getElementById("graphicsDriveClientGrid").addEventListener("click", (ev
   if (!option) return;
   const client = state.clients.find((item) => String(item.id) === String(option.dataset.graphicsDriveClient));
   if (client) selectGraphicsDriveClient(client);
+});
+document.getElementById("graphicsDriveClientSearch").addEventListener("input", () => {
+  document.getElementById("graphicsDriveClientGrid").scrollTop = 0;
+  renderGraphicsDriveClients();
 });
 document.getElementById("graphicsDriveClientGrid").addEventListener("scroll", updateGraphicsDriveScrollHint, { passive: true });
 document.getElementById("graphicsDriveCloseButton").addEventListener("click", closeGraphicsClientDrive);
