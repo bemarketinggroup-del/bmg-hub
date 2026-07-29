@@ -193,8 +193,9 @@ let serviceHealthTimer = null;
 const backendServiceErrors = { clients: "", clickup: "", site: "", calendar: "" };
 let selectedTeamMemberId = ALL_TEAM_TASKS_ID;
 let selectedClientId = "";
-let clientDriveState = { clientId: "", path: [], files: [], libraries: [], source: "", rootId: "", objectUrl: "", thumbnailUrls: new Set(), uploadEnabled: false, bulkMessage: "" };
+let clientDriveState = { surface: "client", clientId: "", path: [], files: [], libraries: [], source: "", rootId: "", objectUrl: "", thumbnailUrls: new Set(), uploadEnabled: false, bulkMessage: "" };
 let clientDriveSelection = new Map();
+let graphicsDriveClientId = "";
 let selectedPedClientId = "";
 let pedUsedFileIds = new Set();
 let selectedPedMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
@@ -1203,7 +1204,7 @@ function renderBackendStatus(message = "", serviceKey = "") {
       key: "clients",
       label: "Clienti",
       online: clientsOnline,
-      visible: canAccessModule("clients") || canAccessModule("ped") || canAccessModule("tasks")
+      visible: canAccessModule("clients") || canAccessModule("ped") || canAccessModule("tasks") || canAccessModule("graphics")
     },
     {
       key: "clickup",
@@ -1621,12 +1622,18 @@ function closeClientDetails() {
   renderClients();
 }
 
-function resetDriveBrowser() {
+function currentClientDrivePanel() {
+  return clientDriveState.surface === "graphics"
+    ? document.querySelector("[data-graphics-drive-panel]")
+    : document.querySelector("[data-client-drive-panel]");
+}
+
+function resetDriveBrowser(surface = "client") {
   clientDriveFolderLoadId += 1;
   if (clientDriveState.objectUrl) URL.revokeObjectURL(clientDriveState.objectUrl);
   clearDriveThumbnailUrls();
   clientDriveSelection.clear();
-  clientDriveState = { clientId: "", path: [], files: [], libraries: [], source: "", rootId: "", objectUrl: "", thumbnailUrls: new Set(), uploadEnabled: false, bulkMessage: "" };
+  clientDriveState = { surface, clientId: "", path: [], files: [], libraries: [], source: "", rootId: "", objectUrl: "", thumbnailUrls: new Set(), uploadEnabled: false, bulkMessage: "" };
 }
 
 async function openClientDrive(clientId) {
@@ -1634,12 +1641,12 @@ async function openClientDrive(clientId) {
   if (!client) return;
   clearDriveThumbnailUrls();
   clientDriveSelection.clear();
-  clientDriveState = { clientId: String(clientId), path: [], files: [], libraries: [], source: "", rootId: "", objectUrl: "", thumbnailUrls: new Set(), uploadEnabled: false, bulkMessage: "" };
+  clientDriveState = { surface: "client", clientId: String(clientId), path: [], files: [], libraries: [], source: "", rootId: "", objectUrl: "", thumbnailUrls: new Set(), uploadEnabled: false, bulkMessage: "" };
   await loadClientDriveFolder("", client.name, { source: "" });
 }
 
 async function loadClientDriveFolder(folderId = "", folderName = "", { fresh = false, source = clientDriveState.source } = {}) {
-  const panel = document.querySelector("[data-client-drive-panel]");
+  const panel = currentClientDrivePanel();
   if (!panel) return;
   const loadId = ++clientDriveFolderLoadId;
   const normalizedSource = String(source || "");
@@ -1668,8 +1675,9 @@ async function loadClientDriveFolder(folderId = "", folderName = "", { fresh = f
       clientDriveState.path.push({ id: data.folder.id, name: folderName || data.folder.name, source: normalizedSource });
     }
     if (clientDriveState.path.length === 1) {
-      clientDriveState.path[0].name = data.client.name;
-      clientDriveState.path[0].source = "";
+      const graphicsSurface = clientDriveState.surface === "graphics";
+      clientDriveState.path[0].name = graphicsSurface ? `${data.client.name} · GRAFICHE` : data.client.name;
+      clientDriveState.path[0].source = graphicsSurface ? normalizedSource : "";
     }
     clientDriveState.source = String(data.source || normalizedSource);
     clientDriveState.rootId = String(data.root_id || "");
@@ -1857,7 +1865,7 @@ function driveEntryMarkup(file, writeEnabled, versionRole = "") {
 }
 
 function updateClientDriveSelectionUi() {
-  const panel = document.querySelector("[data-client-drive-panel]");
+  const panel = currentClientDrivePanel();
   if (!panel) return;
   const selectedIds = new Set(clientDriveSelection.keys());
   panel.querySelectorAll("[data-drive-select]").forEach((input) => {
@@ -1887,12 +1895,12 @@ function toggleClientDriveSelection(input) {
     clientDriveSelection.delete(id);
   }
   clientDriveState.bulkMessage = "";
-  document.querySelector("[data-drive-bulk-message]")?.remove();
+  currentClientDrivePanel()?.querySelector("[data-drive-bulk-message]")?.remove();
   updateClientDriveSelectionUi();
 }
 
 function toggleAllClientDriveEntries() {
-  const panel = document.querySelector("[data-client-drive-panel]");
+  const panel = currentClientDrivePanel();
   if (!panel) return;
   const inputs = [...panel.querySelectorAll("[data-drive-select]")];
   const selectAll = inputs.some((input) => !input.checked);
@@ -1909,14 +1917,14 @@ function toggleAllClientDriveEntries() {
     }
   });
   clientDriveState.bulkMessage = "";
-  document.querySelector("[data-drive-bulk-message]")?.remove();
+  currentClientDrivePanel()?.querySelector("[data-drive-bulk-message]")?.remove();
   updateClientDriveSelectionUi();
 }
 
 function clearClientDriveSelection() {
   clientDriveSelection.clear();
   clientDriveState.bulkMessage = "";
-  document.querySelector("[data-drive-bulk-message]")?.remove();
+  currentClientDrivePanel()?.querySelector("[data-drive-bulk-message]")?.remove();
   updateClientDriveSelectionUi();
 }
 
@@ -1930,7 +1938,7 @@ function currentDriveManageContext(surface = "client") {
     };
   }
   return {
-    surface: "client",
+    surface: clientDriveState.surface || "client",
     clientId: String(clientDriveState.clientId || ""),
     source: String(clientDriveState.source || ""),
     folder: clientDriveState.path[clientDriveState.path.length - 1] || null
@@ -2172,7 +2180,7 @@ async function copyDriveLink(button) {
 async function uploadDriveFiles(files) {
   const selectedFiles = [...files];
   if (!selectedFiles.length || !clientDriveState.uploadEnabled) return;
-  const panel = document.querySelector("[data-client-drive-panel]");
+  const panel = currentClientDrivePanel();
   const status = panel?.querySelector("[data-drive-upload-status]");
   const folder = clientDriveState.path[clientDriveState.path.length - 1];
   if (!folder) return;
@@ -7552,6 +7560,57 @@ async function submitGraphicReview(form) {
   }
 }
 
+function renderGraphicsDriveClients() {
+  const select = document.getElementById("graphicsDriveClientSelect");
+  const openButton = document.getElementById("graphicsDriveOpenButton");
+  const placeholder = document.getElementById("graphicsDrivePlaceholder");
+  const panel = document.querySelector("[data-graphics-drive-panel]");
+  if (!select || !openButton || !placeholder || !panel) return;
+
+  const clients = state.clients
+    .filter(clientHasDrive)
+    .sort((a, b) => String(a.name).localeCompare(String(b.name), "it", { sensitivity: "base" }));
+  if (!clients.some((client) => String(client.id) === String(graphicsDriveClientId))) {
+    graphicsDriveClientId = "";
+    if (clientDriveState.surface === "graphics") resetDriveBrowser("graphics");
+  }
+
+  select.innerHTML = `
+    <option value="">Scegli cliente</option>
+    ${clients.map((client) => `<option value="${escapeHtml(client.id)}">${escapeHtml(client.name)}</option>`).join("")}`;
+  select.value = graphicsDriveClientId;
+  openButton.disabled = !graphicsDriveClientId;
+
+  const isOpen = clientDriveState.surface === "graphics"
+    && String(clientDriveState.clientId) === String(graphicsDriveClientId)
+    && Boolean(graphicsDriveClientId);
+  placeholder.classList.toggle("is-hidden", isOpen);
+  panel.classList.toggle("is-hidden", !isOpen);
+}
+
+async function openGraphicsClientDrive(clientId = document.getElementById("graphicsDriveClientSelect")?.value) {
+  const client = state.clients.find((item) => String(item.id) === String(clientId));
+  if (!client || !clientHasDrive(client)) return;
+
+  graphicsDriveClientId = String(client.id);
+  resetDriveBrowser("graphics");
+  clientDriveState = {
+    surface: "graphics",
+    clientId: graphicsDriveClientId,
+    path: [],
+    files: [],
+    libraries: [],
+    source: "graphics",
+    rootId: "",
+    objectUrl: "",
+    thumbnailUrls: new Set(),
+    uploadEnabled: false,
+    bulkMessage: ""
+  };
+  renderGraphicsDriveClients();
+  await loadClientDriveFolder("", `${client.name} · GRAFICHE`, { source: "graphics" });
+}
+
 async function loadGraphicReviews({ quiet = false } = {}) {
   if (!canAccessModule("graphics") || graphicReviewState.loading) return;
   graphicReviewState.loading = true;
@@ -7579,6 +7638,7 @@ function filteredGraphicReviews() {
 }
 
 function renderGraphicReviews() {
+  renderGraphicsDriveClients();
   const summary = document.getElementById("graphicsSummary");
   const list = document.getElementById("graphicsReviewList");
   const badge = document.getElementById("graphicsNavBadge");
@@ -7979,6 +8039,7 @@ function renderAll() {
   renderGoogleCalendar();
   renderPersonalArea();
   renderNotifications();
+  renderGraphicsDriveClients();
   renderTeamChat();
   renderTeam();
   renderSmartWorking();
@@ -8152,7 +8213,7 @@ document.body.addEventListener("click", (event) => {
     ).catch((error) => alert(error.message || "Download non riuscito"));
   }
   if (driveFile) return openDriveFile(driveFile.dataset.driveFile, driveFile.dataset.driveName, driveFile.dataset.driveMime, driveFile.dataset.driveContentUrl);
-  if (driveUpload) return document.querySelector("[data-drive-upload-input]")?.click();
+  if (driveUpload) return currentClientDrivePanel()?.querySelector("[data-drive-upload-input]")?.click();
   if (driveCreateFolder) return openDriveManageModal("create-folder");
   if (driveSelect) return toggleClientDriveSelection(driveSelect);
   if (driveSelectAll) return toggleAllClientDriveEntries();
@@ -8982,7 +9043,25 @@ document.getElementById("analyzeTaskClientsButton").addEventListener("click", an
 document.getElementById("improveDescriptionButton").addEventListener("click", improveDescriptionWithAi);
 document.getElementById("applyAiDescriptionButton").addEventListener("click", applyAiDescription);
 document.getElementById("newTaskButton").addEventListener("click", () => openTaskModal());
-document.getElementById("graphicsRefreshButton").addEventListener("click", () => loadGraphicReviews());
+document.getElementById("graphicsRefreshButton").addEventListener("click", () => {
+  void loadGraphicReviews();
+  if (clientDriveState.surface === "graphics" && clientDriveState.clientId) {
+    const folder = clientDriveState.path[clientDriveState.path.length - 1];
+    if (folder) void loadClientDriveFolder(folder.id, folder.name, { fresh: true, source: clientDriveState.source });
+  }
+});
+document.getElementById("graphicsDriveClientSelect").addEventListener("change", (event) => {
+  graphicsDriveClientId = String(event.currentTarget.value || "");
+  if (!graphicsDriveClientId) {
+    if (clientDriveState.surface === "graphics") resetDriveBrowser("graphics");
+    renderGraphicsDriveClients();
+    return;
+  }
+  void openGraphicsClientDrive(graphicsDriveClientId);
+});
+document.getElementById("graphicsDriveOpenButton").addEventListener("click", () => {
+  void openGraphicsClientDrive();
+});
 document.getElementById("closeTaskDetailButton").addEventListener("click", () => document.getElementById("taskDetailModal").close());
 document.getElementById("editTaskFromDetailButton").addEventListener("click", () => {
   document.getElementById("taskDetailModal").close();
@@ -9101,7 +9180,7 @@ async function bootApp() {
     }
     renderBackendStatus();
     const loaders = [];
-    if (canAccessModule("clients") || canAccessModule("ped") || canAccessModule("tasks")) loaders.push(loadClientsFromBackend());
+    if (canAccessModule("clients") || canAccessModule("ped") || canAccessModule("tasks") || canAccessModule("graphics")) loaders.push(loadClientsFromBackend());
     if (canAccessModule("tasks") || canAccessModule("smart_working")) loaders.push(loadClickUpTeam());
     if (canAccessModule("tasks")) loaders.push(loadClickUpTasks(), loadClickUpTaskLogs(), loadClientAliases());
     if (canAccessModule("users")) loaders.push(loadUsersFromBackend());
