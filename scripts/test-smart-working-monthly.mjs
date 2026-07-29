@@ -13,7 +13,8 @@ import {
   prefersFridaySmart,
   matchedEmployees,
   mergeSmartAssignments,
-  monthBounds
+  monthBounds,
+  smartViewBounds
 } from "../lib/smart-working.js";
 
 const bounds = monthBounds("2026-07");
@@ -26,6 +27,19 @@ assert.deepEqual(bounds, {
 });
 assert.equal(monthBounds("2026-06").month, "2026-06");
 assert.equal(monthBounds("2026-08").month, "2026-08");
+assert.deepEqual(smartViewBounds("2026-07", new Date("2026-07-29T12:00:00"), 6), {
+  month: "2026-07",
+  first: "2026-07-01",
+  next: "2026-08-01",
+  gridStart: "2026-06-29",
+  gridEnd: "2026-09-07",
+  rollingFuture: true
+});
+assert.deepEqual(
+  smartViewBounds("2026-08", new Date("2026-07-29T12:00:00"), 6),
+  monthBounds("2026-08"),
+  "i mesi non correnti devono mantenere la propria griglia mensile"
+);
 
 assert.equal(isClientWorkEvent({ event_category: "staff_leave", title: "Marta OFF" }), false);
 assert.equal(isClientWorkEvent({ event_category: "smart_working", title: "Daniele SMART" }), false);
@@ -265,5 +279,8 @@ assert.match(smartStyleSource, /\.smart-multiday-event \{[\s\S]*?height: 18px;[\
 assert.match(smartAppSource, /proposal && data\.can_move_smart/, "lo staff abilitato deve poter trascinare le proposte smart");
 assert.match(smartApiSource, /staffCanMoveSuggestion = action === "move_smart_assignment"/, "il server deve consentire allo staff solo lo spostamento delle proposte smart");
 assert.match(smartApiSource, /can_move_smart: canMoveSmart/, "il calendario deve comunicare il permesso di spostamento allo staff");
+assert.match(smartApiSource, /SMART_ROLLING_WEEKS = 6/, "la vista corrente deve includere sei settimane dalla settimana di oggi");
+assert.match(smartApiSource, /monthlyContext\(actionViewBounds, session\)/, "anche dopo sincronizzazioni e modifiche la vista deve conservare le settimane future");
+assert.match(smartAppSource, /data\.rolling_future && date >= `\$\{month\}-01`/, "le settimane dei mesi successivi non devono apparire disattivate");
 
 console.log("Smart working monthly allocation tests passed.");

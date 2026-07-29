@@ -1223,7 +1223,13 @@ async function loadSmartWorking() {
     if (requestedMonth !== smartMonthKey()) return;
     state.smartWorking = data;
     if (data.month) selectedSmartMonth = new Date(`${data.month}-01T12:00:00`);
-    if (!selectedSmartDate?.startsWith(data.month || smartMonthKey())) selectedSmartDate = `${data.month || smartMonthKey()}-01`;
+    const selectedDateInRange = selectedSmartDate
+      && selectedSmartDate >= (data.range_start || `${data.month || smartMonthKey()}-01`)
+      && selectedSmartDate < (data.range_end || `${data.month || smartMonthKey()}-31`);
+    if (!selectedDateInRange) {
+      const today = localDateKey(new Date());
+      selectedSmartDate = data.month === today.slice(0, 7) ? today : `${data.month || smartMonthKey()}-01`;
+    }
     smartWorkingLoading = false;
     renderHome();
     renderSmartWorking();
@@ -4841,7 +4847,7 @@ function smartMonthDay(data, date, consumedEntries = new Set(), columnIndex = 0)
   const entries = smartEntriesForDate(data, date);
   const day = new Date(`${date}T12:00:00`);
   const workday = day.getDay() > 0 && day.getDay() < 6;
-  const outside = !date.startsWith(month);
+  const outside = !date.startsWith(month) && !(data.rolling_future && date >= `${month}-01`);
   const selected = date === selectedSmartDate;
   const visibleSmart = entries.smart.filter((item) => !consumedEntries.has(smartEntryRenderKey(item, "smart")));
   const visibleOff = entries.off.filter((item) => !consumedEntries.has(smartEntryRenderKey(item, "off")));
