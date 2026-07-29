@@ -4172,6 +4172,13 @@ code { font-family: var(--font-mono); font-size: 12px; }
   background: #0a0908;
   object-fit: contain;
 }
+.ped-carousel-editor-media video[data-carousel-video-preview="true"] {
+  opacity: .72;
+  transition: opacity .2s ease;
+}
+.ped-carousel-editor-media video[data-carousel-video-preview="true"].has-first-frame {
+  opacity: 1;
+}
 .ped-carousel-editor-media audio {
   width: calc(100% - 32px);
 }

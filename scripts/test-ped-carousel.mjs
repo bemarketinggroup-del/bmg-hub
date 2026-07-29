@@ -141,6 +141,9 @@ assert.match(appSource, /carousel_member_ids: nextFiles\.map\(memberId\)/, "il n
 assert.match(appSource, /files\.filter\(\(entry\) => memberId\(entry\) !== memberId\(file\)\)/, "il visualizzatore deve permettere di eliminare una foto dal carosello");
 assert.match(appSource, /La foto resterà disponibile nel Drive/, "la rimozione deve chiarire che il file Drive non viene eliminato");
 assert.match(appSource, /files\.length <= 2/, "il carosello deve conservare almeno due contenuti");
+assert.match(appSource, /video\.preload = "auto"/, "i video nel carosello devono caricare il primo fotogramma");
+assert.match(appSource, /video\.currentTime = firstFrameTime/, "il player deve posizionarsi sul primo fotogramma decodificabile");
+assert.match(appSource, /video\.classList\.add\("has-first-frame"\)/, "il video deve segnalare quando il primo fotogramma e visibile");
 assert.match(pedSource, /Array\.isArray\(body\.carousel_member_ids\)/, "l'API PED deve accettare l'ordine completo del carosello");
 assert.match(pedSource, /\/rpc\/sync_ped_carousel_members/, "ordine e rimozioni devono essere applicati atomicamente");
 assert.match(carouselEditorMigration, /delete from public\.ped_items/, "la funzione database deve rimuovere soltanto i membri esclusi");

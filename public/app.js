@@ -4718,9 +4718,39 @@ function pedCarouselMedia(file) {
   if (type.startsWith("video/")) {
     const video = document.createElement("video");
     video.controls = true;
+    video.muted = true;
+    video.defaultMuted = true;
     video.playsInline = true;
-    video.preload = "metadata";
+    video.preload = "auto";
+    video.poster = file.thumbnail_url || "";
+    video.setAttribute("aria-label", `Anteprima video ${file.drive_file_name || "del carosello"}`);
+    video.dataset.carouselVideoPreview = "true";
+    let frameRequested = false;
+    const showFirstFrame = () => {
+      if (frameRequested) return;
+      frameRequested = true;
+      const duration = Number(video.duration);
+      const firstFrameTime = Number.isFinite(duration) && duration > 0
+        ? Math.min(0.1, Math.max(0, duration - 0.01))
+        : 0.05;
+      try {
+        video.currentTime = firstFrameTime;
+      } catch {
+        // Safari puo' attendere loadeddata prima di accettare il seek.
+      }
+    };
+    const markFrameReady = () => {
+      video.pause();
+      video.classList.add("has-first-frame");
+    };
+    video.addEventListener("loadedmetadata", showFirstFrame, { once: true });
+    video.addEventListener("loadeddata", () => {
+      showFirstFrame();
+      markFrameReady();
+    }, { once: true });
+    video.addEventListener("seeked", markFrameReady, { once: true });
     video.src = sourceUrl;
+    video.load();
     return video;
   }
   if (type.startsWith("audio/")) {
