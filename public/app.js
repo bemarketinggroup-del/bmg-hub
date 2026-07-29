@@ -341,6 +341,17 @@ function lastPedPickerLocation(clientId) {
   return {
     source: String(saved.source || ""),
     folder: { id: String(saved.folder.id), name: String(saved.folder.name || "") },
+    libraries: Array.isArray(saved.libraries)
+      ? saved.libraries
+        .filter((item) => item?.id && item?.source)
+        .map((item) => ({
+          id: String(item.id),
+          source: String(item.source),
+          name: String(item.name || ""),
+          description: String(item.description || ""),
+          tone: String(item.tone || "")
+        }))
+      : [],
     path: saved.path
       .filter((item) => item?.id)
       .map((item) => ({ id: String(item.id), name: String(item.name || ""), source: String(item.source || "") }))
@@ -353,6 +364,13 @@ function rememberPedPickerLocation() {
   pedPickerLocations[pedPickerLocationKey(selectedPedClientId)] = {
     source: String(pedPickerState.source || ""),
     folder: { id: String(folder.id), name: String(folder.name || "") },
+    libraries: pedPickerState.libraries.map((item) => ({
+      id: String(item.id),
+      source: String(item.source || ""),
+      name: String(item.name || ""),
+      description: String(item.description || ""),
+      tone: String(item.tone || "")
+    })),
     path: pedPickerState.path.map((item) => ({
       id: String(item.id),
       name: String(item.name || ""),
@@ -3392,7 +3410,7 @@ async function openPedDrivePicker(date) {
     date,
     path: remembered?.path || [],
     files: [],
-    libraries: [],
+    libraries: remembered?.libraries || [],
     source: remembered?.source || "",
     rootId: "",
     uploadEnabled: false,
@@ -3408,15 +3426,32 @@ async function openPedDrivePicker(date) {
   document.getElementById("pedDrivePickerModal").showModal();
   renderPedPickerFormat();
   if (remembered?.folder?.id) {
+    const librariesReady = ensurePedPickerLibraries(selectedPedClientId);
     const restored = await loadPedPickerFolder(remembered.folder.id, remembered.folder.name, {
       source: remembered.source
     });
+    await librariesReady;
     if (restored) return;
     forgetPedPickerLocation(selectedPedClientId);
     pedPickerState.path = [];
     pedPickerState.source = "";
   }
   await loadPedPickerFolder("", client.name);
+}
+
+async function ensurePedPickerLibraries(clientId) {
+  if (pedPickerState.libraries.length) return;
+  const expectedClientId = String(clientId || "");
+  try {
+    const { data } = await fetchDriveFolder(clientId, "", { source: "" });
+    if (String(selectedPedClientId || "") !== expectedClientId) return;
+    if (Array.isArray(data.libraries)) pedPickerState.libraries = data.libraries;
+    rememberPedPickerLocation();
+    renderPedPicker();
+  } catch {
+    // La cartella ricordata resta utilizzabile anche se gli accessi rapidi non
+    // sono temporaneamente disponibili.
+  }
 }
 
 function renderPedPickerFormat() {
@@ -3474,7 +3509,7 @@ async function loadPedPickerFolder(folderId = "", folderName = "", { source = pe
     pedPickerState.files = data.files || [];
     pedPickerState.rootId = String(data.root_id || "");
     pedPickerState.uploadEnabled = Boolean(data.upload_enabled);
-    if (!source && Array.isArray(data.libraries)) pedPickerState.libraries = data.libraries;
+    if (Array.isArray(data.libraries) && data.libraries.length) pedPickerState.libraries = data.libraries;
     rememberPedPickerLocation();
     hideDriveFolderLoading(grid);
     renderPedPicker();
@@ -3575,16 +3610,14 @@ function renderPedPicker() {
       : "Autorizzazione Google Drive necessaria";
   }
   const isCarouselSelection = pedContentType(pedPickerState.contentType) === "carousel";
-  const libraryCards = !pedPickerState.source && pedPickerState.path.length === 1
-    ? pedPickerState.libraries.map((library) => `
+  const libraryCards = pedPickerState.libraries.map((library) => `
       <button class="ped-picker-library is-${escapeHtml(library.tone)}" data-ped-picker-library="${escapeHtml(library.id)}" data-ped-picker-library-source="${escapeHtml(library.source)}" data-ped-picker-name="${escapeHtml(library.name)}" type="button">
         <span class="ped-picker-library-icon" aria-hidden="true">${library.source === "video"
           ? `<svg class="lc" viewBox="0 0 24 24"><path d="M3 7h6l2 2h10v12H3z"/><path d="m10 11 6 3-6 3z"/></svg>`
           : `<svg class="lc" viewBox="0 0 24 24"><path d="M3 7h6l2 2h10v12H3z"/><path d="m12 11 .8 1.8 1.9.2-1.4 1.3.4 1.9-1.7-.9-1.7.9.4-1.9L9.3 13l1.9-.2z"/></svg>`}</span>
         <span><strong>${escapeHtml(library.name)}</strong><small>${escapeHtml(library.description)} · accesso diretto</small></span>
         <svg class="lc ped-picker-library-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
-      </button>`).join("")
-    : "";
+      </button>`).join("");
   breadcrumbs.innerHTML = pedPickerState.path.map((item, index) => {
     const current = index === pedPickerState.path.length - 1;
     return `${index ? `<svg class="lc" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>` : ""}${current

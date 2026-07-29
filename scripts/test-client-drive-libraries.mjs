@@ -67,5 +67,9 @@ assert.match(htmlSource, /drive-manage-name-field/, "creazione e rinomina devono
 assert.match(appSource, /PED_PICKER_LOCATIONS_KEY/, "il PED deve conservare l'ultima cartella aperta");
 assert.match(appSource, /rememberPedPickerLocation\(\)/, "ogni navigazione nel Drive PED deve aggiornare la cartella ricordata");
 assert.match(appSource, /lastPedPickerLocation\(selectedPedClientId\)/, "il nuovo contenuto PED deve riaprire l'ultima cartella del cliente");
+assert.match(appSource, /libraries: remembered\?\.libraries \|\| \[\]/, "il PED deve ripristinare gli accessi rapidi GRAFICHE e VIDEO");
+assert.match(appSource, /ensurePedPickerLibraries\(selectedPedClientId\)/, "una vecchia cartella ricordata deve recuperare gli accessi rapidi mancanti");
+assert.match(appSource, /const libraryCards = pedPickerState\.libraries\.map/, "GRAFICHE e VIDEO devono comparire anche nelle sottocartelle del PED");
+assert.doesNotMatch(appSource, /const libraryCards = !pedPickerState\.source && pedPickerState\.path\.length === 1/, "gli accessi rapidi non devono essere limitati alla radice del cliente");
 
 console.log("Client Drive library tests passed");
