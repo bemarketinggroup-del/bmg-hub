@@ -7578,6 +7578,47 @@ function graphicReviewCardMarkup(review) {
   const deliverables = Array.isArray(review.deliverables) ? review.deliverables : [];
   const assignee = review.assigned_to?.full_name || review.assigned_to?.email || "";
   const requestedBy = review.requested_by?.full_name || review.requested_by?.email || "Utente";
+  const comparisonMarkup = deliverables.length ? `
+    <section class="graphic-review-comparisons">
+      <header>
+        <div>
+          <span>Confronto versioni</span>
+          <h4>Originale e versione modificata</h4>
+        </div>
+        <small>Le immagini affiancate appartengono alla stessa revisione.</small>
+      </header>
+      <div class="graphic-review-comparison-list">
+        ${Array.from({ length: Math.max(files.length, deliverables.length) }, (_, index) => {
+          const originalIndex = files[index] ? index : 0;
+          const original = files[originalIndex];
+          const modified = deliverables[index];
+          return `<article class="graphic-review-comparison-pair">
+            <div class="graphic-review-comparison-side is-original">
+              <span class="graphic-review-version-label">Originale</span>
+              ${original ? `<button data-graphics-preview="${escapeHtml(review.id)}" data-graphics-preview-index="${originalIndex}" type="button" aria-label="Apri originale ${escapeHtml(original.name)}">
+                ${original.thumbnail_url
+                  ? `<img src="${escapeHtml(original.thumbnail_url)}" alt="${escapeHtml(original.name)}" loading="lazy">`
+                  : `<span class="graphic-review-file-placeholder" aria-hidden="true">${driveFileIcon(original)}</span>`}
+                <strong>${escapeHtml(original.name)}</strong>
+              </button>` : `<div class="graphic-review-version-empty">Originale non disponibile</div>`}
+            </div>
+            <span class="graphic-review-pair-link" aria-label="Le due immagini sono collegate">
+              <b aria-hidden="true">→</b>
+              <small>stessa foto</small>
+            </span>
+            <div class="graphic-review-comparison-side is-modified">
+              <span class="graphic-review-version-label">Versione modificata</span>
+              ${modified ? `<button data-graphics-deliverable="${escapeHtml(review.id)}" data-graphics-preview-index="${index}" type="button" aria-label="Apri versione modificata ${escapeHtml(modified.name)}">
+                ${modified.thumbnail_url
+                  ? `<img src="${escapeHtml(modified.thumbnail_url)}" alt="${escapeHtml(modified.name)}" loading="lazy">`
+                  : `<span class="graphic-review-file-placeholder" aria-hidden="true">${driveFileIcon(modified)}</span>`}
+                <strong>${escapeHtml(modified.name)}</strong>
+              </button>` : `<div class="graphic-review-version-empty">Versione non ancora caricata</div>`}
+            </div>
+          </article>`;
+        }).join("")}
+      </div>
+    </section>` : "";
   return `<article class="graphic-review-card is-${escapeHtml(review.status)}" data-graphic-review-card="${escapeHtml(review.id)}">
     <header>
       <div>
@@ -7590,8 +7631,9 @@ function graphicReviewCardMarkup(review) {
         <time>${escapeHtml(formatPersonalDate(review.created_at))}</time>
       </div>
     </header>
-    <div class="graphic-review-body">
-      <div class="graphic-review-media-grid">
+    ${comparisonMarkup}
+    <div class="graphic-review-body${deliverables.length ? " has-comparisons" : ""}">
+      ${deliverables.length ? "" : `<div class="graphic-review-media-grid">
         ${files.map((file, index) => `
           <button data-graphics-preview="${escapeHtml(review.id)}" data-graphics-preview-index="${index}" type="button" aria-label="Apri ${escapeHtml(file.name)}">
             ${file.thumbnail_url
@@ -7599,7 +7641,7 @@ function graphicReviewCardMarkup(review) {
               : `<span aria-hidden="true">${driveFileIcon(file)}</span>`}
             <small>${escapeHtml(file.name)}</small>
           </button>`).join("")}
-      </div>
+      </div>`}
       <section class="graphic-review-brief">
         <span>Modifiche richieste</span>
         <p>${escapeHtml(review.instructions)}</p>
@@ -7621,11 +7663,6 @@ function graphicReviewCardMarkup(review) {
         </div>
       </section>
     </div>
-    ${deliverables.length ? `<footer class="graphic-review-deliverables"><strong>Versioni caricate</strong><div>${deliverables.map((file, index) => `
-      <button data-graphics-deliverable="${escapeHtml(review.id)}" data-graphics-preview-index="${index}" type="button">
-        ${file.thumbnail_url ? `<img src="${escapeHtml(file.thumbnail_url)}" alt="">` : ""}
-        <span>${escapeHtml(file.name)}</span>
-      </button>`).join("")}</div></footer>` : ""}
   </article>`;
 }
 

@@ -59,7 +59,10 @@ assert.match(appSource, /Descrivi le modifiche da apportare/);
 assert.match(appSource, /Carica versione/);
 assert.match(appSource, /folder_id: review\.source_folder_id/);
 assert.match(appSource, /const files = \[\.\.\.\(event\.target\.files \|\| \[\]\)\];/);
+assert.match(appSource, /Originale e versione modificata/);
+assert.match(appSource, /stessa foto/);
 assert.match(styleSource, /\.graphic-review-card/);
+assert.match(styleSource, /\.graphic-review-comparison-pair/);
 assert.match(styleSource, /\.graphic-review-modal/);
 
 for (const sql of [migrationSource, schemaSource]) {

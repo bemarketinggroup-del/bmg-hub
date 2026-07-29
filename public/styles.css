@@ -4278,6 +4278,7 @@ code { font-family: var(--font-mono); font-size: 12px; }
 .graphic-review-status.is-completed { background: rgba(79, 128, 97, .14); color: #3f6e50; }
 .graphic-review-meta { display: grid; justify-items: end; gap: 5px; color: var(--muted); font-size: 10px; }
 .graphic-review-body { display: grid; grid-template-columns: minmax(260px, .85fr) minmax(280px, 1.1fr) minmax(300px, 1fr); gap: 20px; padding: 20px; }
+.graphic-review-body.has-comparisons { grid-template-columns: minmax(280px, 1fr) minmax(320px, 1fr); }
 .graphic-review-media-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; align-content: start; }
 .graphic-review-media-grid button {
   min-width: 0;
@@ -4303,11 +4304,58 @@ code { font-family: var(--font-mono); font-size: 12px; }
 .graphic-review-assignee { color: var(--muted); font-size: 10px; }
 .graphic-review-actions { display: flex; flex-wrap: wrap; gap: 7px; }
 .graphic-review-actions button { min-height: 36px; padding: 0 12px; font-size: 10px; }
-.graphic-review-deliverables { padding: 14px 20px 18px; border-top: 1px solid var(--line); }
-.graphic-review-deliverables > strong { display: block; margin-bottom: 9px; font-size: 11px; }
-.graphic-review-deliverables > div { display: flex; flex-wrap: wrap; gap: 8px; }
-.graphic-review-deliverables button { display: flex; align-items: center; gap: 8px; max-width: 240px; padding: 6px 10px 6px 6px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-soft); font-size: 10px; }
-.graphic-review-deliverables img { width: 34px; height: 34px; border-radius: 5px; object-fit: cover; }
+.graphic-review-comparisons { padding: 18px 20px 20px; border-bottom: 1px solid var(--line); background: #f7f4ee; }
+.graphic-review-comparisons > header { display: flex; align-items: end; justify-content: space-between; gap: 20px; margin-bottom: 13px; }
+.graphic-review-comparisons > header > div { display: grid; gap: 3px; }
+.graphic-review-comparisons > header span { color: var(--terracotta); font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .09em; }
+.graphic-review-comparisons > header h4 { margin: 0; font-size: 16px; }
+.graphic-review-comparisons > header small { color: var(--muted); font-size: 10px; }
+.graphic-review-comparison-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(410px, 1fr)); gap: 12px; }
+.graphic-review-comparison-pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 58px minmax(0, 1fr);
+  align-items: center;
+  gap: 9px;
+  padding: 10px;
+  border: 1px solid #d8d0c4;
+  border-radius: 12px;
+  background: white;
+}
+.graphic-review-comparison-side { min-width: 0; display: grid; gap: 6px; }
+.graphic-review-version-label {
+  justify-self: start;
+  padding: 4px 7px;
+  border-radius: 999px;
+  background: #ece7df;
+  color: #6f6251;
+  font-size: 8px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+}
+.graphic-review-comparison-side.is-modified .graphic-review-version-label { background: #dceadf; color: #356647; }
+.graphic-review-comparison-side button {
+  min-width: 0;
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: 180px auto;
+  padding: 0;
+  border: 2px solid #d7cec1;
+  border-radius: 9px;
+  background: #f2eee7;
+  color: var(--ink);
+  text-align: left;
+}
+.graphic-review-comparison-side.is-modified button { border-color: #66a17a; background: #f2f8f3; }
+.graphic-review-comparison-side img,
+.graphic-review-file-placeholder { width: 100%; height: 180px; object-fit: contain; display: grid; place-items: center; background: #e9e5de; }
+.graphic-review-comparison-side.is-modified img,
+.graphic-review-comparison-side.is-modified .graphic-review-file-placeholder { background: #e8f1ea; }
+.graphic-review-comparison-side button strong { overflow: hidden; padding: 9px; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.graphic-review-pair-link { display: grid; justify-items: center; gap: 1px; color: var(--terracotta); text-align: center; }
+.graphic-review-pair-link b { font-size: 25px; line-height: 1; }
+.graphic-review-pair-link small { color: var(--muted); font-size: 7px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; }
+.graphic-review-version-empty { min-height: 219px; display: grid; place-items: center; padding: 16px; border: 2px dashed #bdd2c4; border-radius: 9px; background: #f2f8f3; color: #52725d; font-size: 10px; text-align: center; }
 
 .graphic-review-modal { width: min(650px, calc(100vw - 28px)); }
 .graphic-review-modal .modal-head > div > span { color: var(--muted); font-size: 12px; }
@@ -4341,6 +4389,7 @@ code { font-family: var(--font-mono); font-size: 12px; }
   .graphic-review-card > header { display: grid; padding: 15px; }
   .graphic-review-meta { justify-items: start; }
   .graphic-review-body { grid-template-columns: 1fr; padding: 12px; }
+  .graphic-review-body.has-comparisons { grid-template-columns: 1fr; }
   .graphic-review-work { grid-column: auto; }
   .graphic-review-media-grid button { grid-template-rows: 145px auto; }
   .graphic-review-media-grid img { height: 145px; }
@@ -4350,6 +4399,15 @@ code { font-family: var(--font-mono); font-size: 12px; }
   .graphic-review-selection-head { align-items: flex-start; flex-wrap: wrap; }
   .graphic-review-selection-head .graphic-review-file-count { margin-left: 0; }
   .graphic-review-selection-grid { grid-template-columns: repeat(2, 1fr); }
+  .graphic-review-comparisons { padding: 14px 10px 16px; }
+  .graphic-review-comparisons > header { align-items: flex-start; display: grid; }
+  .graphic-review-comparison-list { grid-template-columns: 1fr; }
+  .graphic-review-comparison-pair { grid-template-columns: minmax(0, 1fr) 30px minmax(0, 1fr); gap: 5px; padding: 7px; }
+  .graphic-review-comparison-side button { grid-template-rows: 130px auto; }
+  .graphic-review-comparison-side img,
+  .graphic-review-file-placeholder { height: 130px; }
+  .graphic-review-version-empty { min-height: 169px; padding: 8px; }
+  .graphic-review-pair-link small { display: none; }
 }
 .task-detail-shell { padding: 22px 24px 24px; }
 
