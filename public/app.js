@@ -2759,6 +2759,14 @@ function pedStateItem(id) {
     || null;
 }
 
+function replacePedStateItem(updatedItem) {
+  if (!updatedItem) return;
+  const itemId = String(updatedItem.id);
+  for (const key of ["pedItems", "pedAgendaItems"]) {
+    state[key] = (state[key] || []).map((item) => String(item.id) === itemId ? updatedItem : item);
+  }
+}
+
 function pedStateItemsOnDate(date) {
   const items = new Map();
   for (const item of [...(state.pedAgendaItems || []), ...state.pedItems]) {
@@ -4729,7 +4737,7 @@ function pedCarouselMedia(file) {
 }
 
 function openPedCarouselPreview(item) {
-  const files = pedItemFiles(item);
+  let files = pedItemFiles(item);
   if (files.length < 2) {
     const file = files[0];
     return openDriveFile(file.drive_file_id, file.drive_file_name, file.drive_mime_type, file.content_url || "");
@@ -4738,90 +4746,213 @@ function openPedCarouselPreview(item) {
   const modal = document.getElementById("drivePreviewModal");
   const title = document.getElementById("drivePreviewTitle");
   const body = document.getElementById("drivePreviewBody");
-  title.textContent = `Carosello · ${files.length} contenuti`;
+  modal.classList.add("is-ped-carousel-editor");
+  title.textContent = `Editor carosello · ${files.length} contenuti`;
   body.replaceChildren();
-  body.classList.add("is-ped-carousel");
+  body.classList.add("is-ped-carousel-editor");
 
-  const viewer = document.createElement("div");
-  viewer.className = "ped-carousel-preview";
-  const stage = document.createElement("div");
-  stage.className = "ped-carousel-preview-stage";
-  const media = document.createElement("div");
-  media.className = "ped-carousel-preview-media";
-  const previous = document.createElement("button");
-  previous.className = "ped-carousel-preview-arrow is-previous";
-  previous.type = "button";
-  previous.title = "Contenuto precedente";
-  previous.setAttribute("aria-label", "Contenuto precedente");
-  previous.textContent = "‹";
-  const next = document.createElement("button");
-  next.className = "ped-carousel-preview-arrow is-next";
-  next.type = "button";
-  next.title = "Contenuto successivo";
-  next.setAttribute("aria-label", "Contenuto successivo");
-  next.textContent = "›";
-  const position = document.createElement("span");
-  position.className = "ped-carousel-preview-position";
-  stage.append(media, previous, next, position);
+  const editor = document.createElement("section");
+  editor.className = "ped-carousel-editor";
+  const toolbar = document.createElement("div");
+  toolbar.className = "ped-carousel-editor-toolbar";
+  const instructions = document.createElement("div");
+  instructions.innerHTML = `<strong>Ordine di pubblicazione</strong><span>Trascina le foto a destra o a sinistra. La numero 1 sarà la copertina del feed.</span>`;
+  const status = document.createElement("span");
+  status.className = "ped-carousel-editor-status";
+  status.textContent = "Salvataggio automatico";
+  toolbar.append(instructions, status);
+  const track = document.createElement("div");
+  track.className = "ped-carousel-editor-track";
+  track.setAttribute("aria-label", "Contenuti del carosello in ordine di pubblicazione");
+  editor.append(toolbar, track);
+  body.append(editor);
 
-  const footer = document.createElement("div");
-  footer.className = "ped-carousel-preview-footer";
-  const fileName = document.createElement("strong");
-  const thumbnails = document.createElement("div");
-  thumbnails.className = "ped-carousel-preview-thumbs";
-  footer.append(fileName, thumbnails);
-  viewer.append(stage, footer);
-  body.append(viewer);
+  let draggedMemberId = "";
+  let saving = false;
 
-  let activeIndex = 0;
-  const thumbButtons = files.map((file, index) => {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "ped-carousel-preview-thumb";
-    button.title = file.drive_file_name || `Contenuto ${index + 1}`;
-    button.setAttribute("aria-label", `Apri contenuto ${index + 1} di ${files.length}`);
-    if (file.thumbnail_url) {
-      const image = new Image();
-      image.alt = "";
-      image.loading = "lazy";
-      image.src = file.thumbnail_url;
-      button.append(image);
-    } else {
-      const label = document.createElement("span");
-      label.className = "ped-carousel-preview-thumb-fallback";
-      label.textContent = String(index + 1);
-      button.append(label);
-    }
-    const orderBadge = document.createElement("b");
-    orderBadge.className = "ped-carousel-preview-thumb-order";
-    orderBadge.textContent = String(index + 1);
-    orderBadge.title = index === 0 ? "Copertina mostrata nel feed Instagram" : `Posizione ${index + 1} nel carosello`;
-    button.append(orderBadge);
-    button.addEventListener("click", () => renderSlide(index));
-    thumbnails.append(button);
-    return button;
-  });
-
-  function renderSlide(index) {
-    activeIndex = (index + files.length) % files.length;
-    const file = files[activeIndex];
-    media.replaceChildren(pedCarouselMedia(file));
-    fileName.textContent = file.drive_file_name || `Contenuto ${activeIndex + 1}`;
-    position.textContent = `${activeIndex + 1} / ${files.length}`;
-    thumbButtons.forEach((button, buttonIndex) => {
-      button.classList.toggle("is-active", buttonIndex === activeIndex);
-      button.setAttribute("aria-current", buttonIndex === activeIndex ? "true" : "false");
-    });
-    thumbButtons[activeIndex]?.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "smooth" });
+  function memberId(file) {
+    return String(file.id || "");
   }
 
-  previous.addEventListener("click", () => renderSlide(activeIndex - 1));
-  next.addEventListener("click", () => renderSlide(activeIndex + 1));
-  drivePreviewKeyboardState = {
-    isPhoto: files.some((file) => String(file.drive_mime_type || "").startsWith("image/")),
-    navigate: (direction) => renderSlide(activeIndex + direction)
-  };
-  renderSlide(0);
+  function setStatus(message, tone = "") {
+    status.textContent = message;
+    status.dataset.tone = tone;
+  }
+
+  function clearDropTargets() {
+    track.querySelectorAll(".ped-carousel-editor-card").forEach((card) => {
+      card.classList.remove("is-dragging", "is-drop-before", "is-drop-after");
+    });
+  }
+
+  function replaceEditorItem(updatedItem) {
+    replacePedStateItem(updatedItem);
+    files = pedItemFiles(updatedItem);
+    title.textContent = `Editor carosello · ${files.length} contenuti`;
+    renderPed();
+    if (document.getElementById("pedCaptionModal")?.open && String(editingPedCaptionId) === String(updatedItem.id)) {
+      selectPedCaptionItem(updatedItem.id);
+    }
+  }
+
+  async function persistMembers(nextFiles, successMessage) {
+    if (saving) return false;
+    const previousFiles = files;
+    saving = true;
+    files = nextFiles;
+    renderCards();
+    setStatus("Salvataggio in corso…", "pending");
+    try {
+      const response = await apiFetch("/api/ped", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: item.id,
+          carousel_member_ids: nextFiles.map(memberId)
+        })
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || "Impossibile aggiornare il carosello");
+      replaceEditorItem(data.item);
+      renderCards();
+      setStatus(successMessage, "success");
+      window.setTimeout(() => {
+        if (status.dataset.tone === "success") setStatus("Salvataggio automatico");
+      }, 1800);
+      return true;
+    } catch (error) {
+      files = previousFiles;
+      renderCards();
+      setStatus(error.message || "Modifica non salvata", "error");
+      return false;
+    } finally {
+      saving = false;
+      renderCards();
+    }
+  }
+
+  function moveFile(memberIdToMove, targetMemberId, placeAfter = false) {
+    const sourceIndex = files.findIndex((file) => memberId(file) === memberIdToMove);
+    const targetIndex = files.findIndex((file) => memberId(file) === targetMemberId);
+    if (sourceIndex < 0 || targetIndex < 0 || sourceIndex === targetIndex) return;
+    const nextFiles = [...files];
+    const [moved] = nextFiles.splice(sourceIndex, 1);
+    let insertionIndex = nextFiles.findIndex((file) => memberId(file) === targetMemberId);
+    if (placeAfter) insertionIndex += 1;
+    nextFiles.splice(Math.max(0, insertionIndex), 0, moved);
+    if (nextFiles.every((file, index) => memberId(file) === memberId(files[index]))) return;
+    void persistMembers(nextFiles, "Nuovo ordine salvato");
+  }
+
+  async function removeFile(file) {
+    if (files.length <= 2 || saving) return;
+    const name = file.drive_file_name || "questo contenuto";
+    if (!confirm(`Rimuovere “${name}” dal carosello? La foto resterà disponibile nel Drive.`)) return;
+    await persistMembers(
+      files.filter((entry) => memberId(entry) !== memberId(file)),
+      "Contenuto rimosso dal carosello"
+    );
+  }
+
+  function renderCards() {
+    track.replaceChildren();
+    files.forEach((file, index) => {
+      const id = memberId(file);
+      const card = document.createElement("article");
+      card.className = "ped-carousel-editor-card";
+      card.draggable = !saving;
+      card.dataset.carouselMember = id;
+      card.setAttribute("aria-label", `Contenuto ${index + 1} di ${files.length}: ${file.drive_file_name || ""}`);
+
+      const top = document.createElement("div");
+      top.className = "ped-carousel-editor-card-top";
+      const order = document.createElement("b");
+      order.className = "ped-carousel-editor-order";
+      order.textContent = String(index + 1);
+      const cover = document.createElement("span");
+      cover.className = "ped-carousel-editor-cover";
+      cover.textContent = index === 0 ? "Copertina feed" : `Posizione ${index + 1}`;
+      const handle = document.createElement("span");
+      handle.className = "ped-carousel-editor-handle";
+      handle.title = "Trascina per cambiare posizione";
+      handle.setAttribute("aria-hidden", "true");
+      handle.textContent = "⠿";
+      top.append(order, cover, handle);
+
+      const media = document.createElement("div");
+      media.className = "ped-carousel-editor-media";
+      media.append(pedCarouselMedia(file));
+
+      const footer = document.createElement("div");
+      footer.className = "ped-carousel-editor-card-footer";
+      const name = document.createElement("strong");
+      name.textContent = file.drive_file_name || `Contenuto ${index + 1}`;
+      const controls = document.createElement("div");
+      controls.className = "ped-carousel-editor-card-controls";
+      const moveLeft = document.createElement("button");
+      moveLeft.type = "button";
+      moveLeft.className = "ped-carousel-editor-move";
+      moveLeft.disabled = saving || index === 0;
+      moveLeft.title = "Sposta a sinistra";
+      moveLeft.setAttribute("aria-label", `Sposta ${name.textContent} a sinistra`);
+      moveLeft.textContent = "←";
+      moveLeft.addEventListener("click", () => moveFile(id, memberId(files[index - 1]), false));
+      const moveRight = document.createElement("button");
+      moveRight.type = "button";
+      moveRight.className = "ped-carousel-editor-move";
+      moveRight.disabled = saving || index === files.length - 1;
+      moveRight.title = "Sposta a destra";
+      moveRight.setAttribute("aria-label", `Sposta ${name.textContent} a destra`);
+      moveRight.textContent = "→";
+      moveRight.addEventListener("click", () => moveFile(id, memberId(files[index + 1]), true));
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.className = "ped-carousel-editor-remove";
+      remove.disabled = saving || files.length <= 2;
+      remove.title = files.length <= 2 ? "Un carosello deve contenere almeno 2 elementi" : "Elimina dal carosello";
+      remove.setAttribute("aria-label", `Elimina ${name.textContent} dal carosello`);
+      remove.textContent = "Elimina";
+      remove.addEventListener("click", () => removeFile(file));
+      controls.append(moveLeft, moveRight, remove);
+      footer.append(name, controls);
+      card.append(top, media, footer);
+
+      card.addEventListener("dragstart", (event) => {
+        if (saving) {
+          event.preventDefault();
+          return;
+        }
+        draggedMemberId = id;
+        card.classList.add("is-dragging");
+        event.dataTransfer.effectAllowed = "move";
+        event.dataTransfer.setData("text/plain", id);
+      });
+      card.addEventListener("dragover", (event) => {
+        if (!draggedMemberId || draggedMemberId === id || saving) return;
+        event.preventDefault();
+        clearDropTargets();
+        const placeAfter = event.clientX > card.getBoundingClientRect().left + card.offsetWidth / 2;
+        card.classList.add(placeAfter ? "is-drop-after" : "is-drop-before");
+        event.dataTransfer.dropEffect = "move";
+      });
+      card.addEventListener("drop", (event) => {
+        event.preventDefault();
+        const sourceId = draggedMemberId || event.dataTransfer.getData("text/plain");
+        const placeAfter = event.clientX > card.getBoundingClientRect().left + card.offsetWidth / 2;
+        clearDropTargets();
+        draggedMemberId = "";
+        moveFile(sourceId, id, placeAfter);
+      });
+      card.addEventListener("dragend", () => {
+        draggedMemberId = "";
+        clearDropTargets();
+      });
+      track.append(card);
+    });
+  }
+
+  drivePreviewKeyboardState = { isPhoto: true, navigate: null };
+  renderCards();
   modal.showModal();
 }
 
@@ -9803,8 +9934,9 @@ document.getElementById("contentImageFile").addEventListener("change", (event) =
 document.getElementById("newClientButton").addEventListener("click", () => openClientModal());
 document.getElementById("drivePreviewModal").addEventListener("close", () => {
   const body = document.getElementById("drivePreviewBody");
+  document.getElementById("drivePreviewModal").classList.remove("is-ped-carousel-editor");
   body.replaceChildren();
-  body.classList.remove("is-ped-carousel");
+  body.classList.remove("is-ped-carousel", "is-ped-carousel-editor");
   drivePreviewKeyboardState = { isPhoto: false, navigate: null };
   if (clientDriveState.objectUrl) {
     URL.revokeObjectURL(clientDriveState.objectUrl);
