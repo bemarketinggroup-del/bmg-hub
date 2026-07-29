@@ -29,6 +29,8 @@ assert.match(apiSource, /action"\) === "file"/);
 assert.match(apiSource, /sanitizeAttachments\(body\.attachments\)/);
 assert.match(apiSource, /ensureDriveFolderWithWriteAccess/);
 assert.match(apiSource, /loadChatClients\(\)/);
+assert.match(apiSource, /status=neq\.archiviato/, "la chat non deve reintrodurre clienti archiviati nello stato dell'interfaccia");
+assert.match(appSource, /filter\(\(client\) => !isArchivedClient\(client\)\)/, "i dati della chat devono scartare i clienti archiviati");
 assert.match(apiSource, /conversation\.slice\(7\)\.split\(":"\)/);
 assert.match(apiSource, /staff_notifications\?on_conflict=profile_id,source_type,source_id/);
 assert.match(appSource, /setInterval\(\(\) => \{[\s\S]*loadTeamChat\(\{ quiet: true \}\)[\s\S]*\}, 6000\)/);

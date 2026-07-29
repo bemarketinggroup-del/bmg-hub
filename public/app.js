@@ -1103,11 +1103,20 @@ async function loadClientsFromBackend() {
     const response = await apiFetch("/api/clients");
     if (!response.ok) throw new Error(`Clients backend error ${response.status}`);
     const rows = await response.json();
-    state.clients = rows.map(normalizeClient);
+    const previousPedClientId = String(selectedPedClientId || "");
+    state.clients = rows.map(normalizeClient).filter((client) => !isArchivedClient(client));
     ensurePedClientSelection();
+    const pedClientChanged = previousPedClientId !== String(selectedPedClientId || "");
+    if (pedClientChanged) {
+      state.pedItems = [];
+      state.pedAgendaItems = [];
+      pedUsedFileIds = new Set();
+      pedShareState = { active: false, shareUrl: "" };
+    }
     clientsOnline = true;
     renderBackendStatus("", "clients");
     renderAll();
+    if (pedClientChanged) void loadPedCalendar();
   } catch (error) {
     clientsOnline = false;
     renderBackendStatus(error.message, "clients");
@@ -1125,6 +1134,10 @@ function normalizeClient(client) {
     drive: client.drive_url || client.drive || "#",
     notes: client.notes || ""
   };
+}
+
+function isArchivedClient(client) {
+  return ["archiviato", "archived"].includes(normalizeIdentity(client?.status));
 }
 
 async function loadClickUpTeam() {
@@ -8341,8 +8354,13 @@ async function loadTeamChat({ quiet = false } = {}) {
     if (!response.ok) throw new Error(data.error || "Chat non disponibile");
     if (Array.isArray(data.clients) && data.clients.length) {
       const existingClients = new Map(state.clients.map((client) => [String(client.id), client]));
-      data.clients.forEach((client) => existingClients.set(String(client.id), normalizeClient({ ...existingClients.get(String(client.id)), ...client })));
-      state.clients = [...existingClients.values()].sort((left, right) => left.name.localeCompare(right.name, "it"));
+      data.clients
+        .map((client) => normalizeClient({ ...existingClients.get(String(client.id)), ...client }))
+        .filter((client) => !isArchivedClient(client))
+        .forEach((client) => existingClients.set(String(client.id), client));
+      state.clients = [...existingClients.values()]
+        .filter((client) => !isArchivedClient(client))
+        .sort((left, right) => left.name.localeCompare(right.name, "it"));
     }
     teamChatState = {
       profile: data.profile || null,

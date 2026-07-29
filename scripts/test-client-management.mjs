@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 
 const apiSource = await readFile(new URL("../api/clients.js", import.meta.url), "utf8");
 const driveSource = await readFile(new URL("../lib/google-drive.js", import.meta.url), "utf8");
+const driveApiSource = await readFile(new URL("../lib/client-drive-api.js", import.meta.url), "utf8");
 const appSource = await readFile(new URL("../public/app.js", import.meta.url), "utf8");
 const htmlSource = await readFile(new URL("../public/index.html", import.meta.url), "utf8");
 const styleSource = await readFile(new URL("../public/styles.css", import.meta.url), "utf8");
@@ -14,9 +15,14 @@ assert.match(apiSource, /ensureClickUpFolder\(payload\.name\)/, "deve essere cre
 assert.match(apiSource, /request\.method === "DELETE"/, "l'API deve consentire la rimozione del cliente");
 assert.match(apiSource, /session\.profile\?\.role !== "admin"/, "solo un amministratore deve poter eliminare clienti");
 assert.match(apiSource, /status: "archiviato"/, "la rimozione deve impedire la reimportazione da ClickUp");
+assert.match(apiSource, /status=neq\.archiviato/, "l'elenco clienti non deve restituire i clienti archiviati");
+assert.match(driveApiSource, /status=neq\.archiviato/, "il Drive interno non deve aprire un cliente archiviato");
 assert.doesNotMatch(apiSource, /trashDriveFile/, "la rimozione cliente non deve eliminare cartelle Drive");
 assert.match(driveSource, /ensureDriveServiceAccountPermission/, "la nuova cartella deve essere accessibile al gestionale");
 assert.match(appSource, /Le cartelle Google Drive e ClickUp resteranno intatte/, "la conferma deve spiegare cosa resta conservato");
+assert.match(appSource, /function isArchivedClient\(client\)/, "l'interfaccia deve riconoscere in modo centralizzato i clienti archiviati");
+assert.match(appSource, /rows\.map\(normalizeClient\)\.filter\(\(client\) => !isArchivedClient\(client\)\)/, "il calendario e il Drive devono ricevere solo clienti operativi");
+assert.match(appSource, /if \(pedClientChanged\) void loadPedCalendar\(\)/, "archiviando il cliente aperto il PED deve caricare il nuovo cliente selezionato");
 assert.match(appSource, /async function openClientDetails\(clientId\)[\s\S]*?openClientDrive\(selectedClientId\)/, "aprendo un cliente deve aprirsi automaticamente il Drive interno");
 assert.match(appSource, /class="client-drive-panel" data-client-drive-panel aria-live="polite"/, "il browser Drive del cliente deve essere subito visibile");
 assert.doesNotMatch(appSource, /class="client-detail-body"/, "la scheda cliente non deve mostrare il blocco informazioni");
