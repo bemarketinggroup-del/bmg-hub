@@ -166,6 +166,8 @@ const seed = {
   clickupTaskLogs: [],
   pedItems: [],
   pedAgendaItems: [],
+  pedDayNotes: [],
+  pedStagingItems: [],
   smartWorking: {
     month: "",
     range_start: "",
@@ -213,7 +215,8 @@ let pedPickerState = {
   selectedFiles: [],
   showUsed: false,
   appendGroupId: "",
-  existingCount: 0
+  existingCount: 0,
+  destination: "calendar"
 };
 let pedPickerLocations = loadPedPickerLocations();
 let driveManageContext = { surface: "client", clientId: "", source: "", folder: null };
@@ -246,6 +249,7 @@ let pedShareState = { active: false, shareUrl: "" };
 let pedLoadingKey = "";
 let editingPedCaptionId = "";
 let pedDraggedItemId = "";
+let pedDraggedStagingId = "";
 let pedDragTarget = null;
 let pedDragSuppressClickUntil = 0;
 let pedInstagramOrderEditing = false;
@@ -2777,6 +2781,7 @@ function renderPed() {
   ensurePedClientSelection();
   renderPedClientTabs();
   renderPedCalendar();
+  renderPedStaging();
   renderPedInstagramPreviewAction();
   renderPedAgenda();
   renderPedShareButton();
@@ -3168,6 +3173,10 @@ function renderPedCalendar() {
   const monthStart = new Date(selectedPedMonth.getFullYear(), selectedPedMonth.getMonth(), 1, 12);
   label.textContent = new Intl.DateTimeFormat("it-IT", { month: "long", year: "numeric" }).format(monthStart);
   const selectedClient = state.clients.find((client) => String(client.id) === String(selectedPedClientId));
+  const dayNotes = new Map((state.pedDayNotes || []).map((note) => [
+    String(note.note_date || ""),
+    String(note.note_text || "")
+  ]));
   const grouped = state.pedItems.reduce((map, item) => {
     const key = String(item.scheduled_date || "");
     if (!map.has(key)) map.set(key, []);
@@ -3187,6 +3196,7 @@ function renderPedCalendar() {
     const items = [...(grouped.get(dateKey) || [])].sort((left, right) => Number(left.position || 0) - Number(right.position || 0));
     const outside = date.getMonth() !== monthStart.getMonth();
     const weekend = date.getDay() === 0 || date.getDay() === 6;
+    const hiddenItems = Math.max(0, items.length - 2);
     return `<article class="ped-day${outside ? " is-outside" : ""}${weekend ? " is-weekend" : ""}${dateKey === todayKey ? " is-today" : ""}" data-ped-day="${dateKey}">
       <header class="ped-day-head">
         <span class="ped-day-number">${date.getDate()}</span>
@@ -3194,13 +3204,60 @@ function renderPedCalendar() {
           <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
         </button>
       </header>
+      <label class="ped-day-note-wrap" title="Nota breve del giorno">
+        <span class="sr-only">Nota del ${dateKey}</span>
+        <input class="ped-day-note" data-ped-day-note="${dateKey}" type="text" maxlength="180" value="${escapeHtml(dayNotes.get(dateKey) || "")}" placeholder="Nota…" ${outside ? "disabled" : ""}>
+      </label>
       <div class="ped-day-items">${items.map(pedItemMarkup).join("")}</div>
+      ${hiddenItems ? `<span class="ped-day-more">+${hiddenItems}</span>` : ""}
     </article>`;
   }).join("");
 
   if (!selectedClient) summary.textContent = "Seleziona un cliente";
   else if (!canAdd) summary.textContent = `${selectedClient.name}: Drive non collegato`;
   else summary.textContent = `${state.pedItems.length} ${state.pedItems.length === 1 ? "contenuto pianificato" : "contenuti pianificati"}`;
+}
+
+function pedStagingItemMarkup(item) {
+  const format = pedTypeMeta(item.content_type);
+  const files = pedItemFiles(item);
+  const primary = files[0] || {};
+  const title = pedItemTitle(item) || "Contenuto Drive";
+  const mime = String(primary.drive_mime_type || "");
+  const isImage = mime.startsWith("image/");
+  const isVideo = mime.startsWith("video/");
+  const previewUrl = primary.thumbnail_url || (isImage ? primary.content_url : "");
+  const media = previewUrl
+    ? `<img src="${escapeHtml(previewUrl)}" alt="" loading="lazy" decoding="async">`
+    : `<span class="ped-staging-icon">${driveFileIcon({ is_folder: false, mime_type: mime })}</span>`;
+  return `<article class="ped-staging-card ped-type-${format.type}" data-ped-staging="${escapeHtml(item.id)}" draggable="true" aria-grabbed="false" tabindex="0" title="Trascina questo contenuto su un giorno del calendario">
+    <span class="ped-staging-thumb">${media}${isVideo ? `<span class="ped-video-mini"><svg class="lc" viewBox="0 0 24 24"><path d="m9 7 8 5-8 5z"/></svg></span>` : ""}${files.length > 1 ? `<b class="ped-carousel-count">${files.length}</b>` : ""}</span>
+    <span class="ped-staging-copy">
+      <strong>${escapeHtml(title)}</strong>
+      <small>${format.label} · trascina nel calendario</small>
+    </span>
+    <button class="ped-staging-remove" data-ped-staging-remove="${escapeHtml(item.id)}" type="button" aria-label="Rimuovi ${escapeHtml(title)} dai contenuti in attesa" title="Rimuovi">
+      <svg class="lc" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+  </article>`;
+}
+
+function renderPedStaging() {
+  const list = document.getElementById("pedStagingList");
+  const addButton = document.getElementById("pedStagingAddButton");
+  if (!list || !addButton) return;
+  const client = selectedPedClient();
+  const canAdd = clientHasDrive(client);
+  addButton.disabled = !canAdd;
+  addButton.title = canAdd ? "Aggiungi contenuti momentanei dal Drive" : "Collega prima il Drive del cliente";
+  const items = state.pedStagingItems || [];
+  list.innerHTML = items.length
+    ? items.map(pedStagingItemMarkup).join("")
+    : `<div class="ped-staging-empty">
+        <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h6l2 2h10v12H3z"/><path d="M12 12v6M9 15h6"/></svg>
+        <strong>Nessun contenuto momentaneo</strong>
+        <span>Aggiungi file dal Drive: resteranno qui finché non li trascini su una data.</span>
+      </div>`;
 }
 
 function pedCarouselHoverPreview(files, title) {
@@ -3402,6 +3459,8 @@ async function loadPedCalendar() {
   if (!selectedPedClientId) {
     state.pedItems = [];
     state.pedAgendaItems = [];
+    state.pedDayNotes = [];
+    state.pedStagingItems = [];
     pedUsedFileIds = new Set();
     renderPed();
     return;
@@ -3422,12 +3481,16 @@ async function loadPedCalendar() {
     if (pedLoadingKey !== key) return;
     state.pedItems = Array.isArray(data.items) ? data.items : [];
     state.pedAgendaItems = Array.isArray(data.agenda_items) ? data.agenda_items : [];
+    state.pedDayNotes = Array.isArray(data.day_notes) ? data.day_notes : [];
+    state.pedStagingItems = Array.isArray(data.staging_items) ? data.staging_items : [];
     pedUsedFileIds = new Set((data.used_file_ids || []).map(String));
     renderPed();
   } catch (error) {
     if (pedLoadingKey !== key) return;
     state.pedItems = [];
     state.pedAgendaItems = [];
+    state.pedDayNotes = [];
+    state.pedStagingItems = [];
     pedUsedFileIds = new Set();
     renderPed();
     if (grid) grid.innerHTML = `<div class="ped-error"><strong>Calendario non disponibile</strong><span>${escapeHtml(error.message)}</span></div>`;
@@ -3439,13 +3502,14 @@ function shiftPedMonth(delta) {
   loadPedCalendar();
 }
 
-async function openPedDrivePicker(date, { appendItem = null } = {}) {
+async function openPedDrivePicker(date = "", { appendItem = null, staging = false } = {}) {
   const client = state.clients.find((item) => String(item.id) === String(selectedPedClientId));
   if (!clientHasDrive(client)) {
     alert("Collega prima la cartella Google Drive del cliente.");
     return;
   }
   const appendMode = Boolean(appendItem?.is_group && pedContentType(appendItem.content_type) === "carousel");
+  const stagingMode = Boolean(staging && !appendMode);
   const existingCount = appendMode ? pedItemFiles(appendItem).length : 0;
   const remembered = lastPedPickerLocation(selectedPedClientId);
   pedPickerState = {
@@ -3461,14 +3525,19 @@ async function openPedDrivePicker(date, { appendItem = null } = {}) {
     selectedFiles: [],
     showUsed: false,
     appendGroupId: appendMode ? String(appendItem.id) : "",
-    existingCount
+    existingCount,
+    destination: stagingMode ? "staging" : "calendar"
   };
   document.getElementById("pedPickerTitle").textContent = appendMode
     ? "Aggiungi contenuti al carosello"
-    : `Contenuto per ${new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "long" }).format(new Date(`${date}T12:00:00`))}`;
+    : stagingMode
+      ? "Aggiungi contenuti momentanei"
+      : `Contenuto per ${new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "long" }).format(new Date(`${date}T12:00:00`))}`;
   document.getElementById("pedPickerSubtitle").textContent = appendMode
     ? `${client.name} · il carosello contiene gia ${existingCount} ${existingCount === 1 ? "contenuto" : "contenuti"}`
-    : `${client.name} · scegli una foto, un video o una grafica dal Drive`;
+    : stagingMode
+      ? `${client.name} · resteranno in attesa finché non li trascini nel calendario`
+      : `${client.name} · scegli una foto, un video o una grafica dal Drive`;
   document.getElementById("pedPickerMessage").textContent = "";
   document.getElementById("pedPickerCaption").value = pedPickerState.caption;
   document.getElementById("pedDrivePickerModal").showModal();
@@ -4085,6 +4154,7 @@ async function attachPedDriveFiles(fileIds) {
   const message = document.getElementById("pedPickerMessage");
   const format = pedContentType(pedPickerState.contentType);
   const appendMode = Boolean(pedPickerState.appendGroupId);
+  const stagingMode = pedPickerState.destination === "staging";
   if (format === "carousel" && !appendMode && fileIds.length < 2) {
     message.textContent = "Seleziona almeno due contenuti per creare il carosello.";
     return;
@@ -4095,7 +4165,9 @@ async function attachPedDriveFiles(fileIds) {
   }
   message.textContent = appendMode
     ? "Aggiunta dei contenuti al carosello..."
-    : format === "carousel" ? "Creazione carosello in corso..." : "Collegamento in corso...";
+    : stagingMode
+      ? "Aggiunta ai contenuti in attesa..."
+      : format === "carousel" ? "Creazione carosello in corso..." : "Collegamento in corso...";
   try {
     const response = await apiFetch("/api/ped", {
       method: appendMode ? "PATCH" : "POST",
@@ -4108,7 +4180,8 @@ async function attachPedDriveFiles(fileIds) {
             drive_file_id: fileIds[0],
             drive_file_ids: fileIds,
             content_type: format,
-            caption: format === "story" ? "" : document.getElementById("pedPickerCaption").value
+            caption: format === "story" ? "" : document.getElementById("pedPickerCaption").value,
+            staging: stagingMode
           })
     });
     const data = await response.json().catch(() => ({}));
@@ -4219,6 +4292,87 @@ async function movePedItemToDate(id, scheduledDate) {
   }
 }
 
+async function savePedDayNote(input) {
+  const noteDate = String(input?.dataset.pedDayNote || "");
+  const noteText = String(input?.value || "").trim().slice(0, 180);
+  if (!selectedPedClientId || !noteDate) return;
+  const previous = (state.pedDayNotes || []).find((note) => String(note.note_date) === noteDate);
+  input.disabled = true;
+  input.classList.add("is-saving");
+  try {
+    const response = await apiFetch("/api/ped", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        client_id: selectedPedClientId,
+        note_date: noteDate,
+        note_text: noteText
+      })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "Impossibile salvare la nota");
+    state.pedDayNotes = (state.pedDayNotes || []).filter((note) => String(note.note_date) !== noteDate);
+    if (noteText) state.pedDayNotes.push(data.note || { note_date: noteDate, note_text: noteText });
+    input.classList.add("is-saved");
+    window.setTimeout(() => input.classList.remove("is-saved"), 900);
+  } catch (error) {
+    input.value = previous?.note_text || "";
+    showPedMoveNotice(error.message || "Nota non salvata", "error");
+  } finally {
+    input.disabled = false;
+    input.classList.remove("is-saving");
+  }
+}
+
+async function schedulePedStagingItem(id, scheduledDate) {
+  const itemId = String(id || "");
+  const item = (state.pedStagingItems || []).find((entry) => String(entry.id) === itemId);
+  if (!item || !scheduledDate || pedMoveRequests.has(`staging:${itemId}`)) return;
+  pedMoveRequests.add(`staging:${itemId}`);
+  state.pedStagingItems = (state.pedStagingItems || []).filter((entry) => String(entry.id) !== itemId);
+  renderPedStaging();
+  showPedMoveNotice("Inserimento nel PED...", "pending");
+  try {
+    const response = await apiFetch("/api/ped", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ staging_id: itemId, scheduled_date: scheduledDate })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "Impossibile inserire il contenuto nel PED");
+    await loadPedCalendar();
+    const formatted = new Intl.DateTimeFormat("it-IT", { weekday: "long", day: "numeric", month: "long" })
+      .format(new Date(`${scheduledDate}T12:00:00`));
+    showPedMoveNotice(`Contenuto programmato per ${formatted}`, "success");
+  } catch (error) {
+    state.pedStagingItems = [...(state.pedStagingItems || []), item];
+    renderPedStaging();
+    showPedMoveNotice(error.message || "Inserimento non riuscito", "error");
+  } finally {
+    pedMoveRequests.delete(`staging:${itemId}`);
+  }
+}
+
+async function removePedStagingItem(id) {
+  const item = (state.pedStagingItems || []).find((entry) => String(entry.id) === String(id));
+  if (!item || !confirm(`Rimuovere “${pedItemTitle(item)}” dai contenuti in attesa?`)) return;
+  try {
+    const response = await apiFetch(`/api/ped?staging_id=${encodeURIComponent(id)}`, { method: "DELETE" });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "Impossibile rimuovere il contenuto");
+    state.pedStagingItems = (state.pedStagingItems || []).filter((entry) => String(entry.id) !== String(id));
+    renderPedStaging();
+  } catch (error) {
+    showPedMoveNotice(error.message || "Rimozione non riuscita", "error");
+  }
+}
+
+function applyPedDrop(itemId, scheduledDate) {
+  const normalized = String(itemId || "");
+  if (normalized.startsWith("staging:")) return schedulePedStagingItem(normalized.slice(8), scheduledDate);
+  return movePedItemToDate(normalized, scheduledDate);
+}
+
 function setPedDragTarget(day) {
   if (pedDragTarget === day) return;
   pedDragTarget?.classList.remove("is-ped-drop-target");
@@ -4233,7 +4387,7 @@ function pedDayAtPoint(x, y) {
 
 function clearPedDragVisuals() {
   setPedDragTarget(null);
-  document.querySelectorAll(".ped-content-card.is-ped-dragging").forEach((card) => {
+  document.querySelectorAll(".ped-content-card.is-ped-dragging, .ped-staging-card.is-ped-dragging").forEach((card) => {
     card.classList.remove("is-ped-dragging");
     card.setAttribute("aria-grabbed", "false");
   });
@@ -4247,18 +4401,24 @@ function resetPedPointerDrag() {
     pedPointerDrag.card.releasePointerCapture(pedPointerDrag.pointerId);
   }
   pedPointerDrag = { pointerId: null, card: null, itemId: "", timer: 0, active: false, startX: 0, startY: 0, ghost: null };
+  pedDraggedItemId = "";
+  pedDraggedStagingId = "";
   clearPedDragVisuals();
 }
 
 function beginPedPointerDrag() {
   if (!pedPointerDrag.card || !pedPointerDrag.itemId) return;
   pedPointerDrag.active = true;
-  pedDraggedItemId = pedPointerDrag.itemId;
+  pedDraggedItemId = "";
+  pedDraggedStagingId = "";
+  if (pedPointerDrag.itemId.startsWith("staging:")) pedDraggedStagingId = pedPointerDrag.itemId.slice(8);
+  else pedDraggedItemId = pedPointerDrag.itemId;
   pedPointerDrag.card.classList.add("is-ped-dragging");
   pedPointerDrag.card.setAttribute("aria-grabbed", "true");
   document.querySelectorAll(".ped-day:not(.is-outside)").forEach((day) => day.classList.add("is-ped-drop-ready"));
   const ghost = pedPointerDrag.card.cloneNode(true);
   ghost.removeAttribute("data-ped-content");
+  ghost.removeAttribute("data-ped-staging");
   ghost.removeAttribute("draggable");
   ghost.querySelector(".ped-hover-preview")?.remove();
   ghost.className += " ped-drag-ghost";
@@ -8662,6 +8822,8 @@ document.body.addEventListener("click", (event) => {
   const copyDriveLinkButton = event.target.closest("[data-copy-drive-link]");
   const pedClient = event.target.closest("[data-ped-client]");
   const pedAdd = event.target.closest("[data-ped-add]");
+  const pedStagingAdd = event.target.closest("#pedStagingAddButton");
+  const pedStagingRemove = event.target.closest("[data-ped-staging-remove]");
   const pedOpen = event.target.closest("[data-ped-open]");
   const pedEditor = event.target.closest("[data-ped-editor]");
   const pedCaptionSelect = event.target.closest("[data-ped-caption-select]");
@@ -8794,10 +8956,14 @@ document.body.addEventListener("click", (event) => {
     selectedPedClientId = pedClient.dataset.pedClient;
     state.pedItems = [];
     state.pedAgendaItems = [];
+    state.pedDayNotes = [];
+    state.pedStagingItems = [];
     pedUsedFileIds = new Set();
     pedShareState = { active: false, shareUrl: "" };
     return loadPedCalendar();
   }
+  if (pedStagingAdd) return openPedDrivePicker("", { staging: true });
+  if (pedStagingRemove) return removePedStagingItem(pedStagingRemove.dataset.pedStagingRemove);
   if (pedAdd) return openPedDrivePicker(pedAdd.dataset.pedAdd);
   if (pedRemove) return removePedItem(pedRemove.dataset.pedRemove);
   if (pedEditor) return openPedCaptionModal(pedEditor.dataset.pedEditor);
@@ -8888,6 +9054,11 @@ document.body.addEventListener("change", (event) => {
     updatePedItemType(pedType.dataset.pedTypeChange, pedType.value);
     return;
   }
+  const pedDayNote = event.target.closest("[data-ped-day-note]");
+  if (pedDayNote) {
+    savePedDayNote(pedDayNote);
+    return;
+  }
   const pedPublishingStatus = event.target.closest("[data-ped-publishing-status-change]");
   if (pedPublishingStatus) {
     updatePedPublishingStatus(pedPublishingStatus.dataset.pedPublishingStatusChange, pedPublishingStatus.value);
@@ -8944,8 +9115,22 @@ document.body.addEventListener("dragstart", (event) => {
     event.dataTransfer.setData("text/plain", pedInstagramDraggedId);
     return;
   }
+  const stagingCard = event.target.closest?.("[data-ped-staging]");
+  if (stagingCard && !event.target.closest("[data-ped-staging-remove]")) {
+    pedDraggedItemId = "";
+    pedDraggedStagingId = String(stagingCard.dataset.pedStaging || "");
+    if (!pedDraggedStagingId) return;
+    stagingCard.classList.add("is-ped-dragging");
+    stagingCard.setAttribute("aria-grabbed", "true");
+    document.querySelectorAll(".ped-day:not(.is-outside)").forEach((day) => day.classList.add("is-ped-drop-ready"));
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("application/x-bmg-ped-staging", pedDraggedStagingId);
+    event.dataTransfer.setData("text/plain", `staging:${pedDraggedStagingId}`);
+    return;
+  }
   const card = event.target.closest?.("[data-ped-content]");
   if (!card || event.target.closest("[data-ped-remove]")) return;
+  pedDraggedStagingId = "";
   pedDraggedItemId = String(card.dataset.pedContent || "");
   if (!pedDraggedItemId) return;
   card.classList.add("is-ped-dragging");
@@ -8977,7 +9162,7 @@ document.body.addEventListener("dragover", (event) => {
     target.classList.add("is-order-target");
     return;
   }
-  if (!pedDraggedItemId || isDriveFileDrag(event)) return;
+  if ((!pedDraggedItemId && !pedDraggedStagingId) || isDriveFileDrag(event)) return;
   const day = event.target.closest?.(".ped-day[data-ped-day]");
   if (!day || day.classList.contains("is-outside")) {
     setPedDragTarget(null);
@@ -8993,7 +9178,7 @@ document.body.addEventListener("dragleave", (event) => {
     if (smartDragTarget && !smartDragTarget.contains(event.relatedTarget)) setSmartDragTarget(null);
     return;
   }
-  if (!pedDraggedItemId || !pedDragTarget || pedDragTarget.contains(event.relatedTarget)) return;
+  if ((!pedDraggedItemId && !pedDraggedStagingId) || !pedDragTarget || pedDragTarget.contains(event.relatedTarget)) return;
   setPedDragTarget(null);
 });
 
@@ -9021,16 +9206,18 @@ document.body.addEventListener("drop", (event) => {
     movePedInstagramDraftItem(sourceId, targetId);
     return;
   }
-  if (!pedDraggedItemId || isDriveFileDrag(event)) return;
+  if ((!pedDraggedItemId && !pedDraggedStagingId) || isDriveFileDrag(event)) return;
   const day = event.target.closest?.(".ped-day[data-ped-day]");
   if (!day || day.classList.contains("is-outside")) return;
   event.preventDefault();
-  const itemId = pedDraggedItemId;
+  const itemId = pedDraggedStagingId ? `staging:${pedDraggedStagingId}` : pedDraggedItemId;
   const targetDate = day.dataset.pedDay;
   pedDragSuppressClickUntil = Date.now() + 500;
   pedDraggedItemId = "";
+  pedDraggedStagingId = "";
   clearPedDragVisuals();
-  movePedItemToDate(itemId, targetDate);
+  if (itemId.startsWith("staging:")) schedulePedStagingItem(itemId.slice(8), targetDate);
+  else movePedItemToDate(itemId, targetDate);
 });
 
 document.body.addEventListener("dragend", () => {
@@ -9039,17 +9226,20 @@ document.body.addEventListener("dragend", () => {
   pedInstagramDraggedId = "";
   document.querySelectorAll("[data-ped-instagram-item].is-dragging, [data-ped-instagram-item].is-order-target").forEach((item) => item.classList.remove("is-dragging", "is-order-target"));
   pedDraggedItemId = "";
+  pedDraggedStagingId = "";
   clearPedDragVisuals();
 });
 
 document.body.addEventListener("pointerdown", (event) => {
   if (event.pointerType === "mouse" || event.button !== 0) return;
-  const card = event.target.closest?.("[data-ped-content]");
-  if (!card || event.target.closest("[data-ped-remove]")) return;
+  const card = event.target.closest?.("[data-ped-content], [data-ped-staging]");
+  if (!card || event.target.closest("[data-ped-remove], [data-ped-staging-remove]")) return;
   resetPedPointerDrag();
   pedPointerDrag.pointerId = event.pointerId;
   pedPointerDrag.card = card;
-  pedPointerDrag.itemId = String(card.dataset.pedContent || "");
+  pedPointerDrag.itemId = card.dataset.pedStaging
+    ? `staging:${String(card.dataset.pedStaging)}`
+    : String(card.dataset.pedContent || "");
   pedPointerDrag.startX = event.clientX;
   pedPointerDrag.startY = event.clientY;
   card.setPointerCapture?.(event.pointerId);
@@ -9075,16 +9265,18 @@ document.body.addEventListener("pointerup", (event) => {
   const day = active ? pedDayAtPoint(event.clientX, event.clientY) : null;
   resetPedPointerDrag();
   pedDraggedItemId = "";
+  pedDraggedStagingId = "";
   if (!active) return;
   event.preventDefault();
   pedDragSuppressClickUntil = Date.now() + 650;
-  if (day) movePedItemToDate(itemId, day.dataset.pedDay);
+  if (day) applyPedDrop(itemId, day.dataset.pedDay);
 });
 
 document.body.addEventListener("pointercancel", (event) => {
   if (pedPointerDrag.pointerId !== event.pointerId) return;
   resetPedPointerDrag();
   pedDraggedItemId = "";
+  pedDraggedStagingId = "";
 });
 
 document.body.addEventListener("dragenter", (event) => {

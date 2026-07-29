@@ -301,6 +301,21 @@
             <div class="ped-calendar-grid" id="pedCalendarGrid" aria-live="polite"></div>
           </div>
 
+          <section class="ped-staging" aria-labelledby="pedStagingTitle">
+            <div class="ped-staging-head">
+              <div>
+                <p class="eyebrow">Contenuti momentanei</p>
+                <h3 id="pedStagingTitle">In attesa di programmazione</h3>
+                <span>Inserisci file dal Drive e trascinali sul giorno desiderato.</span>
+              </div>
+              <button class="primary-button ped-staging-add" id="pedStagingAddButton" type="button">
+                <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+                Aggiungi dal Drive
+              </button>
+            </div>
+            <div class="ped-staging-list" id="pedStagingList" aria-live="polite"></div>
+          </section>
+
           <div class="ped-publishing-legend" aria-label="Legenda stato di programmazione">
             <strong>Stato programmazione</strong>
             <span><i data-ped-publishing-tone="ped_only" aria-hidden="true"></i>Solo PED</span>
