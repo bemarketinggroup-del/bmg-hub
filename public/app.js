@@ -29,6 +29,7 @@ const MODULE_DEFINITIONS = Object.freeze([
   { key: "clients", label: "Clienti" },
   { key: "calendar", label: "Calendario" },
   { key: "chat", label: "Chat" },
+  { key: "graphics", label: "Grafiche" },
   { key: "site_backend", label: "Backend sito" },
   { key: "users", label: "Utenti" },
   { key: "smart_working", label: "Turni" },
@@ -40,6 +41,7 @@ const VIEW_MODULES = Object.freeze({
   ped: "ped",
   calendar: "calendar",
   chat: "chat",
+  graphics: "graphics",
   team: "tasks",
   smart: "smart_working",
   counter: "smart_working",
@@ -265,6 +267,15 @@ let teamChatState = {
   error: ""
 };
 let teamChatTimer = null;
+let graphicReviewState = {
+  reviews: [],
+  filter: "active",
+  loading: false,
+  loaded: false,
+  error: ""
+};
+let graphicReviewRequestContext = null;
+let graphicDeliverableReviewId = "";
 let selectedSmartMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
 let showPastSmartWeeks = false;
 let selectedSmartDate = localDateKey(new Date());
@@ -500,6 +511,7 @@ function auditMetadata(url, method, options = {}) {
     if (endpoint === "/api/ped-share") return method === "DELETE" ? "disable_ped_share" : "create_ped_share";
     if (endpoint === "/api/google-calendar") return method === "POST" ? "create_calendar_event" : method === "PATCH" ? "update_calendar_event" : method === "DELETE" ? "delete_calendar_event" : "sync_calendar_events";
     if (endpoint === "/api/team-chat") return "send_chat_message";
+    if (endpoint === "/api/graphic-reviews") return method === "POST" ? "create_graphic_review" : "update_graphic_review";
     if (endpoint === "/api/site-media") return "upload_site_media";
     if (endpoint === "/api/site-content") return method === "POST" ? "create_site_content" : method === "DELETE" ? "delete_site_content" : "update_site_content";
     if (endpoint === "/api/smart-working") return "smart_working_operation";
@@ -523,6 +535,7 @@ function auditMetadata(url, method, options = {}) {
   const entityType = endpoint.includes("clickup/tasks") ? "task"
     : endpoint.includes("client") ? "client"
       : endpoint.includes("team-chat") ? "chat"
+      : endpoint.includes("graphic-reviews") ? "graphic_review"
       : endpoint.includes("google-calendar") ? "calendar_event"
       : endpoint.includes("ped") ? "ped_content"
         : endpoint.includes("site-content") ? "site_content"
@@ -775,6 +788,9 @@ async function logout() {
     loaded: false,
     error: ""
   };
+  graphicReviewState = { reviews: [], filter: "active", loading: false, loaded: false, error: "" };
+  graphicReviewRequestContext = null;
+  graphicDeliverableReviewId = "";
   saveAuthSession(null);
   showLogin();
 }
@@ -872,6 +888,7 @@ function setView(view) {
     dashboard: ["BMG Internal OS", "Home"],
     personal: ["Spazio personale", "La mia area"],
     chat: ["Comunicazione interna", "Chat"],
+    graphics: ["Flusso creativo", "Revisioni grafiche"],
     content: ["CMS leggero", "Backend sito"],
     clients: ["Gestionale interno", "Clienti"],
     ped: ["Piano editoriale", "PED"],
@@ -890,6 +907,7 @@ function setView(view) {
     loadPedCalendar();
   }
   if (view === "calendar") loadGoogleCalendar();
+  if (view === "graphics") loadGraphicReviews();
   if (view === "personal") loadPersonalArea();
   if (view === "chat") {
     loadTeamChat();
@@ -1740,6 +1758,7 @@ function driveEntryMarkup(file, writeEnabled) {
   const action = file.is_folder ? "data-drive-folder" : "data-drive-file";
   const isImage = String(file.mime_type || "").startsWith("image/");
   const isVideo = String(file.mime_type || "").startsWith("video/");
+  const isGraphicReviewable = isImage || String(file.mime_type || "") === "application/pdf";
   const hasThumbnail = !file.is_folder && file.has_thumbnail && (isImage || isVideo);
   const webUrl = safeExternalUrl(file.web_url);
   const downloadUrl = String(file.download_url || "");
@@ -1766,6 +1785,11 @@ function driveEntryMarkup(file, writeEnabled) {
       <svg class="lc drive-entry-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
       </button>
       <div class="drive-content-actions">
+        ${isGraphicReviewable ? `
+          <button class="drive-graphic-review-button" data-graphic-review-file="${escapeHtml(file.id)}" data-graphic-review-surface="drive" type="button" aria-label="Manda ${escapeHtml(file.name)} in revisione ai grafici">
+            <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h16"/><path d="m14 4 6 6L9 21H3v-6Z"/><path d="m12 6 6 6"/></svg>
+            Manda ai grafici
+          </button>` : ""}
         ${!file.is_folder ? `
           <button class="drive-download-button" data-drive-download-url="${escapeHtml(downloadUrl)}" data-drive-download-name="${escapeHtml(file.name)}" data-drive-download-size="${escapeHtml(file.size || "")}" type="button" aria-label="Scarica ${escapeHtml(file.name)}">
             <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5"/><path d="M5 20h14"/></svg>
@@ -2171,7 +2195,11 @@ function uploadFileToDrive(uploadUrl, file, onProgress) {
       if (event.lengthComputable) onProgress((event.loaded / event.total) * 100, event.loaded, event.total);
     });
     request.addEventListener("load", () => {
-      if (request.status >= 200 && request.status < 300) resolve();
+      if (request.status >= 200 && request.status < 300) {
+        let payload = null;
+        try { payload = request.responseText ? JSON.parse(request.responseText) : null; } catch { payload = null; }
+        resolve(payload);
+      }
       else reject(new Error(`Google Drive ha rifiutato il file (${request.status || "rete"})`));
     });
     request.addEventListener("error", () => reject(new Error("Connessione a Google Drive interrotta")));
@@ -3504,7 +3532,11 @@ function renderPedPicker() {
       <svg class="lc" viewBox="0 0 24 24" aria-hidden="true">${selected ? `<path d="m5 12 4 4L19 6"/>` : `<path d="M12 5v14M5 12h14"/>`}</svg>
       <span>${insertLabel}</span>
     </button>`;
-    return `${sectionBreak}<article class="ped-picker-file-card">${entry}${insertButton}</article>`;
+    const graphicReviewButton = isImage ? `<button class="ped-picker-review-button" data-graphic-review-file="${escapeHtml(file.id)}" data-graphic-review-surface="ped" type="button" aria-label="Manda ${escapeHtml(file.name)} in revisione ai grafici">
+      <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h16"/><path d="m14 4 6 6L9 21H3v-6Z"/><path d="m12 6 6 6"/></svg>
+      <span>Manda ai grafici</span>
+    </button>` : "";
+    return `${sectionBreak}<article class="ped-picker-file-card">${entry}<div class="ped-picker-card-actions">${insertButton}${graphicReviewButton}</div></article>`;
   }).join("") || `<p class="ped-picker-empty">${pedPickerState.files.length && !pedPickerState.showUsed
     ? "Tutti i contenuti di questa cartella sono gia nel PED."
     : "Non ci sono foto o video selezionabili in questa cartella."}</p>`;
@@ -7325,10 +7357,13 @@ function renderNotifications() {
     const link = safeExternalUrl(item.link);
     const isTask = item.source_type === "task" && item.source_id;
     const isChat = item.source_type === "chat" && item.source_id;
+    const isGraphicReview = item.source_type === "graphic_review" && item.source_id;
     const title = isTask
       ? `<button type="button" data-personal-task="${escapeHtml(item.source_id)}"><strong>${escapeHtml(item.title)}</strong></button>`
       : isChat
         ? `<button type="button" data-chat-open="${escapeHtml(item.source_id)}"><strong>${escapeHtml(item.title)}</strong></button>`
+        : isGraphicReview
+          ? `<button type="button" data-open-graphics-review="${escapeHtml(item.source_id)}"><strong>${escapeHtml(item.title)}</strong></button>`
       : link ? `<a href="${escapeHtml(link)}" target="_blank" rel="noopener"><strong>${escapeHtml(item.title)}</strong></a>` : `<strong>${escapeHtml(item.title)}</strong>`;
     return `<article class="notification-item" data-notification-type="${escapeHtml(item.source_type)}">
       <span class="notification-type is-${escapeHtml(item.source_type)}" aria-hidden="true"></span>
@@ -7368,6 +7403,313 @@ function startPersonalAreaUpdates() {
 function stopPersonalAreaUpdates() {
   window.clearInterval(personalAreaTimer);
   personalAreaTimer = null;
+}
+
+function graphicReviewStatusLabel(status) {
+  return {
+    pending: "Nuova",
+    in_progress: "In lavorazione",
+    changes_requested: "Modifiche richieste",
+    completed: "Completata"
+  }[status] || "Nuova";
+}
+
+function isGraphicReviewableFile(file) {
+  const mime = String(file?.mime_type || "");
+  return mime.startsWith("image/") || mime === "application/pdf";
+}
+
+function graphicReviewFilesFromSurface(fileId, surface) {
+  if (surface === "ped") {
+    const clicked = pedPickerState.files.find((file) => String(file.id) === String(fileId));
+    const selected = pedPickerState.selectedFiles.filter(isGraphicReviewableFile);
+    if (clicked && selected.length > 1 && selected.some((file) => String(file.id) === String(fileId))) return selected;
+    return clicked ? [clicked] : [];
+  }
+  const clicked = clientDriveState.files.find((file) => String(file.id) === String(fileId));
+  const selectedIds = new Set(clientDriveSelection.keys());
+  const selected = clientDriveState.files.filter((file) => selectedIds.has(String(file.id)) && isGraphicReviewableFile(file));
+  if (clicked && selected.length > 1 && selectedIds.has(String(fileId))) return selected;
+  return clicked ? [clicked] : [];
+}
+
+function openGraphicReviewModal(fileId, surface = "drive") {
+  const isPed = surface === "ped";
+  const files = graphicReviewFilesFromSurface(fileId, surface);
+  const folder = isPed
+    ? pedPickerState.path[pedPickerState.path.length - 1]
+    : clientDriveState.path[clientDriveState.path.length - 1];
+  const clientId = isPed ? selectedPedClientId : clientDriveState.clientId;
+  const sourceLibrary = isPed ? pedPickerState.source : clientDriveState.source;
+  const modal = document.getElementById("graphicReviewModal");
+  const selection = document.getElementById("graphicReviewSelection");
+  const instructions = document.getElementById("graphicReviewInstructions");
+  const message = document.getElementById("graphicReviewMessage");
+  if (!modal || !selection || !instructions || !message || !clientId || !folder || !files.length) return;
+
+  graphicReviewRequestContext = {
+    client_id: String(clientId),
+    source_surface: isPed ? "ped" : "drive",
+    source_library: String(sourceLibrary || ""),
+    source_folder_id: String(folder.id || ""),
+    source_folder_name: String(folder.name || ""),
+    files: files.map((file) => ({
+      id: String(file.id),
+      name: String(file.name || "Immagine"),
+      mime_type: String(file.mime_type || "")
+    }))
+  };
+  const client = state.clients.find((item) => String(item.id) === String(clientId));
+  selection.innerHTML = `
+    <div class="graphic-review-selection-head">
+      <div><span>Cliente</span><strong>${escapeHtml(client?.name || "Cliente")}</strong></div>
+      <div><span>Cartella</span><strong>${escapeHtml(folder.name || "Drive")}</strong></div>
+      <span class="graphic-review-file-count">${files.length} ${files.length === 1 ? "file" : "file"}</span>
+    </div>
+    <div class="graphic-review-selection-grid">
+      ${files.map((file) => `
+        <article>
+          ${file.thumbnail_url
+            ? `<img src="${escapeHtml(file.thumbnail_url)}" alt="Anteprima ${escapeHtml(file.name)}">`
+            : `<span aria-hidden="true">${driveFileIcon(file)}</span>`}
+          <strong>${escapeHtml(file.name)}</strong>
+        </article>`).join("")}
+    </div>`;
+  instructions.value = "";
+  message.textContent = "";
+  modal.showModal();
+  window.setTimeout(() => instructions.focus(), 60);
+}
+
+async function submitGraphicReview(form) {
+  const submit = document.getElementById("graphicReviewSubmit");
+  const message = document.getElementById("graphicReviewMessage");
+  const modal = document.getElementById("graphicReviewModal");
+  if (!graphicReviewRequestContext || !submit || !message || !modal) return;
+  const instructions = String(new FormData(form).get("instructions") || "").trim();
+  if (!instructions) {
+    message.textContent = "Descrivi le modifiche da apportare.";
+    return;
+  }
+  submit.disabled = true;
+  message.textContent = "Invio della richiesta…";
+  try {
+    const response = await apiFetch("/api/graphic-reviews", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...graphicReviewRequestContext, instructions })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "Richiesta non inviata");
+    modal.close();
+    graphicReviewRequestContext = null;
+    if (canAccessModule("graphics")) await loadGraphicReviews({ quiet: true });
+    alert("La richiesta è stata inviata alla sezione Grafiche.");
+  } catch (error) {
+    message.textContent = error.message || "Invio non riuscito";
+  } finally {
+    submit.disabled = false;
+  }
+}
+
+async function loadGraphicReviews({ quiet = false } = {}) {
+  if (!canAccessModule("graphics") || graphicReviewState.loading) return;
+  graphicReviewState.loading = true;
+  if (!quiet) renderGraphicReviews();
+  try {
+    const response = await apiFetch("/api/graphic-reviews");
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "Revisioni non disponibili");
+    graphicReviewState.reviews = Array.isArray(data.reviews) ? data.reviews : [];
+    graphicReviewState.loaded = true;
+    graphicReviewState.error = "";
+  } catch (error) {
+    graphicReviewState.error = error.message;
+  } finally {
+    graphicReviewState.loading = false;
+  }
+  renderGraphicReviews();
+}
+
+function filteredGraphicReviews() {
+  const reviews = graphicReviewState.reviews;
+  if (graphicReviewState.filter === "all") return reviews;
+  if (graphicReviewState.filter === "active") return reviews.filter((review) => review.status !== "completed");
+  return reviews.filter((review) => review.status === graphicReviewState.filter);
+}
+
+function renderGraphicReviews() {
+  const summary = document.getElementById("graphicsSummary");
+  const list = document.getElementById("graphicsReviewList");
+  const badge = document.getElementById("graphicsNavBadge");
+  if (!summary || !list || !badge) return;
+  const reviews = graphicReviewState.reviews;
+  const pending = reviews.filter((review) => review.status === "pending").length;
+  const working = reviews.filter((review) => review.status === "in_progress" || review.status === "changes_requested").length;
+  const completed = reviews.filter((review) => review.status === "completed").length;
+  badge.textContent = String(pending);
+  badge.classList.toggle("is-hidden", !pending || !canAccessModule("graphics"));
+  summary.innerHTML = `
+    <span><small>Nuove</small><strong>${pending}</strong></span>
+    <span><small>In lavorazione</small><strong>${working}</strong></span>
+    <span><small>Completate</small><strong>${completed}</strong></span>`;
+  document.querySelectorAll("[data-graphics-filter]").forEach((button) => {
+    button.classList.toggle("is-active", button.dataset.graphicsFilter === graphicReviewState.filter);
+  });
+
+  if (graphicReviewState.loading && !graphicReviewState.loaded) {
+    list.innerHTML = `<div class="graphics-empty"><span class="drive-folder-spinner" aria-hidden="true"></span><strong>Caricamento revisioni…</strong></div>`;
+    return;
+  }
+  if (graphicReviewState.error && !graphicReviewState.loaded) {
+    list.innerHTML = `<div class="graphics-empty is-error"><strong>${escapeHtml(graphicReviewState.error)}</strong><button class="text-button" data-graphics-retry type="button">Riprova</button></div>`;
+    return;
+  }
+  const filtered = filteredGraphicReviews();
+  list.innerHTML = filtered.length ? filtered.map(graphicReviewCardMarkup).join("") : `
+    <div class="graphics-empty">
+      <strong>Nessuna revisione in questa vista</strong>
+      <span>Le richieste inviate da Drive e PED compariranno qui.</span>
+    </div>`;
+}
+
+function graphicReviewCardMarkup(review) {
+  const files = Array.isArray(review.files) ? review.files : [];
+  const deliverables = Array.isArray(review.deliverables) ? review.deliverables : [];
+  const assignee = review.assigned_to?.full_name || review.assigned_to?.email || "";
+  const requestedBy = review.requested_by?.full_name || review.requested_by?.email || "Utente";
+  return `<article class="graphic-review-card is-${escapeHtml(review.status)}" data-graphic-review-card="${escapeHtml(review.id)}">
+    <header>
+      <div>
+        <span class="graphic-review-status is-${escapeHtml(review.status)}">${escapeHtml(graphicReviewStatusLabel(review.status))}</span>
+        <p class="eyebrow">${escapeHtml(review.client?.name || "Cliente")}</p>
+        <h3>${files.length === 1 ? escapeHtml(files[0].name) : `${files.length} contenuti da revisionare`}</h3>
+      </div>
+      <div class="graphic-review-meta">
+        <span>Richiesta da <strong>${escapeHtml(requestedBy)}</strong></span>
+        <time>${escapeHtml(formatPersonalDate(review.created_at))}</time>
+      </div>
+    </header>
+    <div class="graphic-review-body">
+      <div class="graphic-review-media-grid">
+        ${files.map((file, index) => `
+          <button data-graphics-preview="${escapeHtml(review.id)}" data-graphics-preview-index="${index}" type="button" aria-label="Apri ${escapeHtml(file.name)}">
+            ${file.thumbnail_url
+              ? `<img src="${escapeHtml(file.thumbnail_url)}" alt="${escapeHtml(file.name)}" loading="lazy">`
+              : `<span aria-hidden="true">${driveFileIcon(file)}</span>`}
+            <small>${escapeHtml(file.name)}</small>
+          </button>`).join("")}
+      </div>
+      <section class="graphic-review-brief">
+        <span>Modifiche richieste</span>
+        <p>${escapeHtml(review.instructions)}</p>
+        <div class="graphic-review-origin">
+          <span>${review.source_surface === "ped" ? "Dal PED" : "Dal Drive"}</span>
+          <span>${escapeHtml(review.source_folder_name || "Cartella cliente")}</span>
+        </div>
+      </section>
+      <section class="graphic-review-work">
+        <label>Note del grafico
+          <textarea data-graphics-notes="${escapeHtml(review.id)}" rows="3" maxlength="4000" placeholder="Annotazioni, versione consegnata o informazioni per il team…">${escapeHtml(review.designer_notes || "")}</textarea>
+        </label>
+        <div class="graphic-review-assignee">${assignee ? `In carico a <strong>${escapeHtml(assignee)}</strong>` : "Non ancora presa in carico"}</div>
+        <div class="graphic-review-actions">
+          ${review.status === "pending" ? `<button class="ghost-button" data-graphics-action="take" data-graphics-id="${escapeHtml(review.id)}" type="button">Prendi in carico</button>` : ""}
+          ${review.status !== "completed" ? `<button class="ghost-button" data-graphics-upload="${escapeHtml(review.id)}" type="button"><svg class="lc" viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 15v5h16v-5"/></svg>Carica versione</button>` : ""}
+          <button class="ghost-button" data-graphics-save-notes="${escapeHtml(review.id)}" type="button">Salva note</button>
+          ${review.status !== "completed" ? `<button class="primary-button" data-graphics-action="complete" data-graphics-id="${escapeHtml(review.id)}" type="button">Segna completata</button>` : `<button class="ghost-button" data-graphics-action="reopen" data-graphics-id="${escapeHtml(review.id)}" type="button">Riapri</button>`}
+        </div>
+      </section>
+    </div>
+    ${deliverables.length ? `<footer class="graphic-review-deliverables"><strong>Versioni caricate</strong><div>${deliverables.map((file, index) => `
+      <button data-graphics-deliverable="${escapeHtml(review.id)}" data-graphics-preview-index="${index}" type="button">
+        ${file.thumbnail_url ? `<img src="${escapeHtml(file.thumbnail_url)}" alt="">` : ""}
+        <span>${escapeHtml(file.name)}</span>
+      </button>`).join("")}</div></footer>` : ""}
+  </article>`;
+}
+
+async function updateGraphicReview(reviewId, payload, button = null) {
+  if (button) button.disabled = true;
+  try {
+    const response = await apiFetch("/api/graphic-reviews", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: reviewId, ...payload })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "Aggiornamento non riuscito");
+    const index = graphicReviewState.reviews.findIndex((review) => String(review.id) === String(reviewId));
+    if (index >= 0) graphicReviewState.reviews[index] = data.review;
+    renderGraphicReviews();
+    return data.review;
+  } catch (error) {
+    alert(error.message || "Aggiornamento non riuscito");
+    return null;
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
+
+function openGraphicReviewPreview(reviewId, index, deliverable = false) {
+  const review = graphicReviewState.reviews.find((item) => String(item.id) === String(reviewId));
+  const files = deliverable ? review?.deliverables : review?.files;
+  const file = files?.[Number(index)];
+  if (!file) return;
+  openDriveFile(file.id, file.name, file.mime_type, file.content_url);
+}
+
+async function uploadGraphicDeliverables(reviewId, files) {
+  const review = graphicReviewState.reviews.find((item) => String(item.id) === String(reviewId));
+  const selectedFiles = [...files].filter((file) => file.size > 0);
+  if (!review || !selectedFiles.length) return;
+  const transfer = createTransferProgress(`Versione grafica · ${review.client?.name || "Cliente"}`, {
+    total: selectedFiles.reduce((total, file) => total + file.size, 0)
+  });
+  const uploaded = [];
+  let completedBytes = 0;
+  try {
+    for (const file of selectedFiles) {
+      const params = new URLSearchParams({ client_id: review.client_id });
+      if (review.source_library) params.set("source", review.source_library);
+      const response = await apiFetch(`/api/client-drive?${params}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          folder_id: review.source_folder_id,
+          name: file.name,
+          mime_type: file.type || "application/octet-stream",
+          size: file.size
+        })
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data.upload_url) throw new Error(data.error || "Upload non disponibile");
+      const uploadedMetadata = await uploadFileToDrive(data.upload_url, file, (_percent, loaded) => {
+        transfer.update({
+          loaded: completedBytes + loaded,
+          totalBytes: selectedFiles.reduce((total, item) => total + item.size, 0),
+          message: `Caricamento ${file.name}`
+        });
+      });
+      completedBytes += file.size;
+      if (uploadedMetadata?.id) {
+        uploaded.push({
+          id: uploadedMetadata.id,
+          name: uploadedMetadata.name || file.name,
+          mime_type: uploadedMetadata.mimeType || file.type || "application/octet-stream",
+          web_url: uploadedMetadata.webViewLink || "",
+          has_thumbnail: true
+        });
+      }
+    }
+    const patch = uploaded.length ? { deliverables: uploaded, status: "in_progress" } : { status: "in_progress" };
+    await updateGraphicReview(reviewId, patch);
+    transfer.complete("Versione caricata nel Drive del cliente");
+    alert("Versione caricata nella cartella originale e collegata alla revisione.");
+  } catch (error) {
+    transfer.fail(error.message || "Caricamento non riuscito");
+    alert(error.message || "Caricamento non riuscito");
+  }
 }
 
 function chatInitials(value) {
@@ -7648,10 +7990,50 @@ document.body.addEventListener("click", (event) => {
   const applyAiClient = event.target.closest("[data-apply-ai-client]");
   const deleteAlias = event.target.closest("[data-delete-alias]");
   const notificationDismiss = event.target.closest("[data-notification-dismiss]");
+  const graphicReviewFile = event.target.closest("[data-graphic-review-file]");
+  const graphicsFilter = event.target.closest("[data-graphics-filter]");
+  const graphicsRetry = event.target.closest("[data-graphics-retry]");
+  const graphicsAction = event.target.closest("[data-graphics-action]");
+  const graphicsSaveNotes = event.target.closest("[data-graphics-save-notes]");
+  const graphicsUpload = event.target.closest("[data-graphics-upload]");
+  const graphicsPreview = event.target.closest("[data-graphics-preview]");
+  const graphicsDeliverable = event.target.closest("[data-graphics-deliverable]");
+  const openGraphicsReview = event.target.closest("[data-open-graphics-review]");
   const personalRefresh = event.target.closest("[data-personal-refresh]");
   const chatConversation = event.target.closest("[data-chat-conversation]");
   const chatRetry = event.target.closest("[data-chat-retry]");
   const chatOpen = event.target.closest("[data-chat-open]");
+  if (graphicReviewFile) return openGraphicReviewModal(graphicReviewFile.dataset.graphicReviewFile, graphicReviewFile.dataset.graphicReviewSurface);
+  if (graphicsFilter) {
+    graphicReviewState.filter = graphicsFilter.dataset.graphicsFilter || "active";
+    return renderGraphicReviews();
+  }
+  if (graphicsRetry) return loadGraphicReviews();
+  if (graphicsPreview) return openGraphicReviewPreview(graphicsPreview.dataset.graphicsPreview, graphicsPreview.dataset.graphicsPreviewIndex);
+  if (graphicsDeliverable) return openGraphicReviewPreview(graphicsDeliverable.dataset.graphicsDeliverable, graphicsDeliverable.dataset.graphicsPreviewIndex, true);
+  if (graphicsUpload) {
+    graphicDeliverableReviewId = graphicsUpload.dataset.graphicsUpload;
+    return document.getElementById("graphicDeliverableInput")?.click();
+  }
+  if (graphicsSaveNotes) {
+    const notes = document.querySelector(`[data-graphics-notes="${CSS.escape(graphicsSaveNotes.dataset.graphicsSaveNotes)}"]`)?.value || "";
+    return updateGraphicReview(graphicsSaveNotes.dataset.graphicsSaveNotes, { designer_notes: notes }, graphicsSaveNotes);
+  }
+  if (graphicsAction) {
+    const action = graphicsAction.dataset.graphicsAction;
+    const payload = action === "take"
+      ? { assign_to_me: true }
+      : action === "complete"
+        ? { status: "completed" }
+        : { status: "in_progress", assign_to_me: true };
+    return updateGraphicReview(graphicsAction.dataset.graphicsId, payload, graphicsAction);
+  }
+  if (openGraphicsReview) {
+    if (!canAccessModule("graphics")) return;
+    setView("graphics");
+    document.getElementById("notificationPanel")?.classList.add("is-hidden");
+    return loadGraphicReviews({ quiet: true });
+  }
   if (notificationDismiss) return dismissPersonalNotification(notificationDismiss.dataset.notificationDismiss);
   if (personalRefresh) return loadPersonalArea();
   if (chatConversation) return selectTeamChatConversation(chatConversation.dataset.chatConversation);
@@ -7775,6 +8157,13 @@ document.body.addEventListener("click", (event) => {
 });
 
 document.body.addEventListener("change", (event) => {
+  if (event.target.id === "graphicDeliverableInput") {
+    const reviewId = graphicDeliverableReviewId;
+    const files = event.target.files;
+    event.target.value = "";
+    graphicDeliverableReviewId = "";
+    return uploadGraphicDeliverables(reviewId, files);
+  }
   const userRole = event.target.closest("[data-user-role]");
   if (userRole) {
     const row = userRole.closest("[data-user-id]");
@@ -8511,6 +8900,7 @@ document.getElementById("analyzeTaskClientsButton").addEventListener("click", an
 document.getElementById("improveDescriptionButton").addEventListener("click", improveDescriptionWithAi);
 document.getElementById("applyAiDescriptionButton").addEventListener("click", applyAiDescription);
 document.getElementById("newTaskButton").addEventListener("click", () => openTaskModal());
+document.getElementById("graphicsRefreshButton").addEventListener("click", () => loadGraphicReviews());
 document.getElementById("closeTaskDetailButton").addEventListener("click", () => document.getElementById("taskDetailModal").close());
 document.getElementById("editTaskFromDetailButton").addEventListener("click", () => {
   document.getElementById("taskDetailModal").close();
@@ -8584,6 +8974,14 @@ document.getElementById("userCreateForm").addEventListener("submit", (event) => 
   event.preventDefault();
   createUserAccount(event.currentTarget);
 });
+document.getElementById("graphicReviewForm").addEventListener("submit", (event) => {
+  if (event.submitter?.value === "cancel") {
+    graphicReviewRequestContext = null;
+    return;
+  }
+  event.preventDefault();
+  submitGraphicReview(event.currentTarget);
+});
 document.getElementById("provisionClickUpUsersButton").addEventListener("click", provisionClickUpUsers);
 
 document.getElementById("passwordForm").addEventListener("submit", (event) => {
@@ -8625,6 +9023,7 @@ async function bootApp() {
     if (canAccessModule("tasks") || canAccessModule("smart_working")) loaders.push(loadClickUpTeam());
     if (canAccessModule("tasks")) loaders.push(loadClickUpTasks(), loadClickUpTaskLogs(), loadClientAliases());
     if (canAccessModule("users")) loaders.push(loadUsersFromBackend());
+    if (canAccessModule("graphics")) loaders.push(loadGraphicReviews({ quiet: true }));
     if (canAccessModule("smart_working")) loaders.push(loadSmartWorking());
     if (canAccessModule("site_backend")) loaders.push(loadContentFromBackend());
     if (canAccessModule("calendar") || canAccessModule("smart_working")) loaders.push(loadServiceHealth({ quiet: true }));

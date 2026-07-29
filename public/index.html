@@ -63,6 +63,11 @@
           <span class="icon"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></svg></span>
           <span>PED</span>
         </button>
+        <button class="nav-item" data-view="graphics" data-module="graphics" type="button">
+          <span class="icon"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h16"/><path d="m14 4 6 6L9 21H3v-6Z"/><path d="m12 6 6 6"/><path d="M15 3h6v6"/></svg></span>
+          <span>Grafiche</span>
+          <span class="nav-unread-badge is-hidden" id="graphicsNavBadge">0</span>
+        </button>
         <button class="nav-item" data-view="calendar" data-module="calendar" type="button">
           <span class="icon"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/><path d="M8 14h2M14 14h2M8 18h2M14 18h2"/></svg></span>
           <span>Calendario</span>
@@ -318,6 +323,31 @@
             </div>
             <div class="ped-agenda-list" id="pedAgendaList" aria-live="polite"></div>
           </section>
+        </section>
+      </section>
+
+      <section class="view" id="graphicsView" data-view-panel="graphics">
+        <section class="panel graphics-workspace">
+          <header class="graphics-workspace-head">
+            <div>
+              <p class="eyebrow">Flusso creativo</p>
+              <h2>Revisioni grafiche</h2>
+              <span>Foto, istruzioni e versioni aggiornate in un'unica coda di lavoro.</span>
+            </div>
+            <button class="ghost-button" id="graphicsRefreshButton" type="button">
+              <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8.1 8.1 0 0 0-15.5-2M4 4v5h5"/><path d="M4 13a8.1 8.1 0 0 0 15.5 2M20 20v-5h-5"/></svg>
+              Aggiorna
+            </button>
+          </header>
+          <div class="graphics-summary" id="graphicsSummary" aria-live="polite"></div>
+          <div class="graphics-filter-bar" id="graphicsFilters" aria-label="Filtra revisioni">
+            <button class="is-active" data-graphics-filter="active" type="button">Da lavorare</button>
+            <button data-graphics-filter="pending" type="button">Nuove</button>
+            <button data-graphics-filter="in_progress" type="button">In lavorazione</button>
+            <button data-graphics-filter="completed" type="button">Completate</button>
+            <button data-graphics-filter="all" type="button">Tutte</button>
+          </div>
+          <div class="graphics-review-list" id="graphicsReviewList" aria-live="polite"></div>
         </section>
       </section>
 
@@ -656,6 +686,7 @@
               <label class="permission-toggle"><input name="module_clients" type="checkbox" checked><span>Clienti</span></label>
               <label class="permission-toggle"><input name="module_calendar" type="checkbox" checked><span>Calendario</span></label>
               <label class="permission-toggle"><input name="module_chat" type="checkbox" checked><span>Chat</span></label>
+              <label class="permission-toggle"><input name="module_graphics" type="checkbox"><span>Grafiche</span></label>
               <label class="permission-toggle"><input name="module_site_backend" type="checkbox"><span>Backend sito</span></label>
               <label class="permission-toggle"><input name="module_users" type="checkbox"><span>Utenti</span></label>
               <label class="permission-toggle"><input name="module_smart_working" type="checkbox" checked><span>Turni</span></label>
@@ -977,6 +1008,37 @@
       </div>
     </form>
   </dialog>
+
+  <dialog class="modal graphic-review-modal" id="graphicReviewModal">
+    <form id="graphicReviewForm" method="dialog">
+      <div class="modal-head">
+        <div>
+          <p class="eyebrow">Revisione interna</p>
+          <h2>Manda ai grafici</h2>
+          <span>Descrivi in modo chiaro cosa deve essere modificato.</span>
+        </div>
+        <button class="icon-button" value="cancel" type="submit" formnovalidate title="Chiudi" aria-label="Chiudi">
+          <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </button>
+      </div>
+      <div class="graphic-review-selection" id="graphicReviewSelection"></div>
+      <label class="graphic-review-instructions">
+        Modifiche da apportare
+        <textarea id="graphicReviewInstructions" name="instructions" rows="5" maxlength="4000" placeholder="Es. rimuovere il riflesso sul piatto, schiarire lo sfondo e preparare il formato 1080 × 1350 px." required></textarea>
+        <small>Queste indicazioni compariranno nella coda Revisioni grafiche.</small>
+      </label>
+      <p class="form-message" id="graphicReviewMessage" role="status"></p>
+      <div class="modal-actions">
+        <button class="ghost-button" value="cancel" type="submit" formnovalidate>Annulla</button>
+        <button class="primary-button" id="graphicReviewSubmit" value="default" type="submit">
+          <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+          Manda in revisione
+        </button>
+      </div>
+    </form>
+  </dialog>
+
+  <input class="is-hidden" id="graphicDeliverableInput" type="file" accept="image/*,application/pdf" multiple>
 
   <dialog class="modal drive-preview-modal" id="drivePreviewModal">
     <form method="dialog">

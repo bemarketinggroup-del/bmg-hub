@@ -7,6 +7,7 @@ import { handleGoogleCalendar } from "../lib/google-calendar.js";
 import { handleSystemHealth } from "../lib/system-health.js";
 import { handlePersonalArea } from "../lib/personal-area.js";
 import { handleTeamChat } from "../lib/team-chat.js";
+import { handleGraphicReviews } from "../lib/graphic-reviews.js";
 
 const publicRoot = join(process.cwd(), "public");
 
@@ -38,6 +39,10 @@ export default async function handler(request, response) {
   }
   if (requestUrl.pathname === "/api/team-chat") {
     await handleTeamChat(request, response);
+    return;
+  }
+  if (requestUrl.pathname === "/api/graphic-reviews") {
+    await handleGraphicReviews(request, response);
     return;
   }
   if (requestUrl.pathname === "/api/smart-working") {
