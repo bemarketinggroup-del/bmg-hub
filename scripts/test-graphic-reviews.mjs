@@ -47,6 +47,8 @@ assert.ok(vercelSource.includes("api/graphic-reviews"));
 assert.match(permissionsSource, /\{ key: "graphics", label: "Grafiche" \}/);
 assert.match(permissionsSource, /graphics: false/);
 assert.match(driveApiSource, /modules: \["clients", "ped", "graphics"\]/);
+assert.match(driveApiSource, /graphicReviewRelations/);
+assert.match(driveApiSource, /graphic_review: reviewRelations/);
 
 assert.match(htmlSource, /data-view="graphics" data-module="graphics"/);
 assert.match(htmlSource, /id="graphicsView"/);
@@ -61,8 +63,11 @@ assert.match(appSource, /folder_id: review\.source_folder_id/);
 assert.match(appSource, /const files = \[\.\.\.\(event\.target\.files \|\| \[\]\)\];/);
 assert.match(appSource, /Originale e versione modificata/);
 assert.match(appSource, /stessa foto/);
+assert.match(appSource, /Foto revisionata/);
+assert.match(appSource, /Versione modificata/);
 assert.match(styleSource, /\.graphic-review-card/);
 assert.match(styleSource, /\.graphic-review-comparison-pair/);
+assert.match(styleSource, /\.drive-version-pair/);
 assert.match(styleSource, /\.graphic-review-modal/);
 
 for (const sql of [migrationSource, schemaSource]) {

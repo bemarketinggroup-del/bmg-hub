@@ -1693,7 +1693,6 @@ async function loadClientDriveFolder(folderId = "", folderName = "", { fresh = f
 }
 
 function driveBrowserMarkup(files, uploadEnabled, libraries = []) {
-  const sortedFiles = sortPedPickerEntries(files);
   const breadcrumbs = clientDriveState.path.map((item, index) => {
     const current = index === clientDriveState.path.length - 1;
     return current
@@ -1749,12 +1748,52 @@ function driveBrowserMarkup(files, uploadEnabled, libraries = []) {
         <span>Verranno caricati nella cartella aperta</span>
       </div>
       <div class="drive-file-grid">
-        ${sortedFiles.map((file) => driveEntryMarkup(file, uploadEnabled)).join("") || `<div class="drive-empty">Questa cartella è vuota. Trascina qui i file da caricare.</div>`}
+        ${driveEntriesMarkup(files, uploadEnabled) || `<div class="drive-empty">Questa cartella è vuota. Trascina qui i file da caricare.</div>`}
       </div>
     </div>`;
 }
 
-function driveEntryMarkup(file, writeEnabled) {
+function driveEntriesMarkup(files, writeEnabled) {
+  const sortedFiles = sortPedPickerEntries(files);
+  const filesById = new Map(sortedFiles.map((file) => [String(file.id), file]));
+  const emitted = new Set();
+  const entries = [];
+  for (const file of sortedFiles) {
+    const fileId = String(file.id);
+    if (emitted.has(fileId)) continue;
+    const relation = file.graphic_review;
+    const originalId = relation?.role === "modified" ? String(relation.original_file_id || "") : fileId;
+    const original = filesById.get(originalId);
+    const originalRelation = original?.graphic_review;
+    const modifiedFiles = (originalRelation?.modified_file_ids || [])
+      .map((id) => filesById.get(String(id)))
+      .filter(Boolean);
+    if (original && modifiedFiles.length) {
+      emitted.add(String(original.id));
+      modifiedFiles.forEach((item) => emitted.add(String(item.id)));
+      entries.push(`
+        <section class="drive-version-pair" data-drive-version-pair="${escapeHtml(originalRelation.pair_key || original.id)}">
+          <header>
+            <div>
+              <span>Foto revisionata</span>
+              <strong>Originale e ${modifiedFiles.length === 1 ? "versione modificata" : "versioni modificate"}</strong>
+            </div>
+            <small>Questi file appartengono alla stessa foto</small>
+          </header>
+          <div class="drive-version-pair-cards">
+            ${driveEntryMarkup(original, writeEnabled, "original")}
+            ${modifiedFiles.map((item) => driveEntryMarkup(item, writeEnabled, "modified")).join("")}
+          </div>
+        </section>`);
+      continue;
+    }
+    emitted.add(fileId);
+    entries.push(driveEntryMarkup(file, writeEnabled, relation?.role || ""));
+  }
+  return entries.join("");
+}
+
+function driveEntryMarkup(file, writeEnabled, versionRole = "") {
   const action = file.is_folder ? "data-drive-folder" : "data-drive-file";
   const isImage = String(file.mime_type || "").startsWith("image/");
   const isVideo = String(file.mime_type || "").startsWith("video/");
@@ -1767,7 +1806,8 @@ function driveEntryMarkup(file, writeEnabled) {
     : [formatFileSize(file.size), formatDriveDate(file.modified_at)].filter(Boolean).join(" · ") || "File";
   const selected = clientDriveSelection.has(String(file.id));
   return `
-    <article class="drive-entry-card ${hasThumbnail ? "has-thumbnail" : ""}${writeEnabled ? " has-selection-control" : ""}${selected ? " is-selected" : ""}" data-drive-entry-id="${escapeHtml(file.id)}">
+    <article class="drive-entry-card ${hasThumbnail ? "has-thumbnail" : ""}${writeEnabled ? " has-selection-control" : ""}${selected ? " is-selected" : ""}${versionRole ? ` is-graphic-${escapeHtml(versionRole)}` : ""}" data-drive-entry-id="${escapeHtml(file.id)}">
+      ${versionRole ? `<span class="drive-version-badge is-${escapeHtml(versionRole)}">${versionRole === "modified" ? "Versione modificata" : "Originale"}</span>` : ""}
       ${writeEnabled ? `
         <label class="drive-select-control" title="Seleziona ${escapeHtml(file.name)}">
           <input data-drive-select="${escapeHtml(file.id)}" data-drive-name="${escapeHtml(file.name)}" data-drive-is-folder="${file.is_folder ? "1" : "0"}" type="checkbox" ${selected ? "checked" : ""}>
@@ -7741,6 +7781,11 @@ async function uploadGraphicDeliverables(reviewId, files) {
     }
     const patch = uploaded.length ? { deliverables: uploaded, status: "in_progress" } : { status: "in_progress" };
     await updateGraphicReview(reviewId, patch);
+    clearDriveFolderBrowserCache(review.client_id);
+    void fetchDriveFolder(review.client_id, review.source_folder_id, {
+      fresh: true,
+      source: review.source_library || ""
+    }).catch(() => {});
     transfer.complete("Versione caricata nel Drive del cliente");
     alert("Versione caricata nella cartella originale e collegata alla revisione.");
   } catch (error) {
