@@ -429,8 +429,33 @@
               </header>
               <div class="team-chat-messages" id="chatMessageList" aria-live="polite" aria-busy="false"></div>
               <form class="team-chat-composer" id="chatComposer">
-                <label class="sr-only" for="chatMessageInput">Scrivi un messaggio</label>
-                <textarea id="chatMessageInput" name="message" rows="1" maxlength="4000" placeholder="Scrivi un messaggio al team…" required></textarea>
+                <div class="team-chat-compose-main">
+                  <div class="team-chat-compose-tools" aria-label="Aggiungi al messaggio">
+                    <button type="button" id="chatComputerFileButton" title="Carica dal computer">
+                      <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="m7 8 5-5 5 5"/><path d="M5 21h14"/></svg><span>Computer</span>
+                    </button>
+                    <button type="button" id="chatDriveFileButton" title="Allega dal Drive">
+                      <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h6l2 2h10v12H3z"/></svg><span>Drive</span>
+                    </button>
+                    <button type="button" data-chat-picker="task" title="Menziona una task">
+                      <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><span>Task</span>
+                    </button>
+                    <button type="button" data-chat-picker="client" title="Menziona un cliente">
+                      <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21h18M6 21V5h12v16M9 9h.01M15 9h.01M9 13h.01M15 13h.01"/></svg><span>Cliente</span>
+                    </button>
+                    <button type="button" data-chat-picker="person" id="chatMentionButton" title="Menziona una persona">
+                      <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0M19 8v6M16 11h6"/></svg><span>@ Persona</span>
+                    </button>
+                  </div>
+                  <input class="is-hidden" id="chatComputerFileInput" type="file" multiple>
+                  <div class="team-chat-draft-items is-hidden" id="chatDraftItems"></div>
+                  <div class="team-chat-reference-picker is-hidden" id="chatReferencePicker">
+                    <label><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><input id="chatReferenceSearch" type="search" placeholder="Cerca…" autocomplete="off"></label>
+                    <div id="chatReferenceResults"></div>
+                  </div>
+                  <label class="sr-only" for="chatMessageInput">Scrivi un messaggio</label>
+                  <textarea id="chatMessageInput" name="message" rows="1" maxlength="4000" placeholder="Scrivi un messaggio al team…"></textarea>
+                </div>
                 <button class="primary-button" id="chatSendButton" type="submit" aria-label="Invia messaggio">
                   <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
                   <span>Invia</span>
@@ -1036,6 +1061,28 @@
         <button class="primary-button" id="applyAiDescriptionButton" value="default" type="button">Applica proposta</button>
       </div>
     </form>
+  </dialog>
+
+  <dialog class="modal chat-drive-modal" id="chatDriveModal">
+    <div>
+      <div class="modal-head">
+        <div>
+          <p class="eyebrow">Google Drive</p>
+          <h2>Allega un file alla chat</h2>
+          <span>Scegli prima il cliente, poi naviga nelle sue cartelle.</span>
+        </div>
+        <button class="icon-button" id="chatDriveCloseButton" type="button" title="Chiudi" aria-label="Chiudi">
+          <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </button>
+      </div>
+      <label class="chat-drive-search">
+        <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <input id="chatDriveSearch" type="search" placeholder="Cerca cliente o file…" autocomplete="off">
+      </label>
+      <nav class="chat-drive-breadcrumbs" id="chatDriveBreadcrumbs" aria-label="Percorso Drive"></nav>
+      <div class="chat-drive-grid" id="chatDriveGrid"></div>
+      <p class="form-message" id="chatDriveMessage" role="status"></p>
+    </div>
   </dialog>
 
   <dialog class="modal graphic-review-modal" id="graphicReviewModal">

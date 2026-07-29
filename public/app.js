@@ -269,6 +269,10 @@ let teamChatState = {
   error: ""
 };
 let teamChatTimer = null;
+let teamChatDraft = { attachments: [], references: [], mentions: [], uploading: false };
+let chatReferenceKind = "";
+let chatMentionRange = null;
+let chatDrivePickerState = { clientId: "", clientName: "", path: [], files: [], libraries: [], source: "", loading: false };
 let graphicReviewState = {
   reviews: [],
   filter: "active",
@@ -7973,6 +7977,290 @@ async function uploadGraphicDeliverables(reviewId, files) {
   }
 }
 
+function resetTeamChatDraft() {
+  teamChatDraft = { attachments: [], references: [], mentions: [], uploading: false };
+  chatReferenceKind = "";
+  chatMentionRange = null;
+  document.getElementById("chatReferencePicker")?.classList.add("is-hidden");
+  renderTeamChatDraft();
+}
+
+function renderTeamChatDraft() {
+  const container = document.getElementById("chatDraftItems");
+  if (!container) return;
+  const items = [
+    ...teamChatDraft.attachments.map((item, index) => ({ kind: "attachment", index, label: item.name, prefix: "File" })),
+    ...teamChatDraft.references.map((item, index) => ({ kind: "reference", index, label: item.label, prefix: item.type === "task" ? "Task" : "Cliente" })),
+    ...teamChatDraft.mentions.map((item, index) => ({ kind: "mention", index, label: `@${item.label}`, prefix: "Persona" }))
+  ];
+  container.classList.toggle("is-hidden", !items.length && !teamChatDraft.uploading);
+  container.innerHTML = `${teamChatDraft.uploading ? `<span class="team-chat-draft-chip"><span class="drive-folder-spinner" aria-hidden="true"></span><span>Caricamento in corso…</span></span>` : ""}${items.map((item) => `
+    <span class="team-chat-draft-chip">
+      <strong>${escapeHtml(item.prefix)}</strong>
+      <span>${escapeHtml(item.label)}</span>
+      <button type="button" data-chat-draft-remove="${item.kind}" data-chat-draft-index="${item.index}" aria-label="Rimuovi ${escapeHtml(item.label)}">×</button>
+    </span>`).join("")}`;
+  const sendButton = document.getElementById("chatSendButton");
+  if (sendButton) sendButton.disabled = teamChatDraft.uploading;
+}
+
+function removeTeamChatDraftItem(kind, index) {
+  const collection = kind === "attachment"
+    ? teamChatDraft.attachments
+    : kind === "reference"
+      ? teamChatDraft.references
+      : teamChatDraft.mentions;
+  collection.splice(Number(index), 1);
+  renderTeamChatDraft();
+}
+
+function chatReferenceItems(kind) {
+  if (kind === "person") {
+    return teamChatState.team
+      .filter((person) => String(person.id) !== String(teamChatState.profile?.id || currentProfile?.id))
+      .map((person) => ({ id: person.id, label: person.full_name, meta: person.email || person.role || "Membro del team" }));
+  }
+  if (kind === "client") {
+    return state.clients.map((client) => ({ id: client.id, label: client.name, meta: client.status || "Cliente" }));
+  }
+  return state.clickupTasks
+    .filter((task) => !["complete", "completed", "closed"].includes(String(task.status || "").toLowerCase()))
+    .map((task) => ({
+      id: task.clickup_task_id || task.id,
+      label: task.name || "Task senza titolo",
+      meta: [task.client_tag, task.status].filter(Boolean).join(" · ") || "Task"
+    }));
+}
+
+function openChatReferencePicker(kind, query = "", mentionRange = null) {
+  if (kind === "person" && selectedChatConversation().kind !== "general") return;
+  chatReferenceKind = kind;
+  chatMentionRange = mentionRange;
+  const picker = document.getElementById("chatReferencePicker");
+  const search = document.getElementById("chatReferenceSearch");
+  search.placeholder = kind === "person" ? "Cerca una persona…" : kind === "client" ? "Cerca un cliente…" : "Cerca una task…";
+  search.value = query;
+  picker.classList.remove("is-hidden");
+  document.querySelectorAll("[data-chat-picker]").forEach((button) => button.setAttribute("aria-expanded", String(button.dataset.chatPicker === kind)));
+  renderChatReferenceResults();
+  if (!mentionRange) search.focus();
+}
+
+function closeChatReferencePicker() {
+  chatReferenceKind = "";
+  chatMentionRange = null;
+  document.getElementById("chatReferencePicker")?.classList.add("is-hidden");
+  document.querySelectorAll("[data-chat-picker]").forEach((button) => button.setAttribute("aria-expanded", "false"));
+}
+
+function renderChatReferenceResults() {
+  const container = document.getElementById("chatReferenceResults");
+  if (!container || !chatReferenceKind) return;
+  const query = String(document.getElementById("chatReferenceSearch")?.value || "").trim().toLowerCase();
+  const items = chatReferenceItems(chatReferenceKind).filter((item) => `${item.label} ${item.meta}`.toLowerCase().includes(query)).slice(0, 40);
+  const symbol = chatReferenceKind === "person" ? "@" : chatReferenceKind === "client" ? "CL" : "TK";
+  container.innerHTML = items.length ? items.map((item) => `
+    <button class="team-chat-reference-option" type="button" data-chat-reference-select="${escapeHtml(item.id)}">
+      <span class="team-chat-reference-symbol">${symbol}</span>
+      <span><strong>${escapeHtml(item.label)}</strong><small>${escapeHtml(item.meta)}</small></span>
+    </button>`).join("") : `<div class="team-chat-empty is-compact">Nessun risultato.</div>`;
+}
+
+function selectChatReference(itemId) {
+  const item = chatReferenceItems(chatReferenceKind).find((entry) => String(entry.id) === String(itemId));
+  if (!item) return;
+  if (chatReferenceKind === "person") {
+    if (!teamChatDraft.mentions.some((mention) => String(mention.id) === String(item.id))) {
+      teamChatDraft.mentions.push({ id: item.id, label: item.label });
+    }
+    const input = document.getElementById("chatMessageInput");
+    const mention = `@${item.label} `;
+    if (chatMentionRange) {
+      input.value = `${input.value.slice(0, chatMentionRange.start)}${mention}${input.value.slice(chatMentionRange.end)}`;
+      input.setSelectionRange(chatMentionRange.start + mention.length, chatMentionRange.start + mention.length);
+    } else {
+      input.value = `${input.value}${input.value && !/\s$/.test(input.value) ? " " : ""}${mention}`;
+    }
+    input.focus();
+  } else {
+    const reference = { type: chatReferenceKind, id: item.id, label: item.label };
+    if (!teamChatDraft.references.some((entry) => entry.type === reference.type && String(entry.id) === String(reference.id))) {
+      teamChatDraft.references.push(reference);
+    }
+  }
+  closeChatReferencePicker();
+  renderTeamChatDraft();
+}
+
+async function uploadTeamChatComputerFiles(files) {
+  const pending = [...files].slice(0, Math.max(0, 10 - teamChatDraft.attachments.length));
+  if (!pending.length) return;
+  teamChatDraft.uploading = true;
+  renderTeamChatDraft();
+  const status = document.getElementById("chatFormMessage");
+  try {
+    for (const file of pending) {
+      status.textContent = `Carico ${file.name}…`;
+      const response = await apiFetch("/api/team-chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "prepare_upload", name: file.name, mime_type: file.type, size: file.size })
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || "Caricamento non disponibile");
+      const uploaded = await uploadFileToDrive(data.upload_url, file, (progress) => {
+        status.textContent = `Carico ${file.name}: ${progress}%`;
+      });
+      teamChatDraft.attachments.push({
+        source: "chat",
+        id: uploaded.id,
+        name: uploaded.name || file.name,
+        mime_type: uploaded.mimeType || file.type || "application/octet-stream",
+        size: Number(uploaded.size || file.size || 0)
+      });
+    }
+    status.textContent = "";
+  } catch (error) {
+    status.textContent = error.message || "Caricamento non riuscito";
+  } finally {
+    teamChatDraft.uploading = false;
+    document.getElementById("chatComputerFileInput").value = "";
+    renderTeamChatDraft();
+  }
+}
+
+function openChatDrivePicker() {
+  chatDrivePickerState = { clientId: "", clientName: "", path: [], files: [], libraries: [], source: "", loading: false };
+  document.getElementById("chatDriveSearch").value = "";
+  document.getElementById("chatDriveMessage").textContent = "";
+  renderChatDrivePicker();
+  document.getElementById("chatDriveModal").showModal();
+}
+
+function renderChatDrivePicker() {
+  const grid = document.getElementById("chatDriveGrid");
+  const breadcrumbs = document.getElementById("chatDriveBreadcrumbs");
+  const query = String(document.getElementById("chatDriveSearch")?.value || "").trim().toLowerCase();
+  if (!chatDrivePickerState.clientId) {
+    breadcrumbs.innerHTML = "";
+    const clients = state.clients.filter(clientHasDrive).filter((client) => client.name.toLowerCase().includes(query));
+    grid.innerHTML = clients.length ? clients.map((client) => `
+      <button class="chat-drive-entry" type="button" data-chat-drive-client="${escapeHtml(client.id)}">
+        <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21h18M6 21V5h12v16"/></svg>
+        <span><strong>${escapeHtml(client.name)}</strong><small>Apri il Drive del cliente</small></span>
+      </button>`).join("") : `<div class="team-chat-empty">Nessun cliente con Drive trovato.</div>`;
+    return;
+  }
+  breadcrumbs.innerHTML = `<button type="button" data-chat-drive-home>Clienti</button>${chatDrivePickerState.path.map((item, index) => `<button type="button" data-chat-drive-breadcrumb="${index}">${escapeHtml(item.name)}</button>`).join("")}`;
+  const libraries = chatDrivePickerState.path.length === 1 ? chatDrivePickerState.libraries : [];
+  const entries = [
+    ...libraries.map((library) => ({ ...library, is_folder: true, is_library: true })),
+    ...chatDrivePickerState.files
+  ].filter((item) => String(item.name || "").toLowerCase().includes(query));
+  grid.innerHTML = chatDrivePickerState.loading
+    ? `<div class="team-chat-empty"><span class="drive-folder-spinner" aria-hidden="true"></span><strong>Apro la cartella…</strong></div>`
+    : entries.length ? entries.map((item) => `
+      <button class="chat-drive-entry" type="button" ${item.is_library ? `data-chat-drive-library="${escapeHtml(item.id)}" data-chat-drive-source="${escapeHtml(item.source || "")}"` : item.is_folder ? `data-chat-drive-folder="${escapeHtml(item.id)}"` : `data-chat-drive-file="${escapeHtml(item.id)}"`}>
+        <svg class="lc" viewBox="0 0 24 24" aria-hidden="true">${item.is_folder ? `<path d="M3 7h6l2 2h10v12H3z"/>` : `<path d="M14 2H6a2 2 0 0 0-2 2v16h16V8z"/><path d="M14 2v6h6"/>`}</svg>
+        <span><strong>${escapeHtml(item.name || "Elemento")}</strong><small>${item.is_folder ? "Cartella" : `${escapeHtml(item.mime_type || "File")} · ${formatFileSize(item.size)}`}</small></span>
+      </button>`).join("") : `<div class="team-chat-empty">Nessun elemento in questa cartella.</div>`;
+}
+
+async function loadChatDriveFolder(folderId = "", folderName = "", source = chatDrivePickerState.source) {
+  chatDrivePickerState.loading = true;
+  renderChatDrivePicker();
+  try {
+    const { data } = await fetchDriveFolder(chatDrivePickerState.clientId, folderId, { source });
+    const existingIndex = chatDrivePickerState.path.findIndex((item) => String(item.id) === String(data.folder.id));
+    if (existingIndex >= 0) chatDrivePickerState.path = chatDrivePickerState.path.slice(0, existingIndex + 1);
+    else chatDrivePickerState.path.push({ id: data.folder.id, name: folderName || data.folder.name, source });
+    chatDrivePickerState.files = data.files || [];
+    chatDrivePickerState.libraries = data.libraries || chatDrivePickerState.libraries;
+    chatDrivePickerState.source = String(data.source || source || "");
+  } catch (error) {
+    document.getElementById("chatDriveMessage").textContent = error.message;
+  } finally {
+    chatDrivePickerState.loading = false;
+    renderChatDrivePicker();
+  }
+}
+
+function attachChatDriveFile(fileId) {
+  const file = chatDrivePickerState.files.find((item) => String(item.id) === String(fileId));
+  if (!file || teamChatDraft.attachments.length >= 10) return;
+  if (!teamChatDraft.attachments.some((item) => item.source === "client_drive" && String(item.id) === String(file.id))) {
+    teamChatDraft.attachments.push({
+      source: "client_drive",
+      id: file.id,
+      name: file.name,
+      mime_type: file.mime_type,
+      size: Number(file.size || 0),
+      client_id: chatDrivePickerState.clientId,
+      library: chatDrivePickerState.source
+    });
+  }
+  document.getElementById("chatDriveModal").close();
+  renderTeamChatDraft();
+  document.getElementById("chatMessageInput").focus();
+}
+
+function chatMessageTextMarkup(message) {
+  let markup = escapeHtml(message.body || "").replace(/\n/g, "<br>");
+  (message.mentions || []).forEach((mention) => {
+    const token = escapeHtml(`@${mention.label}`);
+    markup = markup.split(token).join(`<mark>${token}</mark>`);
+  });
+  return markup;
+}
+
+function chatMessageExtrasMarkup(message) {
+  const attachments = (message.attachments || []).map((item, index) => `
+    <button class="team-chat-attachment" type="button" data-chat-download="${escapeHtml(message.id)}" data-chat-attachment-index="${index}">
+      <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M21.4 11.6 12 21a6 6 0 0 1-8.5-8.5l9-9a4 4 0 0 1 5.7 5.7l-9 9a2 2 0 0 1-2.8-2.8l8.3-8.3"/></svg>
+      <span><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(item.mime_type || "File")} · ${formatFileSize(item.size)}</small></span>
+      <span>Scarica</span>
+    </button>`).join("");
+  const references = (message.references || []).map((item) => `
+    <button class="team-chat-reference" type="button" data-chat-open-reference="${escapeHtml(item.type)}" data-chat-reference-id="${escapeHtml(item.id)}">
+      <svg class="lc" viewBox="0 0 24 24" aria-hidden="true">${item.type === "task" ? `<path d="M9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>` : `<path d="M3 21h18M6 21V5h12v16"/>`}</svg>
+      <span><strong>${escapeHtml(item.label)}</strong><small>${item.type === "task" ? "Task" : "Cliente"}</small></span>
+      <span>Apri</span>
+    </button>`).join("");
+  return `${attachments ? `<div class="team-chat-attachments">${attachments}</div>` : ""}${references ? `<div class="team-chat-references">${references}</div>` : ""}`;
+}
+
+async function downloadTeamChatAttachment(messageId, index, button) {
+  const message = teamChatState.messages.find((item) => String(item.id) === String(messageId));
+  const attachment = message?.attachments?.[Number(index)];
+  if (!attachment) return;
+  button.disabled = true;
+  try {
+    const params = new URLSearchParams();
+    let url = "";
+    if (attachment.source === "chat") {
+      params.set("action", "file");
+      params.set("file_id", attachment.id);
+      url = `/api/team-chat?${params}`;
+    } else {
+      params.set("client_id", attachment.client_id);
+      params.set("file_id", attachment.id);
+      params.set("action", "download");
+      if (attachment.library) params.set("source", attachment.library);
+      url = `/api/client-drive?${params}`;
+    }
+    const response = await apiFetch(url);
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.error || "Download non riuscito");
+    }
+    saveDownloadedBlob(await response.blob(), attachment.name || "allegato");
+  } catch (error) {
+    alert(error.message || "Download non riuscito");
+  } finally {
+    button.disabled = false;
+  }
+}
+
 function chatInitials(value) {
   const words = String(value || "Utente").trim().split(/\s+/).filter(Boolean);
   return (words.length > 1 ? `${words[0][0]}${words.at(-1)[0]}` : words[0]?.slice(0, 2) || "UT").toUpperCase();
@@ -7993,6 +8281,11 @@ async function loadTeamChat({ quiet = false } = {}) {
     const response = await apiFetch(`/api/team-chat?${params}`);
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || "Chat non disponibile");
+    if (Array.isArray(data.clients) && data.clients.length) {
+      const existingClients = new Map(state.clients.map((client) => [String(client.id), client]));
+      data.clients.forEach((client) => existingClients.set(String(client.id), normalizeClient({ ...existingClients.get(String(client.id)), ...client })));
+      state.clients = [...existingClients.values()].sort((left, right) => left.name.localeCompare(right.name, "it"));
+    }
     teamChatState = {
       profile: data.profile || null,
       team: Array.isArray(data.team) ? data.team : [],
@@ -8028,7 +8321,10 @@ function renderTeamChat({ quiet = false } = {}) {
   conversations.innerHTML = filteredConversations.length ? filteredConversations.map((conversation) => {
     const isGeneral = conversation.kind === "general";
     const title = isGeneral ? "Chat generale" : conversation.profile?.full_name || "Utente";
-    const preview = conversation.last_message?.body || (isGeneral ? "Messaggi visibili a tutto il team" : "Inizia una conversazione privata");
+    const preview = conversation.last_message?.body
+      || conversation.last_message?.attachments?.[0]?.name
+      || conversation.last_message?.references?.[0]?.label
+      || (isGeneral ? "Messaggi visibili a tutto il team" : "Inizia una conversazione privata");
     const active = conversation.key === teamChatState.selectedConversation;
     const unread = Number(conversation.unread_count || 0);
     return `<button class="team-chat-conversation${active ? " is-active" : ""}" data-chat-conversation="${escapeHtml(conversation.key)}" type="button" aria-current="${active ? "page" : "false"}">
@@ -8049,6 +8345,10 @@ function renderTeamChat({ quiet = false } = {}) {
   document.getElementById("chatMessageInput").placeholder = isGeneral
     ? "Scrivi un messaggio al team…"
     : `Scrivi a ${roomTitle}…`;
+  const mentionButton = document.getElementById("chatMentionButton");
+  mentionButton.disabled = !isGeneral;
+  mentionButton.title = isGeneral ? "Menziona una persona" : "Le menzioni sono disponibili nella chat generale";
+  if (!isGeneral && chatReferenceKind === "person") closeChatReferencePicker();
 
   const nearBottom = messages.scrollHeight - messages.scrollTop - messages.clientHeight < 90;
   messages.setAttribute("aria-busy", String(teamChatState.loading));
@@ -8064,7 +8364,8 @@ function renderTeamChat({ quiet = false } = {}) {
         ${mine ? "" : `<span class="team-chat-avatar" aria-hidden="true">${escapeHtml(chatInitials(senderName))}</span>`}
         <div class="team-chat-bubble">
           ${mine ? "" : `<strong>${escapeHtml(senderName)}</strong>`}
-          <p>${escapeHtml(message.body)}</p>
+          ${message.body ? `<p>${chatMessageTextMarkup(message)}</p>` : ""}
+          ${chatMessageExtrasMarkup(message)}
           <time datetime="${escapeHtml(message.created_at)}">${escapeHtml(formatPersonalDate(message.created_at))}</time>
         </div>
       </article>`;
@@ -8091,6 +8392,7 @@ async function selectTeamChatConversation(conversationKey) {
   teamChatState.messages = [];
   teamChatState.loaded = false;
   teamChatState.error = "";
+  resetTeamChatDraft();
   renderTeamChat();
   await loadTeamChat();
   document.getElementById("chatMessageInput")?.focus();
@@ -8102,6 +8404,7 @@ async function openTeamChatConversation(conversationKey = "general") {
   teamChatState.messages = [];
   teamChatState.loaded = false;
   teamChatState.error = "";
+  resetTeamChatDraft();
   document.getElementById("notificationPanel")?.classList.add("is-hidden");
   document.getElementById("notificationButton")?.setAttribute("aria-expanded", "false");
   setView("chat");
@@ -8114,19 +8417,27 @@ async function sendTeamChatMessage(form) {
   const button = document.getElementById("chatSendButton");
   const status = document.getElementById("chatFormMessage");
   const message = String(input.value || "").trim();
-  if (!message) return;
+  if (!message && !teamChatDraft.attachments.length && !teamChatDraft.references.length) return;
+  if (teamChatDraft.uploading) return;
   button.disabled = true;
   status.textContent = "";
   try {
     const response = await apiFetch("/api/team-chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ conversation: teamChatState.selectedConversation, message })
+      body: JSON.stringify({
+        conversation: teamChatState.selectedConversation,
+        message,
+        attachments: teamChatDraft.attachments,
+        references: teamChatDraft.references,
+        mentions: teamChatDraft.mentions
+      })
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || "Messaggio non inviato");
     form.reset();
     input.style.height = "";
+    resetTeamChatDraft();
     await loadTeamChat({ quiet: true });
     input.focus();
     void loadPersonalArea({ quiet: true });
@@ -8849,6 +9160,66 @@ document.getElementById("contentStatusFilter").addEventListener("change", render
 document.getElementById("contentSearch").addEventListener("input", renderContent);
 document.getElementById("clientSearch").addEventListener("input", renderClients);
 document.getElementById("chatSearch").addEventListener("input", () => renderTeamChat({ quiet: true }));
+document.getElementById("chatComputerFileButton").addEventListener("click", () => document.getElementById("chatComputerFileInput").click());
+document.getElementById("chatComputerFileInput").addEventListener("change", (event) => {
+  void uploadTeamChatComputerFiles(event.currentTarget.files || []);
+});
+document.getElementById("chatDriveFileButton").addEventListener("click", openChatDrivePicker);
+document.querySelector(".team-chat-compose-tools").addEventListener("click", (event) => {
+  const button = event.target.closest("[data-chat-picker]");
+  if (!button) return;
+  if (chatReferenceKind === button.dataset.chatPicker) return closeChatReferencePicker();
+  openChatReferencePicker(button.dataset.chatPicker);
+});
+document.getElementById("chatReferenceSearch").addEventListener("input", renderChatReferenceResults);
+document.getElementById("chatReferenceResults").addEventListener("click", (event) => {
+  const button = event.target.closest("[data-chat-reference-select]");
+  if (button) selectChatReference(button.dataset.chatReferenceSelect);
+});
+document.getElementById("chatDraftItems").addEventListener("click", (event) => {
+  const button = event.target.closest("[data-chat-draft-remove]");
+  if (button) removeTeamChatDraftItem(button.dataset.chatDraftRemove, button.dataset.chatDraftIndex);
+});
+document.getElementById("chatMessageList").addEventListener("click", (event) => {
+  const download = event.target.closest("[data-chat-download]");
+  if (download) return void downloadTeamChatAttachment(download.dataset.chatDownload, download.dataset.chatAttachmentIndex, download);
+  const reference = event.target.closest("[data-chat-open-reference]");
+  if (!reference) return;
+  if (reference.dataset.chatOpenReference === "task") return openTaskDetailModal(reference.dataset.chatReferenceId);
+  setView("clients");
+  void openClientDetails(reference.dataset.chatReferenceId);
+});
+document.getElementById("chatDriveCloseButton").addEventListener("click", () => document.getElementById("chatDriveModal").close());
+document.getElementById("chatDriveSearch").addEventListener("input", renderChatDrivePicker);
+document.getElementById("chatDriveBreadcrumbs").addEventListener("click", (event) => {
+  if (event.target.closest("[data-chat-drive-home]")) {
+    chatDrivePickerState = { clientId: "", clientName: "", path: [], files: [], libraries: [], source: "", loading: false };
+    document.getElementById("chatDriveSearch").value = "";
+    return renderChatDrivePicker();
+  }
+  const button = event.target.closest("[data-chat-drive-breadcrumb]");
+  const target = button ? chatDrivePickerState.path[Number(button.dataset.chatDriveBreadcrumb)] : null;
+  if (target) void loadChatDriveFolder(target.id, target.name, target.source || "");
+});
+document.getElementById("chatDriveGrid").addEventListener("click", (event) => {
+  const clientButton = event.target.closest("[data-chat-drive-client]");
+  if (clientButton) {
+    const client = state.clients.find((item) => String(item.id) === String(clientButton.dataset.chatDriveClient));
+    chatDrivePickerState.clientId = String(client.id);
+    chatDrivePickerState.clientName = client.name;
+    document.getElementById("chatDriveSearch").value = "";
+    return void loadChatDriveFolder("", client.name, "");
+  }
+  const libraryButton = event.target.closest("[data-chat-drive-library]");
+  if (libraryButton) return void loadChatDriveFolder(libraryButton.dataset.chatDriveLibrary, libraryButton.textContent.trim(), libraryButton.dataset.chatDriveSource || "");
+  const folderButton = event.target.closest("[data-chat-drive-folder]");
+  if (folderButton) {
+    const folder = chatDrivePickerState.files.find((item) => String(item.id) === String(folderButton.dataset.chatDriveFolder));
+    return void loadChatDriveFolder(folder.id, folder.name, chatDrivePickerState.source);
+  }
+  const fileButton = event.target.closest("[data-chat-drive-file]");
+  if (fileButton) attachChatDriveFile(fileButton.dataset.chatDriveFile);
+});
 document.getElementById("chatComposer").addEventListener("submit", (event) => {
   event.preventDefault();
   void sendTeamChatMessage(event.currentTarget);
@@ -8857,11 +9228,23 @@ document.getElementById("chatMessageInput").addEventListener("input", (event) =>
   const input = event.currentTarget;
   input.style.height = "auto";
   input.style.height = `${Math.min(input.scrollHeight, 132)}px`;
+  if (selectedChatConversation().kind === "general") {
+    const cursor = input.selectionStart;
+    const before = input.value.slice(0, cursor);
+    const match = before.match(/(?:^|\s)@([^@\n]{0,40})$/);
+    if (match) {
+      const start = cursor - match[0].length + (match[0].startsWith(" ") ? 1 : 0);
+      openChatReferencePicker("person", match[1], { start, end: cursor });
+    } else if (chatMentionRange) {
+      closeChatReferencePicker();
+    }
+  }
 });
 document.getElementById("chatMessageInput").addEventListener("keydown", (event) => {
   if (event.key !== "Enter" || event.shiftKey || event.isComposing) return;
+  if (!document.getElementById("chatReferencePicker").classList.contains("is-hidden")) return;
   event.preventDefault();
-  if (!event.currentTarget.value.trim()) return;
+  if (!event.currentTarget.value.trim() && !teamChatDraft.attachments.length && !teamChatDraft.references.length) return;
   event.currentTarget.form?.requestSubmit();
 });
 document.getElementById("pedPreviousMonth").addEventListener("click", () => shiftPedMonth(-1));
