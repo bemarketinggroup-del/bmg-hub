@@ -86,6 +86,7 @@ assert.match(appSource, /state\.pedAgendaItems/, "l'agenda deve usare i contenut
 assert.match(appSource, /agenda_from: localDateKey\(new Date\(\)\)/, "il client deve richiedere tutti i contenuti da oggi");
 assert.match(pedSource, /scheduled_date=gte\.\$\{agendaFrom\}/, "l'API deve caricare i contenuti futuri senza fermarsi al mese selezionato");
 assert.match(appSource, /class="ped-agenda-month-divider"/, "l'agenda deve separare visivamente i mesi");
+assert.match(styleSource, /\.ped-agenda-list \{ max-height: none; overflow: visible; \}/, "l'agenda deve mostrare tutti i contenuti senza uno scorrimento interno");
 assert.doesNotMatch(htmlSource, /id="pedAgendaPrevious"/, "l'agenda futura non deve mostrare il comando Carica precedenti");
 assert.match(styleSource, /\.ped-agenda-day[\s\S]*?border-bottom: 3px solid var\(--line-strong\)/, "i giorni devono avere separatori orizzontali marcati");
 assert.match(styleSource, /\.ped-agenda-date[\s\S]*?border-right: 2px solid var\(--line-strong\)/, "la data deve essere separata nettamente dai contenuti");
