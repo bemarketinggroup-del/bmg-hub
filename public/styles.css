@@ -2574,7 +2574,7 @@ code { font-family: var(--font-mono); font-size: 12px; }
   min-width: 0;
   min-height: 86px;
   display: grid;
-  grid-template-columns: 64px minmax(0, 1fr) 28px;
+  grid-template-columns: 64px minmax(0, 1fr) 30px;
   align-items: center;
   gap: 10px;
   overflow: hidden;
@@ -2611,6 +2611,18 @@ code { font-family: var(--font-mono); font-size: 12px; }
   white-space: nowrap;
 }
 .ped-staging-copy small { color: var(--muted); font-size: 9.5px; line-height: 1.3; }
+.ped-staging-caption-preview {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--ink-soft);
+  font-size: 10px;
+  line-height: 1.35;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.ped-staging-caption-preview.is-empty { color: var(--subtle); font-style: italic; }
+.ped-staging-actions { display: grid; gap: 4px; }
+.ped-staging-edit,
 .ped-staging-remove {
   width: 28px;
   height: 28px;
@@ -2621,7 +2633,9 @@ code { font-family: var(--font-mono); font-size: 12px; }
   background: transparent;
   color: var(--subtle);
 }
+.ped-staging-edit:hover { border-color: var(--terra-line); background: var(--terra-tint); color: var(--terracotta); }
 .ped-staging-remove:hover { border-color: var(--red-line); background: var(--red-tint); color: var(--red); }
+.ped-staging-edit .lc,
 .ped-staging-remove .lc { width: 14px; height: 14px; }
 .ped-staging-empty {
   grid-column: 1 / -1;
@@ -3769,6 +3783,79 @@ code { font-family: var(--font-mono); font-size: 12px; }
 .ped-caption-story-note { margin: 16px 0 0; border: 1px solid var(--line); border-radius: 7px; background: var(--surface-soft); color: var(--muted); padding: 14px; font-size: 12px; line-height: 1.5; }
 .ped-caption-actions { justify-content: space-between; }
 
+.ped-staging-editor-modal { width: min(900px, calc(100vw - 28px)); }
+.ped-staging-editor-modal form { padding: 22px 24px 24px; }
+.ped-staging-editor-media {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+  overflow-x: auto;
+  padding: 2px 2px 10px;
+  scroll-snap-type: x proximity;
+}
+.ped-staging-editor-file {
+  flex: 0 0 min(230px, 64vw);
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--surface-soft);
+  scroll-snap-align: start;
+}
+.ped-staging-editor-file > div {
+  height: 250px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: #171411;
+}
+.ped-staging-editor-file img,
+.ped-staging-editor-file video { width: 100%; height: 100%; object-fit: contain; }
+.ped-staging-editor-file .lc { width: 34px; height: 34px; color: white; }
+.ped-staging-editor-file figcaption {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  align-items: center;
+  gap: 7px;
+  padding: 8px;
+}
+.ped-staging-editor-file figcaption b {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--terracotta);
+  color: white;
+  font-size: 10px;
+}
+.ped-staging-editor-file figcaption span {
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 10px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ped-staging-editor-field { display: grid; gap: 7px; margin-top: 14px; }
+.ped-staging-editor-field > span { color: var(--ink); font-size: 12px; font-weight: 700; }
+.ped-staging-editor-field textarea {
+  width: 100%;
+  min-height: 190px;
+  resize: vertical;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  padding: 13px 14px;
+  font: inherit;
+  font-size: 16px;
+  line-height: 1.55;
+}
+.ped-staging-editor-field textarea:focus { outline: 2px solid var(--terra-line); border-color: var(--terracotta); }
+.ped-staging-editor-field small { justify-self: end; color: var(--muted); font-size: 10px; }
+
 @media (max-width: 680px) {
   .ped-caption-modal {
     width: calc(100vw - 16px);
@@ -3800,6 +3887,16 @@ code { font-family: var(--font-mono); font-size: 12px; }
   }
   .ped-caption-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .ped-caption-actions > button { min-width: 0; width: 100%; }
+  .ped-staging-editor-modal {
+    width: calc(100vw - 16px);
+    max-width: calc(100vw - 16px);
+    max-height: calc(100dvh - 16px);
+    overflow-y: auto;
+  }
+  .ped-staging-editor-modal form { padding: 16px; }
+  .ped-staging-editor-file { flex-basis: min(210px, 72vw); }
+  .ped-staging-editor-file > div { height: 220px; }
+  .ped-staging-editor-field textarea { min-height: 180px; }
   .ped-carousel-preview-stage { min-height: 400px; }
   .ped-carousel-preview-footer { grid-template-columns: 1fr; gap: 8px; }
   .ped-carousel-preview-thumbs { justify-content: flex-start; }

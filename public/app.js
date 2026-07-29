@@ -248,6 +248,7 @@ let drivePreviewKeyboardState = { isPhoto: false, navigate: null };
 let pedShareState = { active: false, shareUrl: "" };
 let pedLoadingKey = "";
 let editingPedCaptionId = "";
+let editingPedStagingId = "";
 let pedDraggedItemId = "";
 let pedDraggedStagingId = "";
 let pedDragTarget = null;
@@ -3235,18 +3236,25 @@ function pedStagingItemMarkup(item) {
   const isImage = mime.startsWith("image/");
   const isVideo = mime.startsWith("video/");
   const previewUrl = primary.thumbnail_url || (isImage ? primary.content_url : "");
+  const caption = String(item.caption || "").replace(/\s+/g, " ").trim();
   const media = previewUrl
     ? `<img src="${escapeHtml(previewUrl)}" alt="" loading="lazy" decoding="async">`
     : `<span class="ped-staging-icon">${driveFileIcon({ is_folder: false, mime_type: mime })}</span>`;
-  return `<article class="ped-staging-card ped-type-${format.type}" data-ped-staging="${escapeHtml(item.id)}" draggable="true" aria-grabbed="false" tabindex="0" title="Trascina questo contenuto su un giorno del calendario">
+  return `<article class="ped-staging-card ped-type-${format.type}" data-ped-staging="${escapeHtml(item.id)}" data-ped-staging-open="${escapeHtml(item.id)}" draggable="true" aria-grabbed="false" tabindex="0" role="button" title="Apri e modifica il copy oppure trascina il contenuto sul calendario">
     <span class="ped-staging-thumb">${media}${isVideo ? `<span class="ped-video-mini"><svg class="lc" viewBox="0 0 24 24"><path d="m9 7 8 5-8 5z"/></svg></span>` : ""}${files.length > 1 ? `<b class="ped-carousel-count">${files.length}</b>` : ""}</span>
     <span class="ped-staging-copy">
       <strong>${escapeHtml(title)}</strong>
       <small>${format.label} · trascina nel calendario</small>
+      <span class="ped-staging-caption-preview${caption ? "" : " is-empty"}">${escapeHtml(caption || "Copy non ancora inserito")}</span>
     </span>
-    <button class="ped-staging-remove" data-ped-staging-remove="${escapeHtml(item.id)}" type="button" aria-label="Rimuovi ${escapeHtml(title)} dai contenuti in attesa" title="Rimuovi">
-      <svg class="lc" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
-    </button>
+    <span class="ped-staging-actions">
+      <button class="ped-staging-edit" data-ped-staging-open="${escapeHtml(item.id)}" type="button" aria-label="Apri e modifica il copy di ${escapeHtml(title)}" title="Apri e modifica copy">
+        <svg class="lc" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+      </button>
+      <button class="ped-staging-remove" data-ped-staging-remove="${escapeHtml(item.id)}" type="button" aria-label="Rimuovi ${escapeHtml(title)} dai contenuti in attesa" title="Rimuovi">
+        <svg class="lc" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </span>
   </article>`;
 }
 
@@ -3266,6 +3274,92 @@ function renderPedStaging() {
         <strong>Nessun contenuto momentaneo</strong>
         <span>Aggiungi file dal Drive: resteranno qui finché non li trascini su una data.</span>
       </div>`;
+}
+
+function pedStagingEditorMediaMarkup(item) {
+  return pedItemFiles(item).map((file, index) => {
+    const mime = String(file.drive_mime_type || "");
+    const name = file.drive_file_name || `Contenuto ${index + 1}`;
+    const isImage = mime.startsWith("image/");
+    const isVideo = mime.startsWith("video/");
+    const source = file.content_url || file.thumbnail_url || "";
+    let media = driveFileIcon({ is_folder: false, mime_type: mime });
+    if (isImage && source) {
+      media = `<img src="${escapeHtml(source)}" alt="${escapeHtml(name)}" loading="eager" decoding="async">`;
+    } else if (isVideo && source) {
+      media = `<video src="${escapeHtml(source)}" poster="${escapeHtml(file.thumbnail_url || "")}" controls muted playsinline preload="metadata"></video>`;
+    }
+    return `<figure class="ped-staging-editor-file">
+      <div>${media}</div>
+      <figcaption><b>${index + 1}</b><span>${escapeHtml(name)}</span></figcaption>
+    </figure>`;
+  }).join("");
+}
+
+function updatePedStagingEditorCount() {
+  const input = document.getElementById("pedStagingEditorCaption");
+  document.getElementById("pedStagingEditorCount").textContent = String(input?.value?.length || 0);
+}
+
+function openPedStagingEditor(id) {
+  const item = (state.pedStagingItems || []).find((entry) => String(entry.id) === String(id));
+  if (!item) return;
+  editingPedStagingId = String(item.id);
+  const format = pedTypeMeta(item.content_type);
+  const files = pedItemFiles(item);
+  const isStory = format.type === "story";
+  document.getElementById("pedStagingEditorTitle").textContent = pedItemTitle(item);
+  document.getElementById("pedStagingEditorMeta").textContent = `${format.label} · ${files.length} ${files.length === 1 ? "contenuto" : "contenuti"} · in attesa di programmazione`;
+  document.getElementById("pedStagingEditorMedia").innerHTML = pedStagingEditorMediaMarkup(item);
+  const input = document.getElementById("pedStagingEditorCaption");
+  input.value = item.caption || "";
+  input.disabled = isStory;
+  document.getElementById("pedStagingEditorField").hidden = isStory;
+  document.getElementById("pedStagingEditorStoryNote").hidden = !isStory;
+  document.getElementById("pedStagingEditorMessage").textContent = "";
+  document.getElementById("pedStagingEditorSaveButton").hidden = isStory;
+  updatePedStagingEditorCount();
+  document.getElementById("pedStagingEditorModal").showModal();
+  if (!isStory) requestAnimationFrame(() => input.focus());
+}
+
+async function savePedStagingCaption(event) {
+  event.preventDefault();
+  const modal = document.getElementById("pedStagingEditorModal");
+  if (event.submitter?.value === "cancel") {
+    modal.close();
+    return;
+  }
+  const item = (state.pedStagingItems || []).find((entry) => String(entry.id) === String(editingPedStagingId));
+  if (!item) return;
+  const caption = String(document.getElementById("pedStagingEditorCaption").value || "").trim();
+  const message = document.getElementById("pedStagingEditorMessage");
+  const button = document.getElementById("pedStagingEditorSaveButton");
+  if (caption.length > 10000) {
+    message.textContent = "Il copy non puo superare 10000 caratteri.";
+    return;
+  }
+  button.disabled = true;
+  message.textContent = "Salvataggio copy...";
+  try {
+    const response = await apiFetch("/api/ped", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ staging_caption_id: item.id, caption })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "Impossibile salvare il copy");
+    const updatedItem = data.item || { ...item, caption };
+    state.pedStagingItems = (state.pedStagingItems || []).map((entry) => (
+      String(entry.id) === String(item.id) ? updatedItem : entry
+    ));
+    renderPedStaging();
+    modal.close();
+  } catch (error) {
+    message.textContent = error.message;
+  } finally {
+    button.disabled = false;
+  }
 }
 
 function pedCarouselHoverPreview(files, title) {
@@ -8937,7 +9031,7 @@ mobileNavigationMedia.addEventListener?.("change", syncMobileNavigation);
 syncMobileNavigation();
 
 document.body.addEventListener("click", (event) => {
-  if (Date.now() < pedDragSuppressClickUntil && event.target.closest("[data-ped-content]")) {
+  if (Date.now() < pedDragSuppressClickUntil && event.target.closest("[data-ped-content], [data-ped-staging]")) {
     event.preventDefault();
     event.stopPropagation();
     return;
@@ -8985,6 +9079,7 @@ document.body.addEventListener("click", (event) => {
   const pedAdd = event.target.closest("[data-ped-add]");
   const pedStagingAdd = event.target.closest("#pedStagingAddButton");
   const pedStagingRemove = event.target.closest("[data-ped-staging-remove]");
+  const pedStagingOpen = event.target.closest("[data-ped-staging-open]");
   const pedOpen = event.target.closest("[data-ped-open]");
   const pedEditor = event.target.closest("[data-ped-editor]");
   const pedCaptionSelect = event.target.closest("[data-ped-caption-select]");
@@ -9125,6 +9220,7 @@ document.body.addEventListener("click", (event) => {
   }
   if (pedStagingAdd) return openPedDrivePicker("", { staging: true });
   if (pedStagingRemove) return removePedStagingItem(pedStagingRemove.dataset.pedStagingRemove);
+  if (pedStagingOpen) return openPedStagingEditor(pedStagingOpen.dataset.pedStagingOpen);
   if (pedAdd) return openPedDrivePicker(pedAdd.dataset.pedAdd);
   if (pedRemove) return removePedItem(pedRemove.dataset.pedRemove);
   if (pedEditor) return openPedCaptionModal(pedEditor.dataset.pedEditor);
@@ -9277,7 +9373,7 @@ document.body.addEventListener("dragstart", (event) => {
     return;
   }
   const stagingCard = event.target.closest?.("[data-ped-staging]");
-  if (stagingCard && !event.target.closest("[data-ped-staging-remove]")) {
+  if (stagingCard && !event.target.closest("[data-ped-staging-remove], .ped-staging-edit")) {
     pedDraggedItemId = "";
     pedDraggedStagingId = String(stagingCard.dataset.pedStaging || "");
     if (!pedDraggedStagingId) return;
@@ -9394,7 +9490,7 @@ document.body.addEventListener("dragend", () => {
 document.body.addEventListener("pointerdown", (event) => {
   if (event.pointerType === "mouse" || event.button !== 0) return;
   const card = event.target.closest?.("[data-ped-content], [data-ped-staging]");
-  if (!card || event.target.closest("[data-ped-remove], [data-ped-staging-remove]")) return;
+  if (!card || event.target.closest("[data-ped-remove], [data-ped-staging-remove], .ped-staging-edit")) return;
   resetPedPointerDrag();
   pedPointerDrag.pointerId = event.pointerId;
   pedPointerDrag.card = card;
@@ -9761,6 +9857,8 @@ document.getElementById("pedShareCopyButton").addEventListener("click", copyPedS
 document.getElementById("pedShareDisableButton").addEventListener("click", disablePedShareLink);
 document.getElementById("pedCaptionForm").addEventListener("submit", savePedCaption);
 document.getElementById("pedCaptionText").addEventListener("input", updatePedCaptionCount);
+document.getElementById("pedStagingEditorForm").addEventListener("submit", savePedStagingCaption);
+document.getElementById("pedStagingEditorCaption").addEventListener("input", updatePedStagingEditorCount);
 document.getElementById("pedCaptionCopyButton").addEventListener("click", copyPedCaption);
 document.getElementById("pedCaptionToolbar").addEventListener("click", (event) => {
   const button = event.target.closest("[data-ped-caption-command]");

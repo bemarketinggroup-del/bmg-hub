@@ -144,6 +144,13 @@ assert.match(appSource, /files\.length <= 2/, "il carosello deve conservare alme
 assert.match(appSource, /video\.preload = "auto"/, "i video nel carosello devono caricare il primo fotogramma");
 assert.match(appSource, /video\.currentTime = firstFrameTime/, "il player deve posizionarsi sul primo fotogramma decodificabile");
 assert.match(appSource, /video\.classList\.add\("has-first-frame"\)/, "il video deve segnalare quando il primo fotogramma e visibile");
+assert.match(htmlSource, /id="pedStagingEditorModal"/, "i contenuti momentanei devono aprire un editor dedicato");
+assert.match(appSource, /function openPedStagingEditor\(id\)/, "la card momentanea deve aprire l'editor del copy");
+assert.match(appSource, /class="ped-staging-caption-preview/, "la card momentanea deve mostrare un estratto del copy");
+assert.match(appSource, /staging_caption_id: item\.id, caption/, "il copy momentaneo deve essere salvato tramite API");
+assert.match(pedSource, /body\.staging_caption_id !== undefined/, "l'API PED deve aggiornare il copy dei contenuti momentanei");
+assert.match(pedSource, /\/ped_staging_items\?\$\{filter\}/, "il copy dei caroselli momentanei deve essere applicato a tutto il gruppo");
+assert.match(styleSource, /\.ped-staging-caption-preview[\s\S]*?-webkit-line-clamp: 2;/, "l'anteprima del copy deve restare compatta");
 assert.match(pedSource, /Array\.isArray\(body\.carousel_member_ids\)/, "l'API PED deve accettare l'ordine completo del carosello");
 assert.match(pedSource, /\/rpc\/sync_ped_carousel_members/, "ordine e rimozioni devono essere applicati atomicamente");
 assert.match(carouselEditorMigration, /delete from public\.ped_items/, "la funzione database deve rimuovere soltanto i membri esclusi");
