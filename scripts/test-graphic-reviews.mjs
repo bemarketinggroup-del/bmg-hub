@@ -58,6 +58,7 @@ assert.match(appSource, /Manda ai grafici/);
 assert.match(appSource, /Descrivi le modifiche da apportare/);
 assert.match(appSource, /Carica versione/);
 assert.match(appSource, /folder_id: review\.source_folder_id/);
+assert.match(appSource, /const files = \[\.\.\.\(event\.target\.files \|\| \[\]\)\];/);
 assert.match(styleSource, /\.graphic-review-card/);
 assert.match(styleSource, /\.graphic-review-modal/);
 

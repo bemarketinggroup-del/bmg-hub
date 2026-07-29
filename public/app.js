@@ -8159,7 +8159,7 @@ document.body.addEventListener("click", (event) => {
 document.body.addEventListener("change", (event) => {
   if (event.target.id === "graphicDeliverableInput") {
     const reviewId = graphicDeliverableReviewId;
-    const files = event.target.files;
+    const files = [...(event.target.files || [])];
     event.target.value = "";
     graphicDeliverableReviewId = "";
     return uploadGraphicDeliverables(reviewId, files);
