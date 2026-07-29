@@ -117,6 +117,10 @@ svg.lc {
   background: var(--ink);
 }
 
+.auth-restoring .login-screen {
+  visibility: hidden;
+}
+
 .login-card {
   width: min(430px, 100%);
   display: grid;

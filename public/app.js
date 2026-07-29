@@ -1,6 +1,7 @@
 const STORAGE_KEY = "bmg-hub-v1";
 const PASSWORD_RECOVERY_KEY = "bmg-password-recovery";
 const PED_PICKER_LOCATIONS_KEY = "bmg-hub-ped-picker-locations-v1";
+const LAST_VIEW_KEY = "bmg-hub-last-view-v1";
 const ALL_TEAM_TASKS_ID = "__all";
 const UNASSIGNED_TASKS_ID = "__unassigned";
 const TEAM_TASK_LIST_NAME = "task del team";
@@ -293,6 +294,7 @@ let smartWorkingLoading = false;
 let selectedContentSection = "all";
 let authConfig = null;
 let authSession = loadAuthSession();
+let authRefreshPromise = null;
 let currentProfile = null;
 const userActivityCache = new Map();
 let activityHeartbeatTimer = null;
@@ -414,7 +416,8 @@ function normalizeSession(data) {
     access_token: data.access_token,
     refresh_token: data.refresh_token,
     expires_at: Date.now() + Number(data.expires_in || 3600) * 1000,
-    user: data.user || null
+    user: data.user || authSession?.user || null,
+    profile: authSession?.profile || null
   };
 }
 
@@ -571,18 +574,29 @@ async function updateCurrentPassword(currentPassword, newPassword, recoveryMode 
 
 async function refreshAuthSession() {
   if (!authSession?.refresh_token) return null;
-  const response = await supabaseAuth("/token?grant_type=refresh_token", {
-    method: "POST",
-    body: JSON.stringify({ refresh_token: authSession.refresh_token })
-  });
-  const data = await response.json();
-  if (!response.ok) {
-    saveAuthSession(null);
-    return null;
+  if (authRefreshPromise) return authRefreshPromise;
+  authRefreshPromise = (async () => {
+    const response = await supabaseAuth("/token?grant_type=refresh_token", {
+      method: "POST",
+      body: JSON.stringify({ refresh_token: authSession.refresh_token })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const invalidSession = response.status === 400 || response.status === 401;
+      if (invalidSession) saveAuthSession(null);
+      const error = new Error(data.error_description || data.msg || "Non riesco a rinnovare la sessione");
+      error.invalidSession = invalidSession;
+      throw error;
+    }
+    const nextSession = normalizeSession(data);
+    saveAuthSession(nextSession);
+    return nextSession.access_token;
+  })();
+  try {
+    return await authRefreshPromise;
+  } finally {
+    authRefreshPromise = null;
   }
-  const nextSession = normalizeSession(data);
-  saveAuthSession(nextSession);
-  return nextSession.access_token;
 }
 
 async function accessToken() {
@@ -594,18 +608,27 @@ async function accessToken() {
 }
 
 async function apiFetch(url, options = {}) {
-  const token = await accessToken();
+  let token = await accessToken();
   if (!token) {
     showLogin();
     throw new Error("Sessione richiesta");
   }
-  const response = await fetch(url, {
+  const request = () => fetch(url, {
     ...options,
     headers: {
       ...(options.headers || {}),
       Authorization: `Bearer ${token}`
     }
   });
+  let response = await request();
+  if (response.status === 401 && authSession?.refresh_token) {
+    try {
+      token = await refreshAuthSession();
+      if (token) response = await request();
+    } catch (error) {
+      if (!error.invalidSession) throw error;
+    }
+  }
   if (response.status === 401) {
     saveAuthSession(null);
     showLogin();
@@ -715,8 +738,13 @@ function scheduleDriveFolderPrefetch(clientId, folderId, source = "") {
 async function loadCurrentUser() {
   const response = await apiFetch("/api/me");
   const data = await response.json();
-  if (!response.ok) throw new Error(data.error || "Profilo staff non disponibile");
+  if (!response.ok) {
+    const error = new Error(data.error || "Profilo staff non disponibile");
+    error.status = response.status;
+    throw error;
+  }
   currentProfile = data.profile;
+  saveAuthSession({ ...authSession, profile: currentProfile });
   renderSession();
   applyRoleAccess();
   return data;
@@ -749,12 +777,14 @@ function applyRoleAccess() {
 }
 
 function showLogin(message = "") {
+  document.documentElement.classList.remove("auth-restoring");
   document.getElementById("appShell").classList.add("is-hidden");
   document.getElementById("loginScreen").classList.remove("is-hidden");
   document.getElementById("loginError").textContent = message;
 }
 
 function showApp() {
+  document.documentElement.classList.remove("auth-restoring");
   document.getElementById("loginScreen").classList.add("is-hidden");
   document.getElementById("appShell").classList.remove("is-hidden");
 }
@@ -880,11 +910,27 @@ function consumeRecoverySessionFromUrl() {
   return true;
 }
 
+function loadLastView() {
+  try {
+    return localStorage.getItem(LAST_VIEW_KEY) || "dashboard";
+  } catch {
+    return "dashboard";
+  }
+}
+
+function rememberLastView(view) {
+  try {
+    localStorage.setItem(LAST_VIEW_KEY, view);
+  } catch {
+    // La navigazione continua a funzionare anche se lo storage del browser non e' disponibile.
+  }
+}
+
+function restoreLastView() {
+  setView(loadLastView());
+}
+
 function setView(view) {
-  if (!canAccessView(view)) view = "dashboard";
-  setMobileNavOpen(false);
-  document.querySelectorAll(".nav-item").forEach((item) => item.classList.toggle("is-active", item.dataset.view === view));
-  document.querySelectorAll("[data-view-panel]").forEach((panel) => panel.classList.toggle("is-active", panel.dataset.viewPanel === view));
   const titles = {
     dashboard: ["BMG Internal OS", "Home"],
     personal: ["Spazio personale", "La mia area"],
@@ -900,6 +946,11 @@ function setView(view) {
     users: ["Accessi interni", "Utenti"],
     settings: ["Setup tecnico", "Configurazione"]
   };
+  if (!Object.hasOwn(titles, view) || !canAccessView(view)) view = "dashboard";
+  rememberLastView(view);
+  setMobileNavOpen(false);
+  document.querySelectorAll(".nav-item").forEach((item) => item.classList.toggle("is-active", item.dataset.view === view));
+  document.querySelectorAll("[data-view-panel]").forEach((panel) => panel.classList.toggle("is-active", panel.dataset.viewPanel === view));
   document.getElementById("viewKicker").textContent = titles[view][0];
   document.getElementById("viewTitle").textContent = titles[view][1];
   auditModuleView(view);
@@ -9265,18 +9316,38 @@ document.getElementById("loginForm").addEventListener("submit", async (event) =>
 });
 
 async function bootApp() {
+  const recoveryMode = consumeRecoverySessionFromUrl();
+  if (!authSession?.access_token) {
+    showLogin();
+    return;
+  }
+  let restoredFromCache = false;
   try {
-    const recoveryMode = consumeRecoverySessionFromUrl();
     await loadAuthConfig();
     await loadCurrentUser();
-    showApp();
-    startActivityTracker();
-    renderAll();
-    if (recoveryMode) {
-      openProfileModal();
-      setPasswordMessage("Imposta una nuova password per completare il recupero.", "success");
+  } catch (error) {
+    const temporaryFailure = !error.status || error.status >= 500;
+    if (!temporaryFailure || !authSession?.access_token || !authSession?.profile) {
+      showLogin(error.message);
+      return;
     }
-    renderBackendStatus();
+    currentProfile = authSession.profile;
+    renderSession();
+    applyRoleAccess();
+    restoredFromCache = true;
+  }
+
+  showApp();
+  restoreLastView();
+  startActivityTracker();
+  renderAll();
+  if (recoveryMode) {
+    openProfileModal();
+    setPasswordMessage("Imposta una nuova password per completare il recupero.", "success");
+  }
+  renderBackendStatus(restoredFromCache ? "Sessione ripristinata. Alcuni dati potrebbero aggiornarsi con qualche secondo di ritardo." : "");
+
+  try {
     const loaders = [];
     if (canAccessModule("clients") || canAccessModule("ped") || canAccessModule("tasks") || canAccessModule("graphics")) loaders.push(loadClientsFromBackend());
     if (canAccessModule("tasks") || canAccessModule("smart_working")) loaders.push(loadClickUpTeam());
@@ -9287,12 +9358,14 @@ async function bootApp() {
     if (canAccessModule("site_backend")) loaders.push(loadContentFromBackend());
     if (canAccessModule("calendar") || canAccessModule("smart_working")) loaders.push(loadServiceHealth({ quiet: true }));
     loaders.push(loadPersonalArea({ quiet: true }));
-    await Promise.all(loaders);
+    const results = await Promise.allSettled(loaders);
+    const failed = results.find((result) => result.status === "rejected");
+    if (failed) renderBackendStatus(failed.reason?.message || "Alcuni dati non sono ancora disponibili");
     startPersonalAreaUpdates();
     startServiceHealthUpdates();
     renderHome();
   } catch (error) {
-    showLogin(error.message);
+    renderBackendStatus(error.message);
   }
 }
 
