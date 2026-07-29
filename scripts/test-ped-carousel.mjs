@@ -127,6 +127,12 @@ assert.match(appSource, /data-ped-hover-slide/, "ogni contenuto del carosello de
 assert.match(appSource, /window\.setInterval\(\(\) => \{[\s\S]*?1500\)/, "l'anteprima carosello deve scorrere automaticamente");
 assert.match(htmlSource, /data-ped-caption-preview/, "il pannello editoriale deve aprire il visualizzatore interno");
 assert.match(appSource, /function openPedCarouselPreview\(item\)/, "il pannello editoriale deve mostrare tutti i contenuti del carosello");
+assert.match(htmlSource, /data-ped-caption-add/, "il pannello editoriale deve permettere di aggiungere contenuti a un carosello esistente");
+assert.match(appSource, /append_drive_file_ids: fileIds/, "il selettore deve accodare i nuovi file al carosello esistente");
+assert.match(appSource, /existingCount \+ addedCount/, "il selettore deve rispettare il limite considerando i contenuti gia presenti");
+assert.match(pedSource, /Array\.isArray\(body\.append_drive_file_ids\)/, "l'API PED deve gestire l'aggiunta successiva di file al carosello");
+assert.match(pedSource, /group_position: nextPosition \+ index/, "i nuovi contenuti devono essere aggiunti in coda all'ordine esistente");
+assert.match(pedSource, /targetRows\.length \+ fileIds\.length > MAX_CAROUSEL_FILES/, "il limite di 20 contenuti deve valere anche sugli aggiornamenti");
 assert.match(appSource, /class="ped-agenda-preview" data-ped-caption-preview="\$\{escapeHtml\(item\.id\)\}"/, "la miniatura dell'agenda deve aprire il contenuto completo, inclusi i caroselli");
 assert.match(appSource, /position\.textContent = `\$\{activeIndex \+ 1\} \/ \$\{files\.length\}`/, "il visualizzatore deve indicare la posizione nel carosello");
 assert.match(styleSource, /\.ped-carousel-preview-thumbs/, "il visualizzatore deve mostrare le miniature di tutti i contenuti");

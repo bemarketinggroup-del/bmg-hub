@@ -200,7 +200,21 @@ let graphicsDriveClientId = "";
 let selectedPedClientId = "";
 let pedUsedFileIds = new Set();
 let selectedPedMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-let pedPickerState = { date: "", path: [], files: [], libraries: [], source: "", rootId: "", uploadEnabled: false, contentType: "post", caption: "", selectedFiles: [], showUsed: false };
+let pedPickerState = {
+  date: "",
+  path: [],
+  files: [],
+  libraries: [],
+  source: "",
+  rootId: "",
+  uploadEnabled: false,
+  contentType: "post",
+  caption: "",
+  selectedFiles: [],
+  showUsed: false,
+  appendGroupId: "",
+  existingCount: 0
+};
 let pedPickerLocations = loadPedPickerLocations();
 let driveManageContext = { surface: "client", clientId: "", source: "", folder: null };
 let driveMoveState = { path: [], folder: null, sourceFileId: "", sourceName: "", sourceIsFolder: false, sourceItems: [] };
@@ -3416,12 +3430,14 @@ function shiftPedMonth(delta) {
   loadPedCalendar();
 }
 
-async function openPedDrivePicker(date) {
+async function openPedDrivePicker(date, { appendItem = null } = {}) {
   const client = state.clients.find((item) => String(item.id) === String(selectedPedClientId));
   if (!clientHasDrive(client)) {
     alert("Collega prima la cartella Google Drive del cliente.");
     return;
   }
+  const appendMode = Boolean(appendItem?.is_group && pedContentType(appendItem.content_type) === "carousel");
+  const existingCount = appendMode ? pedItemFiles(appendItem).length : 0;
   const remembered = lastPedPickerLocation(selectedPedClientId);
   pedPickerState = {
     date,
@@ -3431,15 +3447,21 @@ async function openPedDrivePicker(date) {
     source: remembered?.source || "",
     rootId: "",
     uploadEnabled: false,
-    contentType: "post",
-    caption: "",
+    contentType: appendMode ? "carousel" : "post",
+    caption: appendMode ? String(appendItem.caption || "") : "",
     selectedFiles: [],
-    showUsed: false
+    showUsed: false,
+    appendGroupId: appendMode ? String(appendItem.id) : "",
+    existingCount
   };
-  document.getElementById("pedPickerTitle").textContent = `Contenuto per ${new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "long" }).format(new Date(`${date}T12:00:00`))}`;
-  document.getElementById("pedPickerSubtitle").textContent = `${client.name} · scegli una foto, un video o una grafica dal Drive`;
+  document.getElementById("pedPickerTitle").textContent = appendMode
+    ? "Aggiungi contenuti al carosello"
+    : `Contenuto per ${new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "long" }).format(new Date(`${date}T12:00:00`))}`;
+  document.getElementById("pedPickerSubtitle").textContent = appendMode
+    ? `${client.name} · il carosello contiene gia ${existingCount} ${existingCount === 1 ? "contenuto" : "contenuti"}`
+    : `${client.name} · scegli una foto, un video o una grafica dal Drive`;
   document.getElementById("pedPickerMessage").textContent = "";
-  document.getElementById("pedPickerCaption").value = "";
+  document.getElementById("pedPickerCaption").value = pedPickerState.caption;
   document.getElementById("pedDrivePickerModal").showModal();
   renderPedPickerFormat();
   if (remembered?.folder?.id) {
@@ -3479,11 +3501,12 @@ function renderPedPickerFormat() {
     const active = button.dataset.pedPickerType === type;
     button.classList.toggle("is-active", active);
     button.setAttribute("aria-pressed", String(active));
+    button.disabled = Boolean(pedPickerState.appendGroupId);
   });
   const captionField = document.getElementById("pedPickerCaptionField");
   const captionInput = document.getElementById("pedPickerCaption");
   const isStory = type === "story";
-  captionField.classList.toggle("is-hidden", isStory);
+  captionField.classList.toggle("is-hidden", isStory || Boolean(pedPickerState.appendGroupId));
   if (isStory) {
     pedPickerState.caption = "";
     captionInput.value = "";
@@ -3497,15 +3520,24 @@ function renderPedPickerFormat() {
 }
 
 function renderPedCarouselSelection() {
-  const count = pedPickerState.selectedFiles.length;
+  const addedCount = pedPickerState.selectedFiles.length;
+  const existingCount = Number(pedPickerState.existingCount || 0);
+  const totalCount = existingCount + addedCount;
+  const appendMode = Boolean(pedPickerState.appendGroupId);
   const countLabel = document.getElementById("pedCarouselSelectionCount");
   const button = document.getElementById("pedCreateCarouselButton");
   if (!countLabel || !button) return;
-  countLabel.textContent = count
-    ? `${count} ${count === 1 ? "contenuto selezionato" : "contenuti selezionati"} · la foto 1 sara la copertina`
-    : "0 contenuti selezionati";
-  button.disabled = count < 2 || count > 20;
-  button.textContent = count >= 2 ? `Crea carosello (${count})` : "Crea carosello";
+  countLabel.textContent = appendMode
+    ? addedCount
+      ? `${existingCount} gia presenti + ${addedCount} ${addedCount === 1 ? "nuovo contenuto" : "nuovi contenuti"} · totale ${totalCount}/20`
+      : `${existingCount} contenuti gia presenti · seleziona i nuovi file da aggiungere`
+    : addedCount
+      ? `${addedCount} ${addedCount === 1 ? "contenuto selezionato" : "contenuti selezionati"} · la foto 1 sara la copertina`
+      : "0 contenuti selezionati";
+  button.disabled = appendMode ? addedCount < 1 || totalCount > 20 : addedCount < 2 || addedCount > 20;
+  button.textContent = appendMode
+    ? addedCount ? `Aggiungi al carosello (${addedCount})` : "Aggiungi al carosello"
+    : addedCount >= 2 ? `Crea carosello (${addedCount})` : "Crea carosello";
 }
 
 async function loadPedPickerFolder(folderId = "", folderName = "", { source = pedPickerState.source, resetPath = false, fresh = false } = {}) {
@@ -3658,7 +3690,7 @@ function renderPedPicker() {
       ? pedPickerState.selectedFiles.findIndex((item) => String(item.id) === String(file.id))
       : -1;
     const selected = selectionIndex >= 0;
-    const selectionOrder = selected ? selectionIndex + 1 : 0;
+    const selectionOrder = selected ? Number(pedPickerState.existingCount || 0) + selectionIndex + 1 : 0;
     const mediaContent = `${hasPreview
       ? `<img src="${escapeHtml(file.thumbnail_url || "")}" alt="" loading="lazy">${isVideo ? `<span class="ped-video-mini"><svg class="lc" viewBox="0 0 24 24"><path d="m9 7 8 5-8 5z"/></svg></span>` : ""}`
       : driveFileIcon(file)}${used ? `<span class="ped-picker-used-badge">Gia nel PED</span>` : ""}${isCarouselSelection && selected ? `<strong class="ped-picker-order-badge" title="${selectionOrder === 1 ? "Copertina del carosello nel feed Instagram" : `Posizione ${selectionOrder} nel carosello`}">${selectionOrder}</strong>` : ""}`;
@@ -4028,8 +4060,8 @@ function togglePedCarouselFile(fileId) {
   const index = pedPickerState.selectedFiles.findIndex((file) => String(file.id) === String(fileId));
   if (index >= 0) pedPickerState.selectedFiles.splice(index, 1);
   else {
-    if (pedPickerState.selectedFiles.length >= 20) {
-      document.getElementById("pedPickerMessage").textContent = "Puoi selezionare al massimo 20 contenuti per carosello.";
+    if (Number(pedPickerState.existingCount || 0) + pedPickerState.selectedFiles.length >= 20) {
+      document.getElementById("pedPickerMessage").textContent = "Il carosello puo contenere al massimo 20 contenuti.";
       return;
     }
     const file = pedPickerState.files.find((item) => String(item.id) === String(fileId));
@@ -4043,28 +4075,39 @@ function togglePedCarouselFile(fileId) {
 async function attachPedDriveFiles(fileIds) {
   const message = document.getElementById("pedPickerMessage");
   const format = pedContentType(pedPickerState.contentType);
-  if (format === "carousel" && fileIds.length < 2) {
+  const appendMode = Boolean(pedPickerState.appendGroupId);
+  if (format === "carousel" && !appendMode && fileIds.length < 2) {
     message.textContent = "Seleziona almeno due contenuti per creare il carosello.";
     return;
   }
-  message.textContent = format === "carousel" ? "Creazione carosello in corso..." : "Collegamento in corso...";
+  if (appendMode && !fileIds.length) {
+    message.textContent = "Seleziona almeno un nuovo contenuto da aggiungere.";
+    return;
+  }
+  message.textContent = appendMode
+    ? "Aggiunta dei contenuti al carosello..."
+    : format === "carousel" ? "Creazione carosello in corso..." : "Collegamento in corso...";
   try {
     const response = await apiFetch("/api/ped", {
-      method: "POST",
+      method: appendMode ? "PATCH" : "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        client_id: selectedPedClientId,
-        scheduled_date: pedPickerState.date,
-        drive_file_id: fileIds[0],
-        drive_file_ids: fileIds,
-        content_type: format,
-        caption: format === "story" ? "" : document.getElementById("pedPickerCaption").value
-      })
+      body: JSON.stringify(appendMode
+        ? { id: pedPickerState.appendGroupId, append_drive_file_ids: fileIds }
+        : {
+            client_id: selectedPedClientId,
+            scheduled_date: pedPickerState.date,
+            drive_file_id: fileIds[0],
+            drive_file_ids: fileIds,
+            content_type: format,
+            caption: format === "story" ? "" : document.getElementById("pedPickerCaption").value
+          })
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || "Impossibile collegare il contenuto");
     document.getElementById("pedDrivePickerModal").close();
+    const updatedGroupId = appendMode ? pedPickerState.appendGroupId : "";
     await loadPedCalendar();
+    if (updatedGroupId) openPedCaptionModal(updatedGroupId);
   } catch (error) {
     message.textContent = error.message;
   }
@@ -4267,6 +4310,13 @@ function selectPedCaptionItem(id, { focus = false } = {}) {
   document.getElementById("pedCaptionStoryNote").hidden = !isStory;
   document.getElementById("pedCaptionCopyButton").hidden = isStory;
   document.getElementById("pedCaptionPublishingStatus").value = pedPublishingStatus(item.publishing_status);
+  const addLink = document.getElementById("pedCaptionAddLink");
+  const itemFiles = pedItemFiles(item);
+  const canAppend = Boolean(item.is_group && pedContentType(item.content_type) === "carousel");
+  addLink.hidden = !canAppend;
+  addLink.disabled = canAppend && itemFiles.length >= 20;
+  addLink.dataset.pedCaptionAdd = canAppend ? String(item.id) : "";
+  addLink.textContent = itemFiles.length >= 20 ? "Carosello completo (20/20)" : "Aggiungi contenuti";
   const previewLink = document.getElementById("pedCaptionPreviewLink");
   previewLink.dataset.pedCaptionPreview = String(item.id);
   previewLink.hidden = !pedItemFiles(item).some((file) => file.content_url || file.drive_web_url || file.drive_file_id);
@@ -8616,6 +8666,7 @@ document.body.addEventListener("click", (event) => {
   const pedEditor = event.target.closest("[data-ped-editor]");
   const pedCaptionSelect = event.target.closest("[data-ped-caption-select]");
   const pedCaptionPreview = event.target.closest("[data-ped-caption-preview]");
+  const pedCaptionAdd = event.target.closest("[data-ped-caption-add]");
   const pedDay = event.target.closest(".ped-day[data-ped-day]");
   const pedInstagramOrderItem = event.target.closest("[data-ped-instagram-item]");
   const pedRemove = event.target.closest("[data-ped-remove]");
@@ -8752,6 +8803,12 @@ document.body.addEventListener("click", (event) => {
   if (pedEditor) return openPedCaptionModal(pedEditor.dataset.pedEditor);
   if (pedCaptionSelect) return selectPedCaptionItem(pedCaptionSelect.dataset.pedCaptionSelect, { focus: true });
   if (pedCaptionPreview) return openPedContentPreview(pedCaptionPreview.dataset.pedCaptionPreview);
+  if (pedCaptionAdd && !pedCaptionAdd.disabled) {
+    const item = pedStateItem(pedCaptionAdd.dataset.pedCaptionAdd);
+    if (!item) return;
+    document.getElementById("pedCaptionModal").close();
+    return openPedDrivePicker(item.scheduled_date, { appendItem: item });
+  }
   if (pedInstagramOrderItem && pedInstagramOrderEditing) return;
   if (pedOpen) return openDriveFile(pedOpen.dataset.pedOpen, pedOpen.dataset.pedName, pedOpen.dataset.pedMime, pedOpen.dataset.pedContentUrl);
   if (pedCarouselDownload) return downloadPedCarousel(pedCarouselDownload.dataset.pedCarouselDownload, pedCarouselDownload);
