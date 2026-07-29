@@ -52,6 +52,8 @@ assert.match(htmlSource, /id="chatDriveModal"/);
 assert.match(htmlSource, /id="chatDrivePreview"/);
 assert.match(htmlSource, /id="chatDriveAttachButton"/);
 assert.match(cssSource, /\.team-chat-workspace/);
+assert.match(cssSource, /\.team-chat-layout\s*\{[\s\S]*flex:\s*1 1 0/);
+assert.match(cssSource, /\.team-chat-room\s*\{[\s\S]*min-height:\s*0[\s\S]*overflow:\s*hidden/);
 assert.match(cssSource, /\.team-chat-compose-tools/);
 assert.match(cssSource, /\.team-chat-reference-picker/);
 assert.match(cssSource, /\.chat-drive-grid/);
