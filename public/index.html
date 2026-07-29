@@ -353,11 +353,25 @@
               </div>
               <div class="graphics-drive-client-picker">
                 <div class="graphics-drive-client-grid" id="graphicsDriveClientGrid" role="list" aria-label="Cartelle GRAFICHE dei clienti"></div>
+                <div class="graphics-drive-scroll-hint is-hidden" id="graphicsDriveScrollHint" aria-hidden="true">
+                  <span>Scorri per vedere tutti i clienti</span>
+                  <svg class="lc" viewBox="0 0 24 24"><path d="m7 10 5 5 5-5"/></svg>
+                </div>
               </div>
             </div>
             <div class="graphics-drive-placeholder" id="graphicsDrivePlaceholder">
               <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h6l2 2h10v10H3z"/><path d="M3 7V5h6l2 2"/></svg>
               <span>Seleziona un cliente per aprire la sua cartella GRAFICHE.</span>
+            </div>
+            <div class="graphics-drive-open-bar is-hidden" id="graphicsDriveOpenBar">
+              <div>
+                <span>Cartella aperta</span>
+                <strong id="graphicsDriveOpenLabel"></strong>
+              </div>
+              <button class="ghost-button graphics-drive-close-button" id="graphicsDriveCloseButton" type="button">
+                <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+                Chiudi cartella
+              </button>
             </div>
             <div class="graphics-client-drive is-hidden" data-graphics-drive-panel aria-live="polite"></div>
           </section>

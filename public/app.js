@@ -7724,11 +7724,26 @@ async function submitGraphicReview(form) {
   }
 }
 
+function updateGraphicsDriveScrollHint() {
+  const grid = document.getElementById("graphicsDriveClientGrid");
+  const picker = grid?.closest(".graphics-drive-client-picker");
+  const hint = document.getElementById("graphicsDriveScrollHint");
+  if (!grid || !picker || !hint) return;
+
+  const isScrollable = grid.scrollHeight > grid.clientHeight + 2;
+  const isAtEnd = !isScrollable || grid.scrollHeight - grid.scrollTop - grid.clientHeight < 6;
+  picker.classList.toggle("has-overflow", isScrollable);
+  picker.classList.toggle("is-at-end", isAtEnd);
+  hint.classList.toggle("is-hidden", !isScrollable || isAtEnd);
+}
+
 function renderGraphicsDriveClients() {
   const grid = document.getElementById("graphicsDriveClientGrid");
   const placeholder = document.getElementById("graphicsDrivePlaceholder");
+  const openBar = document.getElementById("graphicsDriveOpenBar");
+  const openLabel = document.getElementById("graphicsDriveOpenLabel");
   const panel = document.querySelector("[data-graphics-drive-panel]");
-  if (!grid || !placeholder || !panel) return;
+  if (!grid || !placeholder || !openBar || !openLabel || !panel) return;
 
   const clients = state.clients
     .filter(clientHasDrive)
@@ -7751,11 +7766,27 @@ function renderGraphicsDriveClients() {
     && String(clientDriveState.clientId) === String(graphicsDriveClientId)
     && Boolean(graphicsDriveClientId);
   placeholder.classList.toggle("is-hidden", isOpen);
+  openBar.classList.toggle("is-hidden", !isOpen);
+  openLabel.textContent = isOpen && selectedClient ? `${selectedClient.name} · GRAFICHE` : "";
   panel.classList.toggle("is-hidden", !isOpen);
+  requestAnimationFrame(updateGraphicsDriveScrollHint);
+}
+
+function closeGraphicsClientDrive() {
+  graphicsDriveClientId = "";
+  if (clientDriveState.surface === "graphics") resetDriveBrowser("graphics");
+  renderGraphicsDriveClients();
 }
 
 function selectGraphicsDriveClient(client) {
   if (!client || !clientHasDrive(client)) return;
+  const isAlreadyOpen = clientDriveState.surface === "graphics"
+    && String(clientDriveState.clientId) === String(client.id)
+    && String(graphicsDriveClientId) === String(client.id);
+  if (isAlreadyOpen) {
+    closeGraphicsClientDrive();
+    return;
+  }
   graphicsDriveClientId = String(client.id);
   renderGraphicsDriveClients();
   void openGraphicsClientDrive(graphicsDriveClientId);
@@ -9661,6 +9692,9 @@ document.getElementById("graphicsDriveClientGrid").addEventListener("click", (ev
   const client = state.clients.find((item) => String(item.id) === String(option.dataset.graphicsDriveClient));
   if (client) selectGraphicsDriveClient(client);
 });
+document.getElementById("graphicsDriveClientGrid").addEventListener("scroll", updateGraphicsDriveScrollHint, { passive: true });
+document.getElementById("graphicsDriveCloseButton").addEventListener("click", closeGraphicsClientDrive);
+window.addEventListener("resize", updateGraphicsDriveScrollHint, { passive: true });
 document.getElementById("closeTaskDetailButton").addEventListener("click", () => document.getElementById("taskDetailModal").close());
 document.getElementById("editTaskFromDetailButton").addEventListener("click", () => {
   document.getElementById("taskDetailModal").close();
