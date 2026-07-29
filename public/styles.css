@@ -1821,7 +1821,10 @@ code { font-family: var(--font-mono); font-size: 12px; }
 .drive-entry-card {
   position: relative;
   min-width: 0;
-  align-self: start;
+  align-self: stretch;
+  display: flex;
+  height: 100%;
+  flex-direction: column;
   overflow: hidden;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -1833,8 +1836,8 @@ code { font-family: var(--font-mono); font-size: 12px; }
   display: flex;
   flex-direction: column;
 }
-.drive-entry-card.is-folder-card .drive-entry { flex: 1 0 auto; }
-.drive-entry-card.is-folder-card .drive-content-actions { margin-top: auto; }
+.drive-entry-card.is-visual-card .drive-entry { flex: 1 0 auto; }
+.drive-entry-card.is-visual-card .drive-content-actions { margin-top: auto; }
 .drive-entry-card:hover { border-color: var(--line-strong); background: var(--surface); transform: translateY(-1px); }
 .drive-entry-card.is-graphic-original { border-color: #a89d8c; background: #f3efe8; }
 .drive-entry-card.is-graphic-modified { border-color: #5f9972; background: #f5faf6; box-shadow: inset 0 0 0 1px rgba(95, 153, 114, .2); }
@@ -1981,6 +1984,18 @@ code { font-family: var(--font-mono); font-size: 12px; }
     radial-gradient(circle at 50% 43%, color-mix(in srgb, var(--client-accent) 13%, transparent), transparent 42%),
     var(--client-tint);
 }
+.drive-file-preview {
+  border-bottom-color: var(--line);
+  background:
+    radial-gradient(circle at 50% 43%, color-mix(in srgb, var(--stone) 9%, transparent), transparent 42%),
+    var(--surface-tint);
+}
+.drive-file-preview .drive-entry-preview-placeholder { color: var(--stone); }
+.drive-file-preview .drive-entry-preview-placeholder .lc {
+  width: clamp(42px, 26%, 62px);
+  height: clamp(42px, 26%, 62px);
+  stroke-width: 1.45;
+}
 .drive-folder-preview .drive-entry-preview-placeholder { color: var(--client-accent); }
 .drive-folder-preview .drive-entry-preview-placeholder .lc {
   width: clamp(46px, 29%, 68px);
@@ -2109,13 +2124,19 @@ code { font-family: var(--font-mono); font-size: 12px; }
 }
 .drive-entry.is-folder .drive-entry-icon { background: var(--client-tint); color: var(--client-accent); }
 .drive-entry-icon .lc { width: 18px; height: 18px; }
-.drive-entry-copy { min-width: 0; display: grid; gap: 1px; }
+.drive-entry-copy {
+  min-width: 0;
+  min-height: 52px;
+  display: grid;
+  align-content: center;
+  gap: 3px;
+}
 .drive-entry-copy strong {
-  overflow: hidden;
   color: var(--ink);
   font-size: 12px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 .drive-entry-copy small { color: var(--muted); font-size: 10px; }
 .drive-entry-arrow { width: 14px; height: 14px; color: var(--subtle); }
