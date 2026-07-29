@@ -7722,12 +7722,10 @@ async function submitGraphicReview(form) {
 }
 
 function renderGraphicsDriveClients() {
-  const search = document.getElementById("graphicsDriveClientSearch");
-  const clear = document.getElementById("graphicsDriveClientClear");
-  const selection = document.getElementById("graphicsDriveClientSelection");
+  const grid = document.getElementById("graphicsDriveClientGrid");
   const placeholder = document.getElementById("graphicsDrivePlaceholder");
   const panel = document.querySelector("[data-graphics-drive-panel]");
-  if (!search || !clear || !selection || !placeholder || !panel) return;
+  if (!grid || !placeholder || !panel) return;
 
   const clients = state.clients
     .filter(clientHasDrive)
@@ -7738,17 +7736,13 @@ function renderGraphicsDriveClients() {
   }
 
   const selectedClient = clients.find((client) => String(client.id) === String(graphicsDriveClientId));
-  if (selectedClient) {
-    search.value = selectedClient.name;
-    clear.classList.remove("is-hidden");
-    selection.innerHTML = `<span>Cartella selezionata</span><strong>${escapeHtml(selectedClient.name)} · GRAFICHE</strong>`;
-    selection.classList.remove("is-hidden");
-  } else {
-    if (document.activeElement !== search) search.value = "";
-    clear.classList.add("is-hidden");
-    selection.replaceChildren();
-    selection.classList.add("is-hidden");
-  }
+  grid.innerHTML = clients.length ? clients.map((client) => {
+    const active = String(client.id) === String(selectedClient?.id);
+    return `<button class="graphics-drive-client-tile${active ? " is-active" : ""}" data-graphics-drive-client="${escapeHtml(client.id)}" type="button" role="listitem" style="${clientColorStyle(client)}" aria-label="Apri la cartella GRAFICHE di ${escapeHtml(client.name)}"${active ? ' aria-current="true"' : ""}>
+      <span class="graphics-drive-client-square" aria-hidden="true"><svg class="lc" viewBox="0 0 24 24"><path d="M3 7h6l2 2h10v10H3z"/><path d="M3 7V5h6l2 2"/></svg></span>
+      <strong title="${escapeHtml(client.name)}">${escapeHtml(client.name)}</strong>
+    </button>`;
+  }).join("") : `<div class="graphics-drive-client-empty">Nessuna cartella GRAFICHE disponibile.</div>`;
 
   const isOpen = clientDriveState.surface === "graphics"
     && String(clientDriveState.clientId) === String(graphicsDriveClientId)
@@ -7757,48 +7751,9 @@ function renderGraphicsDriveClients() {
   panel.classList.toggle("is-hidden", !isOpen);
 }
 
-function graphicsDriveClients() {
-  return state.clients
-    .filter(clientHasDrive)
-    .sort((a, b) => String(a.name).localeCompare(String(b.name), "it", { sensitivity: "base" }));
-}
-
-function renderGraphicsDriveClientResults(query = "") {
-  const results = document.getElementById("graphicsDriveClientResults");
-  const search = document.getElementById("graphicsDriveClientSearch");
-  if (!results || !search) return;
-  const normalizedQuery = normalizedClientSearch(query);
-  const matches = graphicsDriveClients()
-    .filter((client) => !normalizedQuery || normalizedClientSearch(client.name).includes(normalizedQuery))
-    .slice(0, 12);
-  results.innerHTML = matches.length ? matches.map((client) => `
-    <button data-graphics-drive-client="${escapeHtml(client.id)}" type="button" role="option">
-      <span class="client-folder-swatch" style="${clientColorStyle(client)}" aria-hidden="true">${escapeHtml(initials(client.name))}</span>
-      <span><strong>${escapeHtml(client.name)}</strong><small>Cartella GRAFICHE</small></span>
-      <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
-    </button>
-  `).join("") : `<div class="task-client-no-results">Nessun cliente trovato.</div>`;
-  results.classList.remove("is-hidden");
-  search.setAttribute("aria-expanded", "true");
-}
-
-function closeGraphicsDriveClientResults() {
-  document.getElementById("graphicsDriveClientResults")?.classList.add("is-hidden");
-  document.getElementById("graphicsDriveClientSearch")?.setAttribute("aria-expanded", "false");
-}
-
-function clearGraphicsDriveClientSelection({ preserveSearch = false } = {}) {
-  const search = document.getElementById("graphicsDriveClientSearch");
-  graphicsDriveClientId = "";
-  if (clientDriveState.surface === "graphics") resetDriveBrowser("graphics");
-  if (search && !preserveSearch) search.value = "";
-  renderGraphicsDriveClients();
-}
-
 function selectGraphicsDriveClient(client) {
   if (!client || !clientHasDrive(client)) return;
   graphicsDriveClientId = String(client.id);
-  closeGraphicsDriveClientResults();
   renderGraphicsDriveClients();
   void openGraphicsClientDrive(graphicsDriveClientId);
 }
@@ -9697,46 +9652,11 @@ document.getElementById("graphicsRefreshButton").addEventListener("click", () =>
     if (folder) void loadClientDriveFolder(folder.id, folder.name, { fresh: true, source: clientDriveState.source });
   }
 });
-const graphicsDriveClientSearch = document.getElementById("graphicsDriveClientSearch");
-const graphicsDriveClientResults = document.getElementById("graphicsDriveClientResults");
-graphicsDriveClientSearch.addEventListener("focus", () => renderGraphicsDriveClientResults(graphicsDriveClientSearch.value));
-graphicsDriveClientSearch.addEventListener("input", () => {
-  const selected = state.clients.find((client) => String(client.id) === String(graphicsDriveClientId));
-  if (selected && normalizeClientLabel(selected.name) !== normalizeClientLabel(graphicsDriveClientSearch.value)) {
-    clearGraphicsDriveClientSelection({ preserveSearch: true });
-  }
-  const exactClient = graphicsDriveClients().find(
-    (client) => normalizeClientLabel(client.name) === normalizeClientLabel(graphicsDriveClientSearch.value)
-  );
-  if (exactClient) {
-    selectGraphicsDriveClient(exactClient);
-    return;
-  }
-  renderGraphicsDriveClientResults(graphicsDriveClientSearch.value);
-});
-graphicsDriveClientSearch.addEventListener("keydown", (event) => {
-  if (event.key === "Escape") {
-    closeGraphicsDriveClientResults();
-    return;
-  }
-  if (event.key === "Enter") {
-    const firstOption = graphicsDriveClientResults.querySelector("[data-graphics-drive-client]");
-    if (firstOption) {
-      event.preventDefault();
-      firstOption.click();
-    }
-  }
-});
-graphicsDriveClientResults.addEventListener("click", (event) => {
+document.getElementById("graphicsDriveClientGrid").addEventListener("click", (event) => {
   const option = event.target.closest("[data-graphics-drive-client]");
   if (!option) return;
   const client = state.clients.find((item) => String(item.id) === String(option.dataset.graphicsDriveClient));
   if (client) selectGraphicsDriveClient(client);
-});
-document.getElementById("graphicsDriveClientClear").addEventListener("click", () => {
-  clearGraphicsDriveClientSelection();
-  graphicsDriveClientSearch.focus();
-  renderGraphicsDriveClientResults("");
 });
 document.getElementById("closeTaskDetailButton").addEventListener("click", () => document.getElementById("taskDetailModal").close());
 document.getElementById("editTaskFromDetailButton").addEventListener("click", () => {
@@ -9798,7 +9718,6 @@ document.querySelector('#taskForm [name="name"]').addEventListener("input", auto
 document.querySelector('#taskForm [name="description"]').addEventListener("input", autoSelectTaskClient);
 document.addEventListener("click", (event) => {
   if (!event.target.closest(".task-client-picker")) closeTaskClientResults();
-  if (!event.target.closest(".graphics-drive-client-picker")) closeGraphicsDriveClientResults();
 });
 
 document.getElementById("taskForm").addEventListener("submit", async (event) => {
