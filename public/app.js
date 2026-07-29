@@ -4810,8 +4810,10 @@ function pedCarouselMedia(file) {
     return image;
   }
   if (type.startsWith("video/")) {
+    const preview = document.createElement("div");
+    preview.className = "ped-carousel-video-preview";
     const video = document.createElement("video");
-    video.controls = true;
+    video.controls = false;
     video.muted = true;
     video.defaultMuted = true;
     video.playsInline = true;
@@ -4837,6 +4839,35 @@ function pedCarouselMedia(file) {
       video.pause();
       video.classList.add("has-first-frame");
     };
+    const playButton = document.createElement("button");
+    playButton.type = "button";
+    playButton.className = "ped-carousel-video-play";
+    playButton.setAttribute("aria-label", `Riproduci ${file.drive_file_name || "il video"}`);
+    playButton.textContent = "▶";
+    const togglePlayback = () => {
+      if (video.paused) {
+        video.play().catch(() => {});
+      } else {
+        video.pause();
+      }
+    };
+    playButton.addEventListener("click", (event) => {
+      event.stopPropagation();
+      togglePlayback();
+    });
+    video.addEventListener("click", (event) => {
+      event.stopPropagation();
+      togglePlayback();
+    });
+    video.addEventListener("play", () => {
+      playButton.hidden = true;
+    });
+    video.addEventListener("pause", () => {
+      playButton.hidden = false;
+    });
+    video.addEventListener("ended", () => {
+      playButton.hidden = false;
+    });
     video.addEventListener("loadedmetadata", showFirstFrame, { once: true });
     video.addEventListener("loadeddata", () => {
       showFirstFrame();
@@ -4845,7 +4876,8 @@ function pedCarouselMedia(file) {
     video.addEventListener("seeked", markFrameReady, { once: true });
     video.src = sourceUrl;
     video.load();
-    return video;
+    preview.append(video, playButton);
+    return preview;
   }
   if (type.startsWith("audio/")) {
     const audio = document.createElement("audio");

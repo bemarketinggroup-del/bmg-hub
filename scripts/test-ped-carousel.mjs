@@ -145,6 +145,9 @@ assert.match(appSource, /files\.length <= 2/, "il carosello deve conservare alme
 assert.match(appSource, /video\.preload = "auto"/, "i video nel carosello devono caricare il primo fotogramma");
 assert.match(appSource, /video\.currentTime = firstFrameTime/, "il player deve posizionarsi sul primo fotogramma decodificabile");
 assert.match(appSource, /video\.classList\.add\("has-first-frame"\)/, "il video deve segnalare quando il primo fotogramma e visibile");
+assert.match(appSource, /video\.controls = false/, "il player non deve applicare la patina scura dei controlli nativi");
+assert.match(appSource, /className = "ped-carousel-video-play"/, "il video deve avere un comando play personalizzato");
+assert.match(styleSource, /video\[data-carousel-video-preview="true"\][^{]*\{[^}]*opacity: 1;/s, "il primo frame dei video non deve essere oscurato");
 assert.match(htmlSource, /id="pedStagingEditorModal"/, "i contenuti momentanei devono aprire un editor dedicato");
 assert.match(appSource, /function openPedStagingEditor\(id\)/, "la card momentanea deve aprire l'editor del copy");
 assert.match(appSource, /class="ped-staging-caption-preview/, "la card momentanea deve mostrare un estratto del copy");
