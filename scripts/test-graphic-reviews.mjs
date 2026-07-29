@@ -52,7 +52,8 @@ assert.match(driveApiSource, /graphic_review: reviewRelations/);
 
 assert.match(htmlSource, /data-view="graphics" data-module="graphics"/);
 assert.match(htmlSource, /id="graphicsView"/);
-assert.match(htmlSource, /id="graphicsDriveClientSelect"/);
+assert.match(htmlSource, /id="graphicsDriveClientSearch"/);
+assert.match(htmlSource, /id="graphicsDriveClientResults"/);
 assert.match(htmlSource, /data-graphics-drive-panel/);
 assert.match(htmlSource, /id="graphicReviewModal"/);
 assert.match(htmlSource, /id="graphicReviewInstructions"/);

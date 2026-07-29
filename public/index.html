@@ -346,15 +346,15 @@
                 <h3>Cartelle GRAFICHE clienti</h3>
                 <span>Scegli un cliente per navigare nelle cartelle e caricare nuove grafiche direttamente dal gestionale.</span>
               </div>
-              <div class="graphics-drive-client-picker">
-                <label for="graphicsDriveClientSelect">Cliente</label>
-                <select id="graphicsDriveClientSelect">
-                  <option value="">Scegli cliente</option>
-                </select>
-                <button class="primary-button" id="graphicsDriveOpenButton" type="button" disabled>
-                  <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h6l2 2h10v10H3z"/><path d="M3 7V5h6l2 2"/></svg>
-                  Apri GRAFICHE
-                </button>
+              <div class="graphics-drive-client-picker task-client-picker">
+                <label for="graphicsDriveClientSearch">Cliente</label>
+                <div class="task-client-search">
+                  <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+                  <input id="graphicsDriveClientSearch" type="search" autocomplete="off" placeholder="Scrivi il nome del cliente…" role="combobox" aria-autocomplete="list" aria-controls="graphicsDriveClientResults" aria-expanded="false">
+                  <button class="icon-button is-hidden" id="graphicsDriveClientClear" type="button" title="Cambia cliente" aria-label="Cambia cliente"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+                </div>
+                <div class="task-client-results is-hidden" id="graphicsDriveClientResults" role="listbox" aria-label="Clienti disponibili"></div>
+                <div class="task-client-selection is-hidden" id="graphicsDriveClientSelection" aria-live="polite"></div>
               </div>
             </div>
             <div class="graphics-drive-placeholder" id="graphicsDrivePlaceholder">
