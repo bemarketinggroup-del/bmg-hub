@@ -4360,7 +4360,8 @@ code { font-family: var(--font-mono); font-size: 12px; }
 .graphic-review-body { display: grid; grid-template-columns: minmax(260px, .85fr) minmax(280px, 1.1fr) minmax(300px, 1fr); gap: 20px; padding: 20px; }
 .graphic-review-body.has-comparisons { grid-template-columns: minmax(280px, 1fr) minmax(320px, 1fr); }
 .graphic-review-media-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; align-content: start; }
-.graphic-review-media-grid button {
+.graphic-review-media-item { min-width: 0; display: grid; align-content: start; gap: 6px; }
+.graphic-review-media-preview {
   min-width: 0;
   overflow: hidden;
   display: grid;
@@ -4370,9 +4371,26 @@ code { font-family: var(--font-mono); font-size: 12px; }
   background: var(--surface-soft);
   text-align: left;
 }
-.graphic-review-media-grid img { width: 100%; height: 132px; object-fit: contain; background: #ece8e1; }
-.graphic-review-media-grid button > span { display: grid; place-items: center; min-height: 132px; color: var(--terracotta); }
-.graphic-review-media-grid small { overflow: hidden; padding: 8px; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.graphic-review-media-preview img { width: 100%; height: 132px; object-fit: contain; background: #ece8e1; }
+.graphic-review-media-preview > span { display: grid; place-items: center; min-height: 132px; color: var(--terracotta); }
+.graphic-review-media-preview small { overflow: hidden; padding: 8px; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.graphic-review-download-button {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid rgba(193, 79, 43, .42);
+  border-radius: 8px;
+  background: rgba(193, 79, 43, .08);
+  color: var(--terracotta);
+  padding: 0 10px;
+  font-size: 9px;
+  font-weight: 800;
+}
+.graphic-review-download-button:hover { background: var(--terracotta); color: white; }
+.graphic-review-download-button:disabled { opacity: .55; cursor: wait; }
+.graphic-review-download-button .lc { width: 14px; height: 14px; }
 .graphic-review-brief { padding: 15px 17px; border: 1px solid rgba(193, 79, 43, .2); border-radius: 10px; background: rgba(193, 79, 43, .055); }
 .graphic-review-brief > span, .graphic-review-work label { color: var(--muted); font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; }
 .graphic-review-brief p { margin: 12px 0 18px; color: var(--ink); font-size: 14px; line-height: 1.55; white-space: pre-wrap; }
@@ -4414,7 +4432,7 @@ code { font-family: var(--font-mono); font-size: 12px; }
   letter-spacing: .07em;
 }
 .graphic-review-comparison-side.is-modified .graphic-review-version-label { background: #dceadf; color: #356647; }
-.graphic-review-comparison-side button {
+.graphic-review-comparison-preview {
   min-width: 0;
   overflow: hidden;
   display: grid;
@@ -4426,12 +4444,12 @@ code { font-family: var(--font-mono); font-size: 12px; }
   color: var(--ink);
   text-align: left;
 }
-.graphic-review-comparison-side.is-modified button { border-color: #66a17a; background: #f2f8f3; }
+.graphic-review-comparison-side.is-modified .graphic-review-comparison-preview { border-color: #66a17a; background: #f2f8f3; }
 .graphic-review-comparison-side img,
 .graphic-review-file-placeholder { width: 100%; height: 180px; object-fit: contain; display: grid; place-items: center; background: #e9e5de; }
 .graphic-review-comparison-side.is-modified img,
 .graphic-review-comparison-side.is-modified .graphic-review-file-placeholder { background: #e8f1ea; }
-.graphic-review-comparison-side button strong { overflow: hidden; padding: 9px; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.graphic-review-comparison-preview strong { overflow: hidden; padding: 9px; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
 .graphic-review-pair-link { display: grid; justify-items: center; gap: 1px; color: var(--terracotta); text-align: center; }
 .graphic-review-pair-link b { font-size: 25px; line-height: 1; }
 .graphic-review-pair-link small { color: var(--muted); font-size: 7px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; }
@@ -4475,8 +4493,8 @@ code { font-family: var(--font-mono); font-size: 12px; }
   .graphic-review-body { grid-template-columns: 1fr; padding: 12px; }
   .graphic-review-body.has-comparisons { grid-template-columns: 1fr; }
   .graphic-review-work { grid-column: auto; }
-  .graphic-review-media-grid button { grid-template-rows: 145px auto; }
-  .graphic-review-media-grid img { height: 145px; }
+  .graphic-review-media-preview { grid-template-rows: 145px auto; }
+  .graphic-review-media-preview img { height: 145px; }
   .graphic-review-actions { display: grid; grid-template-columns: 1fr 1fr; }
   .graphic-review-actions button { width: 100%; }
   .ped-picker-card-actions { grid-template-columns: 1fr; }
@@ -4487,7 +4505,7 @@ code { font-family: var(--font-mono); font-size: 12px; }
   .graphic-review-comparisons > header { align-items: flex-start; display: grid; }
   .graphic-review-comparison-list { grid-template-columns: 1fr; }
   .graphic-review-comparison-pair { grid-template-columns: minmax(0, 1fr) 30px minmax(0, 1fr); gap: 5px; padding: 7px; }
-  .graphic-review-comparison-side button { grid-template-rows: 130px auto; }
+  .graphic-review-comparison-preview { grid-template-rows: 130px auto; }
   .graphic-review-comparison-side img,
   .graphic-review-file-placeholder { height: 130px; }
   .graphic-review-version-empty { min-height: 169px; padding: 8px; }

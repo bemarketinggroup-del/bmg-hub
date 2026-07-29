@@ -62,6 +62,8 @@ assert.match(appSource, /data-graphic-review-file/);
 assert.match(appSource, /Manda ai grafici/);
 assert.match(appSource, /Descrivi le modifiche da apportare/);
 assert.match(appSource, /Carica versione/);
+assert.match(appSource, /Scarica originale/);
+assert.match(appSource, /graphic-review-download-button/);
 assert.match(appSource, /folder_id: review\.source_folder_id/);
 assert.match(appSource, /const files = \[\.\.\.\(event\.target\.files \|\| \[\]\)\];/);
 assert.match(appSource, /Originale e versione modificata/);

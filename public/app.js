@@ -7749,11 +7749,15 @@ function graphicReviewCardMarkup(review) {
           return `<article class="graphic-review-comparison-pair">
             <div class="graphic-review-comparison-side is-original">
               <span class="graphic-review-version-label">Originale</span>
-              ${original ? `<button data-graphics-preview="${escapeHtml(review.id)}" data-graphics-preview-index="${originalIndex}" type="button" aria-label="Apri originale ${escapeHtml(original.name)}">
+              ${original ? `<button class="graphic-review-comparison-preview" data-graphics-preview="${escapeHtml(review.id)}" data-graphics-preview-index="${originalIndex}" type="button" aria-label="Apri originale ${escapeHtml(original.name)}">
                 ${original.thumbnail_url
                   ? `<img src="${escapeHtml(original.thumbnail_url)}" alt="${escapeHtml(original.name)}" loading="lazy">`
                   : `<span class="graphic-review-file-placeholder" aria-hidden="true">${driveFileIcon(original)}</span>`}
                 <strong>${escapeHtml(original.name)}</strong>
+              </button>
+              <button class="graphic-review-download-button" data-drive-download-url="${escapeHtml(original.download_url || "")}" data-drive-download-name="${escapeHtml(original.name)}" type="button">
+                <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5"/><path d="M5 20h14"/></svg>
+                Scarica originale
               </button>` : `<div class="graphic-review-version-empty">Originale non disponibile</div>`}
             </div>
             <span class="graphic-review-pair-link" aria-label="Le due immagini sono collegate">
@@ -7762,11 +7766,15 @@ function graphicReviewCardMarkup(review) {
             </span>
             <div class="graphic-review-comparison-side is-modified">
               <span class="graphic-review-version-label">Versione modificata</span>
-              ${modified ? `<button data-graphics-deliverable="${escapeHtml(review.id)}" data-graphics-preview-index="${index}" type="button" aria-label="Apri versione modificata ${escapeHtml(modified.name)}">
+              ${modified ? `<button class="graphic-review-comparison-preview" data-graphics-deliverable="${escapeHtml(review.id)}" data-graphics-preview-index="${index}" type="button" aria-label="Apri versione modificata ${escapeHtml(modified.name)}">
                 ${modified.thumbnail_url
                   ? `<img src="${escapeHtml(modified.thumbnail_url)}" alt="${escapeHtml(modified.name)}" loading="lazy">`
                   : `<span class="graphic-review-file-placeholder" aria-hidden="true">${driveFileIcon(modified)}</span>`}
                 <strong>${escapeHtml(modified.name)}</strong>
+              </button>
+              <button class="graphic-review-download-button" data-drive-download-url="${escapeHtml(modified.download_url || "")}" data-drive-download-name="${escapeHtml(modified.name)}" type="button">
+                <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5"/><path d="M5 20h14"/></svg>
+                Scarica versione
               </button>` : `<div class="graphic-review-version-empty">Versione non ancora caricata</div>`}
             </div>
           </article>`;
@@ -7789,12 +7797,18 @@ function graphicReviewCardMarkup(review) {
     <div class="graphic-review-body${deliverables.length ? " has-comparisons" : ""}">
       ${deliverables.length ? "" : `<div class="graphic-review-media-grid">
         ${files.map((file, index) => `
-          <button data-graphics-preview="${escapeHtml(review.id)}" data-graphics-preview-index="${index}" type="button" aria-label="Apri ${escapeHtml(file.name)}">
-            ${file.thumbnail_url
-              ? `<img src="${escapeHtml(file.thumbnail_url)}" alt="${escapeHtml(file.name)}" loading="lazy">`
-              : `<span aria-hidden="true">${driveFileIcon(file)}</span>`}
-            <small>${escapeHtml(file.name)}</small>
-          </button>`).join("")}
+          <article class="graphic-review-media-item">
+            <button class="graphic-review-media-preview" data-graphics-preview="${escapeHtml(review.id)}" data-graphics-preview-index="${index}" type="button" aria-label="Apri ${escapeHtml(file.name)}">
+              ${file.thumbnail_url
+                ? `<img src="${escapeHtml(file.thumbnail_url)}" alt="${escapeHtml(file.name)}" loading="lazy">`
+                : `<span aria-hidden="true">${driveFileIcon(file)}</span>`}
+              <small>${escapeHtml(file.name)}</small>
+            </button>
+            <button class="graphic-review-download-button" data-drive-download-url="${escapeHtml(file.download_url || "")}" data-drive-download-name="${escapeHtml(file.name)}" type="button">
+              <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5"/><path d="M5 20h14"/></svg>
+              Scarica originale
+            </button>
+          </article>`).join("")}
       </div>`}
       <section class="graphic-review-brief">
         <span>Modifiche richieste</span>
