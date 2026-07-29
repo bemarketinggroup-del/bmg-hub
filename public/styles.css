@@ -1828,6 +1828,13 @@ code { font-family: var(--font-mono); font-size: 12px; }
   background: var(--surface-soft);
   transition: border-color .14s, background .14s, transform .12s;
 }
+.drive-entry-card.is-folder-card {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+}
+.drive-entry-card.is-folder-card .drive-entry { flex: 1 0 auto; }
+.drive-entry-card.is-folder-card .drive-content-actions { margin-top: auto; }
 .drive-entry-card:hover { border-color: var(--line-strong); background: var(--surface); transform: translateY(-1px); }
 .drive-entry-card.is-graphic-original { border-color: #a89d8c; background: #f3efe8; }
 .drive-entry-card.is-graphic-modified { border-color: #5f9972; background: #f5faf6; box-shadow: inset 0 0 0 1px rgba(95, 153, 114, .2); }
@@ -1967,6 +1974,18 @@ code { font-family: var(--font-mono); font-size: 12px; }
   overflow: hidden;
   border-bottom: 1px solid var(--line);
   background: var(--surface);
+}
+.drive-folder-preview {
+  border-bottom-color: color-mix(in srgb, var(--client-accent) 24%, var(--line));
+  background:
+    radial-gradient(circle at 50% 43%, color-mix(in srgb, var(--client-accent) 13%, transparent), transparent 42%),
+    var(--client-tint);
+}
+.drive-folder-preview .drive-entry-preview-placeholder { color: var(--client-accent); }
+.drive-folder-preview .drive-entry-preview-placeholder .lc {
+  width: clamp(46px, 29%, 68px);
+  height: clamp(46px, 29%, 68px);
+  stroke-width: 1.45;
 }
 .drive-content-actions {
   display: grid;

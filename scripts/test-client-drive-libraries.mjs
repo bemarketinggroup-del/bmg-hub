@@ -51,6 +51,10 @@ assert.match(googleDriveSource, /export async function moveDriveFile/, "Google D
 assert.match(appSource, /data-drive-move=/, "ogni elemento del Drive interno deve avere il comando Sposta");
 assert.match(appSource, /data-drive-select=/, "ogni elemento del Drive interno deve poter essere selezionato");
 assert.match(appSource, /has-selection-control/, "le schede Drive modificabili devono riservare uno spazio al selettore");
+assert.match(appSource, /file\.is_folder \? " is-folder-card"/, "le cartelle Drive devono usare una scheda visuale della stessa famiglia di foto e video");
+assert.match(appSource, /drive-entry-preview drive-folder-preview/, "le cartelle Drive devono avere un'anteprima proporzionata come i contenuti");
+assert.match(styleSource, /\.drive-entry-card\.is-folder-card \{[\s\S]*?align-self: stretch;[\s\S]*?flex-direction: column;/, "le cartelle devono occupare tutta l'altezza della riga Drive");
+assert.match(styleSource, /\.drive-folder-preview \{[\s\S]*?background:/, "le cartelle devono mostrare un'area anteprima riconoscibile");
 assert.match(styleSource, /\.drive-select-control \{[\s\S]*?right: 7px;/, "il selettore deve stare sul lato opposto rispetto all'icona della cartella");
 assert.match(styleSource, /\.drive-entry-card\.has-selection-control \.drive-entry:not\(\.has-thumbnail\)[\s\S]*?padding-right: 44px;/, "il contenuto della cartella non deve sovrapporsi al selettore");
 assert.match(appSource, /data-drive-bulk-move/, "il Drive interno deve offrire lo spostamento in blocco");

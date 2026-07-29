@@ -1893,6 +1893,7 @@ function driveEntryMarkup(file, writeEnabled, versionRole = "") {
   const isVideo = String(file.mime_type || "").startsWith("video/");
   const isGraphicReviewable = isImage || String(file.mime_type || "") === "application/pdf";
   const hasThumbnail = !file.is_folder && file.has_thumbnail && (isImage || isVideo);
+  const hasVisualCard = hasThumbnail || file.is_folder;
   const webUrl = safeExternalUrl(file.web_url);
   const downloadUrl = String(file.download_url || "");
   const meta = file.is_folder
@@ -1900,7 +1901,7 @@ function driveEntryMarkup(file, writeEnabled, versionRole = "") {
     : [formatFileSize(file.size), formatDriveDate(file.modified_at)].filter(Boolean).join(" · ") || "File";
   const selected = clientDriveSelection.has(String(file.id));
   return `
-    <article class="drive-entry-card ${hasThumbnail ? "has-thumbnail" : ""}${writeEnabled ? " has-selection-control" : ""}${selected ? " is-selected" : ""}${versionRole ? ` is-graphic-${escapeHtml(versionRole)}` : ""}" data-drive-entry-id="${escapeHtml(file.id)}">
+    <article class="drive-entry-card ${hasThumbnail ? "has-thumbnail" : ""}${file.is_folder ? " is-folder-card" : ""}${writeEnabled ? " has-selection-control" : ""}${selected ? " is-selected" : ""}${versionRole ? ` is-graphic-${escapeHtml(versionRole)}` : ""}" data-drive-entry-id="${escapeHtml(file.id)}">
       ${versionRole ? `<span class="drive-version-badge is-${escapeHtml(versionRole)}">${versionRole === "modified" ? "Versione modificata" : "Originale"}</span>` : ""}
       ${writeEnabled ? `
         <label class="drive-select-control" title="Seleziona ${escapeHtml(file.name)}">
@@ -1908,12 +1909,15 @@ function driveEntryMarkup(file, writeEnabled, versionRole = "") {
           <span aria-hidden="true"><svg class="lc" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg></span>
           <span class="sr-only">Seleziona ${escapeHtml(file.name)}</span>
         </label>` : ""}
-      <button class="drive-entry ${file.is_folder ? "is-folder" : "is-file"} ${hasThumbnail ? "has-thumbnail" : ""}" ${action}="${escapeHtml(file.id)}" data-drive-name="${escapeHtml(file.name)}" data-drive-mime="${escapeHtml(file.mime_type || "")}" data-drive-content-url="${escapeHtml(file.content_url || "")}" type="button">
+      <button class="drive-entry ${file.is_folder ? "is-folder" : "is-file"} ${hasVisualCard ? "has-thumbnail" : ""}" ${action}="${escapeHtml(file.id)}" data-drive-name="${escapeHtml(file.name)}" data-drive-mime="${escapeHtml(file.mime_type || "")}" data-drive-content-url="${escapeHtml(file.content_url || "")}" type="button">
       ${hasThumbnail ? `
         <span class="drive-entry-preview">
           <span class="drive-entry-preview-placeholder" aria-hidden="true">${driveFileIcon(file)}</span>
           <img data-drive-thumbnail-url="${escapeHtml(file.thumbnail_url || "")}" alt="Anteprima ${escapeHtml(file.name)}" loading="lazy" decoding="async">
           ${isVideo ? `<span class="drive-video-badge" aria-hidden="true"><svg class="lc" viewBox="0 0 24 24"><path d="m9 7 8 5-8 5z"/></svg></span>` : ""}
+        </span>` : file.is_folder ? `
+        <span class="drive-entry-preview drive-folder-preview" aria-hidden="true">
+          <span class="drive-entry-preview-placeholder">${driveFileIcon(file)}</span>
         </span>` : `<span class="drive-entry-icon" aria-hidden="true">${driveFileIcon(file)}</span>`}
       <span class="drive-entry-copy"><strong>${escapeHtml(file.name)}</strong><small>${escapeHtml(meta)}</small></span>
       <svg class="lc drive-entry-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
