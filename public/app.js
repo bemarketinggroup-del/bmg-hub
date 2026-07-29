@@ -4971,7 +4971,7 @@ function openPedCarouselPreviewWithOptions(item, { readOnly = false } = {}) {
   const instructions = document.createElement("div");
   instructions.innerHTML = readOnly
     ? `<strong>Contenuti del carosello</strong><span>La numero 1 sarà la copertina del feed.</span>`
-    : `<strong>Ordine di pubblicazione</strong><span>Trascina le foto a destra o a sinistra. La numero 1 sarà la copertina del feed.</span>`;
+    : `<strong>Ordine di pubblicazione</strong><span>Trascina un contenuto nella posizione desiderata. La numero 1 sarà la copertina del feed.</span>`;
   const status = document.createElement("span");
   status.className = "ped-carousel-editor-status";
   status.textContent = readOnly ? "Sola lettura" : "Salvataggio automatico";
