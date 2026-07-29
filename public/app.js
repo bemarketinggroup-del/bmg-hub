@@ -3276,29 +3276,28 @@ function renderPedStaging() {
       </div>`;
 }
 
-function pedStagingEditorMediaMarkup(item) {
-  return pedItemFiles(item).map((file, index) => {
-    const mime = String(file.drive_mime_type || "");
-    const name = file.drive_file_name || `Contenuto ${index + 1}`;
-    const isImage = mime.startsWith("image/");
-    const isVideo = mime.startsWith("video/");
-    const source = file.content_url || file.thumbnail_url || "";
-    let media = driveFileIcon({ is_folder: false, mime_type: mime });
-    if (isImage && source) {
-      media = `<img src="${escapeHtml(source)}" alt="${escapeHtml(name)}" loading="eager" decoding="async">`;
-    } else if (isVideo && source) {
-      media = `<video src="${escapeHtml(source)}" poster="${escapeHtml(file.thumbnail_url || "")}" controls muted playsinline preload="metadata"></video>`;
-    }
-    return `<figure class="ped-staging-editor-file">
-      <div>${media}</div>
-      <figcaption><b>${index + 1}</b><span>${escapeHtml(name)}</span></figcaption>
-    </figure>`;
-  }).join("");
+function pedStagingPlainText() {
+  return String(document.getElementById("pedStagingText")?.innerText || "").replace(/\r/g, "").trim();
+}
+
+function renderPedStagingEditorItems(item) {
+  const format = pedTypeMeta(item.content_type);
+  const files = pedItemFiles(item);
+  const primary = files[0] || item;
+  const mime = String(primary.drive_mime_type || "");
+  const previewUrl = primary.thumbnail_url || (mime.startsWith("image/") ? primary.content_url : "");
+  const publishing = pedPublishingStatusMeta(item.publishing_status);
+  document.getElementById("pedStagingEditorItems").innerHTML = `<div class="ped-caption-day-item is-active">
+    <span class="ped-caption-day-thumb">${previewUrl ? `<img src="${escapeHtml(previewUrl)}" alt="" loading="eager" decoding="async">` : driveFileIcon({ is_folder: false, mime_type: mime })}${files.length > 1 ? `<b>${files.length}</b>` : ""}</span>
+    <span><strong>${escapeHtml(pedItemTitle(item))}</strong><small>${escapeHtml(format.label)} · in attesa di programmazione</small></span>
+    <i class="ped-publishing-dot" data-ped-publishing-tone="${escapeHtml(publishing.value)}" aria-label="${escapeHtml(publishing.label)}"></i>
+  </div>`;
 }
 
 function updatePedStagingEditorCount() {
-  const input = document.getElementById("pedStagingEditorCaption");
-  document.getElementById("pedStagingEditorCount").textContent = String(input?.value?.length || 0);
+  const count = pedStagingPlainText().length;
+  document.getElementById("pedStagingEditorCount").textContent = String(count);
+  document.getElementById("pedStagingEditorSaveButton").disabled = count > 10000;
 }
 
 function openPedStagingEditor(id) {
@@ -3310,17 +3309,50 @@ function openPedStagingEditor(id) {
   const isStory = format.type === "story";
   document.getElementById("pedStagingEditorTitle").textContent = pedItemTitle(item);
   document.getElementById("pedStagingEditorMeta").textContent = `${format.label} · ${files.length} ${files.length === 1 ? "contenuto" : "contenuti"} · in attesa di programmazione`;
-  document.getElementById("pedStagingEditorMedia").innerHTML = pedStagingEditorMediaMarkup(item);
-  const input = document.getElementById("pedStagingEditorCaption");
-  input.value = item.caption || "";
-  input.disabled = isStory;
-  document.getElementById("pedStagingEditorField").hidden = isStory;
+  renderPedStagingEditorItems(item);
+  const editor = document.getElementById("pedStagingText");
+  editor.innerHTML = item.caption_html || pedPlainCaptionHtml(item.caption || "");
+  editor.contentEditable = isStory ? "false" : "true";
+  document.getElementById("pedStagingEditorBlock").hidden = isStory;
   document.getElementById("pedStagingEditorStoryNote").hidden = !isStory;
+  document.getElementById("pedStagingCopyButton").hidden = isStory;
+  document.getElementById("pedStagingPublishingStatus").value = pedPublishingStatus(item.publishing_status);
+  const canAppend = Boolean(item.is_group && pedContentType(item.content_type) === "carousel");
+  const addLink = document.getElementById("pedStagingAddLink");
+  addLink.hidden = !canAppend;
+  addLink.disabled = canAppend && files.length >= 20;
+  addLink.dataset.pedStagingAdd = canAppend ? String(item.id) : "";
+  addLink.textContent = files.length >= 20 ? "Carosello completo (20/20)" : "Aggiungi contenuti";
+  const previewLink = document.getElementById("pedStagingPreviewLink");
+  previewLink.dataset.pedStagingPreview = String(item.id);
+  previewLink.hidden = !files.some((file) => file.content_url || file.drive_web_url || file.drive_file_id);
+  previewLink.textContent = files.length > 1 ? `Apri ${files.length} contenuti` : "Apri contenuto";
   document.getElementById("pedStagingEditorMessage").textContent = "";
-  document.getElementById("pedStagingEditorSaveButton").hidden = isStory;
   updatePedStagingEditorCount();
   document.getElementById("pedStagingEditorModal").showModal();
-  if (!isStory) requestAnimationFrame(() => input.focus());
+  if (!isStory) requestAnimationFrame(() => editor.focus());
+}
+
+async function copyPedStagingCaption() {
+  const editor = document.getElementById("pedStagingText");
+  const message = document.getElementById("pedStagingEditorMessage");
+  const copy = pedStagingPlainText();
+  if (!copy) {
+    message.textContent = "Inserisci prima il copy da copiare.";
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(copy);
+  } catch {
+    const range = document.createRange();
+    range.selectNodeContents(editor);
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+    document.execCommand("copy");
+    selection.removeAllRanges();
+  }
+  message.textContent = "Copy copiato negli appunti.";
 }
 
 async function savePedStagingCaption(event) {
@@ -3332,24 +3364,37 @@ async function savePedStagingCaption(event) {
   }
   const item = (state.pedStagingItems || []).find((entry) => String(entry.id) === String(editingPedStagingId));
   if (!item) return;
-  const caption = String(document.getElementById("pedStagingEditorCaption").value || "").trim();
+  const editor = document.getElementById("pedStagingText");
+  const isStory = pedContentType(item.content_type) === "story";
+  const caption = isStory ? null : pedStagingPlainText();
+  const captionHtml = isStory ? null : editor.innerHTML.trim();
+  const publishingStatus = pedPublishingStatus(document.getElementById("pedStagingPublishingStatus").value);
   const message = document.getElementById("pedStagingEditorMessage");
   const button = document.getElementById("pedStagingEditorSaveButton");
-  if (caption.length > 10000) {
+  if (String(caption || "").length > 10000) {
     message.textContent = "Il copy non puo superare 10000 caratteri.";
     return;
   }
   button.disabled = true;
-  message.textContent = "Salvataggio copy...";
+  message.textContent = "Salvataggio modifiche...";
   try {
     const response = await apiFetch("/api/ped", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ staging_caption_id: item.id, caption })
+      body: JSON.stringify({
+        staging_caption_id: item.id, caption,
+        caption_html: captionHtml,
+        publishing_status: publishingStatus
+      })
     });
     const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.error || "Impossibile salvare il copy");
-    const updatedItem = data.item || { ...item, caption };
+    if (!response.ok) throw new Error(data.error || "Impossibile salvare le modifiche");
+    const updatedItem = data.item || {
+      ...item,
+      caption,
+      caption_html: captionHtml,
+      publishing_status: publishingStatus
+    };
     state.pedStagingItems = (state.pedStagingItems || []).map((entry) => (
       String(entry.id) === String(item.id) ? updatedItem : entry
     ));
@@ -3604,15 +3649,17 @@ function shiftPedMonth(delta) {
   loadPedCalendar();
 }
 
-async function openPedDrivePicker(date = "", { appendItem = null, staging = false } = {}) {
+async function openPedDrivePicker(date = "", { appendItem = null, stagingAppendItem = null, staging = false } = {}) {
   const client = state.clients.find((item) => String(item.id) === String(selectedPedClientId));
   if (!clientHasDrive(client)) {
     alert("Collega prima la cartella Google Drive del cliente.");
     return;
   }
-  const appendMode = Boolean(appendItem?.is_group && pedContentType(appendItem.content_type) === "carousel");
+  const appendTarget = appendItem || stagingAppendItem;
+  const appendMode = Boolean(appendTarget?.is_group && pedContentType(appendTarget.content_type) === "carousel");
   const stagingMode = Boolean(staging && !appendMode);
-  const existingCount = appendMode ? pedItemFiles(appendItem).length : 0;
+  const stagingAppendMode = Boolean(stagingAppendItem && appendMode);
+  const existingCount = appendMode ? pedItemFiles(appendTarget).length : 0;
   const remembered = lastPedPickerLocation(selectedPedClientId);
   pedPickerState = {
     date,
@@ -3623,12 +3670,12 @@ async function openPedDrivePicker(date = "", { appendItem = null, staging = fals
     rootId: "",
     uploadEnabled: false,
     contentType: appendMode ? "carousel" : "post",
-    caption: appendMode ? String(appendItem.caption || "") : "",
+    caption: appendMode ? String(appendTarget.caption || "") : "",
     selectedFiles: [],
     showUsed: false,
-    appendGroupId: appendMode ? String(appendItem.id) : "",
+    appendGroupId: appendMode ? String(appendTarget.id) : "",
     existingCount,
-    destination: stagingMode ? "staging" : "calendar"
+    destination: stagingAppendMode ? "staging_append" : stagingMode ? "staging" : "calendar"
   };
   document.getElementById("pedPickerTitle").textContent = appendMode
     ? "Aggiungi contenuti al carosello"
@@ -4257,6 +4304,7 @@ async function attachPedDriveFiles(fileIds) {
   const format = pedContentType(pedPickerState.contentType);
   const appendMode = Boolean(pedPickerState.appendGroupId);
   const stagingMode = pedPickerState.destination === "staging";
+  const stagingAppendMode = pedPickerState.destination === "staging_append";
   if (format === "carousel" && !appendMode && fileIds.length < 2) {
     message.textContent = "Seleziona almeno due contenuti per creare il carosello.";
     return;
@@ -4275,7 +4323,9 @@ async function attachPedDriveFiles(fileIds) {
       method: appendMode ? "PATCH" : "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(appendMode
-        ? { id: pedPickerState.appendGroupId, append_drive_file_ids: fileIds }
+        ? stagingAppendMode
+          ? { staging_append_id: pedPickerState.appendGroupId, append_drive_file_ids: fileIds }
+          : { id: pedPickerState.appendGroupId, append_drive_file_ids: fileIds }
         : {
             client_id: selectedPedClientId,
             scheduled_date: pedPickerState.date,
@@ -4291,7 +4341,10 @@ async function attachPedDriveFiles(fileIds) {
     document.getElementById("pedDrivePickerModal").close();
     const updatedGroupId = appendMode ? pedPickerState.appendGroupId : "";
     await loadPedCalendar();
-    if (updatedGroupId) openPedCaptionModal(updatedGroupId);
+    if (updatedGroupId) {
+      if (stagingAppendMode) openPedStagingEditor(updatedGroupId);
+      else openPedCaptionModal(updatedGroupId);
+    }
   } catch (error) {
     message.textContent = error.message;
   }
@@ -4893,6 +4946,10 @@ function pedCarouselMedia(file) {
 }
 
 function openPedCarouselPreview(item) {
+  return openPedCarouselPreviewWithOptions(item);
+}
+
+function openPedCarouselPreviewWithOptions(item, { readOnly = false } = {}) {
   let files = pedItemFiles(item);
   if (files.length < 2) {
     const file = files[0];
@@ -4903,7 +4960,7 @@ function openPedCarouselPreview(item) {
   const title = document.getElementById("drivePreviewTitle");
   const body = document.getElementById("drivePreviewBody");
   modal.classList.add("is-ped-carousel-editor");
-  title.textContent = `Editor carosello · ${files.length} contenuti`;
+  title.textContent = `${readOnly ? "Anteprima" : "Editor"} carosello · ${files.length} contenuti`;
   body.replaceChildren();
   body.classList.add("is-ped-carousel-editor");
 
@@ -4912,10 +4969,12 @@ function openPedCarouselPreview(item) {
   const toolbar = document.createElement("div");
   toolbar.className = "ped-carousel-editor-toolbar";
   const instructions = document.createElement("div");
-  instructions.innerHTML = `<strong>Ordine di pubblicazione</strong><span>Trascina le foto a destra o a sinistra. La numero 1 sarà la copertina del feed.</span>`;
+  instructions.innerHTML = readOnly
+    ? `<strong>Contenuti del carosello</strong><span>La numero 1 sarà la copertina del feed.</span>`
+    : `<strong>Ordine di pubblicazione</strong><span>Trascina le foto a destra o a sinistra. La numero 1 sarà la copertina del feed.</span>`;
   const status = document.createElement("span");
   status.className = "ped-carousel-editor-status";
-  status.textContent = "Salvataggio automatico";
+  status.textContent = readOnly ? "Sola lettura" : "Salvataggio automatico";
   toolbar.append(instructions, status);
   const track = document.createElement("div");
   track.className = "ped-carousel-editor-track";
@@ -4952,7 +5011,7 @@ function openPedCarouselPreview(item) {
   }
 
   async function persistMembers(nextFiles, successMessage) {
-    if (saving) return false;
+    if (saving || readOnly) return false;
     const previousFiles = files;
     saving = true;
     files = nextFiles;
@@ -4988,6 +5047,7 @@ function openPedCarouselPreview(item) {
   }
 
   function moveFile(memberIdToMove, targetMemberId, placeAfter = false) {
+    if (readOnly) return;
     const sourceIndex = files.findIndex((file) => memberId(file) === memberIdToMove);
     const targetIndex = files.findIndex((file) => memberId(file) === targetMemberId);
     if (sourceIndex < 0 || targetIndex < 0 || sourceIndex === targetIndex) return;
@@ -5001,7 +5061,7 @@ function openPedCarouselPreview(item) {
   }
 
   async function removeFile(file) {
-    if (files.length <= 2 || saving) return;
+    if (readOnly || files.length <= 2 || saving) return;
     const name = file.drive_file_name || "questo contenuto";
     if (!confirm(`Rimuovere “${name}” dal carosello? La foto resterà disponibile nel Drive.`)) return;
     await persistMembers(
@@ -5016,7 +5076,7 @@ function openPedCarouselPreview(item) {
       const id = memberId(file);
       const card = document.createElement("article");
       card.className = "ped-carousel-editor-card";
-      card.draggable = !saving;
+      card.draggable = !saving && !readOnly;
       card.dataset.carouselMember = id;
       card.setAttribute("aria-label", `Contenuto ${index + 1} di ${files.length}: ${file.drive_file_name || ""}`);
 
@@ -5033,7 +5093,8 @@ function openPedCarouselPreview(item) {
       handle.title = "Trascina per cambiare posizione";
       handle.setAttribute("aria-hidden", "true");
       handle.textContent = "⠿";
-      top.append(order, cover, handle);
+      top.append(order, cover);
+      if (!readOnly) top.append(handle);
 
       const media = document.createElement("div");
       media.className = "ped-carousel-editor-media";
@@ -5070,11 +5131,12 @@ function openPedCarouselPreview(item) {
       remove.textContent = "Elimina";
       remove.addEventListener("click", () => removeFile(file));
       controls.append(moveLeft, moveRight, remove);
-      footer.append(name, controls);
+      footer.append(name);
+      if (!readOnly) footer.append(controls);
       card.append(top, media, footer);
 
       card.addEventListener("dragstart", (event) => {
-        if (saving) {
+        if (saving || readOnly) {
           event.preventDefault();
           return;
         }
@@ -5084,7 +5146,7 @@ function openPedCarouselPreview(item) {
         event.dataTransfer.setData("text/plain", id);
       });
       card.addEventListener("dragover", (event) => {
-        if (!draggedMemberId || draggedMemberId === id || saving) return;
+        if (readOnly || !draggedMemberId || draggedMemberId === id || saving) return;
         event.preventDefault();
         clearDropTargets();
         const placeAfter = event.clientX > card.getBoundingClientRect().left + card.offsetWidth / 2;
@@ -5092,6 +5154,7 @@ function openPedCarouselPreview(item) {
         event.dataTransfer.dropEffect = "move";
       });
       card.addEventListener("drop", (event) => {
+        if (readOnly) return;
         event.preventDefault();
         const sourceId = draggedMemberId || event.dataTransfer.getData("text/plain");
         const placeAfter = event.clientX > card.getBoundingClientRect().left + card.offsetWidth / 2;
@@ -5118,6 +5181,16 @@ function openPedContentPreview(id) {
   const files = pedItemFiles(item);
   if (files.length > 1) return openPedCarouselPreview(item);
   const file = files[0];
+  return openDriveFile(file.drive_file_id, file.drive_file_name, file.drive_mime_type, file.content_url || "");
+}
+
+function openPedStagingContentPreview(id) {
+  const item = (state.pedStagingItems || []).find((entry) => String(entry.id) === String(id));
+  if (!item) return;
+  const files = pedItemFiles(item);
+  if (files.length > 1) return openPedCarouselPreviewWithOptions(item, { readOnly: true });
+  const file = files[0];
+  if (!file) return;
   return openDriveFile(file.drive_file_id, file.drive_file_name, file.drive_mime_type, file.content_url || "");
 }
 
@@ -9112,6 +9185,8 @@ document.body.addEventListener("click", (event) => {
   const pedStagingAdd = event.target.closest("#pedStagingAddButton");
   const pedStagingRemove = event.target.closest("[data-ped-staging-remove]");
   const pedStagingOpen = event.target.closest("[data-ped-staging-open]");
+  const pedStagingPreview = event.target.closest("[data-ped-staging-preview]");
+  const pedStagingAppend = event.target.closest("[data-ped-staging-add]");
   const pedOpen = event.target.closest("[data-ped-open]");
   const pedEditor = event.target.closest("[data-ped-editor]");
   const pedCaptionSelect = event.target.closest("[data-ped-caption-select]");
@@ -9252,6 +9327,15 @@ document.body.addEventListener("click", (event) => {
   }
   if (pedStagingAdd) return openPedDrivePicker("", { staging: true });
   if (pedStagingRemove) return removePedStagingItem(pedStagingRemove.dataset.pedStagingRemove);
+  if (pedStagingPreview) return openPedStagingContentPreview(pedStagingPreview.dataset.pedStagingPreview);
+  if (pedStagingAppend && !pedStagingAppend.disabled) {
+    const item = (state.pedStagingItems || []).find(
+      (entry) => String(entry.id) === String(pedStagingAppend.dataset.pedStagingAdd)
+    );
+    if (!item) return;
+    document.getElementById("pedStagingEditorModal").close();
+    return openPedDrivePicker("", { stagingAppendItem: item });
+  }
   if (pedStagingOpen) return openPedStagingEditor(pedStagingOpen.dataset.pedStagingOpen);
   if (pedAdd) return openPedDrivePicker(pedAdd.dataset.pedAdd);
   if (pedRemove) return removePedItem(pedRemove.dataset.pedRemove);
@@ -9890,7 +9974,22 @@ document.getElementById("pedShareDisableButton").addEventListener("click", disab
 document.getElementById("pedCaptionForm").addEventListener("submit", savePedCaption);
 document.getElementById("pedCaptionText").addEventListener("input", updatePedCaptionCount);
 document.getElementById("pedStagingEditorForm").addEventListener("submit", savePedStagingCaption);
-document.getElementById("pedStagingEditorCaption").addEventListener("input", updatePedStagingEditorCount);
+document.getElementById("pedStagingText").addEventListener("input", updatePedStagingEditorCount);
+document.getElementById("pedStagingCopyButton").addEventListener("click", copyPedStagingCaption);
+document.getElementById("pedStagingToolbar").addEventListener("click", (event) => {
+  const button = event.target.closest("[data-ped-staging-command]");
+  if (!button) return;
+  const editor = document.getElementById("pedStagingText");
+  editor.focus();
+  document.execCommand(button.dataset.pedStagingCommand, false, null);
+  updatePedStagingEditorCount();
+});
+document.getElementById("pedStagingColor").addEventListener("input", (event) => {
+  const editor = document.getElementById("pedStagingText");
+  editor.focus();
+  document.execCommand("foreColor", false, event.target.value);
+  updatePedStagingEditorCount();
+});
 document.getElementById("pedCaptionCopyButton").addEventListener("click", copyPedCaption);
 document.getElementById("pedCaptionToolbar").addEventListener("click", (event) => {
   const button = event.target.closest("[data-ped-caption-command]");

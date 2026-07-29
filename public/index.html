@@ -1281,7 +1281,7 @@
     </form>
   </dialog>
 
-  <dialog class="modal ped-staging-editor-modal" id="pedStagingEditorModal">
+  <dialog class="modal ped-caption-modal ped-staging-editor-modal" id="pedStagingEditorModal">
     <form id="pedStagingEditorForm">
       <div class="modal-head">
         <div>
@@ -1291,17 +1291,43 @@
         </div>
         <button class="icon-button" value="cancel" type="submit" formnovalidate title="Chiudi" aria-label="Chiudi"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
       </div>
-      <div class="ped-staging-editor-media" id="pedStagingEditorMedia" aria-label="Anteprima contenuto"></div>
-      <label class="ped-staging-editor-field" id="pedStagingEditorField">
+      <div class="ped-caption-day-items" id="pedStagingEditorItems" aria-label="Contenuti in attesa"></div>
+      <div class="ped-caption-settings">
+        <label>
+          <span>Stato programmazione</span>
+          <select id="pedStagingPublishingStatus">
+            <option value="ped_only">Solo PED</option>
+            <option value="meta">Programmato Meta</option>
+            <option value="phone">Programmato telefono</option>
+          </select>
+        </label>
+        <div class="ped-caption-content-actions">
+          <button class="ghost-button ped-caption-add-link" id="pedStagingAddLink" data-ped-staging-add type="button">Aggiungi contenuti</button>
+          <button class="ghost-button ped-caption-preview-link" id="pedStagingPreviewLink" data-ped-staging-preview type="button">Apri contenuto</button>
+        </div>
+      </div>
+      <div class="ped-caption-editor" id="pedStagingEditorBlock">
         <span>Copy Instagram</span>
-        <textarea id="pedStagingEditorCaption" maxlength="10000" placeholder="Scrivi il copy Instagram, gli hashtag e le eventuali call to action..."></textarea>
+        <div class="ped-caption-editor-shell">
+          <div class="ped-caption-toolbar" id="pedStagingToolbar" role="toolbar" aria-label="Formattazione copy">
+            <button type="button" data-ped-staging-command="bold" title="Grassetto" aria-label="Grassetto"><strong>B</strong></button>
+            <button type="button" data-ped-staging-command="italic" title="Corsivo" aria-label="Corsivo"><em>I</em></button>
+            <button type="button" data-ped-staging-command="strikeThrough" title="Barrato" aria-label="Barrato"><s>S</s></button>
+            <label class="ped-caption-color" title="Colore testo">
+              <span class="sr-only">Colore testo</span>
+              <input id="pedStagingColor" type="color" value="#1b1916" aria-label="Colore testo">
+            </label>
+            <button type="button" data-ped-staging-command="removeFormat" title="Rimuovi formattazione" aria-label="Rimuovi formattazione">Aa</button>
+          </div>
+          <div id="pedStagingText" class="ped-caption-rich-input" contenteditable="true" role="textbox" aria-multiline="true" data-placeholder="Scrivi il copy Instagram, gli hashtag e le eventuali call to action..."></div>
+        </div>
         <small><span id="pedStagingEditorCount">0</span>/10000 caratteri</small>
-      </label>
-      <p class="ped-caption-story-note" id="pedStagingEditorStoryNote" hidden>Le stories non prevedono copy. Puoi aprire l’anteprima e trascinare il contenuto nel calendario.</p>
+      </div>
+      <p class="ped-caption-story-note" id="pedStagingEditorStoryNote" hidden>Le stories non prevedono copy. Puoi comunque controllare il contenuto e aggiornare lo stato di programmazione.</p>
       <p class="form-message" id="pedStagingEditorMessage" role="status"></p>
-      <div class="modal-actions">
-        <button class="ghost-button" value="cancel" type="submit" formnovalidate>Annulla</button>
-        <button class="primary-button" id="pedStagingEditorSaveButton" type="submit">Salva copy</button>
+      <div class="modal-actions ped-caption-actions">
+        <button class="ghost-button" id="pedStagingCopyButton" type="button">Copia copy</button>
+        <button class="primary-button" id="pedStagingEditorSaveButton" type="submit">Salva modifiche</button>
       </div>
     </form>
   </dialog>

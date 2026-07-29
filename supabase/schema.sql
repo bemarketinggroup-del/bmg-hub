@@ -632,6 +632,7 @@ create table if not exists public.ped_staging_items (
   content_type text not null default 'post'
     check (content_type in ('post', 'story', 'reel', 'carousel')),
   caption text,
+  caption_html text,
   content_group_id uuid,
   group_position integer not null default 0 check (group_position >= 0),
   position integer not null default 0,
