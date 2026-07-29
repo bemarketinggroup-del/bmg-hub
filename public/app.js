@@ -272,7 +272,7 @@ let teamChatTimer = null;
 let teamChatDraft = { attachments: [], references: [], mentions: [], uploading: false };
 let chatReferenceKind = "";
 let chatMentionRange = null;
-let chatDrivePickerState = { clientId: "", clientName: "", path: [], files: [], libraries: [], source: "", loading: false };
+let chatDrivePickerState = { clientId: "", clientName: "", path: [], files: [], libraries: [], source: "", loading: false, selectedFileId: "" };
 let graphicReviewState = {
   reviews: [],
   filter: "active",
@@ -8130,9 +8130,10 @@ async function uploadTeamChatComputerFiles(files) {
 }
 
 function openChatDrivePicker() {
-  chatDrivePickerState = { clientId: "", clientName: "", path: [], files: [], libraries: [], source: "", loading: false };
+  chatDrivePickerState = { clientId: "", clientName: "", path: [], files: [], libraries: [], source: "", loading: false, selectedFileId: "" };
   document.getElementById("chatDriveSearch").value = "";
   document.getElementById("chatDriveMessage").textContent = "";
+  closeChatDrivePreview();
   renderChatDrivePicker();
   document.getElementById("chatDriveModal").showModal();
 }
@@ -8159,14 +8160,22 @@ function renderChatDrivePicker() {
   ].filter((item) => String(item.name || "").toLowerCase().includes(query));
   grid.innerHTML = chatDrivePickerState.loading
     ? `<div class="team-chat-empty"><span class="drive-folder-spinner" aria-hidden="true"></span><strong>Apro la cartella…</strong></div>`
-    : entries.length ? entries.map((item) => `
-      <button class="chat-drive-entry" type="button" ${item.is_library ? `data-chat-drive-library="${escapeHtml(item.id)}" data-chat-drive-source="${escapeHtml(item.source || "")}"` : item.is_folder ? `data-chat-drive-folder="${escapeHtml(item.id)}"` : `data-chat-drive-file="${escapeHtml(item.id)}"`}>
-        <svg class="lc" viewBox="0 0 24 24" aria-hidden="true">${item.is_folder ? `<path d="M3 7h6l2 2h10v12H3z"/>` : `<path d="M14 2H6a2 2 0 0 0-2 2v16h16V8z"/><path d="M14 2v6h6"/>`}</svg>
+    : entries.length ? entries.map((item) => {
+      const media = !item.is_folder;
+      const thumbnail = String(item.thumbnail_url || "");
+      return `
+      <button class="chat-drive-entry${media ? " is-media" : ""}" type="button" ${item.is_library ? `data-chat-drive-library="${escapeHtml(item.id)}" data-chat-drive-source="${escapeHtml(item.source || "")}"` : item.is_folder ? `data-chat-drive-folder="${escapeHtml(item.id)}"` : `data-chat-drive-file="${escapeHtml(item.id)}"`}>
+        ${media ? `<span class="chat-drive-thumb">${thumbnail
+          ? `<img src="${escapeHtml(thumbnail)}" alt="Anteprima ${escapeHtml(item.name || "file")}" loading="lazy" decoding="async">`
+          : `<svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16h16V8z"/><path d="M14 2v6h6"/></svg>`}</span>`
+          : `<svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h6l2 2h10v12H3z"/></svg>`}
         <span><strong>${escapeHtml(item.name || "Elemento")}</strong><small>${item.is_folder ? "Cartella" : `${escapeHtml(item.mime_type || "File")} · ${formatFileSize(item.size)}`}</small></span>
-      </button>`).join("") : `<div class="team-chat-empty">Nessun elemento in questa cartella.</div>`;
+      </button>`;
+    }).join("") : `<div class="team-chat-empty">Nessun elemento in questa cartella.</div>`;
 }
 
 async function loadChatDriveFolder(folderId = "", folderName = "", source = chatDrivePickerState.source) {
+  closeChatDrivePreview();
   chatDrivePickerState.loading = true;
   renderChatDrivePicker();
   try {
@@ -8185,7 +8194,37 @@ async function loadChatDriveFolder(folderId = "", folderName = "", source = chat
   }
 }
 
-function attachChatDriveFile(fileId) {
+function previewChatDriveFile(fileId) {
+  const file = chatDrivePickerState.files.find((item) => String(item.id) === String(fileId));
+  if (!file) return;
+  chatDrivePickerState.selectedFileId = String(file.id);
+  const type = String(file.mime_type || "");
+  const source = String(file.content_url || file.thumbnail_url || "");
+  document.getElementById("chatDrivePreviewTitle").textContent = file.name || "File selezionato";
+  document.getElementById("chatDrivePreviewMeta").textContent = `${type || "File"}${file.size ? ` · ${formatFileSize(file.size)}` : ""}`;
+  const media = document.getElementById("chatDrivePreviewMedia");
+  if (type.startsWith("image/") && source) {
+    media.innerHTML = `<img src="${escapeHtml(source)}" alt="Anteprima ${escapeHtml(file.name)}">`;
+  } else if (type.startsWith("video/") && source) {
+    media.innerHTML = `<video src="${escapeHtml(source)}" poster="${escapeHtml(file.thumbnail_url || "")}" controls playsinline preload="metadata"></video>`;
+  } else if ((type === "application/pdf" || type.startsWith("text/") || type.startsWith("application/vnd.google-apps.")) && source) {
+    media.innerHTML = `<iframe src="${escapeHtml(source)}" title="Anteprima ${escapeHtml(file.name)}"></iframe>`;
+  } else {
+    media.innerHTML = `<div class="chat-drive-preview-unavailable"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16h16V8z"/><path d="M14 2v6h6"/></svg><strong>Anteprima non disponibile</strong><p>Puoi comunque allegare questo file alla chat.</p></div>`;
+  }
+  document.getElementById("chatDriveGrid").classList.add("is-hidden");
+  document.getElementById("chatDrivePreview").classList.remove("is-hidden");
+}
+
+function closeChatDrivePreview() {
+  chatDrivePickerState.selectedFileId = "";
+  document.getElementById("chatDrivePreview")?.classList.add("is-hidden");
+  document.getElementById("chatDriveGrid")?.classList.remove("is-hidden");
+  const media = document.getElementById("chatDrivePreviewMedia");
+  if (media) media.innerHTML = "";
+}
+
+function attachChatDriveFile(fileId = chatDrivePickerState.selectedFileId) {
   const file = chatDrivePickerState.files.find((item) => String(item.id) === String(fileId));
   if (!file || teamChatDraft.attachments.length >= 10) return;
   if (!teamChatDraft.attachments.some((item) => item.source === "client_drive" && String(item.id) === String(file.id))) {
@@ -9189,12 +9228,22 @@ document.getElementById("chatMessageList").addEventListener("click", (event) => 
   setView("clients");
   void openClientDetails(reference.dataset.chatReferenceId);
 });
-document.getElementById("chatDriveCloseButton").addEventListener("click", () => document.getElementById("chatDriveModal").close());
-document.getElementById("chatDriveSearch").addEventListener("input", renderChatDrivePicker);
+document.getElementById("chatDriveCloseButton").addEventListener("click", () => {
+  closeChatDrivePreview();
+  document.getElementById("chatDriveModal").close();
+});
+document.getElementById("chatDrivePreviewCloseButton").addEventListener("click", closeChatDrivePreview);
+document.getElementById("chatDriveAttachButton").addEventListener("click", () => attachChatDriveFile());
+document.getElementById("chatDriveModal").addEventListener("close", closeChatDrivePreview);
+document.getElementById("chatDriveSearch").addEventListener("input", () => {
+  closeChatDrivePreview();
+  renderChatDrivePicker();
+});
 document.getElementById("chatDriveBreadcrumbs").addEventListener("click", (event) => {
   if (event.target.closest("[data-chat-drive-home]")) {
-    chatDrivePickerState = { clientId: "", clientName: "", path: [], files: [], libraries: [], source: "", loading: false };
+    chatDrivePickerState = { clientId: "", clientName: "", path: [], files: [], libraries: [], source: "", loading: false, selectedFileId: "" };
     document.getElementById("chatDriveSearch").value = "";
+    closeChatDrivePreview();
     return renderChatDrivePicker();
   }
   const button = event.target.closest("[data-chat-drive-breadcrumb]");
@@ -9218,7 +9267,7 @@ document.getElementById("chatDriveGrid").addEventListener("click", (event) => {
     return void loadChatDriveFolder(folder.id, folder.name, chatDrivePickerState.source);
   }
   const fileButton = event.target.closest("[data-chat-drive-file]");
-  if (fileButton) attachChatDriveFile(fileButton.dataset.chatDriveFile);
+  if (fileButton) previewChatDriveFile(fileButton.dataset.chatDriveFile);
 });
 document.getElementById("chatComposer").addEventListener("submit", (event) => {
   event.preventDefault();
