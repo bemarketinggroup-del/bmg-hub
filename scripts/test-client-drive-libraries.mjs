@@ -55,6 +55,8 @@ assert.match(appSource, /file\.is_folder \? " is-folder-card"/, "le cartelle Dri
 assert.match(appSource, /drive-entry-preview drive-folder-preview/, "le cartelle Drive devono avere un'anteprima proporzionata come i contenuti");
 assert.match(styleSource, /\.drive-entry-card\.is-folder-card \{[\s\S]*?align-self: stretch;[\s\S]*?flex-direction: column;/, "le cartelle devono occupare tutta l'altezza della riga Drive");
 assert.match(styleSource, /\.drive-folder-preview \{[\s\S]*?background:/, "le cartelle devono mostrare un'area anteprima riconoscibile");
+assert.match(styleSource, /\.drive-version-pair \{[\s\S]*?grid-column: span 2;/, "originale e versione modificata devono occupare soltanto due colonne del Drive");
+assert.match(styleSource, /\.drive-version-pair-cards \{[\s\S]*?grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/, "le due versioni collegate devono restare affiancate senza allargare il contenitore");
 assert.match(styleSource, /\.drive-select-control \{[\s\S]*?right: 7px;/, "il selettore deve stare sul lato opposto rispetto all'icona della cartella");
 assert.match(styleSource, /\.drive-entry-card\.has-selection-control \.drive-entry:not\(\.has-thumbnail\)[\s\S]*?padding-right: 44px;/, "il contenuto della cartella non deve sovrapporsi al selettore");
 assert.match(appSource, /data-drive-bulk-move/, "il Drive interno deve offrire lo spostamento in blocco");

@@ -1788,7 +1788,7 @@ code { font-family: var(--font-mono); font-size: 12px; }
 }
 .drive-version-pair {
   min-width: 0;
-  grid-column: 1 / -1;
+  grid-column: span 2;
   padding: 10px;
   border: 2px solid #6b9b79;
   border-radius: 12px;
@@ -1807,7 +1807,7 @@ code { font-family: var(--font-mono); font-size: 12px; }
 .drive-version-pair > header span { color: #3f7250; font-size: 8px; font-weight: 900; text-transform: uppercase; letter-spacing: .08em; }
 .drive-version-pair > header strong { font-size: 12px; }
 .drive-version-pair > header small { color: #52715c; font-size: 9px; }
-.drive-version-pair-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 9px; }
+.drive-version-pair-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
 .drive-library-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
