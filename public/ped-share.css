@@ -17,37 +17,45 @@
 * { box-sizing: border-box; }
 .is-hidden { display: none !important; }
 html { background: var(--paper); }
-body { min-width: 320px; margin: 0; background: var(--paper); color: var(--ink); }
+body {
+  min-width: 320px;
+  margin: 0;
+  background:
+    radial-gradient(circle at 12% 8%, rgba(189, 79, 43, .07), transparent 26rem),
+    linear-gradient(180deg, #f7f2ea 0, var(--paper) 38rem);
+  color: var(--ink);
+}
 button { font: inherit; }
 
 .share-header {
-  min-height: 76px;
+  position: relative;
+  min-height: 88px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 20px;
   border-bottom: 1px solid var(--line);
-  background: rgba(255, 253, 249, .96);
-  padding: 14px clamp(20px, 4vw, 64px);
+  background: rgba(255, 253, 249, .86);
+  box-shadow: 0 8px 28px rgba(43, 36, 30, .045);
+  backdrop-filter: blur(16px);
 }
-.brand { display: inline-flex; align-items: center; gap: 12px; color: inherit; text-decoration: none; }
-.brand-mark { width: 42px; height: 42px; display: grid; place-items: center; border: 1px solid #514b45; background: #171512; color: white; font-size: 17px; font-weight: 800; }
-.brand > span:last-child { display: grid; gap: 2px; }
-.brand strong { font-size: 14px; }
-.brand small { color: var(--muted); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9px; letter-spacing: .12em; text-transform: uppercase; }
-.readonly-pill { border: 1px solid var(--line); border-radius: 999px; background: var(--surface-soft); color: var(--muted); padding: 8px 12px; font-size: 11px; font-weight: 700; }
+.share-header::after { content: ""; position: absolute; inset: auto 0 -1px; height: 2px; background: linear-gradient(90deg, var(--terracotta), rgba(189,79,43,.18) 22%, transparent 55%); }
+.share-header-inner { width: min(1500px, calc(100% - 40px)); margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+.brand { display: inline-flex; align-items: center; gap: 18px; color: inherit; text-decoration: none; }
+.brand img { width: 114px; height: 56px; display: block; object-fit: contain; object-position: left center; }
+.brand-context { border-left: 1px solid var(--line); color: var(--muted); padding-left: 18px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9px; font-weight: 700; letter-spacing: .15em; line-height: 1.4; text-transform: uppercase; }
+.readonly-pill { display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--line); border-radius: 999px; background: rgba(255,255,255,.72); color: var(--muted); padding: 9px 13px; font-size: 11px; font-weight: 700; box-shadow: 0 5px 16px rgba(43,36,30,.05); }
+.readonly-pill i { width: 7px; height: 7px; border-radius: 50%; background: var(--carousel); box-shadow: 0 0 0 4px rgba(77,121,95,.10); }
 
 .share-main { width: min(1500px, calc(100% - 40px)); margin: 0 auto; padding: 44px 0 30px; }
 .share-title { display: flex; align-items: flex-end; justify-content: space-between; gap: 28px; margin-bottom: 24px; }
 .eyebrow { margin: 0 0 8px; color: var(--terracotta); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; }
 .share-title h1 { margin: 0; font-size: clamp(30px, 5vw, 54px); line-height: 1; letter-spacing: 0; }
 .share-title p:last-child { margin: 11px 0 0; color: var(--muted); font-size: 14px; }
-.month-controls { min-height: 46px; display: grid; grid-template-columns: 44px minmax(170px, 1fr) 44px; align-items: center; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); }
+.month-controls { min-height: 46px; display: grid; grid-template-columns: 44px minmax(170px, 1fr) 44px; align-items: center; border: 1px solid var(--line); border-radius: 999px; background: rgba(255,253,249,.92); box-shadow: 0 8px 24px rgba(43,36,30,.06); }
 .month-controls button { width: 44px; height: 44px; border: 0; background: transparent; color: var(--ink); font-size: 26px; cursor: pointer; }
 .month-controls button:hover { background: #f0ebe4; }
 .month-controls strong { text-align: center; font-size: 14px; text-transform: capitalize; }
 
-.share-panel { overflow: hidden; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); box-shadow: 0 12px 34px rgba(43, 36, 30, .07); }
+.share-panel { overflow: hidden; border: 1px solid rgba(202,193,182,.85); border-radius: 16px; background: rgba(255,253,249,.94); box-shadow: 0 18px 48px rgba(43, 36, 30, .09); }
 .share-legend { min-height: 58px; display: flex; align-items: center; gap: 18px; border-bottom: 1px solid var(--line); padding: 12px 18px; }
 .share-legend > span { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 11px; font-weight: 700; }
 .share-legend i { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
@@ -110,9 +118,11 @@ button { font: inherit; }
 .preview-copy p { max-height: 120px; overflow: auto; margin: 0; color: var(--ink); font-size: 12px; line-height: 1.55; white-space: pre-wrap; }
 
 @media (max-width: 720px) {
-  .share-header { min-height: 66px; padding: 11px 15px; }
-  .brand strong { font-size: 12px; }
-  .brand small { display: none; }
+  .share-header { min-height: 72px; }
+  .share-header-inner { width: calc(100% - 24px); gap: 12px; }
+  .brand { gap: 10px; }
+  .brand img { width: 82px; height: 42px; }
+  .brand-context { max-width: 92px; padding-left: 10px; font-size: 7px; letter-spacing: .11em; }
   .readonly-pill { padding: 7px 9px; }
   .share-main { width: calc(100% - 12px); padding-top: 22px; }
   .share-title { align-items: stretch; flex-direction: column; }
