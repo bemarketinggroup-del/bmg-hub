@@ -104,12 +104,10 @@ button { font: inherit; }
 .share-carousel-gallery img, .share-carousel-gallery video { width: 100%; height: 100%; max-height: 520px; object-fit: contain; }
 .share-carousel-gallery iframe { width: 100%; height: 420px; }
 .share-carousel-gallery figcaption, .preview-body > figure figcaption { overflow: hidden; background: #25211d; color: #e9e2d9; padding: 8px 10px; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
-.preview-copy { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; border-top: 1px solid var(--line); background: var(--surface); padding: 14px 18px 16px; }
+.preview-copy { border-top: 1px solid var(--line); background: var(--surface); padding: 14px 18px 16px; }
 .preview-copy > div { min-width: 0; display: grid; gap: 5px; }
 .preview-copy small { color: var(--terracotta); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
 .preview-copy p { max-height: 120px; overflow: auto; margin: 0; color: var(--ink); font-size: 12px; line-height: 1.55; white-space: pre-wrap; }
-.preview-copy button { flex: 0 0 auto; min-height: 38px; border: 1px solid var(--terracotta); border-radius: 6px; background: #fff8f4; color: var(--terracotta); padding: 0 15px; font-size: 11px; font-weight: 800; cursor: pointer; }
-.preview-copy button:hover { background: var(--terracotta); color: white; }
 
 @media (max-width: 720px) {
   .share-header { min-height: 66px; padding: 11px 15px; }
@@ -151,6 +149,4 @@ button { font: inherit; }
   .share-item-copy small { display: none; }
   .preview-body { min-height: 260px; }
   .share-carousel-gallery { grid-template-columns: 1fr; }
-  .preview-copy { align-items: stretch; flex-direction: column; gap: 12px; }
-  .preview-copy button { width: 100%; }
 }

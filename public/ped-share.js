@@ -157,27 +157,6 @@ function openPreview(id) {
   document.getElementById("sharePreviewModal").showModal();
 }
 
-async function copyPreviewCaption() {
-  const text = document.getElementById("sharePreviewCaption").textContent.trim();
-  if (!text) return;
-  const button = document.getElementById("sharePreviewCopyButton");
-  try {
-    await navigator.clipboard.writeText(text);
-  } catch {
-    const textarea = document.createElement("textarea");
-    textarea.value = text;
-    textarea.setAttribute("readonly", "");
-    textarea.style.position = "fixed";
-    textarea.style.opacity = "0";
-    document.body.append(textarea);
-    textarea.select();
-    document.execCommand("copy");
-    textarea.remove();
-  }
-  button.textContent = "Copiato";
-  window.setTimeout(() => { button.textContent = "Copia copy"; }, 1600);
-}
-
 document.getElementById("sharePreviousMonth").addEventListener("click", () => shiftMonth(-1));
 document.getElementById("shareNextMonth").addEventListener("click", () => shiftMonth(1));
 document.getElementById("shareCalendarGrid").addEventListener("click", (event) => {
@@ -185,14 +164,12 @@ document.getElementById("shareCalendarGrid").addEventListener("click", (event) =
   if (item) openPreview(item.dataset.shareItem);
 });
 document.getElementById("sharePreviewClose").addEventListener("click", () => document.getElementById("sharePreviewModal").close());
-document.getElementById("sharePreviewCopyButton").addEventListener("click", copyPreviewCaption);
 document.getElementById("sharePreviewModal").addEventListener("close", () => {
   const video = document.querySelector("#sharePreviewBody video");
   if (video) video.pause();
   document.getElementById("sharePreviewBody").replaceChildren();
   document.getElementById("sharePreviewCopy").classList.add("is-hidden");
   document.getElementById("sharePreviewCaption").textContent = "";
-  document.getElementById("sharePreviewCopyButton").textContent = "Copia copy";
 });
 
 shareToken = decodeURIComponent(location.hash.slice(1));
