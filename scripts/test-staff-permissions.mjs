@@ -40,6 +40,7 @@ const appSource = await readFile(new URL("../public/app.js", import.meta.url), "
 const htmlSource = await readFile(new URL("../public/index.html", import.meta.url), "utf8");
 const pedShareSource = await readFile(new URL("../lib/ped-share.js", import.meta.url), "utf8");
 assert.match(appSource, /const visible = canAccessModule\("ped"\)/, "Condividi PED deve essere visibile a tutto lo staff con accesso al PED");
+assert.match(appSource, /function openPedShareModal\(\)[\s\S]*?!canAccessModule\("ped"\)/, "Condividi PED deve aprirsi per tutto lo staff con accesso al PED");
 assert.doesNotMatch(htmlSource, /class="ghost-button is-hidden" id="pedShareButton"/, "Condividi PED non deve partire nascosto per lo staff");
 assert.match(pedShareSource, /roles: \["admin", "staff"\], module: "ped"/, "l'API di condivisione PED deve accettare lo staff abilitato");
 

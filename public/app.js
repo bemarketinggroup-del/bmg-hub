@@ -3084,7 +3084,7 @@ async function loadPedShareStatus() {
 
 function openPedShareModal() {
   const client = selectedPedClient();
-  if (!client || currentProfile?.role !== "admin") return;
+  if (!client || !canAccessModule("ped")) return;
   document.getElementById("pedShareTitle").textContent = `Condividi PED · ${client.name}`;
   document.getElementById("pedShareIntro").textContent = `Il cliente vedra solo il calendario di ${client.name} e i contenuti pianificati.`;
   document.getElementById("pedShareLink").value = "";
