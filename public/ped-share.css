@@ -56,8 +56,8 @@ button { font: inherit; }
 .share-legend .type-reel { color: var(--reel); }
 .share-legend .type-carousel { color: var(--carousel); }
 .share-legend small { margin-left: auto; color: var(--muted); }
-.calendar-scroll { overflow-x: auto; padding: 18px; }
-.weekdays, .calendar-grid { min-width: 1020px; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.calendar-scroll { width: 100%; overflow-x: hidden; padding: 18px; }
+.weekdays, .calendar-grid { width: 100%; min-width: 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
 .weekdays { border: 1px solid var(--line); border-bottom: 0; border-radius: 6px 6px 0 0; background: var(--surface-soft); }
 .weekdays span { min-height: 35px; display: grid; place-items: center; border-right: 1px solid var(--line); color: var(--muted); font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
 .weekdays span:last-child { border-right: 0; }
@@ -116,12 +116,39 @@ button { font: inherit; }
   .brand strong { font-size: 12px; }
   .brand small { display: none; }
   .readonly-pill { padding: 7px 9px; }
-  .share-main { width: calc(100% - 24px); padding-top: 28px; }
+  .share-main { width: calc(100% - 12px); padding-top: 22px; }
   .share-title { align-items: stretch; flex-direction: column; }
   .month-controls { width: 100%; }
   .share-legend { flex-wrap: wrap; gap: 10px 15px; }
   .share-legend small { width: 100%; margin-left: 0; }
-  .calendar-scroll { padding: 10px; }
+  .calendar-scroll { padding: 6px; }
+  .weekdays span { min-height: 28px; font-size: 8px; letter-spacing: .04em; }
+  .calendar-day { min-width: 0; min-height: 88px; padding: 3px 2px; }
+  .day-number { width: 20px; height: 20px; margin: 0 auto 3px; font-size: 9px; }
+  .day-items { gap: 2px; }
+  .share-item {
+    min-width: 0;
+    min-height: 24px;
+    display: block;
+    overflow: hidden;
+    border-left-width: 2px;
+    border-radius: 3px;
+    padding: 3px 2px;
+  }
+  .share-item-media { display: none; }
+  .share-item-copy { display: block; min-width: 0; }
+  .share-item-copy strong {
+    display: -webkit-box;
+    overflow: hidden;
+    font-size: clamp(6px, 1.85vw, 8px);
+    line-height: 1.15;
+    text-overflow: ellipsis;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+  .share-item-copy small { display: none; }
   .preview-body { min-height: 260px; }
   .share-carousel-gallery { grid-template-columns: 1fr; }
   .preview-copy { align-items: stretch; flex-direction: column; gap: 12px; }
