@@ -294,6 +294,10 @@ supabase/                     schema e migration
 
 ## Regole UX da non perdere
 
+Principio generale: ogni vista applicativa mostra un solo titolo nella topbar.
+Le intestazioni interne compaiono soltanto quando aggiungono un contesto diverso
+o dinamico; non ripetere il nome del modulo, il provider o descrizioni ovvie.
+
 1. Desktop: sidebar fissa; il burger menu non deve comparire.
 2. Smartphone: burger menu che apre una navigazione laterale.
 3. Input e aree editabili su iPhone con font di almeno 16 px per evitare lo zoom

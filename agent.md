@@ -59,6 +59,29 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-08-04 — CMS semplificato con titoli unici e barre compatte
+
+- Richiesta: modernizzare e semplificare tutte le aree del gestionale,
+  eliminando titoli, kicker e descrizioni ripetuti come nella pagina Calendario.
+- Modifiche: ogni vista usa ora un solo titolo nella topbar; rimosse le
+  intestazioni duplicate da Calendario, PED, Grafiche, Task, Chat, Utenti,
+  Contatore, area personale e Backend sito. Le intestazioni operative sono
+  diventate barre comandi compatte, Home e KPI occupano meno spazio e panel,
+  toolbar e riepiloghi usano un linguaggio più piatto e moderno. Restano i
+  titoli che cambiano davvero il contesto, come mese, cliente, persona o
+  sottosezione selezionata.
+- File: `public/index.html`, `public/app.js`, `public/styles.css`,
+  `scripts/test-mobile-navigation.mjs`, `scripts/test-graphic-reviews.mjs`,
+  `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run check`, `npm run test:mobile-navigation`,
+  `npm run test:google-calendar`, `npm run test:smart-working`,
+  `npm run test:personal-area`, `npm run test:users`,
+  `npm run test:team-chat`, `npm run test:graphic-reviews`,
+  `npm run test:session-persistence`, `git diff --check`; controllo visivo
+  trasversale desktop e smartphone.
+- Pubblicazione: GitHub `main` e Vercel produzione.
+- Note: Nessuna.
+
 ### 2026-08-04 — Sidebar CMS completa con account e notifiche
 
 - Richiesta: riprodurre anche la disposizione della sidebar PrimeNG di

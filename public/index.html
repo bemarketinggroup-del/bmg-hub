@@ -163,7 +163,6 @@
             <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h16"/></svg>
           </button>
           <div>
-            <p class="eyebrow" id="viewKicker">BMG Internal OS</p>
             <h1 id="viewTitle">Home</h1>
           </div>
         </div>
@@ -175,7 +174,6 @@
       <section class="view is-active" id="dashboardView" data-view-panel="dashboard">
         <section class="home-welcome">
           <div class="home-welcome-copy">
-            <p class="eyebrow">Spazio di lavoro BMG</p>
             <h2 id="homeWelcomeTitle">Benvenuto nell'Hub di BMG</h2>
             <p id="homeWelcomeMessage">Tutto il lavoro dell'agenzia, organizzato in un unico posto.</p>
           </div>
@@ -185,12 +183,6 @@
           </div>
         </section>
 
-        <div class="home-section-head">
-          <div>
-            <p class="eyebrow">Panoramica</p>
-            <h2>La giornata in breve</h2>
-          </div>
-        </div>
         <div class="metric-grid">
           <article class="metric">
             <span>Clienti attivi</span>
@@ -213,8 +205,7 @@
         <section class="panel home-quick-panel">
           <div class="panel-head">
             <div>
-              <p class="eyebrow">Accesso rapido</p>
-              <h2>Da dove vuoi iniziare?</h2>
+              <h2>Accesso rapido</h2>
             </div>
           </div>
           <div class="home-quick-grid">
@@ -246,9 +237,7 @@
         <section class="panel cms-workspace">
           <div class="panel-head cms-heading">
             <div>
-              <p class="eyebrow">Gestione contenuti</p>
-              <h2>Scegli la pagina da modificare</h2>
-              <span>Ogni contenuto e organizzato come appare nel sito: pagina, sezione e campo.</span>
+              <h2>Pagine del sito</h2>
             </div>
             <button class="primary-button" id="addContentButton" type="button"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg>Nuovo contenuto</button>
           </div>
@@ -258,9 +247,9 @@
           <div class="cms-browser">
             <div class="cms-browser-head">
               <div>
-                <p class="eyebrow" id="contentPageEyebrow">Tutto il sito</p>
+                <p class="sr-only" id="contentPageEyebrow">Tutto il sito</p>
                 <h3 id="contentPageTitle">Tutti i contenuti</h3>
-                <p id="contentPageDescription">Seleziona una pagina per vedere le sezioni nello stesso ordine del sito.</p>
+                <p class="sr-only" id="contentPageDescription">Seleziona una pagina per vedere le sezioni nello stesso ordine del sito.</p>
               </div>
               <div class="cms-summary" id="contentSummary" aria-label="Riepilogo contenuti"></div>
             </div>
@@ -307,11 +296,6 @@
       <section class="view" id="pedView" data-view-panel="ped">
         <section class="panel ped-workspace">
           <div class="ped-workspace-head">
-            <div>
-              <p class="eyebrow">Piano editoriale</p>
-              <h2>Calendario contenuti</h2>
-              <span>Collega foto, video e grafiche dal Google Drive di ogni cliente.</span>
-            </div>
             <div class="ped-workspace-actions">
               <button class="ghost-button" id="pedShareButton" type="button" title="Crea un link protetto per il cliente">
                 <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 10.6 6.8-4.2M8.6 13.4l6.8 4.2"/></svg>
@@ -346,7 +330,6 @@
           <section class="ped-staging" aria-labelledby="pedStagingTitle">
             <div class="ped-staging-head">
               <div>
-                <p class="eyebrow">Contenuti momentanei</p>
                 <h3 id="pedStagingTitle">In attesa di programmazione</h3>
                 <span>Inserisci file dal Drive e trascinali sul giorno desiderato.</span>
               </div>
@@ -376,7 +359,6 @@
           <section class="ped-agenda" aria-labelledby="pedAgendaTitle">
             <div class="ped-agenda-head">
               <div>
-                <p class="eyebrow">Programmazione SMM</p>
                 <h3 id="pedAgendaTitle">Agenda da oggi in poi</h3>
               </div>
               <div class="ped-agenda-head-meta">
@@ -391,11 +373,6 @@
       <section class="view" id="graphicsView" data-view-panel="graphics">
         <section class="panel graphics-workspace">
           <header class="graphics-workspace-head">
-            <div>
-              <p class="eyebrow">Flusso creativo</p>
-              <h2>Revisioni grafiche</h2>
-              <span>Foto, istruzioni e versioni aggiornate in un'unica coda di lavoro.</span>
-            </div>
             <button class="ghost-button" id="graphicsRefreshButton" type="button">
               <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8.1 8.1 0 0 0-15.5-2M4 4v5h5"/><path d="M4 13a8.1 8.1 0 0 0 15.5 2M20 20v-5h-5"/></svg>
               Aggiorna
@@ -404,9 +381,7 @@
           <section class="graphics-drive-access">
             <div class="graphics-drive-access-head">
               <div>
-                <p class="eyebrow">Archivio creativo</p>
-                <h3>Cartelle GRAFICHE clienti</h3>
-                <span>Clicca un cliente per aprire subito la sua cartella GRAFICHE e caricare nuovi contenuti.</span>
+                <h3>Archivio clienti</h3>
               </div>
               <div class="graphics-drive-client-picker">
                 <label class="graphics-drive-client-search" for="graphicsDriveClientSearch">
@@ -450,11 +425,7 @@
 
       <section class="view" id="personalView" data-view-panel="personal">
         <section class="personal-summary">
-          <div>
-            <p class="eyebrow">Spazio personale</p>
-            <h2 id="personalGreeting">Il tuo lavoro</h2>
-            <p>Task assegnate ed eventi ai quali devi partecipare, riuniti in un'unica vista.</p>
-          </div>
+          <h2 class="sr-only" id="personalGreeting">Il tuo lavoro</h2>
           <div class="personal-metrics">
             <span><strong id="personalTaskCount">0</strong> task attive</span>
             <span><strong id="personalEventCount">0</strong> eventi in arrivo</span>
@@ -462,11 +433,11 @@
         </section>
         <div class="personal-grid">
           <section class="panel personal-panel">
-            <div class="panel-head"><div><p class="eyebrow">ClickUp</p><h2>Le mie task</h2></div></div>
+            <div class="panel-head"><div><h2>Task</h2></div></div>
             <div class="personal-list" id="personalTaskList"></div>
           </section>
           <section class="panel personal-panel">
-            <div class="panel-head"><div><p class="eyebrow">Google Calendar</p><h2>I miei eventi</h2></div></div>
+            <div class="panel-head"><div><h2>Eventi</h2></div></div>
             <div class="personal-list" id="personalEventList"></div>
           </section>
         </div>
@@ -475,11 +446,6 @@
       <section class="view" id="chatView" data-view-panel="chat">
         <section class="panel team-chat-workspace">
           <header class="team-chat-head">
-            <div>
-              <p class="eyebrow">Comunicazione interna</p>
-              <h2>Chat del team</h2>
-              <span>Messaggi generali e conversazioni private, sempre dentro il gestionale.</span>
-            </div>
             <span class="team-chat-live"><i aria-hidden="true"></i>Aggiornamento automatico</span>
           </header>
           <div class="team-chat-layout">
@@ -538,11 +504,7 @@
       <section class="view" id="calendarView" data-view-panel="calendar">
         <section class="panel google-calendar-workspace">
           <div class="google-calendar-head">
-            <div>
-              <p class="eyebrow">Google Calendar</p>
-              <h2>Calendario BeViral Agency</h2>
-              <span id="googleCalendarAccount">Appuntamenti, shooting e impegni condivisi del team</span>
-            </div>
+            <span class="workspace-context" id="googleCalendarAccount">Appuntamenti, shooting e impegni condivisi del team</span>
             <div class="google-calendar-actions">
               <button class="ghost-button" id="calendarRefreshButton" type="button">
                 <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8.1 8.1 0 0 0-15.5-2M4 4v5h5"/><path d="M4 13a8.1 8.1 0 0 0 15.5 2M20 20v-5h-5"/></svg>
@@ -586,11 +548,6 @@
       <section class="view" id="teamView" data-view-panel="team">
         <section class="panel task-workspace">
           <div class="task-workspace-head">
-            <div>
-              <p class="eyebrow">ClickUp operativo</p>
-              <h2>Task del team</h2>
-              <span>Attivita condivise e assegnazioni personali</span>
-            </div>
             <div class="task-workspace-actions">
               <button class="ghost-button admin-only" id="analyzeTaskClientsButton" type="button">Analizza clienti</button>
               <button class="ghost-button" id="syncTasksButton" type="button"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7h-9"/><path d="m17 4 3 3-3 3"/><path d="M4 17h9"/><path d="m7 20-3-3 3-3"/></svg>Sincronizza</button>
@@ -602,7 +559,6 @@
 
           <div class="task-view-head" id="teamProfileHead">
             <div>
-              <h3>Task del team</h3>
               <span>Vista completa delle attivita operative</span>
             </div>
           </div>
@@ -633,7 +589,6 @@
           </summary>
           <div class="team-details-content">
             <div class="panel-head">
-              <h2>Log sincronizzazione</h2>
               <button class="text-button" id="refreshTaskLogsButton" type="button">Aggiorna</button>
             </div>
             <div class="sync-log-list" id="taskSyncLogList"></div>
@@ -697,11 +652,6 @@
       <section class="view admin-only" id="counterView" data-view-panel="counter">
         <section class="panel smart-off-summary">
           <div class="smart-off-summary-head">
-            <div>
-              <p class="eyebrow">Assenze</p>
-              <h2>Contatore giorni OFF</h2>
-              <span>Conteggio dei giorni lavorativi registrati, senza duplicati.</span>
-            </div>
             <div class="smart-off-totals" aria-label="Totali giorni OFF">
               <div class="smart-off-total"><small id="smartOffMonthLabel">Mese</small><strong id="smartOffMonthTotal">0</strong></div>
               <div class="smart-off-total"><small id="smartOffYearLabel">Anno</small><strong id="smartOffYearTotal">0</strong></div>
@@ -715,7 +665,6 @@
           <section class="smart-off-chart-section" aria-labelledby="smartOffChartTitle">
             <div class="smart-off-chart-head">
               <div>
-                <p class="eyebrow">Confronto assenze</p>
                 <h3 id="smartOffChartTitle">Assenze per persona</h3>
               </div>
               <div class="smart-off-chart-legend" aria-label="Legenda grafico assenze">
@@ -731,7 +680,6 @@
 
         <section class="panel smart-settings-panel">
           <div>
-            <p class="eyebrow">Regole</p>
             <h2>Rotazione automatica</h2>
             <form class="smart-settings" id="smartRulesForm">
               <label>Massimo persone in smart al giorno<input name="max_remote_per_day" type="number" min="1" max="2" value="2"></label>
@@ -741,7 +689,6 @@
             <p class="smart-settings-note">La proposta assegna un giorno a settimana per persona, evita gli impegni cliente e non supera mai due persone nello stesso giorno.</p>
           </div>
           <div>
-            <p class="eyebrow">Google Calendar</p>
             <h2 id="smartCalendarSummary">Calendario BMG collegato</h2>
             <div class="smart-events-list" id="smartEventsList"></div>
           </div>
@@ -778,11 +725,6 @@
       <section class="view" id="usersView" data-view-panel="users">
         <section class="panel users-workspace">
           <div class="panel-head users-heading">
-            <div>
-              <p class="eyebrow">Amministrazione CMS</p>
-              <h2>Directory utenti</h2>
-              <span>Gestisci account, ruoli, accessi al gestionale e collegamenti ClickUp da un unico pannello.</span>
-            </div>
             <div class="users-heading-actions admin-only">
               <button class="ghost-button" id="provisionClickUpUsersButton" type="button">Sincronizza ClickUp</button>
             </div>

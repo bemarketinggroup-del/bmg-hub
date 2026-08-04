@@ -997,27 +997,26 @@ function restoreLastView() {
 
 function setView(view) {
   const titles = {
-    dashboard: ["BMG Internal OS", "Home"],
-    personal: ["Spazio personale", "La mia area"],
-    chat: ["Comunicazione interna", "Chat"],
-    graphics: ["Flusso creativo", "Revisioni grafiche"],
-    content: ["CMS leggero", "Backend sito"],
-    clients: ["Gestionale interno", "Clienti"],
-    ped: ["Piano editoriale", "PED"],
-    calendar: ["Agenda condivisa", "Calendario"],
-    team: ["ClickUp operativo", "Task del team"],
-    smart: ["Turni interni", "Turni / Smart Working"],
-    counter: ["Amministrazione turni", "Contatore"],
-    users: ["Accessi interni", "Utenti"],
-    settings: ["Setup tecnico", "Configurazione"]
+    dashboard: "Home",
+    personal: "La mia area",
+    chat: "Chat",
+    graphics: "Grafiche",
+    content: "Backend sito",
+    clients: "Clienti",
+    ped: "PED",
+    calendar: "Calendario",
+    team: "Task del team",
+    smart: "Turni / Smart Working",
+    counter: "Contatore",
+    users: "Utenti",
+    settings: "Configurazione"
   };
   if (!Object.hasOwn(titles, view) || !canAccessView(view)) view = "dashboard";
   rememberLastView(view);
   setMobileNavOpen(false);
   document.querySelectorAll(".nav-item").forEach((item) => item.classList.toggle("is-active", item.dataset.view === view));
   document.querySelectorAll("[data-view-panel]").forEach((panel) => panel.classList.toggle("is-active", panel.dataset.viewPanel === view));
-  document.getElementById("viewKicker").textContent = titles[view][0];
-  document.getElementById("viewTitle").textContent = titles[view][1];
+  document.getElementById("viewTitle").textContent = titles[view];
   auditModuleView(view);
   if (view === "ped") {
     ensurePedClientSelection();
@@ -6674,7 +6673,6 @@ function renderTeamProfile() {
     const unknown = tasks.filter((task) => unrecognizedAssignees(task).length).length;
     target.innerHTML = `
       <div>
-        <h3>Task del team</h3>
         <span>${tasks.length} task operative${excludedTaskCount() ? ` · ${excludedTaskCount()} elementi non operativi esclusi` : ""}</span>
       </div>
       ${taskSummaryMarkup(tasks)}
