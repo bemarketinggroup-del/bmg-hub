@@ -2188,12 +2188,16 @@ code { font-family: var(--font-mono); font-size: 12px; }
 .ped-workspace-actions { display: flex; align-items: center; gap: 8px; }
 .ped-workspace-actions .lc { width: 16px; height: 16px; }
 
+.ped-client-picker { border-bottom: 1px solid var(--line); }
+.ped-client-search {
+  width: min(520px, calc(100% - 40px));
+  margin: 14px 20px 0;
+}
 .ped-client-tabs {
   display: flex;
   gap: 8px;
   overflow-x: auto;
   padding: 14px 20px;
-  border-bottom: 1px solid var(--line);
   scrollbar-width: thin;
 }
 .ped-client-tab {
@@ -6499,6 +6503,8 @@ code { font-family: var(--font-mono); font-size: 12px; }
   .ped-workspace-actions { width: 100%; }
   .ped-workspace-actions > button { flex: 1 1 auto; }
   .ped-workspace-head h2 { font-size: 22px; }
+  .ped-client-search { width: calc(100% - 28px); margin-right: 14px; margin-left: 14px; }
+  .ped-client-search input { font-size: 16px; }
   .ped-client-tabs { padding-right: 14px; padding-left: 14px; }
   .ped-calendar-toolbar { flex-wrap: wrap; padding-right: 14px; padding-left: 14px; }
   .ped-calendar-toolbar h3 { min-width: 150px; font-size: 18px; }

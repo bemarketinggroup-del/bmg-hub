@@ -59,6 +59,18 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-08-04 — Ricerca cliente nella sezione PED
+
+- Richiesta: aggiungere nel PED una ricerca per nome cliente come nelle sezioni
+  Clienti e Grafiche.
+- Modifiche: inserito il campo `Cerca cliente` sopra l'elenco dei calendari PED,
+  con filtro immediato, confronto senza distinzione tra maiuscole e accenti e
+  messaggio dedicato quando non ci sono risultati.
+- File: `public/index.html`, `public/app.js`, `public/styles.css`, `agent.md`.
+- Verifiche: `npm run check`, `git diff --check`, controllo desktop e smartphone.
+- Pubblicazione: GitHub `main` e Vercel produzione.
+- Note: Nessuna.
+
 ### 2026-08-04 — Memoria permanente per le nuove chat
 
 - Richiesta: creare nella cartella BMG Hub un file operativo da aggiornare a
@@ -70,4 +82,3 @@ più recente alla più vecchia:
 - Pubblicazione: GitHub `main` e Vercel produzione.
 - Note: per comprendere l'intero gestionale leggere anche
   `docs/PROJECT-HANDOFF.md`.
-

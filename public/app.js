@@ -3162,7 +3162,10 @@ async function disablePedShareLink() {
 function renderPedClientTabs() {
   const tabs = document.getElementById("pedClientTabs");
   if (!tabs) return;
-  const clients = [...state.clients].sort((a, b) => String(a.name).localeCompare(String(b.name), "it"));
+  const query = normalizeIdentity(document.getElementById("pedClientSearch")?.value);
+  const clients = [...state.clients]
+    .filter((client) => !query || normalizeIdentity(client.name).includes(query))
+    .sort((a, b) => String(a.name).localeCompare(String(b.name), "it", { sensitivity: "base" }));
   tabs.innerHTML = clients.map((client) => {
     const active = String(client.id) === String(selectedPedClientId);
     return `<button class="ped-client-tab${active ? " is-active" : ""}" data-ped-client="${escapeHtml(client.id)}" style="${clientColorStyle(client)}" type="button" title="Apri il PED di ${escapeHtml(client.name)}">
@@ -3170,7 +3173,7 @@ function renderPedClientTabs() {
       <span>${escapeHtml(client.name)}</span>
       ${clientHasDrive(client) ? "" : `<svg class="lc" viewBox="0 0 24 24" aria-label="Drive non collegato"><path d="M12 9v4M12 17h.01"/><circle cx="12" cy="12" r="9"/></svg>`}
     </button>`;
-  }).join("") || `<p class="ped-empty-state">Aggiungi almeno un cliente per creare il PED.</p>`;
+  }).join("") || `<p class="ped-empty-state">${query ? "Nessun cliente corrisponde alla ricerca." : "Aggiungi almeno un cliente per creare il PED."}</p>`;
 }
 
 function renderPedCalendar() {
@@ -9861,6 +9864,7 @@ document.getElementById("contentPageFilter").addEventListener("change", () => {
 document.getElementById("contentStatusFilter").addEventListener("change", renderContent);
 document.getElementById("contentSearch").addEventListener("input", renderContent);
 document.getElementById("clientSearch").addEventListener("input", renderClients);
+document.getElementById("pedClientSearch").addEventListener("input", renderPedClientTabs);
 document.getElementById("chatSearch").addEventListener("input", () => renderTeamChat({ quiet: true }));
 document.getElementById("chatComputerFileButton").addEventListener("click", () => document.getElementById("chatComputerFileInput").click());
 document.getElementById("chatComputerFileInput").addEventListener("change", (event) => {
