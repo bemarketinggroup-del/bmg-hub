@@ -24,6 +24,8 @@ assert.match(appSource, /function isArchivedClient\(client\)/, "l'interfaccia de
 assert.match(appSource, /rows\.map\(normalizeClient\)\.filter\(\(client\) => !isArchivedClient\(client\)\)/, "il calendario e il Drive devono ricevere solo clienti operativi");
 assert.match(appSource, /if \(pedClientChanged\) void loadPedCalendar\(\)/, "archiviando il cliente aperto il PED deve caricare il nuovo cliente selezionato");
 assert.match(appSource, /async function openClientDetails\(clientId\)[\s\S]*?openClientDrive\(selectedClientId\)/, "aprendo un cliente deve aprirsi automaticamente il Drive interno");
+assert.match(appSource, /function clientFolderMarkup\(client/, "Clienti e Archivio grafiche devono condividere lo stesso renderer delle cartelle");
+assert.match(appSource, /clients\.map\(\(client\) => clientFolderMarkup\(client\)\)/, "l'area Clienti deve usare il renderer condiviso");
 assert.match(appSource, /class="client-drive-panel" data-client-drive-panel aria-live="polite"/, "il browser Drive del cliente deve essere subito visibile");
 assert.doesNotMatch(appSource, /class="client-detail-body"/, "la scheda cliente non deve mostrare il blocco informazioni");
 assert.doesNotMatch(appSource, />Sistemi interni</, "la scheda cliente non deve mostrare il riepilogo dei sistemi");

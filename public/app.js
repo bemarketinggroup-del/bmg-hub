@@ -1739,19 +1739,7 @@ function renderClients() {
     return;
   }
 
-  grid.innerHTML = clients.map((client) => {
-    const status = labelClientStatus(client.status);
-    return `
-      <button class="client-folder" data-client-open="${client.id}" type="button" style="${clientColorStyle(client)}">
-        <span class="client-folder-icon" aria-hidden="true"><svg class="lc" viewBox="0 0 24 24"><path d="M3 7h6l2 2h10v10H3z"/><path d="M3 7V5h6l2 2"/></svg></span>
-        <span class="client-folder-copy">
-          <strong>${escapeHtml(client.name)}</strong>
-          <small>${escapeHtml(status)}</small>
-        </span>
-        <svg class="lc client-folder-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
-      </button>
-    `;
-  }).join("") || emptyState("Nessun cliente trovato.");
+  grid.innerHTML = clients.map((client) => clientFolderMarkup(client)).join("") || emptyState("Nessun cliente trovato.");
 }
 
 const CLIENT_COLOR_PALETTE = [
@@ -1767,6 +1755,25 @@ function clientColorStyle(client) {
   for (const char of value) hash = ((hash << 5) - hash + char.charCodeAt(0)) | 0;
   const [accent, tint] = CLIENT_COLOR_PALETTE[Math.abs(hash) % CLIENT_COLOR_PALETTE.length];
   return `--client-accent:${accent};--client-tint:${tint}`;
+}
+
+function clientFolderMarkup(client, {
+  dataAttribute = "data-client-open",
+  active = false,
+  ariaLabel = ""
+} = {}) {
+  const current = active ? ' aria-current="true"' : "";
+  const accessibleName = ariaLabel ? ` aria-label="${escapeHtml(ariaLabel)}"` : "";
+  return `
+    <button class="client-folder${active ? " is-active" : ""}" ${dataAttribute}="${escapeHtml(client.id)}" type="button" style="${clientColorStyle(client)}"${accessibleName}${current}>
+      <span class="client-folder-icon" aria-hidden="true"><svg class="lc" viewBox="0 0 24 24"><path d="M3 7h6l2 2h10v10H3z"/><path d="M3 7V5h6l2 2"/></svg></span>
+      <span class="client-folder-copy">
+        <strong title="${escapeHtml(client.name)}">${escapeHtml(client.name)}</strong>
+        <small>${escapeHtml(labelClientStatus(client.status))}</small>
+      </span>
+      <svg class="lc client-folder-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+    </button>
+  `;
 }
 
 function clientDetailMarkup(client) {
@@ -8961,13 +8968,11 @@ function renderGraphicsDriveClients() {
     ? allClients.filter((client) => normalizeIdentity(client.name).includes(query))
     : allClients;
   const selectedClient = allClients.find((client) => String(client.id) === String(graphicsDriveClientId));
-  grid.innerHTML = clients.length ? clients.map((client) => {
-    const active = String(client.id) === String(selectedClient?.id);
-    return `<button class="graphics-drive-client-tile${active ? " is-active" : ""}" data-graphics-drive-client="${escapeHtml(client.id)}" type="button" role="listitem" style="${clientColorStyle(client)}" aria-label="Apri la cartella GRAFICHE di ${escapeHtml(client.name)}"${active ? ' aria-current="true"' : ""}>
-      <span class="graphics-drive-client-square" aria-hidden="true"><svg class="lc" viewBox="0 0 24 24"><path d="M3 7h6l2 2h10v10H3z"/><path d="M3 7V5h6l2 2"/></svg></span>
-      <strong title="${escapeHtml(client.name)}">${escapeHtml(client.name)}</strong>
-    </button>`;
-  }).join("") : `<div class="graphics-drive-client-empty">${query ? "Nessun cliente corrisponde alla ricerca." : "Nessuna cartella GRAFICHE disponibile."}</div>`;
+  grid.innerHTML = clients.length ? clients.map((client) => clientFolderMarkup(client, {
+    dataAttribute: "data-graphics-drive-client",
+    active: String(client.id) === String(selectedClient?.id),
+    ariaLabel: `Apri la cartella GRAFICHE di ${client.name}`
+  })).join("") : `<div class="graphics-drive-client-empty">${query ? "Nessun cliente corrisponde alla ricerca." : "Nessuna cartella GRAFICHE disponibile."}</div>`;
 
   const isOpen = clientDriveState.surface === "graphics"
     && String(clientDriveState.clientId) === String(graphicsDriveClientId)

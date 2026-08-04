@@ -59,6 +59,24 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-08-05 — Cartelle Archivio grafiche allineate all'area Clienti
+
+- Richiesta: mostrare le cartelle dell'Archivio grafiche con la stessa
+  visualizzazione usata nell'area Clienti.
+- Modifiche: creato un renderer condiviso per le schede cliente e applicato
+  anche all'Archivio grafiche; griglia, proporzioni, icona, nome, stato, freccia
+  e comportamento responsive sono ora identici. Restano invariati ricerca,
+  ordinamento alfabetico, selezione attiva e apertura della cartella `GRAFICHE`.
+- File: `public/index.html`, `public/app.js`, `public/styles.css`,
+  `scripts/test-client-management.mjs`, `scripts/test-graphic-reviews.mjs`,
+  `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run check`, `npm run test:client-management`,
+  `npm run test:graphic-reviews`, `npm run test:primeng-components`,
+  `npm run test:mobile-navigation`, `git diff --check`; controllo visivo
+  desktop e smartphone in produzione.
+- Pubblicazione: GitHub `main` e Vercel produzione.
+- Note: Nessuna.
+
 ### 2026-08-05 — Email multiple per identità Calendar e ClickUp
 
 - Richiesta: permettere all'utente Davide De Luca di collegare più indirizzi

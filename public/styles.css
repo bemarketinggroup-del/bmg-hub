@@ -5555,52 +5555,13 @@ body.user-activity-dialog-visible { overflow: hidden; }
 }
 .graphics-drive-client-search input::placeholder { color: var(--muted); }
 .graphics-drive-client-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(116px, 1fr));
-  gap: 16px 12px;
   overflow: visible;
   padding: 0;
 }
-.graphics-drive-client-tile {
-  display: grid;
-  min-width: 0;
-  justify-items: center;
-  gap: 8px;
-  border: 1px solid transparent;
-  border-radius: 11px;
-  background: transparent;
-  padding: 10px 6px;
-  color: var(--ink);
-  text-align: center;
-}
-.graphics-drive-client-tile:hover,
-.graphics-drive-client-tile:focus-visible { border-color: var(--line-strong); background: var(--surface); }
-.graphics-drive-client-tile.is-active {
+.graphics-drive-client-grid .client-folder.is-active {
   border-color: color-mix(in srgb, var(--client-accent) 50%, var(--line));
   background: var(--client-tint);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--client-accent) 20%, transparent);
-}
-.graphics-drive-client-square {
-  display: grid;
-  width: 80px;
-  height: 80px;
-  place-items: center;
-  border: 1px solid color-mix(in srgb, var(--client-accent) 24%, transparent);
-  border-radius: 14px;
-  background: var(--client-tint);
-  color: var(--client-accent);
-}
-.graphics-drive-client-square .lc { width: 32px; height: 32px; }
-.graphics-drive-client-tile strong {
-  display: -webkit-box;
-  min-height: 28px;
-  overflow: hidden;
-  color: var(--ink);
-  font-size: 11px;
-  line-height: 1.3;
-  text-overflow: ellipsis;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
 }
 .graphics-drive-client-empty {
   grid-column: 1 / -1;
@@ -5824,10 +5785,6 @@ body.user-activity-dialog-visible { overflow: hidden; }
   .graphics-drive-access-head { display: block; padding: 18px 14px 22px; }
   .graphics-drive-access-head > div:first-child { margin-bottom: 14px; }
   .graphics-drive-client-search { margin-bottom: 14px; }
-  .graphics-drive-client-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 8px; }
-  .graphics-drive-client-tile { padding: 8px 3px; }
-  .graphics-drive-client-square { width: 64px; height: 64px; }
-  .graphics-drive-client-square .lc { width: 27px; height: 27px; }
   .graphics-drive-placeholder { min-height: 75px; padding: 12px 14px 20px; }
   .graphics-drive-open-bar { align-items: flex-start; margin: 0 14px; }
   .graphics-drive-close-button { min-height: 40px; padding: 0 12px; }

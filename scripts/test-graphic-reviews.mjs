@@ -91,7 +91,8 @@ assert.match(appSource, /setView\("graphics-reviews"\)/, "le notifiche devono ap
 assert.doesNotMatch(appSource, /updateGraphicsDriveScrollHint|graphicsDriveClientGrid"\)\.addEventListener\("scroll"/);
 assert.match(appSource, /Nessun cliente corrisponde alla ricerca/);
 assert.match(appSource, /source: "graphics"/);
-assert.match(appSource, /graphics-drive-client-tile/);
+assert.match(appSource, /function clientFolderMarkup\(client/);
+assert.match(appSource, /dataAttribute: "data-graphics-drive-client"/);
 assert.match(appSource, /\.localeCompare\(String\(b\.name\), "it", \{ sensitivity: "base" \}\)/);
 assert.match(styleSource, /\.graphic-review-card/);
 assert.match(styleSource, /\.graphics-drive-access/);
@@ -100,10 +101,11 @@ assert.match(styleSource, /\.sidebar-subnav\[hidden\]\s*\{\s*display:\s*none;/, 
 assert.match(styleSource, /\.graphics-surface-head\s*\{[\s\S]*min-height:\s*86px/, "ogni finestra deve avere una testata ampia");
 assert.match(styleSource, /\.graphics-drive-client-grid/);
 assert.match(styleSource, /\.graphics-drive-client-search/);
-assert.match(styleSource, /\.graphics-drive-client-grid \{[\s\S]*?grid-template-columns: repeat\(auto-fill, minmax\(116px, 1fr\)\);[\s\S]*?overflow: visible;/);
+assert.match(htmlSource, /class="client-grid graphics-drive-client-grid"/, "l'archivio deve usare la stessa griglia dell'area Clienti");
+assert.match(styleSource, /\.graphics-drive-client-grid \{[\s\S]*?overflow: visible;/);
 assert.doesNotMatch(styleSource, /\.graphics-drive-scroll-hint|graphics-scroll-cue|\.graphics-drive-client-grid::/);
 assert.match(styleSource, /\.graphics-drive-open-bar/);
-assert.match(styleSource, /\.graphics-drive-client-square/);
+assert.match(styleSource, /\.graphics-drive-client-grid \.client-folder\.is-active/);
 assert.match(styleSource, /\.graphic-review-comparison-pair/);
 assert.match(styleSource, /\.drive-version-pair/);
 assert.match(styleSource, /\.graphic-review-modal/);

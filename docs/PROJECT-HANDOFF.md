@@ -273,8 +273,10 @@ supabase/                     schema e migration
   collegata; la coppia occupa solo lo spazio delle due schede, non tutta la riga.
 - Archivio `GRAFICHE` per ogni cliente con upload diretto.
 - Clienti mostrati in una griglia alfabetica completa e a tutta larghezza, con
-  cartelle grandi, ricerca mantenuta e nessuno scorrimento interno; la griglia
-  cresce con la pagina e resta disponibile il comando per richiudere la cartella.
+  ricerca mantenuta e nessuno scorrimento interno; le cartelle riusano le stesse
+  schede, proporzioni, stato e disposizione responsive dell'area `Clienti`.
+  La griglia cresce con la pagina e resta disponibile il comando per richiudere
+  la cartella.
 - Il contatore notifiche resta sulla voce padre `Grafiche` e continua a mostrare
   le revisioni nuove ancora da prendere in carico; una notifica apre
   direttamente la pagina `Revisioni grafiche`.
