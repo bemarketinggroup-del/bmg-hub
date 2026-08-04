@@ -59,6 +59,20 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-08-04 — Eventi calendario rossi invece che neri
+
+- Richiesta: sostituire il colore nero degli eventi nel calendario CRM con il
+  rosso.
+- Modifiche: mappati sul rosso `#D50000` sia il colore Google grigio `8` sia il
+  fallback degli eventi senza colore; mantenuti i colori specifici delle
+  categorie già riconosciute.
+- File: `public/app.js`, `scripts/test-google-calendar.mjs`,
+  `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run check`, `npm run test:google-calendar`,
+  `git diff --check` e controllo visivo del colore evento.
+- Pubblicazione: GitHub `main` e Vercel produzione.
+- Note: Nessuna.
+
 ### 2026-08-04 — Notifiche eventi nel calendario CRM
 
 - Richiesta: fare in modo che il clic sulle notifiche degli eventi apra il

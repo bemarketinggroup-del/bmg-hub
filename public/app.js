@@ -8108,9 +8108,9 @@ function calendarEventColor(event) {
   };
   const googleColors = {
     1: "#7986CB", 2: "#33B679", 3: "#8E24AA", 4: "#E67C73", 5: "#F6BF26", 6: "#F4511E",
-    7: "#039BE5", 8: "#616161", 9: "#3F51B5", 10: "#0B8043", 11: "#D50000"
+    7: "#039BE5", 8: "#D50000", 9: "#3F51B5", 10: "#0B8043", 11: "#D50000"
   };
-  return categoryColors[event.event_category] || googleColors[Number(event.color_id)] || "#616161";
+  return categoryColors[event.event_category] || googleColors[Number(event.color_id)] || "#D50000";
 }
 
 function calendarEventCategoryLabel(event) {

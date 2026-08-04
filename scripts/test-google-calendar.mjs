@@ -159,5 +159,6 @@ assert.match(calendarSource, /error\.authSource === "oauth"[\s\S]*forceServiceAc
 assert.match(calendarSource, /code: googleErrorCode\(error\)[\s\S]*retryable: isRetryableGoogleError\(error\)/, "le risposte devono distinguere gli errori recuperabili");
 assert.match(appSource, /const hasCurrentRange = googleCalendarState\.loadedRange === rangeKey[\s\S]*if \(!hasCurrentRange\) \{[\s\S]*googleCalendarState\.events = \[\]/, "un errore di aggiornamento non deve svuotare un calendario gia caricato");
 assert.match(appSource, /\[429, 502, 503, 504\]\.includes\(response\.status\)[\s\S]*setTimeout\(resolve, 900\)/, "il browser deve ritentare una sincronizzazione temporaneamente fallita");
+assert.match(appSource, /8: "#D50000"[\s\S]*return categoryColors\[event\.event_category\] \|\| googleColors\[Number\(event\.color_id\)\] \|\| "#D50000"/, "gli eventi grigi o senza colore devono essere mostrati in rosso");
 
 console.log("Google Calendar payload tests passed.");

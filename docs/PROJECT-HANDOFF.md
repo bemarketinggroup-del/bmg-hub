@@ -149,6 +149,9 @@ supabase/                     schema e migration
   `data-*`, gli handler e le API applicative devono restare invariati.
 - Collegamento univoco dell'utente al membro ClickUp.
 - Gestione permessi, eliminazione/disattivazione utenti e audit accessi.
+- Nel calendario CRM gli eventi senza categoria o con il precedente colore
+  Google grigio usano il rosso; i colori semantici delle categorie restano
+  distinti.
 
 ### Home e area personale
 
