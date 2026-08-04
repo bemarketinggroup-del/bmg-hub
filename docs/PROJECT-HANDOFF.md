@@ -233,6 +233,10 @@ supabase/                     schema e migration
   finestra con scroll interno.
 - Anteprima feed e agenda includono anche i mesi successivi, non solo il mese
   attualmente aperto nel calendario.
+- Nel mockup del profilo Instagram Reel e caroselli conservano sempre le icone
+  sovrapposte alle miniature anche dopo l'adattamento PrimeNG. Il telaio del
+  telefono usa il rapporto fisso `370:700`: sugli schermi bassi o stretti viene
+  ridotto uniformemente, senza modificare separatamente larghezza e altezza.
 
 ### PED condiviso con il cliente
 

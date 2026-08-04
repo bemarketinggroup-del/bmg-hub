@@ -238,6 +238,8 @@ assert.match(feedCalendarSyncMigration, /scheduled_date = assignment\.scheduled_
 assert.match(feedCalendarSyncMigration, /set constraints ped_items_client_id_scheduled_date_drive_file_id_key deferred/, "gli scambi di data devono essere transazionali");
 assert.match(feedCalendarSyncMigration, /content_type <> 'story'/, "le stories devono restare fuori dall'ordine del feed");
 assert.match(appSource, /class="ped-instagram-grid-type"/, "reel e caroselli devono essere riconoscibili nella griglia");
+assert.match(styleSource, /\.ped-instagram-grid-type,\s*\.ped-instagram-grid-item\.p-button > \.ped-instagram-grid-type \{[\s\S]*?position: absolute;[\s\S]*?z-index: 4;[\s\S]*?background: rgba\(22, 20, 18, \.78\)/, "le icone Reel e Carosello devono restare sovrapposte e leggibili prima e dopo l'adattamento PrimeNG");
+assert.match(styleSource, /\.ped-iphone \{[\s\S]*?width: min\(370px, 100%, calc\(52\.857dvh - 79px\)\);[\s\S]*?height: auto;[\s\S]*?aspect-ratio: 37 \/ 70;/, "il mockup iPhone deve scalare mantenendo il rapporto 370:700");
 assert.match(appSource, /function pedCarouselHoverPreview\(files, title\)/, "i caroselli devono generare un'anteprima multipla");
 assert.match(appSource, /data-ped-hover-slide/, "ogni contenuto del carosello deve avere una slide dedicata");
 assert.match(appSource, /window\.setInterval\(\(\) => \{[\s\S]*?1500\)/, "l'anteprima carosello deve scorrere automaticamente");

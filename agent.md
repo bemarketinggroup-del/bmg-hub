@@ -59,6 +59,23 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-08-04 — Icone feed e proporzioni del mockup Instagram
+
+- Richiesta: ripristinare le icone della tipologia di contenuto nella griglia
+  Instagram e impedire che il mockup del telefono venga schiacciato o stirato
+  sugli schermi più piccoli.
+- Modifiche: risolto il conflitto con il posizionamento PrimeNG dei figli dei
+  pulsanti, riportando i badge Reel e Carosello sopra le miniature con fondo ad
+  alto contrasto; fissato il rapporto del telefono a `370:700` e vincolata la
+  sua scala sia alla larghezza sia all'altezza disponibile.
+- File: `public/styles.css`, `scripts/test-ped-carousel.mjs`,
+  `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run check`, `npm run test:ped-carousel`,
+  `npm run test:primeng-components`, `git diff --check` e controllo visivo del
+  mockup a dimensioni desktop, notebook e smartphone.
+- Pubblicazione: GitHub `main` e Vercel produzione.
+- Note: Nessuna.
+
 ### 2026-08-04 — Spazi operativi più ampi per chat, PED, grafiche e attività
 
 - Richiesta: eliminare lo scroll esterno della chat e ingrandirla; rendere più
