@@ -59,6 +59,22 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-08-04 — Download multipost senza ZIP
+
+- Richiesta: eliminare il file ZIP dal download dei multipost e scaricare i file
+  seguendo la loro numerazione.
+- Modifiche: sostituito l'archivio ZIP con una coda di download dei singoli file,
+  rinominati `01`, `02`, ... in base all'ordine del carosello; aggiunto il
+  progresso file per file e rimossi endpoint e dipendenza ZIP non più necessari.
+- File: `public/app.js`, `lib/ped.js`, `api/app.js`,
+  `scripts/local-server.mjs`, `scripts/test-ped-carousel.mjs`, `vercel.json`,
+  `package.json`, `package-lock.json`, `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run check`, `npm run test:ped-carousel`, `git diff --check`,
+  controllo desktop e smartphone su Chrome e Safari.
+- Pubblicazione: GitHub `main` e Vercel produzione.
+- Note: il browser può chiedere una sola volta l'autorizzazione ai download
+  multipli.
+
 ### 2026-08-04 — Ricerca cliente nella sezione PED
 
 - Richiesta: aggiungere nel PED una ricerca per nome cliente come nelle sezioni

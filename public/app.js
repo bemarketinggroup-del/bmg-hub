@@ -3545,9 +3545,9 @@ function pedAgendaItemMarkup(item) {
       <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
       <span>${item.caption ? "Copy" : "Scrivi copy"}</span>
     </button>`}
-    ${files.length > 1 ? `<button class="ped-agenda-download" data-ped-carousel-download="${escapeHtml(item.id)}" data-ped-download-name="${escapeHtml(title)}" type="button" title="Scarica tutti i contenuti in un unico ZIP">` : `<button class="ped-agenda-download" data-drive-download-url="${escapeHtml(primary.download_url || "")}" data-drive-download-name="${escapeHtml(primary.drive_file_name || title)}" type="button" title="Scarica ${escapeHtml(primary.drive_file_name)}">`}
+    ${files.length > 1 ? `<button class="ped-agenda-download" data-ped-carousel-download="${escapeHtml(item.id)}" data-ped-download-name="${escapeHtml(title)}" type="button" title="Scarica separatamente i ${files.length} contenuti in ordine numerico">` : `<button class="ped-agenda-download" data-drive-download-url="${escapeHtml(primary.download_url || "")}" data-drive-download-name="${escapeHtml(primary.drive_file_name || title)}" type="button" title="Scarica ${escapeHtml(primary.drive_file_name)}">`}
       <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
-      <span>${files.length > 1 ? "Scarica ZIP" : "Scarica"}</span>
+      <span>${files.length > 1 ? "Download" : "Scarica"}</span>
     </button>
   </article>`;
 }
@@ -3575,28 +3575,59 @@ function pedPublishingStatusMeta(value) {
   }[status];
 }
 
+function numberedPedDownloadFilename(value, index) {
+  const position = Math.max(1, Number(index) + 1);
+  const prefix = String(position).padStart(2, "0");
+  const safeName = String(value || `contenuto-${prefix}`)
+    .replace(/[\\/:*?"<>|\u0000-\u001f\u007f]/g, "-")
+    .trim() || `contenuto-${prefix}`;
+  return `${prefix} - ${safeName}`;
+}
+
 async function downloadPedCarousel(groupId, button) {
+  const item = pedStateItem(groupId);
+  const files = item ? pedItemFiles(item) : [];
+  if (!files.length || files.some((file) => !file.download_url)) {
+    alert("I file del multipost non sono disponibili per il download");
+    return;
+  }
+
   const original = button.innerHTML;
-  const transfer = createTransferProgress("Preparazione carosello ZIP", { estimated: true });
+  const transfer = createTransferProgress(`Download multipost · ${files.length} file`, { estimated: true });
   button.disabled = true;
-  button.textContent = "Preparo ZIP...";
+  button.textContent = `0/${files.length}`;
   try {
-    transfer.update({ percent: 5, message: "Creazione archivio sul server" });
-    const response = await apiFetch(`/api/ped-carousel-download?group_id=${encodeURIComponent(groupId)}`);
-    if (!response.ok) {
-      const data = await response.json().catch(() => ({}));
-      throw new Error(data.error || "Download del carosello non riuscito");
+    for (let index = 0; index < files.length; index += 1) {
+      const file = files[index];
+      const filename = numberedPedDownloadFilename(file.drive_file_name, index);
+      const message = `File ${index + 1} di ${files.length} · ${filename}`;
+      button.textContent = `${index + 1}/${files.length}`;
+      transfer.update({ percent: (index / files.length) * 100, message });
+
+      const response = await fetch(file.download_url);
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || `Download di ${filename} non riuscito`);
+      }
+
+      const fileProgress = {
+        update({ loaded = 0, totalBytes = 0, percent = 0 } = {}) {
+          const fileRatio = totalBytes > 0
+            ? Math.min(1, loaded / totalBytes)
+            : Math.min(1, Number(percent || 0) / 100);
+          transfer.update({
+            percent: ((index + fileRatio) / files.length) * 100,
+            message
+          });
+        }
+      };
+      const blob = await readResponseBlobWithProgress(response, fileProgress);
+      saveDownloadedBlob(blob, filename);
+      transfer.update({ percent: ((index + 1) / files.length) * 100, message: `${filename} scaricato` });
     }
-    const disposition = response.headers.get("Content-Disposition") || "";
-    const filename = disposition.match(/filename="?([^";]+)"?/i)?.[1];
-    const sourceBytes = Number(response.headers.get("X-Archive-Source-Bytes") || 0);
-    const fileCount = Number(response.headers.get("X-Archive-File-Count") || 0);
-    transfer.update({ percent: 8, message: `${fileCount || ""} file pronti, download ZIP`.trim() });
-    const blob = await readResponseBlobWithProgress(response, transfer, sourceBytes);
-    saveDownloadedBlob(blob, filename || `carosello-${groupId}.zip`);
-    transfer.complete("ZIP scaricato");
+    transfer.complete(`${files.length} file scaricati in ordine numerico`);
   } catch (error) {
-    transfer.fail(error.message || "Download del carosello non riuscito");
+    transfer.fail(error.message || "Download del multipost non riuscito");
     alert(error.message);
   } finally {
     button.disabled = false;

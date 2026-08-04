@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { carouselArchiveFilename, groupPedItems, isPedSpreadsheetFile, sanitizeCaptionHtml } from "../lib/ped.js";
+import { groupPedItems, isPedSpreadsheetFile, sanitizeCaptionHtml } from "../lib/ped.js";
 
 function row(overrides = {}) {
   return {
@@ -35,9 +35,6 @@ assert.equal(grouped[0].item_count, 3);
 assert.equal(grouped[0].caption, "Copy unico");
 assert.equal(grouped[0].caption_html, "<strong>Copy dedicato</strong>");
 assert.deepEqual(grouped[0].files.map((file) => file.drive_file_name), ["uno.jpg", "due.jpg", "tre.jpg"]);
-assert.equal(carouselArchiveFilename("foto principale.jpg", 0), "01 - foto principale.jpg");
-assert.equal(carouselArchiveFilename("ultima foto.jpg", 19), "20 - ultima foto.jpg");
-assert.equal(carouselArchiveFilename("foto:non valida?.jpg", 2), "03 - fotonon valida.jpg");
 assert.equal(isPedSpreadsheetFile({ name: "PED CLIENTE.xlsx", mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }), true);
 assert.equal(isPedSpreadsheetFile({ name: "PED CLIENTE", mimeType: "application/vnd.google-apps.spreadsheet" }), true);
 assert.equal(isPedSpreadsheetFile({ name: "foto.jpg", mimeType: "image/jpeg" }), false);
@@ -62,16 +59,25 @@ const feedCalendarSyncMigration = await readFile(new URL("../supabase/20260717_p
 const publishingStatusMigration = await readFile(new URL("../supabase/20260718_ped_publishing_status.sql", import.meta.url), "utf8");
 const richCaptionMigration = await readFile(new URL("../supabase/20260718_ped_rich_caption.sql", import.meta.url), "utf8");
 const carouselEditorMigration = await readFile(new URL("../supabase/migrations/20260729170000_ped_carousel_editor.sql", import.meta.url), "utf8");
+const numberedFilenameSource = appSource.match(/function numberedPedDownloadFilename\(value, index\) \{[\s\S]*?\n\}/)?.[0];
+assert.ok(numberedFilenameSource, "la funzione di numerazione download deve essere presente");
+const numberedPedDownloadFilename = Function(`${numberedFilenameSource}; return numberedPedDownloadFilename;`)();
+assert.equal(numberedPedDownloadFilename("foto principale.jpg", 0), "01 - foto principale.jpg");
+assert.equal(numberedPedDownloadFilename("ultima foto.jpg", 19), "20 - ultima foto.jpg");
+assert.equal(numberedPedDownloadFilename("foto:non valida?.jpg", 2), "03 - foto-non valida-.jpg");
 assert.doesNotMatch(appSource, /data-ped-picker-preview-type/, "il selettore Drive non deve aprire anteprime al passaggio del mouse");
 assert.doesNotMatch(appSource, /function showPedPickerPreview/, "la vecchia anteprima hover deve essere rimossa");
 assert.match(appSource, /Il codec di questo video MOV non è supportato/, "i video incompatibili devono mostrare una spiegazione chiara");
 assert.match(appSource, /showEmbeddedDriveVideo/, "i codec video non supportati devono usare il player incorporato di Drive");
 assert.match(appSource, /createTransferProgress/, "upload e download devono esporre una barra di avanzamento");
 assert.match(appSource, /readResponseBlobWithProgress/, "i download devono misurare i byte trasferiti");
-assert.match(appSource, /X-Archive-Source-Bytes/, "il download ZIP deve usare la dimensione sorgente per il progresso");
-assert.match(pedSource, /mapWithConcurrency\(rows, CAROUSEL_DOWNLOAD_CONCURRENCY/, "i file del carosello devono essere preparati in parallelo");
-assert.match(pedSource, /X-Archive-File-Count/, "lo ZIP deve comunicare quanti file contiene");
-assert.match(pedSource, /filename: carouselArchiveFilename\(download\.baseName, index\)/, "i file nello ZIP devono avere il prefisso numerico nell ordine del carosello");
+assert.match(appSource, /function numberedPedDownloadFilename\(value, index\)/, "i file del multipost devono ricevere un nome numerato");
+assert.match(appSource, /String\(position\)\.padStart\(2, "0"\)/, "la numerazione deve usare i prefissi 01, 02 fino a 20");
+assert.match(appSource, /for \(let index = 0; index < files\.length; index \+= 1\)/, "il download multipost deve usare una coda ordinata");
+assert.match(appSource, /saveDownloadedBlob\(blob, filename\)/, "ogni file del multipost deve essere scaricato separatamente");
+assert.match(appSource, /files\.length > 1 \? "Download" : "Scarica"/, "il multipost deve mostrare un comando download compatto");
+assert.doesNotMatch(appSource, /Scarica ZIP|Preparo ZIP|ZIP scaricato/, "l'interfaccia non deve più proporre archivi ZIP");
+assert.doesNotMatch(pedSource, /application\/zip|archiver\(/, "il backend PED non deve più creare archivi ZIP");
 assert.match(appSource, /data-drive-download-url/, "i download Drive devono passare dal gestore tracciato");
 assert.doesNotMatch(styleSource, /\.ped-picker-hover-preview/, "gli stili della vecchia anteprima hover devono essere rimossi");
 assert.match(styleSource, /\.drive-transfer-center/, "il centro trasferimenti deve essere visibile sopra ai modal");

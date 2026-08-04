@@ -24,8 +24,5 @@
     "test:team-chat": "node scripts/test-team-chat.mjs",
     "test:graphic-reviews": "node scripts/test-graphic-reviews.mjs",
     "test:session-persistence": "node scripts/test-session-persistence.mjs"
-  },
-  "dependencies": {
-    "archiver": "^7.0.1"
   }
 }

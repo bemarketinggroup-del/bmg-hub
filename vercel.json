@@ -72,10 +72,6 @@
       "dest": "/api/app.js"
     },
     {
-      "src": "/api/ped-carousel-download",
-      "dest": "/api/app.js"
-    },
-    {
       "src": "/api/ped-share",
       "dest": "/api/app.js"
     },

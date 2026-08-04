@@ -160,7 +160,8 @@ supabase/                     schema e migration
 - I caroselli supportano fino a 20 elementi, numero d'ordine visibile, riordino
   drag-and-drop, eliminazione e aggiunta di altri elementi in un secondo momento.
 - Il primo elemento del carosello è la copertina usata nel feed Instagram.
-- Lo ZIP del carosello antepone `01`, `02`, ... `20` ai nomi dei file.
+- Il download del carosello non crea ZIP: scarica i singoli file in coda e
+  antepone `01`, `02`, ... `20` ai nomi in base all'ordine del multipost.
 - L'editor carosello è una griglia compatta senza scorrimento orizzontale, sei
   elementi per riga su desktop; mostra anche il primo frame dei video senza
   patina scura.
@@ -398,4 +399,3 @@ Puoi iniziare la nuova chat con questo testo:
 > di agire. Il repository esistente è la fonte di verità: non ricostruire il
 > progetto e non rimuovere funzioni già presenti. Ogni modifica completata deve
 > essere verificata, pubblicata su GitHub e distribuita in produzione su Vercel.
-
