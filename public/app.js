@@ -6269,7 +6269,7 @@ function openUserEditPanel(profileId) {
   document.getElementById("userCreateForm").hidden = true;
   showUserEditorPanel();
   renderUsers();
-  focusUserEditor(document.querySelector("#userEditContent [data-user-name]"));
+  focusUserEditor(document.getElementById("userEditorActivityTab"));
 }
 
 function renderUserEditPanel(profile) {
@@ -6281,58 +6281,103 @@ function renderUserEditPanel(profile) {
   document.getElementById("userEditorSubtitle").textContent = profile.email || "Configura ruolo e accessi";
   target.hidden = false;
   target.innerHTML = `<div class="user-editor-form" data-user-id="${escapeHtml(profile.id)}">
-    <div class="user-editor-account">
-      <div class="user-identity">
-        <span class="user-avatar">${escapeHtml(label.slice(0, 1).toUpperCase())}</span>
-        <div><strong>${escapeHtml(label)}</strong><span>${escapeHtml(profile.email || "")}</span></div>
+    <div class="p-tabs user-editor-tabs">
+      <div class="p-tablist">
+        <div class="p-tablist-content">
+          <div class="p-tablist-tab-list" role="tablist" aria-label="Sezioni modifica utente">
+            <button class="p-tab is-active" id="userEditorActivityTab" data-user-editor-tab="activity" type="button" role="tab" aria-selected="true" aria-controls="userEditorActivityPanel" tabindex="0"><svg class="p-tab-icon lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg><span>Registro attività</span></button>
+            <button class="p-tab" id="userEditorProfileTab" data-user-editor-tab="profile" type="button" role="tab" aria-selected="false" aria-controls="userEditorProfilePanel" tabindex="-1"><svg class="p-tab-icon lc" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span>Profilo</span></button>
+            <button class="p-tab" id="userEditorPermissionsTab" data-user-editor-tab="permissions" type="button" role="tab" aria-selected="false" aria-controls="userEditorPermissionsPanel" tabindex="-1"><svg class="p-tab-icon lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg><span>Permessi</span></button>
+          </div>
+        </div>
       </div>
-      <label class="user-active-toggle"><input data-user-active type="checkbox" ${profile.active !== false ? "checked" : ""}><span>Accesso attivo</span></label>
-    </div>
-    <div class="user-access-fields">
-      <label>Nome visualizzato
-        <input data-user-name value="${escapeHtml(profile.full_name || "")}" placeholder="Nome staff">
-      </label>
-      <label>Ruolo
-        <select data-user-role>
-          <option value="admin" ${profile.role === "admin" ? "selected" : ""}>Amministratore</option>
-          <option value="staff" ${profile.role === "staff" ? "selected" : ""}>Staff</option>
-        </select>
-      </label>
-      <label>Utente ClickUp
-        <select data-user-clickup ${profile.role === "staff" ? "required" : ""}>
-          ${clickUpMemberOptions(profile.clickup_user_id, profile.id, profile.role === "admin")}
-        </select>
-      </label>
-    </div>
-    <p class="user-clickup-link-status ${profile.clickup_user_id ? "is-linked" : "is-unlinked"}">
-      ${profile.clickup_user_id
-        ? `Collegato all'ID ClickUp ${escapeHtml(profile.clickup_user_id)}`
-        : profile.role === "admin" ? "L'account amministratore non richiede un assegnatario ClickUp." : "Collegamento ClickUp mancante: le task personali non sono disponibili."}
-    </p>
-    <div class="user-permission-section">
-      <div><p class="eyebrow">Permessi CMS</p><span>${profile.role === "admin" ? "Gli amministratori hanno sempre accesso completo." : "Abilita solo le aree necessarie a questa persona."}</span></div>
-      <div class="user-permission-grid">
-        ${MODULE_DEFINITIONS.map((module) => `<label class="permission-toggle"><input type="checkbox" data-user-module="${module.key}" ${profile.role === "admin" || profile.module_permissions?.[module.key] ? "checked" : ""} ${profile.role === "admin" ? "disabled" : ""}><span>${module.label}</span></label>`).join("")}
+      <div class="p-tabpanels">
+        <section class="p-tabs-panel user-editor-tab-panel is-active" id="userEditorActivityPanel" data-user-editor-panel="activity" role="tabpanel" aria-labelledby="userEditorActivityTab">
+          ${renderUserActivitySummary(profile, true)}
+        </section>
+        <section class="p-tabs-panel user-editor-tab-panel" id="userEditorProfilePanel" data-user-editor-panel="profile" role="tabpanel" aria-labelledby="userEditorProfileTab" hidden>
+          <div class="user-editor-account p-card">
+            <div class="user-identity">
+              <span class="user-avatar p-avatar">${escapeHtml(label.slice(0, 1).toUpperCase())}</span>
+              <div><strong>${escapeHtml(label)}</strong><span>${escapeHtml(profile.email || "")}</span></div>
+            </div>
+            <label class="user-active-toggle p-toggleswitch-field">
+              <span class="p-toggleswitch"><input class="p-toggleswitch-input" data-user-active type="checkbox" role="switch" aria-label="Accesso attivo" ${profile.active !== false ? "checked" : ""}><span class="p-toggleswitch-slider" aria-hidden="true"></span></span>
+              <span>Accesso attivo</span>
+            </label>
+          </div>
+          <div class="user-access-fields p-fluid">
+            <label>Nome visualizzato
+              <input class="p-inputtext" data-user-name value="${escapeHtml(profile.full_name || "")}" placeholder="Nome staff">
+            </label>
+            <label>Ruolo
+              <select class="p-select" data-user-role>
+                <option value="admin" ${profile.role === "admin" ? "selected" : ""}>Amministratore</option>
+                <option value="staff" ${profile.role === "staff" ? "selected" : ""}>Staff</option>
+              </select>
+            </label>
+            <label>Utente ClickUp
+              <select class="p-select" data-user-clickup ${profile.role === "staff" ? "required" : ""}>
+                ${clickUpMemberOptions(profile.clickup_user_id, profile.id, profile.role === "admin")}
+              </select>
+            </label>
+          </div>
+          <p class="p-tag user-clickup-link-status ${profile.clickup_user_id ? "is-linked" : "is-unlinked"}">
+            <span class="p-tag-label">${profile.clickup_user_id
+              ? `Collegato all'ID ClickUp ${escapeHtml(profile.clickup_user_id)}`
+              : profile.role === "admin" ? "L'account amministratore non richiede un assegnatario ClickUp." : "Collegamento ClickUp mancante: le task personali non sono disponibili."}</span>
+          </p>
+        </section>
+        <section class="p-tabs-panel user-editor-tab-panel" id="userEditorPermissionsPanel" data-user-editor-panel="permissions" role="tabpanel" aria-labelledby="userEditorPermissionsTab" hidden>
+          <div class="user-permission-section p-panel">
+            <div><p class="eyebrow">Permessi CMS</p><span>${profile.role === "admin" ? "Gli amministratori hanno sempre accesso completo." : "Abilita solo le aree necessarie a questa persona."}</span></div>
+            <div class="user-permission-grid">
+              ${MODULE_DEFINITIONS.map((module) => `<label class="permission-toggle p-checkbox"><input class="p-checkbox-input" type="checkbox" data-user-module="${module.key}" ${profile.role === "admin" || profile.module_permissions?.[module.key] ? "checked" : ""} ${profile.role === "admin" ? "disabled" : ""}><span class="p-checkbox-box" aria-hidden="true"><svg class="p-checkbox-icon lc" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg></span><span class="p-checkbox-label">${module.label}</span></label>`).join("")}
+            </div>
+          </div>
+        </section>
       </div>
     </div>
-    ${renderUserActivitySummary(profile)}
-    <div class="user-access-actions">
-      ${profile.id !== currentProfile?.id ? `<button class="danger-button" data-delete-user="${escapeHtml(profile.id)}" type="button">Elimina utente</button>` : ""}
-      <div><button class="ghost-button" data-close-user-editor type="button">Annulla</button><button class="primary-button" data-save-user type="button">Salva modifiche</button></div>
+    <div class="user-access-actions p-toolbar">
+      ${profile.id !== currentProfile?.id ? `<button class="p-button p-button-danger p-button-outlined danger-button" data-delete-user="${escapeHtml(profile.id)}" type="button"><span class="p-button-label">Elimina utente</span></button>` : "<span></span>"}
+      <div><button class="p-button p-button-outlined ghost-button" data-close-user-editor type="button"><span class="p-button-label">Annulla</span></button><button class="p-button primary-button" data-save-user type="button"><span class="p-button-label">Salva modifiche</span></button></div>
     </div>
   </div>`;
+  void loadUserActivity(profile.id);
 }
 
-function renderUserActivitySummary(profile) {
+function activateUserEditorTab(tabName, { focus = false } = {}) {
+  const root = document.getElementById("userEditContent");
+  if (!root) return;
+  const tabs = [...root.querySelectorAll("[data-user-editor-tab]")];
+  const panels = [...root.querySelectorAll("[data-user-editor-panel]")];
+  const activeTab = tabs.find((tab) => tab.dataset.userEditorTab === tabName);
+  if (!activeTab) return;
+  tabs.forEach((tab) => {
+    const selected = tab === activeTab;
+    tab.classList.toggle("is-active", selected);
+    tab.setAttribute("aria-selected", String(selected));
+    tab.tabIndex = selected ? 0 : -1;
+  });
+  panels.forEach((panel) => {
+    const selected = panel.dataset.userEditorPanel === tabName;
+    panel.hidden = !selected;
+    panel.classList.toggle("is-active", selected);
+  });
+  if (focus) activeTab.focus();
+  if (tabName === "activity" && editingUserProfileId) void loadUserActivity(editingUserProfileId);
+}
+
+function renderUserActivitySummary(profile, expanded = false) {
   const lastAccess = profile.last_access_at ? formatUserAccessTime(profile.last_access_at) : "Nessun accesso registrato";
   return `
-    <section class="user-activity-summary" aria-label="Attivita di ${escapeHtml(profile.full_name || profile.email)}">
-      <div class="user-last-login">
+    <section class="user-activity-summary p-panel" aria-label="Attivita di ${escapeHtml(profile.full_name || profile.email)}">
+      <div class="user-last-login p-card">
         <span>Ultima attivita</span>
         <strong>${escapeHtml(lastAccess)}</strong>
       </div>
-      <button class="ghost-button" data-toggle-user-activity="${escapeHtml(profile.id)}" type="button" aria-expanded="false">Apri registro attivita</button>
-      <div class="user-activity-panel" data-user-activity-panel="${escapeHtml(profile.id)}" hidden></div>
+      <button class="p-button p-button-outlined ghost-button" data-toggle-user-activity="${escapeHtml(profile.id)}" type="button" aria-expanded="${expanded ? "true" : "false"}"><span class="p-button-label">${expanded ? "Nascondi registro" : "Apri registro attività"}</span></button>
+      <div class="user-activity-panel p-panel-content" data-user-activity-panel="${escapeHtml(profile.id)}" ${expanded ? "" : "hidden"}></div>
     </section>`;
 }
 
@@ -6343,7 +6388,8 @@ async function toggleUserActivity(button, forceRefresh = false) {
   const opening = panel.hidden;
   panel.hidden = !opening;
   button.setAttribute("aria-expanded", String(opening));
-  button.textContent = opening ? "Chiudi registro" : "Apri registro attivita";
+  const label = button.querySelector(".p-button-label") || button;
+  label.textContent = opening ? "Nascondi registro" : "Apri registro attività";
   if (opening) await loadUserActivity(profileId, forceRefresh);
 }
 
@@ -6354,7 +6400,7 @@ async function loadUserActivity(profileId, forceRefresh = false) {
     panel.innerHTML = renderUserActivityDetails(userActivityCache.get(profileId));
     return;
   }
-  panel.innerHTML = `<div class="user-activity-loading">Caricamento registro...</div>`;
+  panel.innerHTML = `<div class="p-message p-message-info user-activity-loading">Caricamento registro...</div>`;
   try {
     const response = await apiFetch(`/api/users?activity_profile_id=${encodeURIComponent(profileId)}&days=30`);
     const data = await response.json().catch(() => ({}));
@@ -6362,7 +6408,7 @@ async function loadUserActivity(profileId, forceRefresh = false) {
     userActivityCache.set(profileId, data);
     panel.innerHTML = renderUserActivityDetails(data);
   } catch (error) {
-    panel.innerHTML = `<div class="user-activity-error">${escapeHtml(error.message)}</div>`;
+    panel.innerHTML = `<div class="p-message p-message-error user-activity-error">${escapeHtml(error.message)}</div>`;
   }
 }
 
@@ -6379,14 +6425,14 @@ function renderUserActivityDetails(data) {
         <strong>Presenza misurata · ultimi ${Number(data.days || 30)} giorni</strong>
         <span>Il tempo conta solo mentre il gestionale e aperto e visibile.</span>
       </div>
-      <button class="ghost-button" data-refresh-user-activity="${escapeHtml(data.profile?.id || "")}" type="button">Aggiorna</button>
+      <button class="p-button p-button-outlined p-button-sm ghost-button" data-refresh-user-activity="${escapeHtml(data.profile?.id || "")}" type="button"><span class="p-button-label">Aggiorna</span></button>
     </div>
     <div class="user-activity-kpis">
-      <div><span>Tempo attivo</span><strong>${escapeHtml(formatActiveDuration(totalSeconds))}</strong></div>
-      <div><span>Giorni attivi</span><strong>${activeDays}</strong></div>
-      <div><span>Azioni registrate</span><strong>${actions.length}</strong></div>
+      <div class="p-card"><span>Tempo attivo</span><strong>${escapeHtml(formatActiveDuration(totalSeconds))}</strong></div>
+      <div class="p-card"><span>Giorni attivi</span><strong>${activeDays}</strong></div>
+      <div class="p-card"><span>Azioni registrate</span><strong>${actions.length}</strong></div>
     </div>
-    <div class="user-activity-chart" role="img" aria-label="Tempo attivo giorno per giorno negli ultimi ${daily.length} giorni">
+    <div class="p-chart user-activity-chart" role="img" aria-label="Tempo attivo giorno per giorno negli ultimi ${daily.length} giorni">
       ${daily.map((day) => {
         const seconds = Number(day.active_seconds || 0);
         const height = seconds ? Math.max(8, Math.round((seconds / maximum) * 100)) : 2;
@@ -6397,31 +6443,31 @@ function renderUserActivityDetails(data) {
     <div class="user-activity-columns">
       <section>
         <h4>Dettaglio giornaliero</h4>
-        <div class="user-activity-days">
+        <div class="p-listbox user-activity-days">
           ${dayRows.length ? dayRows.map((day) => `
-            <article>
+            <article class="p-card">
               <strong>${escapeHtml(formatActivityDate(day.date))}</strong>
               <span>Primo accesso <b>${escapeHtml(formatActivityClock(day.first_access_at))}</b></span>
               <span>Ultima attivita <b>${escapeHtml(formatActivityClock(day.last_activity_at))}</b></span>
               <span>Tempo attivo <b>${escapeHtml(formatActiveDuration(day.active_seconds))}</b></span>
               <small>${Number(day.session_count || 0)} ${Number(day.session_count || 0) === 1 ? "sessione" : "sessioni"}</small>
             </article>
-          `).join("") : `<p class="user-activity-empty">Nessuna presenza misurata nel periodo.</p>`}
+          `).join("") : `<p class="p-message p-message-secondary user-activity-empty">Nessuna presenza misurata nel periodo.</p>`}
         </div>
       </section>
       <section>
         <h4>Azioni nel gestionale</h4>
-        <div class="user-action-list">
+        <div class="p-listbox user-action-list">
           ${actions.length ? actions.map((action) => `
-            <article>
-              <span class="user-action-method">${escapeHtml(action.method || "VIEW")}</span>
+            <article class="p-listbox-option">
+              <span class="p-tag user-action-method"><span class="p-tag-label">${escapeHtml(action.method || "VIEW")}</span></span>
               <div><strong>${escapeHtml(action.action_label || "Operazione")}</strong><small>${escapeHtml(formatUserAccessTime(action.created_at))}</small></div>
             </article>
-          `).join("") : `<p class="user-activity-empty">Nessuna azione registrata nel periodo.</p>`}
+          `).join("") : `<p class="p-message p-message-secondary user-activity-empty">Nessuna azione registrata nel periodo.</p>`}
         </div>
       </section>
     </div>
-    <p class="user-activity-note">La durata e una misura operativa basata su heartbeat ogni 30 secondi. Arresti improvvisi, sospensione del dispositivo o assenza di rete possono produrre uno scarto massimo nell'ultima frazione di sessione.</p>`;
+    <p class="p-message p-message-secondary user-activity-note">La durata e una misura operativa basata su heartbeat ogni 30 secondi. Arresti improvvisi, sospensione del dispositivo o assenza di rete possono produrre uno scarto massimo nell'ultima frazione di sessione.</p>`;
 }
 
 function formatUserAccessTime(value) {
@@ -9633,6 +9679,7 @@ document.body.addEventListener("click", (event) => {
   const pedCaption = event.target.closest("[data-ped-caption]");
   const toggleUserActivityButton = event.target.closest("[data-toggle-user-activity]");
   const refreshUserActivityButton = event.target.closest("[data-refresh-user-activity]");
+  const userEditorTab = event.target.closest("[data-user-editor-tab]");
   const editUser = event.target.closest("[data-edit-user]");
   const closeUserEditor = event.target.closest("[data-close-user-editor]");
   const saveUser = event.target.closest("[data-save-user]");
@@ -9810,6 +9857,7 @@ document.body.addEventListener("click", (event) => {
   }
   if (pedPickerClose) return document.getElementById("pedDrivePickerModal").close();
   if (pedCaption) return openPedCaptionModal(pedCaption.dataset.pedCaption);
+  if (userEditorTab) return activateUserEditorTab(userEditorTab.dataset.userEditorTab);
   if (toggleUserActivityButton) return toggleUserActivity(toggleUserActivityButton);
   if (refreshUserActivityButton) {
     userActivityCache.delete(refreshUserActivityButton.dataset.refreshUserActivity);
@@ -10132,6 +10180,19 @@ document.body.addEventListener("keydown", (event) => {
       (event.shiftKey ? last : first).focus();
       return;
     }
+  }
+  const userEditorTab = event.target.closest?.("[data-user-editor-tab]");
+  if (userEditorTab && ["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) {
+    const tabs = [...userEditorTab.parentElement.querySelectorAll("[data-user-editor-tab]")];
+    const currentIndex = tabs.indexOf(userEditorTab);
+    const nextIndex = event.key === "Home"
+      ? 0
+      : event.key === "End"
+        ? tabs.length - 1
+        : (currentIndex + (event.key === "ArrowRight" ? 1 : -1) + tabs.length) % tabs.length;
+    event.preventDefault();
+    activateUserEditorTab(tabs[nextIndex].dataset.userEditorTab, { focus: true });
+    return;
   }
   if (event.key === "Escape" && document.getElementById("appSidebar")?.classList.contains("is-mobile-open")) {
     setMobileNavOpen(false, { restoreFocus: true });

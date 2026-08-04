@@ -16,6 +16,12 @@ assert.match(htmlSource, /id="userRoleFilter"/, "la tabella deve filtrare il ruo
 assert.match(htmlSource, /id="userStatusFilter"/, "la tabella deve filtrare lo stato");
 assert.match(htmlSource, /id="userEditorOverlay"[^>]*data-close-user-editor/, "il drawer deve avere un overlay che lo chiude");
 assert.match(htmlSource, /id="userEditorPanel"[^>]*role="dialog"[^>]*aria-modal="true"[\s\S]*id="userCreateForm"/, "creazione e modifica devono restare nel drawer modale");
+assert.match(htmlSource, /class="p-drawer-mask user-editor-overlay"/, "l'overlay deve seguire il componente Drawer PrimeNG");
+assert.match(htmlSource, /class="p-drawer user-editor-panel[^"]*"/, "il pannello deve usare la struttura Drawer PrimeNG");
+assert.match(htmlSource, /class="p-drawer-content user-editor-content"/, "il contenuto deve usare la sezione Drawer PrimeNG");
+assert.match(htmlSource, /class="p-inputtext" name="first_name"/, "gli input di creazione devono usare InputText PrimeNG");
+assert.match(htmlSource, /class="permission-toggle p-checkbox"/, "i permessi iniziali devono usare Checkbox PrimeNG");
+assert.match(htmlSource, /class="p-button primary-button" type="submit"/, "l'azione di creazione deve usare Button PrimeNG");
 assert.match(htmlSource, /name="first_name"[^>]*autocomplete="given-name"/, "il modulo deve richiedere il nome");
 assert.match(htmlSource, /name="last_name"[^>]*autocomplete="family-name"/, "il modulo deve richiedere il cognome");
 assert.match(htmlSource, /name="email" type="email"[^>]*required/, "l'email deve essere modificabile e obbligatoria");
@@ -29,6 +35,14 @@ assert.match(appSource, /function renderUserTableRow\(profile, canManage\)/, "il
 assert.match(appSource, /data-edit-user=/, "ogni account gestibile deve aprire l'editor interno");
 assert.match(appSource, /function openUserCreatePanel\(\)/, "la creazione deve aprirsi nel pannello interno");
 assert.match(appSource, /function openUserEditPanel\(profileId\)/, "la modifica deve aprirsi nel pannello interno");
+assert.match(appSource, /class="p-tabs user-editor-tabs"/, "l'editor deve usare Tabs PrimeNG");
+assert.match(appSource, /data-user-editor-tab="activity"[^>]*aria-selected="true"/, "Registro attività deve essere la prima tab attiva");
+assert.match(appSource, /id="userEditorActivityPanel"[^>]*data-user-editor-panel="activity"[^>]*role="tabpanel"(?![^>]*hidden)/, "il registro attività deve essere il primo pannello visibile");
+assert.match(appSource, /class="p-toggleswitch"[\s\S]*class="p-inputtext" data-user-name[\s\S]*class="p-select" data-user-role/, "profilo e stato devono usare i controlli PrimeNG");
+assert.match(appSource, /class="permission-toggle p-checkbox"[\s\S]*class="p-checkbox-box"/, "i permessi di modifica devono usare Checkbox PrimeNG");
+assert.match(appSource, /function activateUserEditorTab\(tabName[\s\S]*aria-selected[\s\S]*panel\.hidden = !selected/, "le tab devono aggiornare stato e pannelli accessibili");
+assert.match(appSource, /void loadUserActivity\(profile\.id\)/, "il registro iniziale deve caricarsi automaticamente");
+assert.match(appSource, /\["ArrowLeft", "ArrowRight", "Home", "End"\]/, "le tab devono supportare la navigazione da tastiera PrimeNG");
 assert.match(appSource, /panel\.classList\.add\("is-open"\)[\s\S]*overlay\.classList\.add\("is-open"\)/, "drawer e overlay devono animarsi insieme");
 assert.match(appSource, /document\.body\.classList\.add\("user-editor-visible"\)/, "la pagina deve bloccarsi mentre il drawer e aperto");
 assert.match(appSource, /event\.key === "Escape" && userEditorMode[\s\S]*closeUserEditorPanel\(\)/, "il tasto Escape deve chiudere il drawer");
@@ -53,6 +67,9 @@ assert.match(styleSource, /\.p-datatable-table\s*\{[^}]*width:\s*100%/, "la Data
 assert.match(styleSource, /\.user-editor-overlay\s*\{[^}]*position:\s*fixed[^}]*opacity:\s*0/, "l'overlay deve coprire la pagina ed entrare con dissolvenza");
 assert.match(styleSource, /\.user-editor-panel\s*\{[^}]*position:\s*fixed[^}]*right:\s*0[^}]*transform:\s*translate3d\(100%/, "il drawer deve partire fuori schermo sulla destra");
 assert.match(styleSource, /\.user-editor-panel\.is-open\s*\{[^}]*translate3d\(0, 0, 0\)/, "il drawer aperto deve scorrere nella pagina da destra");
+assert.match(styleSource, /\.user-editor-tabs \.p-tablist-tab-list\s*\{[^}]*grid-template-columns:\s*repeat\(3/, "il drawer deve mostrare tre tab PrimeNG");
+assert.match(styleSource, /\.user-editor-panel \.p-toggleswitch-input:checked \+ \.p-toggleswitch-slider/, "ToggleSwitch PrimeNG deve mostrare lo stato attivo");
+assert.match(styleSource, /\.user-editor-panel \.p-checkbox-input:checked \+ \.p-checkbox-box/, "Checkbox PrimeNG deve mostrare lo stato selezionato");
 assert.match(styleSource, /@media \(max-width: 760px\)[\s\S]*\.p-datatable-tbody td::before[^}]*attr\(data-label\)/, "su mobile le righe devono mantenere le etichette delle colonne");
 
 console.log("User management tests passed");

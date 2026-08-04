@@ -779,54 +779,56 @@
               <div class="user-list" id="userList"></div>
             </section>
 
-            <div class="user-editor-overlay" id="userEditorOverlay" data-close-user-editor aria-hidden="true" hidden></div>
-            <aside class="user-editor-panel admin-only" id="userEditorPanel" role="dialog" aria-modal="true" aria-labelledby="userEditorTitle" tabindex="-1" hidden>
-              <div class="user-editor-head">
-                <div>
+            <div class="p-drawer-mask user-editor-overlay" id="userEditorOverlay" data-close-user-editor aria-hidden="true" hidden></div>
+            <aside class="p-drawer user-editor-panel admin-only" id="userEditorPanel" role="dialog" aria-modal="true" aria-labelledby="userEditorTitle" tabindex="-1" hidden>
+              <div class="p-drawer-header user-editor-head">
+                <div class="p-drawer-title">
                   <p class="eyebrow" id="userEditorEyebrow">Account CMS</p>
                   <h3 id="userEditorTitle">Nuovo utente</h3>
                   <span id="userEditorSubtitle">Configura il nuovo accesso e le funzioni iniziali.</span>
                 </div>
-                <button class="icon-button" id="userEditorCloseButton" type="button" title="Chiudi editor" aria-label="Chiudi editor"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+                <button class="p-button p-button-text p-button-rounded p-drawer-close-button icon-button" id="userEditorCloseButton" type="button" title="Chiudi editor" aria-label="Chiudi editor"><svg class="p-button-icon lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
               </div>
-              <div id="userEditContent" hidden></div>
-              <form class="user-create-form" id="userCreateForm" hidden>
+              <div class="p-drawer-content user-editor-content">
+                <div id="userEditContent" hidden></div>
+                <form class="user-create-form" id="userCreateForm" hidden>
                 <div class="user-create-fields">
                   <label>Nome
-                    <input name="first_name" autocomplete="given-name" placeholder="Nome" required>
+                    <input class="p-inputtext" name="first_name" autocomplete="given-name" placeholder="Nome" required>
                   </label>
                   <label>Cognome
-                    <input name="last_name" autocomplete="family-name" placeholder="Cognome" required>
+                    <input class="p-inputtext" name="last_name" autocomplete="family-name" placeholder="Cognome" required>
                   </label>
                   <label>Email personale
-                    <input name="email" type="email" autocomplete="email" placeholder="nome@azienda.it" required>
+                    <input class="p-inputtext" name="email" type="email" autocomplete="email" placeholder="nome@azienda.it" required>
                   </label>
                   <label>Password temporanea
-                    <input name="password" type="password" autocomplete="new-password" minlength="12" placeholder="Minimo 12 caratteri" required>
+                    <input class="p-inputtext" name="password" type="password" autocomplete="new-password" minlength="12" placeholder="Minimo 12 caratteri" required>
                   </label>
                 </div>
-                <p class="user-create-note">La persona riceverà anche l’invito al workspace ClickUp con la stessa email.</p>
-                <fieldset class="user-create-permissions">
+                <p class="p-message p-message-info user-create-note">La persona riceverà anche l’invito al workspace ClickUp con la stessa email.</p>
+                <fieldset class="p-fieldset user-create-permissions">
                   <legend>Funzioni iniziali</legend>
-                  <label class="permission-toggle"><input name="module_tasks" type="checkbox" checked><span>Task</span></label>
-                  <label class="permission-toggle"><input name="module_ped" type="checkbox" checked><span>PED</span></label>
-                  <label class="permission-toggle"><input name="module_clients" type="checkbox" checked><span>Clienti</span></label>
-                  <label class="permission-toggle"><input name="module_calendar" type="checkbox" checked><span>Calendario</span></label>
-                  <label class="permission-toggle"><input name="module_chat" type="checkbox" checked><span>Chat</span></label>
-                  <label class="permission-toggle"><input name="module_graphics" type="checkbox"><span>Grafiche</span></label>
-                  <label class="permission-toggle"><input name="module_site_backend" type="checkbox"><span>Backend sito</span></label>
-                  <label class="permission-toggle"><input name="module_users" type="checkbox"><span>Utenti</span></label>
-                  <label class="permission-toggle"><input name="module_smart_working" type="checkbox" checked><span>Turni</span></label>
-                  <label class="permission-toggle"><input name="module_settings" type="checkbox"><span>Setup</span></label>
+                  <label class="permission-toggle p-checkbox"><input class="p-checkbox-input" name="module_tasks" type="checkbox" checked><span class="p-checkbox-box" aria-hidden="true">✓</span><span class="p-checkbox-label">Task</span></label>
+                  <label class="permission-toggle p-checkbox"><input class="p-checkbox-input" name="module_ped" type="checkbox" checked><span class="p-checkbox-box" aria-hidden="true">✓</span><span class="p-checkbox-label">PED</span></label>
+                  <label class="permission-toggle p-checkbox"><input class="p-checkbox-input" name="module_clients" type="checkbox" checked><span class="p-checkbox-box" aria-hidden="true">✓</span><span class="p-checkbox-label">Clienti</span></label>
+                  <label class="permission-toggle p-checkbox"><input class="p-checkbox-input" name="module_calendar" type="checkbox" checked><span class="p-checkbox-box" aria-hidden="true">✓</span><span class="p-checkbox-label">Calendario</span></label>
+                  <label class="permission-toggle p-checkbox"><input class="p-checkbox-input" name="module_chat" type="checkbox" checked><span class="p-checkbox-box" aria-hidden="true">✓</span><span class="p-checkbox-label">Chat</span></label>
+                  <label class="permission-toggle p-checkbox"><input class="p-checkbox-input" name="module_graphics" type="checkbox"><span class="p-checkbox-box" aria-hidden="true">✓</span><span class="p-checkbox-label">Grafiche</span></label>
+                  <label class="permission-toggle p-checkbox"><input class="p-checkbox-input" name="module_site_backend" type="checkbox"><span class="p-checkbox-box" aria-hidden="true">✓</span><span class="p-checkbox-label">Backend sito</span></label>
+                  <label class="permission-toggle p-checkbox"><input class="p-checkbox-input" name="module_users" type="checkbox"><span class="p-checkbox-box" aria-hidden="true">✓</span><span class="p-checkbox-label">Utenti</span></label>
+                  <label class="permission-toggle p-checkbox"><input class="p-checkbox-input" name="module_smart_working" type="checkbox" checked><span class="p-checkbox-box" aria-hidden="true">✓</span><span class="p-checkbox-label">Turni</span></label>
+                  <label class="permission-toggle p-checkbox"><input class="p-checkbox-input" name="module_settings" type="checkbox"><span class="p-checkbox-box" aria-hidden="true">✓</span><span class="p-checkbox-label">Setup</span></label>
                 </fieldset>
-                <div class="user-create-actions">
+                <div class="p-toolbar user-create-actions">
                   <p id="userCreateMessage" role="status"></p>
                   <div>
-                    <button class="ghost-button" data-close-user-editor type="button">Annulla</button>
-                    <button class="primary-button" type="submit">Crea utente e invita</button>
+                    <button class="p-button p-button-outlined ghost-button" data-close-user-editor type="button"><span class="p-button-label">Annulla</span></button>
+                    <button class="p-button primary-button" type="submit"><span class="p-button-label">Crea utente e invita</span></button>
                   </div>
                 </div>
-              </form>
+                </form>
+              </div>
             </aside>
           </div>
         </section>

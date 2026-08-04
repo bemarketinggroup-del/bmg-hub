@@ -59,6 +59,27 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-08-04 — Editor utente a tab PrimeNG
+
+- Richiesta: dividere la modifica dell'utente in tab, mostrare per primo il
+  registro attività e convertire tutti gli elementi del side panel in
+  componenti PrimeNG.
+- Modifiche: l'editor usa ora `Tabs` con `Registro attività`, `Profilo` e
+  `Permessi`; il registro è selezionato e caricato automaticamente all'apertura.
+  Drawer, mask, header, InputText, Select, ToggleSwitch, Checkbox, Button, Tag,
+  Card, Panel e Toolbar adottano struttura e classi PrimeNG mantenendo gli
+  handler vanilla e tutte le API esistenti. Le tab supportano click, frecce,
+  Home/End, ruoli ARIA e gestione corretta del focus.
+- File: `public/index.html`, `public/app.js`, `public/styles.css`,
+  `scripts/test-user-management.mjs`, `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run check`, `npm run test:users`,
+  `npm run test:permissions`, `npm run test:mobile-navigation`,
+  `git diff --check`; controllo visivo e funzionale desktop e smartphone.
+- Pubblicazione: GitHub `main` e Vercel produzione.
+- Note: i pattern, le classi e i requisiti accessibili di Tabs, Drawer,
+  ToggleSwitch e degli altri controlli sono stati verificati tramite il MCP
+  PrimeNG; lo stack del progetto resta JavaScript/CSS vanilla.
+
 ### 2026-08-04 — Drawer utenti sovrapposto con slide da destra
 
 - Richiesta: mostrare il pannello laterale di creazione/modifica utenti sopra la
