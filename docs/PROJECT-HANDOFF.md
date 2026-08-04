@@ -114,9 +114,11 @@ supabase/                     schema e migration
 - Sessione e pagina attiva persistono dopo il refresh.
 - Directory utenti in linguaggio CMS, con tabella PrimeNG-style, ricerca e
   filtri per ruolo/stato; la modifica avviene in un drawer modale sovrapposto
-  alla pagina, con overlay e ingresso animato da destra. L'editor
-  usa componenti PrimeNG-style e tre tab: `Registro attività` è la vista
-  iniziale, seguita da `Profilo` e `Permessi`.
+  alla pagina, con overlay e ingresso animato da destra. L'editor usa
+  componenti PrimeNG-style e due tab: `Profilo` e `Permessi`. Il
+  `Registro attività` si apre invece da un pulsante dedicato accanto a
+  `Modifica`, in un dialog ampio che mostra KPI, grafico, dettaglio giornaliero
+  e azioni senza comprimere le liste in scroll interni.
 - La pagina Utenti non espone la creazione di nuovi account; il provisioning
   coordinato resta disponibile soltanto nel backend.
 - Collegamento univoco dell'utente al membro ClickUp.

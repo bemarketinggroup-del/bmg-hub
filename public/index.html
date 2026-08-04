@@ -783,8 +783,8 @@
               <div class="p-drawer-header user-editor-head">
                 <div class="p-drawer-title">
                   <p class="eyebrow" id="userEditorEyebrow">Account CMS</p>
-                  <h3 id="userEditorTitle">Nuovo utente</h3>
-                  <span id="userEditorSubtitle">Configura il nuovo accesso e le funzioni iniziali.</span>
+                  <h3 id="userEditorTitle">Modifica utente</h3>
+                  <span id="userEditorSubtitle">Configura profilo, ruolo e permessi.</span>
                 </div>
                 <button class="p-button p-button-text p-button-rounded p-drawer-close-button icon-button" id="userEditorCloseButton" type="button" title="Chiudi editor" aria-label="Chiudi editor"><svg class="p-button-icon lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
               </div>
@@ -797,6 +797,20 @@
       </section>
     </main>
   </div>
+
+  <dialog class="modal p-dialog user-activity-dialog" id="userActivityDialog" aria-modal="true" aria-labelledby="userActivityDialogTitle">
+    <section class="p-dialog-content user-activity-dialog-shell">
+      <header class="p-dialog-header user-activity-dialog-head">
+        <div>
+          <p class="eyebrow">Registro attività</p>
+          <h2 id="userActivityDialogTitle">Attività utente</h2>
+          <span id="userActivityDialogSubtitle">Presenze e operazioni registrate nel gestionale.</span>
+        </div>
+        <button class="p-button p-button-text p-button-rounded icon-button" id="userActivityDialogCloseButton" type="button" title="Chiudi registro" aria-label="Chiudi registro attività"><svg class="p-button-icon lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+      </header>
+      <div class="user-activity-dialog-content" id="userActivityDialogContent"></div>
+    </section>
+  </dialog>
 
   <dialog class="modal calendar-event-detail-modal" id="calendarEventDetailModal">
     <section class="calendar-event-detail-shell" aria-labelledby="calendarEventDetailTitle">

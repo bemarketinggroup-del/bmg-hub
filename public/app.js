@@ -321,6 +321,7 @@ let authSession = loadAuthSession();
 let authRefreshPromise = null;
 let currentProfile = null;
 const userActivityCache = new Map();
+let userActivityDialogProfileId = "";
 let userEditorMode = "";
 let editingUserProfileId = "";
 let userEditorCloseTimer = null;
@@ -6178,7 +6179,7 @@ function renderUserTableRow(profile, canManage) {
     <td data-label="Permessi"><strong class="user-permission-count">${profile.role === "admin" ? "Completi" : `${permissionCount} moduli`}</strong></td>
     <td data-label="Ultima attività"><span class="user-table-date">${escapeHtml(profile.last_access_at ? formatUserAccessTime(profile.last_access_at) : "Mai registrata")}</span></td>
     <td data-label="Azioni" class="user-table-actions">
-      ${canManage ? `<button class="user-table-edit" data-edit-user="${escapeHtml(profile.id)}" type="button" aria-label="Modifica ${escapeHtml(label)}"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg><span>Modifica</span></button>` : `<span class="user-table-readonly">Solo lettura</span>`}
+      ${canManage ? `<div class="user-table-action-group"><button class="user-table-activity" data-user-activity="${escapeHtml(profile.id)}" type="button" aria-label="Registro attività di ${escapeHtml(label)}"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg><span>Attività</span></button><button class="user-table-edit" data-edit-user="${escapeHtml(profile.id)}" type="button" aria-label="Modifica ${escapeHtml(label)}"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg><span>Modifica</span></button></div>` : `<span class="user-table-readonly">Solo lettura</span>`}
     </td>
   </tr>`;
 }
@@ -6245,7 +6246,7 @@ function openUserEditPanel(profileId) {
   editingUserProfileId = String(profile.id);
   showUserEditorPanel();
   renderUsers();
-  focusUserEditor(document.getElementById("userEditorActivityTab"));
+  focusUserEditor(document.getElementById("userEditorProfileTab"));
 }
 
 function renderUserEditPanel(profile) {
@@ -6261,17 +6262,13 @@ function renderUserEditPanel(profile) {
       <div class="p-tablist">
         <div class="p-tablist-content">
           <div class="p-tablist-tab-list" role="tablist" aria-label="Sezioni modifica utente">
-            <button class="p-tab is-active" id="userEditorActivityTab" data-user-editor-tab="activity" type="button" role="tab" aria-selected="true" aria-controls="userEditorActivityPanel" tabindex="0"><svg class="p-tab-icon lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg><span>Registro attività</span></button>
-            <button class="p-tab" id="userEditorProfileTab" data-user-editor-tab="profile" type="button" role="tab" aria-selected="false" aria-controls="userEditorProfilePanel" tabindex="-1"><svg class="p-tab-icon lc" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span>Profilo</span></button>
+            <button class="p-tab is-active" id="userEditorProfileTab" data-user-editor-tab="profile" type="button" role="tab" aria-selected="true" aria-controls="userEditorProfilePanel" tabindex="0"><svg class="p-tab-icon lc" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span>Profilo</span></button>
             <button class="p-tab" id="userEditorPermissionsTab" data-user-editor-tab="permissions" type="button" role="tab" aria-selected="false" aria-controls="userEditorPermissionsPanel" tabindex="-1"><svg class="p-tab-icon lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg><span>Permessi</span></button>
           </div>
         </div>
       </div>
       <div class="p-tabpanels">
-        <section class="p-tabs-panel user-editor-tab-panel is-active" id="userEditorActivityPanel" data-user-editor-panel="activity" role="tabpanel" aria-labelledby="userEditorActivityTab">
-          ${renderUserActivitySummary(profile, true)}
-        </section>
-        <section class="p-tabs-panel user-editor-tab-panel" id="userEditorProfilePanel" data-user-editor-panel="profile" role="tabpanel" aria-labelledby="userEditorProfileTab" hidden>
+        <section class="p-tabs-panel user-editor-tab-panel is-active" id="userEditorProfilePanel" data-user-editor-panel="profile" role="tabpanel" aria-labelledby="userEditorProfileTab">
           <div class="user-editor-account p-card">
             <div class="user-identity">
               <span class="user-avatar p-avatar">${escapeHtml(label.slice(0, 1).toUpperCase())}</span>
@@ -6319,7 +6316,6 @@ function renderUserEditPanel(profile) {
       <div><button class="p-button p-button-outlined ghost-button" data-close-user-editor type="button"><span class="p-button-label">Annulla</span></button><button class="p-button primary-button" data-save-user type="button"><span class="p-button-label">Salva modifiche</span></button></div>
     </div>
   </div>`;
-  void loadUserActivity(profile.id);
 }
 
 function activateUserEditorTab(tabName, { focus = false } = {}) {
@@ -6341,32 +6337,40 @@ function activateUserEditorTab(tabName, { focus = false } = {}) {
     panel.classList.toggle("is-active", selected);
   });
   if (focus) activeTab.focus();
-  if (tabName === "activity" && editingUserProfileId) void loadUserActivity(editingUserProfileId);
 }
 
-function renderUserActivitySummary(profile, expanded = false) {
+function openUserActivityDialog(profileId) {
+  if (currentProfile?.role !== "admin") return;
+  const profile = (state.staffProfiles || []).find((item) => String(item.id) === String(profileId));
+  const dialog = document.getElementById("userActivityDialog");
+  const content = document.getElementById("userActivityDialogContent");
+  if (!profile || !dialog || !content) return;
+  const label = profile.full_name || profile.email || "Utente";
   const lastAccess = profile.last_access_at ? formatUserAccessTime(profile.last_access_at) : "Nessun accesso registrato";
-  return `
-    <section class="user-activity-summary p-panel" aria-label="Attivita di ${escapeHtml(profile.full_name || profile.email)}">
-      <div class="user-last-login p-card">
-        <span>Ultima attivita</span>
-        <strong>${escapeHtml(lastAccess)}</strong>
-      </div>
-      <button class="p-button p-button-outlined ghost-button" data-toggle-user-activity="${escapeHtml(profile.id)}" type="button" aria-expanded="${expanded ? "true" : "false"}"><span class="p-button-label">${expanded ? "Nascondi registro" : "Apri registro attività"}</span></button>
-      <div class="user-activity-panel p-panel-content" data-user-activity-panel="${escapeHtml(profile.id)}" ${expanded ? "" : "hidden"}></div>
-    </section>`;
+  userActivityDialogProfileId = String(profile.id);
+  document.getElementById("userActivityDialogTitle").textContent = label;
+  document.getElementById("userActivityDialogSubtitle").textContent = profile.email || "Presenze e operazioni registrate nel gestionale.";
+  content.innerHTML = `<div class="user-activity-dialog-profile p-card">
+    <div class="user-identity">
+      <span class="user-avatar p-avatar">${escapeHtml(label.slice(0, 1).toUpperCase())}</span>
+      <div><strong>${escapeHtml(label)}</strong><span>${escapeHtml(profile.email || "Email non disponibile")}</span></div>
+    </div>
+    <div class="user-last-login"><span>Ultima attività</span><strong>${escapeHtml(lastAccess)}</strong></div>
+  </div>
+  <div class="user-activity-panel p-panel-content" data-user-activity-panel="${escapeHtml(profile.id)}"></div>`;
+  if (!dialog.open) dialog.showModal();
+  focusUserEditor(document.getElementById("userActivityDialogCloseButton"));
+  void loadUserActivity(profile.id);
 }
 
-async function toggleUserActivity(button, forceRefresh = false) {
-  const profileId = button.dataset.toggleUserActivity;
-  const panel = document.querySelector(`[data-user-activity-panel="${profileId}"]`);
-  if (!panel) return;
-  const opening = panel.hidden;
-  panel.hidden = !opening;
-  button.setAttribute("aria-expanded", String(opening));
-  const label = button.querySelector(".p-button-label") || button;
-  label.textContent = opening ? "Nascondi registro" : "Apri registro attività";
-  if (opening) await loadUserActivity(profileId, forceRefresh);
+function closeUserActivityDialog() {
+  const profileId = userActivityDialogProfileId;
+  const dialog = document.getElementById("userActivityDialog");
+  userActivityDialogProfileId = "";
+  if (dialog?.open) dialog.close();
+  window.requestAnimationFrame(() => {
+    document.querySelector(`[data-user-activity="${CSS.escape(profileId)}"]`)?.focus();
+  });
 }
 
 async function loadUserActivity(profileId, forceRefresh = false) {
@@ -9607,7 +9611,7 @@ document.body.addEventListener("click", (event) => {
   const pedCreateCarousel = event.target.closest("[data-ped-create-carousel]");
   const pedCarouselDownload = event.target.closest("[data-ped-carousel-download]");
   const pedCaption = event.target.closest("[data-ped-caption]");
-  const toggleUserActivityButton = event.target.closest("[data-toggle-user-activity]");
+  const activityUser = event.target.closest("[data-user-activity]");
   const refreshUserActivityButton = event.target.closest("[data-refresh-user-activity]");
   const userEditorTab = event.target.closest("[data-user-editor-tab]");
   const editUser = event.target.closest("[data-edit-user]");
@@ -9788,7 +9792,7 @@ document.body.addEventListener("click", (event) => {
   if (pedPickerClose) return document.getElementById("pedDrivePickerModal").close();
   if (pedCaption) return openPedCaptionModal(pedCaption.dataset.pedCaption);
   if (userEditorTab) return activateUserEditorTab(userEditorTab.dataset.userEditorTab);
-  if (toggleUserActivityButton) return toggleUserActivity(toggleUserActivityButton);
+  if (activityUser) return openUserActivityDialog(activityUser.dataset.userActivity);
   if (refreshUserActivityButton) {
     userActivityCache.delete(refreshUserActivityButton.dataset.refreshUserActivity);
     return loadUserActivity(refreshUserActivityButton.dataset.refreshUserActivity, true);
@@ -10806,6 +10810,14 @@ document.getElementById("taskForm").addEventListener("submit", async (event) => 
 });
 
 document.getElementById("userEditorCloseButton").addEventListener("click", closeUserEditorPanel);
+document.getElementById("userActivityDialogCloseButton").addEventListener("click", closeUserActivityDialog);
+document.getElementById("userActivityDialog").addEventListener("cancel", (event) => {
+  event.preventDefault();
+  closeUserActivityDialog();
+});
+document.getElementById("userActivityDialog").addEventListener("click", (event) => {
+  if (event.target === event.currentTarget) closeUserActivityDialog();
+});
 document.getElementById("userDirectorySearch").addEventListener("input", renderUsers);
 document.getElementById("userRoleFilter").addEventListener("change", renderUsers);
 document.getElementById("userStatusFilter").addEventListener("change", renderUsers);

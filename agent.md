@@ -59,6 +59,24 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-08-04 — Registro attività utenti in schermata ampia
+
+- Richiesta: spostare il registro attività fuori dal pannello di modifica e
+  aprirlo con un pulsante dedicato accanto a `Modifica`, mostrando bene tutti i
+  dati disponibili.
+- Modifiche: aggiunto il comando `Attività` in ogni riga della directory e un
+  Dialog PrimeNG-style autonomo, largo e responsive con profilo, ultimo accesso,
+  KPI, grafico dei 30 giorni, dettaglio giornaliero e azioni del gestionale. Le
+  liste non hanno più uno scroll interno nella vista ampia; il drawer di modifica
+  contiene ora soltanto le tab `Profilo` e `Permessi`.
+- File: `public/index.html`, `public/app.js`, `public/styles.css`,
+  `scripts/test-user-management.mjs`, `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run check`, `npm run test:users`,
+  `npm run test:permissions`, `npm run test:mobile-navigation`,
+  `git diff --check`; controllo funzionale e visivo desktop e smartphone.
+- Pubblicazione: GitHub `main` e Vercel produzione.
+- Note: Nessuna.
+
 ### 2026-08-04 — Creazione utenti rimossa dall'editor
 
 - Richiesta: togliere la creazione di nuovi utenti dal pannello di modifica.
