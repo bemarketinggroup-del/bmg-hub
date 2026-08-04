@@ -59,6 +59,23 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-08-04 — Archivio Grafiche a tutta larghezza
+
+- Richiesta: eliminare lo scorrimento interno dei clienti nella sezione
+  `Grafiche` e allargare l'area occupata dalle cartelle.
+- Modifiche: trasformato l'archivio clienti in una griglia completa che usa
+  tutta la larghezza del pannello e cresce insieme alla pagina; rimosse altezza
+  massima, scrollbar, sfumatura e invito allo scorrimento. Aumentate dimensioni
+  di cartelle, icone e nomi, con layout mobile a tre cartelle per riga; ricerca,
+  selezione, apertura e chiusura della cartella GRAFICHE restano invariate.
+- File: `public/index.html`, `public/app.js`, `public/styles.css`,
+  `scripts/test-graphic-reviews.mjs`, `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run check`, `npm run test:graphic-reviews`,
+  `npm run test:primeng-components`, `git diff --check`, controllo visivo
+  desktop e smartphone.
+- Pubblicazione: GitHub `main` e Vercel produzione.
+- Note: Nessuna.
+
 ### 2026-08-04 — Sidebar e topbar alleggerite
 
 - Richiesta: eliminare la sezione `Servizi collegati` in basso a sinistra e il

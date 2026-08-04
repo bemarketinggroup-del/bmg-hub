@@ -242,8 +242,9 @@ supabase/                     schema e migration
 - Nel Drive la versione modificata compare accanto all'originale ed è chiaramente
   collegata; la coppia occupa solo lo spazio delle due schede, non tutta la riga.
 - Archivio `GRAFICHE` per ogni cliente con upload diretto.
-- Clienti mostrati come quadrati alfabetici scorrevoli, con ricerca mantenuta,
-  indicazione visiva dello scorrimento e comando per richiudere la cartella.
+- Clienti mostrati in una griglia alfabetica completa e a tutta larghezza, con
+  cartelle grandi, ricerca mantenuta e nessuno scorrimento interno; la griglia
+  cresce con la pagina e resta disponibile il comando per richiudere la cartella.
 
 ### Chat interna
 
