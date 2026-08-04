@@ -59,6 +59,28 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-08-04 — Directory utenti in stile CMS PrimeNG
+
+- Richiesta: trasformare la pagina Utenti in una tabella più vicina al
+  linguaggio di un CMS, con creazione e modifica dentro il pannello e senza
+  perdere alcuna funzione esistente.
+- Modifiche: introdotta una directory utenti PrimeNG-style con riepiloghi,
+  ricerca, filtri per ruolo e stato, tag di stato e azioni per riga; i flussi
+  `Nuovo utente` e `Modifica` si aprono nello stesso workspace. Restano intatti
+  creazione coordinata BMG Hub/ClickUp, ruoli, permessi, attivazione,
+  collegamento ClickUp, registro attività ed eliminazione. Il layout mobile
+  trasforma semanticamente ogni riga in una scheda leggibile senza cambiare le
+  API e senza introdurre Angular nel progetto vanilla.
+- File: `public/index.html`, `public/app.js`, `public/styles.css`,
+  `scripts/test-user-management.mjs`, `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run check`, `npm run test:users`,
+  `npm run test:permissions`, `npm run test:mobile-navigation`,
+  `git diff --check`; controllo visivo desktop e smartphone.
+- Pubblicazione: GitHub `main` e Vercel produzione.
+- Note: la struttura e i pattern accessibili della DataTable e dei Tag sono
+  stati verificati tramite il MCP PrimeNG; l'implementazione resta coerente con
+  lo stack JavaScript/CSS esistente.
+
 ### 2026-08-04 — Setup rimosso dalla sidebar
 
 - Richiesta: togliere la voce `Setup` dalla navigazione laterale.

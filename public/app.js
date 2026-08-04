@@ -321,6 +321,8 @@ let authSession = loadAuthSession();
 let authRefreshPromise = null;
 let currentProfile = null;
 const userActivityCache = new Map();
+let userEditorMode = "";
+let editingUserProfileId = "";
 let activityHeartbeatTimer = null;
 let lastAuditedView = "";
 let lastAuditedViewAt = 0;
@@ -6087,66 +6089,212 @@ function renderUsers() {
   if (!target) return;
   if (!canAccessModule("users")) {
     target.innerHTML = emptyState("Il modulo Utenti non e abilitato per questo account.");
+    closeUserEditorPanel();
     return;
   }
   const canManage = currentProfile?.role === "admin";
-  target.innerHTML = (state.staffProfiles || []).map((profile) => `
-    <article class="user-row user-access-card ${canManage ? "" : "is-readonly"}" data-user-id="${escapeHtml(profile.id)}">
-      <header class="user-access-head">
-        <div class="user-identity">
-          <span class="user-avatar">${escapeHtml((profile.full_name || profile.email || "U").slice(0, 1).toUpperCase())}</span>
-          <div>
-            <strong>${escapeHtml(profile.full_name || profile.email)}</strong>
-            <span>${escapeHtml(profile.email)} · ${profile.role === "admin" ? "Amministratore" : "Staff"}</span>
-          </div>
-        </div>
-        <label class="user-active-toggle">
-          <input data-user-active type="checkbox" ${profile.active !== false ? "checked" : ""} ${canManage ? "" : "disabled"}>
-          <span>Accesso attivo</span>
-        </label>
-      </header>
-      ${canManage ? renderUserActivitySummary(profile) : ""}
-      <div class="user-access-fields">
-        <label>Nome
-          <input data-user-name value="${escapeHtml(profile.full_name || "")}" placeholder="Nome staff" ${canManage ? "" : "disabled"}>
-        </label>
-        <label>Ruolo
-          <select data-user-role ${canManage ? "" : "disabled"}>
-            <option value="admin" ${profile.role === "admin" ? "selected" : ""}>admin</option>
-            <option value="staff" ${profile.role === "staff" ? "selected" : ""}>staff</option>
-          </select>
-        </label>
-        <label>Utente ClickUp
-          <select data-user-clickup ${canManage ? "" : "disabled"} ${profile.role === "staff" ? "required" : ""}>
-            ${clickUpMemberOptions(profile.clickup_user_id, profile.id, profile.role === "admin")}
-          </select>
-        </label>
+  const profiles = [...(state.staffProfiles || [])].sort((left, right) => (
+    String(left.full_name || left.email || "").localeCompare(String(right.full_name || right.email || ""), "it", { sensitivity: "base" })
+  ));
+  const search = normalizeUserDirectoryText(document.getElementById("userDirectorySearch")?.value);
+  const role = document.getElementById("userRoleFilter")?.value || "all";
+  const status = document.getElementById("userStatusFilter")?.value || "all";
+  const visibleProfiles = profiles.filter((profile) => {
+    const matchesSearch = !search || normalizeUserDirectoryText(`${profile.full_name || ""} ${profile.email || ""}`).includes(search);
+    const matchesRole = role === "all" || profile.role === role;
+    const isActive = profile.active !== false;
+    const matchesStatus = status === "all" || (status === "active" ? isActive : !isActive);
+    return matchesSearch && matchesRole && matchesStatus;
+  });
+
+  setUserDirectoryMetric("userTotalCount", profiles.length);
+  setUserDirectoryMetric("userActiveCount", profiles.filter((profile) => profile.active !== false).length);
+  setUserDirectoryMetric("userClickUpCount", profiles.filter((profile) => profile.clickup_user_id).length);
+  const directoryCount = document.getElementById("userDirectoryCount");
+  if (directoryCount) directoryCount.textContent = visibleProfiles.length === profiles.length
+    ? `${profiles.length} account`
+    : `${visibleProfiles.length} di ${profiles.length} account`;
+
+  target.innerHTML = `<div class="p-datatable user-datatable">
+    <div class="p-datatable-table-container">
+      <table class="p-datatable-table" aria-label="Elenco utenti del gestionale">
+        <thead class="p-datatable-thead">
+          <tr>
+            <th scope="col">Utente</th>
+            <th scope="col">Ruolo</th>
+            <th scope="col">Stato</th>
+            <th scope="col">ClickUp</th>
+            <th scope="col">Permessi</th>
+            <th scope="col">Ultima attività</th>
+            <th scope="col"><span class="sr-only">Azioni</span></th>
+          </tr>
+        </thead>
+        <tbody class="p-datatable-tbody">
+          ${visibleProfiles.length ? visibleProfiles.map((profile) => renderUserTableRow(profile, canManage)).join("") : `
+            <tr class="p-datatable-empty-message"><td colspan="7">Nessun utente corrisponde ai filtri selezionati.</td></tr>`}
+        </tbody>
+      </table>
+    </div>
+  </div>`;
+
+  if (!canManage && userEditorMode) closeUserEditorPanel();
+  if (canManage && userEditorMode === "edit") {
+    const selectedProfile = profiles.find((profile) => String(profile.id) === String(editingUserProfileId));
+    if (selectedProfile) renderUserEditPanel(selectedProfile);
+    else closeUserEditorPanel();
+  }
+}
+
+function normalizeUserDirectoryText(value) {
+  return String(value || "").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
+function setUserDirectoryMetric(id, value) {
+  const target = document.getElementById(id);
+  if (target) target.textContent = String(value);
+}
+
+function userPermissionCount(profile) {
+  if (profile.role === "admin") return MODULE_DEFINITIONS.length;
+  return MODULE_DEFINITIONS.filter(({ key }) => profile.module_permissions?.[key]).length;
+}
+
+function renderUserTableRow(profile, canManage) {
+  const label = profile.full_name || profile.email || "Utente";
+  const isActive = profile.active !== false;
+  const permissionCount = userPermissionCount(profile);
+  const isSelected = userEditorMode === "edit" && String(editingUserProfileId) === String(profile.id);
+  return `<tr class="p-datatable-selectable-row ${isSelected ? "is-selected" : ""}" data-user-table-id="${escapeHtml(profile.id)}">
+    <td data-label="Utente">
+      <div class="user-identity user-table-identity">
+        <span class="user-avatar">${escapeHtml(label.slice(0, 1).toUpperCase())}</span>
+        <div><strong>${escapeHtml(label)}</strong><span>${escapeHtml(profile.email || "Email non disponibile")}</span></div>
       </div>
-      <p class="user-clickup-link-status ${profile.clickup_user_id ? "is-linked" : "is-unlinked"}">
-        ${profile.clickup_user_id
-          ? `Collegato all'ID ClickUp ${escapeHtml(profile.clickup_user_id)}`
-          : profile.role === "admin" ? "L'account admin non richiede un assegnatario ClickUp." : "Collegamento ClickUp mancante: le task personali non sono disponibili."}
-      </p>
-      <div class="user-permission-section">
-        <div>
-          <p class="eyebrow">Funzioni disponibili</p>
-          <span>${profile.role === "admin" ? "Gli admin hanno sempre accesso completo." : "Attiva solo le aree necessarie a questa persona."}</span>
-        </div>
-        <div class="user-permission-grid">
-          ${MODULE_DEFINITIONS.map((module) => `
-            <label class="permission-toggle">
-              <input type="checkbox" data-user-module="${module.key}" ${profile.role === "admin" || profile.module_permissions?.[module.key] ? "checked" : ""} ${canManage && profile.role !== "admin" ? "" : "disabled"}>
-              <span>${module.label}</span>
-            </label>
-          `).join("")}
-        </div>
+    </td>
+    <td data-label="Ruolo"><span class="p-tag user-role-tag is-${profile.role === "admin" ? "admin" : "staff"}">${profile.role === "admin" ? "Amministratore" : "Staff"}</span></td>
+    <td data-label="Stato"><span class="p-tag user-status-tag ${isActive ? "is-active" : "is-inactive"}"><i aria-hidden="true"></i>${isActive ? "Attivo" : "Disattivato"}</span></td>
+    <td data-label="ClickUp"><span class="user-table-link ${profile.clickup_user_id ? "is-linked" : "is-unlinked"}">${profile.clickup_user_id ? "Collegato" : profile.role === "admin" ? "Non richiesto" : "Da collegare"}</span></td>
+    <td data-label="Permessi"><strong class="user-permission-count">${profile.role === "admin" ? "Completi" : `${permissionCount} moduli`}</strong></td>
+    <td data-label="Ultima attività"><span class="user-table-date">${escapeHtml(profile.last_access_at ? formatUserAccessTime(profile.last_access_at) : "Mai registrata")}</span></td>
+    <td data-label="Azioni" class="user-table-actions">
+      ${canManage ? `<button class="user-table-edit" data-edit-user="${escapeHtml(profile.id)}" type="button" aria-label="Modifica ${escapeHtml(label)}"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg><span>Modifica</span></button>` : `<span class="user-table-readonly">Solo lettura</span>`}
+    </td>
+  </tr>`;
+}
+
+function showUserEditorPanel() {
+  const panel = document.getElementById("userEditorPanel");
+  const layout = document.getElementById("userManagementLayout");
+  if (!panel || !layout) return;
+  panel.hidden = false;
+  layout.classList.add("is-editor-open");
+}
+
+function closeUserEditorPanel() {
+  const panel = document.getElementById("userEditorPanel");
+  const layout = document.getElementById("userManagementLayout");
+  const editContent = document.getElementById("userEditContent");
+  const createForm = document.getElementById("userCreateForm");
+  userEditorMode = "";
+  editingUserProfileId = "";
+  if (panel) panel.hidden = true;
+  if (layout) layout.classList.remove("is-editor-open");
+  if (editContent) {
+    editContent.hidden = true;
+    editContent.innerHTML = "";
+  }
+  if (createForm) createForm.hidden = true;
+  document.querySelectorAll("[data-user-table-id].is-selected").forEach((row) => row.classList.remove("is-selected"));
+}
+
+function focusUserEditor(target) {
+  window.requestAnimationFrame(() => {
+    if (window.matchMedia("(max-width: 980px)").matches) document.getElementById("userEditorPanel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    target?.focus();
+  });
+}
+
+function openUserCreatePanel() {
+  if (currentProfile?.role !== "admin") return;
+  userEditorMode = "create";
+  editingUserProfileId = "";
+  const form = document.getElementById("userCreateForm");
+  const editContent = document.getElementById("userEditContent");
+  document.getElementById("userEditorEyebrow").textContent = "Nuovo account CMS";
+  document.getElementById("userEditorTitle").textContent = "Nuovo utente";
+  document.getElementById("userEditorSubtitle").textContent = "Configura credenziali, invito ClickUp e funzioni iniziali.";
+  form.reset();
+  document.getElementById("userCreateMessage").textContent = "";
+  document.getElementById("userCreateMessage").className = "";
+  form.hidden = false;
+  editContent.hidden = true;
+  editContent.innerHTML = "";
+  showUserEditorPanel();
+  renderUsers();
+  focusUserEditor(form.elements.first_name);
+}
+
+function openUserEditPanel(profileId) {
+  if (currentProfile?.role !== "admin") return;
+  const profile = (state.staffProfiles || []).find((item) => String(item.id) === String(profileId));
+  if (!profile) return;
+  userEditorMode = "edit";
+  editingUserProfileId = String(profile.id);
+  document.getElementById("userCreateForm").hidden = true;
+  showUserEditorPanel();
+  renderUsers();
+  focusUserEditor(document.querySelector("#userEditContent [data-user-name]"));
+}
+
+function renderUserEditPanel(profile) {
+  const target = document.getElementById("userEditContent");
+  const label = profile.full_name || profile.email || "Utente";
+  if (!target) return;
+  document.getElementById("userEditorEyebrow").textContent = "Modifica account CMS";
+  document.getElementById("userEditorTitle").textContent = label;
+  document.getElementById("userEditorSubtitle").textContent = profile.email || "Configura ruolo e accessi";
+  target.hidden = false;
+  target.innerHTML = `<div class="user-editor-form" data-user-id="${escapeHtml(profile.id)}">
+    <div class="user-editor-account">
+      <div class="user-identity">
+        <span class="user-avatar">${escapeHtml(label.slice(0, 1).toUpperCase())}</span>
+        <div><strong>${escapeHtml(label)}</strong><span>${escapeHtml(profile.email || "")}</span></div>
       </div>
-      ${canManage ? `<div class="user-access-actions">
-        ${profile.id !== currentProfile?.id ? `<button class="danger-button" data-delete-user="${escapeHtml(profile.id)}" type="button">Elimina utente</button>` : ""}
-        <button class="primary-button" data-save-user type="button">Salva accessi</button>
-      </div>` : ""}
-    </article>
-  `).join("") || emptyState("Nessun profilo staff configurato.");
+      <label class="user-active-toggle"><input data-user-active type="checkbox" ${profile.active !== false ? "checked" : ""}><span>Accesso attivo</span></label>
+    </div>
+    <div class="user-access-fields">
+      <label>Nome visualizzato
+        <input data-user-name value="${escapeHtml(profile.full_name || "")}" placeholder="Nome staff">
+      </label>
+      <label>Ruolo
+        <select data-user-role>
+          <option value="admin" ${profile.role === "admin" ? "selected" : ""}>Amministratore</option>
+          <option value="staff" ${profile.role === "staff" ? "selected" : ""}>Staff</option>
+        </select>
+      </label>
+      <label>Utente ClickUp
+        <select data-user-clickup ${profile.role === "staff" ? "required" : ""}>
+          ${clickUpMemberOptions(profile.clickup_user_id, profile.id, profile.role === "admin")}
+        </select>
+      </label>
+    </div>
+    <p class="user-clickup-link-status ${profile.clickup_user_id ? "is-linked" : "is-unlinked"}">
+      ${profile.clickup_user_id
+        ? `Collegato all'ID ClickUp ${escapeHtml(profile.clickup_user_id)}`
+        : profile.role === "admin" ? "L'account amministratore non richiede un assegnatario ClickUp." : "Collegamento ClickUp mancante: le task personali non sono disponibili."}
+    </p>
+    <div class="user-permission-section">
+      <div><p class="eyebrow">Permessi CMS</p><span>${profile.role === "admin" ? "Gli amministratori hanno sempre accesso completo." : "Abilita solo le aree necessarie a questa persona."}</span></div>
+      <div class="user-permission-grid">
+        ${MODULE_DEFINITIONS.map((module) => `<label class="permission-toggle"><input type="checkbox" data-user-module="${module.key}" ${profile.role === "admin" || profile.module_permissions?.[module.key] ? "checked" : ""} ${profile.role === "admin" ? "disabled" : ""}><span>${module.label}</span></label>`).join("")}
+      </div>
+    </div>
+    ${renderUserActivitySummary(profile)}
+    <div class="user-access-actions">
+      ${profile.id !== currentProfile?.id ? `<button class="danger-button" data-delete-user="${escapeHtml(profile.id)}" type="button">Elimina utente</button>` : ""}
+      <div><button class="ghost-button" data-close-user-editor type="button">Annulla</button><button class="primary-button" data-save-user type="button">Salva modifiche</button></div>
+    </div>
+  </div>`;
 }
 
 function renderUserActivitySummary(profile) {
@@ -6383,6 +6531,7 @@ async function deleteUserProfile(profileId) {
     });
     const result = await response.json();
     if (!response.ok) throw new Error(result.error || `Users backend error ${response.status}`);
+    if (String(editingUserProfileId) === String(profileId)) closeUserEditorPanel();
     await Promise.all([loadUsersFromBackend(), loadClickUpTeam()]);
     alert(`Accesso eliminato per ${result.deleted?.full_name || result.deleted?.email || label}. Il membro ClickUp e rimasto nel workspace.`);
   } catch (error) {
@@ -9458,6 +9607,8 @@ document.body.addEventListener("click", (event) => {
   const pedCaption = event.target.closest("[data-ped-caption]");
   const toggleUserActivityButton = event.target.closest("[data-toggle-user-activity]");
   const refreshUserActivityButton = event.target.closest("[data-refresh-user-activity]");
+  const editUser = event.target.closest("[data-edit-user]");
+  const closeUserEditor = event.target.closest("[data-close-user-editor]");
   const saveUser = event.target.closest("[data-save-user]");
   const deleteUser = event.target.closest("[data-delete-user]");
   const copyProvisionPasswordButton = event.target.closest("[data-copy-provision-password]");
@@ -9643,6 +9794,8 @@ document.body.addEventListener("click", (event) => {
     if (firstItem) return openPedCaptionModal(firstItem.id);
   }
   if (taskRow && !event.target.closest("a, button, input, select, textarea")) return openTaskDetailModal(taskRow.dataset.taskDetail);
+  if (editUser) return openUserEditPanel(editUser.dataset.editUser);
+  if (closeUserEditor) return closeUserEditorPanel();
   if (saveUser) return saveUserProfile(saveUser.closest("[data-user-id]"));
   if (deleteUser) return deleteUserProfile(deleteUser.dataset.deleteUser);
   if (copyProvisionPasswordButton) return copyProvisionPassword(copyProvisionPasswordButton);
@@ -10621,6 +10774,11 @@ document.getElementById("userCreateForm").addEventListener("submit", (event) => 
   event.preventDefault();
   createUserAccount(event.currentTarget);
 });
+document.getElementById("userNewButton").addEventListener("click", openUserCreatePanel);
+document.getElementById("userEditorCloseButton").addEventListener("click", closeUserEditorPanel);
+document.getElementById("userDirectorySearch").addEventListener("input", renderUsers);
+document.getElementById("userRoleFilter").addEventListener("change", renderUsers);
+document.getElementById("userStatusFilter").addEventListener("change", renderUsers);
 document.getElementById("graphicReviewForm").addEventListener("submit", (event) => {
   if (event.submitter?.value === "cancel") {
     graphicReviewRequestContext = null;

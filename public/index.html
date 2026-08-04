@@ -739,48 +739,95 @@
         <section class="panel users-workspace">
           <div class="panel-head users-heading">
             <div>
-              <p class="eyebrow">Accessi staff</p>
-              <h2>Persone e funzioni abilitate</h2>
-              <span>Ogni account staff e collegato in modo univoco al relativo utente ClickUp.</span>
+              <p class="eyebrow">Amministrazione CMS</p>
+              <h2>Directory utenti</h2>
+              <span>Gestisci account, ruoli, accessi al gestionale e collegamenti ClickUp da un unico pannello.</span>
             </div>
-            <button class="ghost-button admin-only" id="provisionClickUpUsersButton" type="button">Crea accessi ClickUp mancanti</button>
+            <div class="users-heading-actions admin-only">
+              <button class="ghost-button" id="provisionClickUpUsersButton" type="button">Sincronizza ClickUp</button>
+              <button class="primary-button" id="userNewButton" type="button"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Nuovo utente</button>
+            </div>
           </div>
-          <form class="user-create-form admin-only" id="userCreateForm">
-            <div class="user-create-fields">
-              <label>Nome
-                <input name="first_name" autocomplete="given-name" placeholder="Nome" required>
-              </label>
-              <label>Cognome
-                <input name="last_name" autocomplete="family-name" placeholder="Cognome" required>
-              </label>
-              <label>Email personale
-                <input name="email" type="email" autocomplete="email" placeholder="nome@azienda.it" required>
-              </label>
-              <label>Password
-                <input name="password" type="password" autocomplete="new-password" minlength="12" placeholder="Minimo 12 caratteri" required>
-              </label>
-            </div>
-            <p class="user-create-note">La persona ricevera anche l’invito al workspace ClickUp con la stessa email.</p>
-            <fieldset class="user-create-permissions">
-              <legend>Funzioni iniziali</legend>
-              <label class="permission-toggle"><input name="module_tasks" type="checkbox" checked><span>Task</span></label>
-              <label class="permission-toggle"><input name="module_ped" type="checkbox" checked><span>PED</span></label>
-              <label class="permission-toggle"><input name="module_clients" type="checkbox" checked><span>Clienti</span></label>
-              <label class="permission-toggle"><input name="module_calendar" type="checkbox" checked><span>Calendario</span></label>
-              <label class="permission-toggle"><input name="module_chat" type="checkbox" checked><span>Chat</span></label>
-              <label class="permission-toggle"><input name="module_graphics" type="checkbox"><span>Grafiche</span></label>
-              <label class="permission-toggle"><input name="module_site_backend" type="checkbox"><span>Backend sito</span></label>
-              <label class="permission-toggle"><input name="module_users" type="checkbox"><span>Utenti</span></label>
-              <label class="permission-toggle"><input name="module_smart_working" type="checkbox" checked><span>Turni</span></label>
-              <label class="permission-toggle"><input name="module_settings" type="checkbox"><span>Setup</span></label>
-            </fieldset>
-            <div class="user-create-actions">
-              <p id="userCreateMessage" role="status"></p>
-              <button class="primary-button" type="submit">Crea utente e invita</button>
-            </div>
-          </form>
+          <div class="users-summary" aria-label="Riepilogo account">
+            <div><span>Account totali</span><strong id="userTotalCount">0</strong></div>
+            <div><span>Accessi attivi</span><strong id="userActiveCount">0</strong></div>
+            <div><span>Collegati a ClickUp</span><strong id="userClickUpCount">0</strong></div>
+          </div>
           <section class="user-provision-result admin-only" id="provisionUsersResult" aria-live="polite" hidden></section>
-          <div class="user-list" id="userList"></div>
+          <div class="user-management-layout" id="userManagementLayout">
+            <section class="user-directory-card" aria-labelledby="userDirectoryTitle">
+              <div class="p-datatable-header user-directory-toolbar">
+                <div>
+                  <strong id="userDirectoryTitle">Elenco utenti</strong>
+                  <span id="userDirectoryCount">0 account</span>
+                </div>
+                <label class="user-directory-search">
+                  <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                  <input id="userDirectorySearch" type="search" placeholder="Cerca nome o email" aria-label="Cerca utenti">
+                </label>
+                <select id="userRoleFilter" aria-label="Filtra per ruolo">
+                  <option value="all">Tutti i ruoli</option>
+                  <option value="admin">Amministratori</option>
+                  <option value="staff">Staff</option>
+                </select>
+                <select id="userStatusFilter" aria-label="Filtra per stato">
+                  <option value="all">Tutti gli stati</option>
+                  <option value="active">Attivi</option>
+                  <option value="inactive">Disattivati</option>
+                </select>
+              </div>
+              <div class="user-list" id="userList"></div>
+            </section>
+
+            <aside class="user-editor-panel admin-only" id="userEditorPanel" aria-labelledby="userEditorTitle" hidden>
+              <div class="user-editor-head">
+                <div>
+                  <p class="eyebrow" id="userEditorEyebrow">Account CMS</p>
+                  <h3 id="userEditorTitle">Nuovo utente</h3>
+                  <span id="userEditorSubtitle">Configura il nuovo accesso e le funzioni iniziali.</span>
+                </div>
+                <button class="icon-button" id="userEditorCloseButton" type="button" title="Chiudi editor" aria-label="Chiudi editor"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+              </div>
+              <div id="userEditContent" hidden></div>
+              <form class="user-create-form" id="userCreateForm" hidden>
+                <div class="user-create-fields">
+                  <label>Nome
+                    <input name="first_name" autocomplete="given-name" placeholder="Nome" required>
+                  </label>
+                  <label>Cognome
+                    <input name="last_name" autocomplete="family-name" placeholder="Cognome" required>
+                  </label>
+                  <label>Email personale
+                    <input name="email" type="email" autocomplete="email" placeholder="nome@azienda.it" required>
+                  </label>
+                  <label>Password temporanea
+                    <input name="password" type="password" autocomplete="new-password" minlength="12" placeholder="Minimo 12 caratteri" required>
+                  </label>
+                </div>
+                <p class="user-create-note">La persona riceverà anche l’invito al workspace ClickUp con la stessa email.</p>
+                <fieldset class="user-create-permissions">
+                  <legend>Funzioni iniziali</legend>
+                  <label class="permission-toggle"><input name="module_tasks" type="checkbox" checked><span>Task</span></label>
+                  <label class="permission-toggle"><input name="module_ped" type="checkbox" checked><span>PED</span></label>
+                  <label class="permission-toggle"><input name="module_clients" type="checkbox" checked><span>Clienti</span></label>
+                  <label class="permission-toggle"><input name="module_calendar" type="checkbox" checked><span>Calendario</span></label>
+                  <label class="permission-toggle"><input name="module_chat" type="checkbox" checked><span>Chat</span></label>
+                  <label class="permission-toggle"><input name="module_graphics" type="checkbox"><span>Grafiche</span></label>
+                  <label class="permission-toggle"><input name="module_site_backend" type="checkbox"><span>Backend sito</span></label>
+                  <label class="permission-toggle"><input name="module_users" type="checkbox"><span>Utenti</span></label>
+                  <label class="permission-toggle"><input name="module_smart_working" type="checkbox" checked><span>Turni</span></label>
+                  <label class="permission-toggle"><input name="module_settings" type="checkbox"><span>Setup</span></label>
+                </fieldset>
+                <div class="user-create-actions">
+                  <p id="userCreateMessage" role="status"></p>
+                  <div>
+                    <button class="ghost-button" data-close-user-editor type="button">Annulla</button>
+                    <button class="primary-button" type="submit">Crea utente e invita</button>
+                  </div>
+                </div>
+              </form>
+            </aside>
+          </div>
         </section>
       </section>
     </main>

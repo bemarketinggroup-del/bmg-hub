@@ -112,9 +112,12 @@ supabase/                     schema e migration
 - Login tramite Supabase Auth.
 - Ruoli `admin` e `staff` con permessi per modulo.
 - Sessione e pagina attiva persistono dopo il refresh.
+- Directory utenti in linguaggio CMS, con tabella PrimeNG-style, ricerca e
+  filtri per ruolo/stato; creazione e modifica avvengono nel pannello della
+  stessa pagina.
 - Utenti creabili con nome, cognome, email e password.
 - Collegamento univoco dell'utente al membro ClickUp.
-- Gestione eliminazione/disattivazione utenti e audit accessi.
+- Gestione permessi, eliminazione/disattivazione utenti e audit accessi.
 
 ### Home e area personale
 
