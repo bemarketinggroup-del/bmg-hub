@@ -4006,10 +4006,18 @@ code { font-family: var(--font-mono); font-size: 12px; }
 .ped-download-item.is-ready { border-color: rgba(77, 121, 95, .42); background: rgba(77, 121, 95, .09); }
 .ped-download-item.is-ready .ped-download-number { background: rgba(77, 121, 95, .16); color: #386449; }
 .ped-download-item.is-ready .ped-download-action { background: #4d795f; }
+.ped-download-item.is-next { border-color: var(--terracotta); box-shadow: 0 0 0 2px rgba(201, 91, 50, .12); }
+.ped-download-item.is-next .ped-download-number { background: var(--terracotta); color: #fff; }
+.ped-download-item.is-saving { border-color: var(--terracotta); background: var(--terra-tint); }
+.ped-download-item.is-saving .ped-download-action { background: var(--terracotta); }
+.ped-download-item.is-saved { border-color: rgba(77, 121, 95, .42); background: rgba(77, 121, 95, .09); }
+.ped-download-item.is-saved .ped-download-number { background: #4d795f; color: #fff; }
+.ped-download-item.is-saved .ped-download-action { background: #4d795f; }
 .ped-download-item.is-error { border-color: rgba(178, 63, 49, .42); background: rgba(178, 63, 49, .08); }
 .ped-download-item .ped-download-action .drive-spinner { display: none; }
 .ped-download-item .ped-gallery-ready-icon { display: none; width: 15px; height: 15px; }
-.ped-download-item.is-ready .ped-gallery-ready-icon { display: block; }
+.ped-download-item.is-ready .ped-gallery-ready-icon,
+.ped-download-item.is-saved .ped-gallery-ready-icon { display: block; }
 .ped-download-modal .form-message { min-height: 18px; margin-top: 12px; }
 .ped-download-modal .modal-actions { justify-content: space-between; }
 #pedGalleryShareButton { min-width: 190px; }

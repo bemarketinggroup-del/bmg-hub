@@ -59,6 +59,25 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-08-04 — Salvataggio sequenziale misto nella galleria iPhone
+
+- Richiesta: correggere il persistente raggruppamento di tutte le foto prima dei
+  video quando iOS salva un carosello PED misto.
+- Modifiche: su iPhone ogni contenuto viene ora consegnato singolarmente al
+  pannello `Salva in Foto`, in ordine PED e senza possibilità di saltare una
+  posizione; al ritorno dal pannello BMG Hub abilita automaticamente il
+  contenuto successivo. In questo modo ogni salvataggio costituisce un passaggio
+  distinto e iOS non può riordinare gli allegati per formato dentro lo stesso
+  gruppo. La galleria può mostrare la sequenza al contrario, ma foto e video
+  restano intercalati.
+- File: `public/app.js`, `public/index.html`, `public/styles.css`,
+  `scripts/test-ped-carousel.mjs`, `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run check`, `npm run test:ped-carousel`, `git diff --check`;
+  controllo del flusso progressivo e del layout a dimensioni desktop e iPhone.
+- Pubblicazione: GitHub `main` e Vercel produzione.
+- Note: Safari/iOS richiede una conferma `Salva in Foto` per ogni elemento; è il
+  compromesso necessario per evitare il raggruppamento automatico per formato.
+
 ### 2026-08-04 — Ordine unico di foto e video nella galleria iPhone
 
 - Richiesta: conservare nella galleria iPhone la sequenza del carosello PED

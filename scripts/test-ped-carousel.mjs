@@ -166,8 +166,10 @@ assert.match(appSource, /saveDownloadedBlob\(blob, filename\)/, "ogni file del m
 assert.match(appSource, /isIosDownloadDevice\(\) \? "Foto" : "Download"/, "il multipost deve mostrare un comando Foto su iPhone e Download su desktop");
 assert.match(appSource, /function isIosDownloadDevice\(\)/, "iPhone e iPad devono usare un download compatibile con WebKit");
 assert.match(appSource, /if \(isIosDownloadDevice\(\)\) \{\s*openPedCarouselGallery\(item, files\);\s*return;/, "su iPhone la coda download deve essere sostituita dal salvataggio in Foto");
-assert.match(appSource, /navigator\.canShare\(\{ files: preparedFiles \}\)/, "Safari deve verificare che tutti i contenuti possano essere inviati insieme");
-assert.match(appSource, /navigator\.share\(\{ files \}\)/, "iPhone deve ricevere i contenuti tramite il pannello nativo");
+assert.match(appSource, /preparedFiles\.some\(\(file\) => !navigator\.canShare\(\{ files: \[file\] \}\)\)/, "Safari deve verificare ogni contenuto singolarmente");
+assert.match(appSource, /navigator\.share\(\{ files: \[file\] \}\)/, "iPhone deve ricevere un solo contenuto alla volta per non separare foto e video");
+assert.doesNotMatch(appSource, /navigator\.share\(\{ files \}\)/, "il multipost misto non deve più essere inviato come un unico gruppo");
+assert.match(appSource, /pedGalleryShareState\.nextIndex \+= 1/, "il salvataggio deve avanzare di una sola posizione dopo il ritorno dal pannello iOS");
 assert.match(appSource, /new File\(\[orderedMedia\.blob\], filename/, "ogni contenuto condiviso deve conservare il nome numerato");
 assert.match(appSource, /batchNewest - \(index \* 1000\)/, "foto e video devono condividere date decrescenti per mantenere l'ordine nel rullino recente");
 assert.match(appSource, /orderGalleryMediaBlob\(blob, \{ filename, takenAt \}\)/, "le copie iPhone devono ricevere metadata interni ordinati");
@@ -178,7 +180,7 @@ assert.match(galleryMetadataSource, /QUICKTIME_EPOCH_OFFSET/, "i video devono us
 assert.match(appSource, /url\.searchParams\.set\("download_name", filename\)/, "i download diretti devono richiedere il nome numerato");
 assert.match(htmlSource, /id="pedDownloadModal"/, "iPhone deve mostrare la lista download dedicata");
 assert.match(htmlSource, /id="pedDownloadList"/, "il modal iPhone deve contenere i file numerati");
-assert.match(htmlSource, /id="pedGalleryShareButton"/, "il modal iPhone deve offrire un solo comando per l'app Foto");
+assert.match(htmlSource, /id="pedGalleryShareButton"/, "il modal iPhone deve offrire il comando progressivo per l'app Foto");
 assert.match(htmlSource, /src="ped-gallery-metadata\.js"/, "le utilità EXIF devono essere caricate prima dell'applicazione");
 assert.match(styleSource, /\.ped-download-item/, "la lista download iPhone deve avere uno stile dedicato");
 assert.match(clientDriveSource, /url\.searchParams\.get\("download_name"\)/, "il backend Drive deve applicare il nome numerato richiesto");

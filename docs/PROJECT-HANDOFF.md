@@ -163,8 +163,13 @@ supabase/                     schema e migration
 - Il download del carosello non crea ZIP: scarica i singoli file in coda e
   antepone `01`, `02`, ... `20` ai nomi in base all'ordine del multipost.
 - Su iPhone/iPad il multipost viene preparato come sequenza di file `01`, `02`,
-  ... e passato in un'unica operazione al pannello nativo di iOS; scegliendo
-  `Salva in Foto`, i contenuti entrano direttamente nella galleria. BMG Hub crea
+  ... e ogni contenuto viene passato singolarmente al pannello nativo di iOS;
+  scegliendo ogni volta `Salva in Foto`, i contenuti entrano direttamente nella
+  galleria senza che iOS raggruppi prima le foto e poi i video. Il pannello BMG
+  avanza alla posizione successiva soltanto al ritorno dalla condivisione, senza
+  permettere di saltare elementi. Nella vista dei salvataggi recenti la sequenza
+  può apparire invertita perché l'ultimo elemento salvato è il più recente, ma
+  foto e video restano intercalati come nel PED. BMG Hub crea
   copie temporanee senza ricompressione e assegna a foto JPEG e video MP4/MOV
   date interne appartenenti alla stessa sequenza: la posizione `01` è la più
   recente e ogni posizione successiva è più vecchia di un secondo, così Foto
@@ -175,7 +180,7 @@ supabase/                     schema e migration
   le JPEG. Gli
   originali Drive non cambiano. iOS può comunque mostrare un nome interno
   `IMG_…`: un sito web non può impostare `PHAssetResource.originalFilename`,
-  disponibile soltanto alle app native. La conferma nel pannello iOS è
+  disponibile soltanto alle app native. Ogni conferma nel pannello iOS è
   obbligatoria e la lista di download diretti resta come ripiego.
 - L'editor carosello è una griglia compatta senza scorrimento orizzontale, sei
   elementi per riga su desktop; mostra anche il primo frame dei video senza
