@@ -3646,6 +3646,9 @@ async function preparePedCarouselForGallery(item, files, loadId) {
   const button = document.getElementById("pedGalleryShareButton");
   const message = document.getElementById("pedDownloadMessage");
   const preparedFiles = [];
+  let orderedMetadataCount = 0;
+  const batchEnd = Date.now();
+  const batchStart = batchEnd - (Math.max(0, files.length - 1) * 1000);
 
   try {
     for (let index = 0; index < files.length; index += 1) {
@@ -3663,11 +3666,14 @@ async function preparePedCarouselForGallery(item, files, loadId) {
       }
       const blob = await response.blob();
       const mimeType = String(blob.type || file.drive_mime_type || "application/octet-stream").split(";")[0];
-      preparedFiles.push(new File([blob], filename, {
-        type: mimeType,
-        lastModified: Date.now() + (index * 1000)
+      const takenAt = new Date(batchStart + (index * 1000));
+      const orderedMedia = await window.BmgPedGalleryMetadata.orderGalleryMediaBlob(blob, { filename, takenAt });
+      if (orderedMedia.metadataApplied) orderedMetadataCount += 1;
+      preparedFiles.push(new File([orderedMedia.blob], filename, {
+        type: orderedMedia.blob.type || mimeType,
+        lastModified: takenAt.getTime()
       }));
-      pedGalleryItemStatus(index, "ready", "Pronto");
+      pedGalleryItemStatus(index, "ready", orderedMedia.metadataApplied ? "Ordinato" : "Pronto");
     }
 
     if (pedGalleryShareState.loadId !== loadId) return;
@@ -3677,7 +3683,9 @@ async function preparePedCarouselForGallery(item, files, loadId) {
     pedGalleryShareState.files = preparedFiles;
     button.disabled = false;
     button.textContent = `Salva ${preparedFiles.length} in Foto`;
-    message.textContent = `Tocca “Salva ${preparedFiles.length} in Foto”, poi scegli “Salva in Foto” nel pannello iPhone.`;
+    message.textContent = orderedMetadataCount === preparedFiles.length
+      ? `Ordine 01→${String(preparedFiles.length).padStart(2, "0")} applicato. Tocca “Salva ${preparedFiles.length} in Foto”, poi scegli “Salva in Foto”.`
+      : `${orderedMetadataCount} JPEG ordinate; gli altri contenuti seguiranno l'ordine del pannello iOS. Tocca “Salva ${preparedFiles.length} in Foto”.`;
   } catch (error) {
     if (pedGalleryShareState.loadId !== loadId) return;
     const pendingIndex = preparedFiles.length;
@@ -3697,7 +3705,7 @@ function openPedCarouselGallery(item, files) {
   document.getElementById("pedDownloadEyebrow").textContent = "Galleria iPhone";
   document.getElementById("pedDownloadTitle").textContent = "Salva il multipost in Foto";
   document.getElementById("pedDownloadSubtitle").textContent = `${files.length} contenuti · ordine da 01 a ${String(files.length).padStart(2, "0")}`;
-  document.getElementById("pedDownloadIntro").textContent = "Attendi la preparazione, poi usa un solo pulsante: iPhone riceverà tutti i contenuti nello stesso ordine del multipost.";
+  document.getElementById("pedDownloadIntro").textContent = "iPhone assegna nomi IMG_…; BMG Hub fissa l'ordine 01→N nella data interna delle copie, senza modificare gli originali Drive.";
   document.getElementById("pedDownloadMessage").textContent = "Preparazione per l'app Foto…";
   shareButton.classList.remove("is-hidden");
   shareButton.disabled = true;
@@ -3706,7 +3714,7 @@ function openPedCarouselGallery(item, files) {
     const filename = numberedPedDownloadFilename(file.drive_file_name, index);
     return `<div class="ped-download-item" data-ped-gallery-item="${index}">
       <span class="ped-download-number">${String(index + 1).padStart(2, "0")}</span>
-      <span class="ped-download-file"><strong>${escapeHtml(file.drive_file_name || filename)}</strong><small>${escapeHtml(filename)}</small></span>
+      <span class="ped-download-file"><strong>${escapeHtml(file.drive_file_name || filename)}</strong><small>Posizione nella galleria: ${String(index + 1).padStart(2, "0")}</small></span>
       <span class="ped-download-action"><span class="drive-spinner" aria-hidden="true"></span><svg class="lc ped-gallery-ready-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg><b>Attesa</b></span>
     </div>`;
   }).join("");

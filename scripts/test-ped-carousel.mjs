@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { groupPedItems, isPedSpreadsheetFile, sanitizeCaptionHtml } from "../lib/ped.js";
 
+await import("../public/ped-gallery-metadata.js");
+
 function row(overrides = {}) {
   return {
     id: crypto.randomUUID(),
@@ -55,6 +57,7 @@ const styleSource = await readFile(new URL("../public/styles.css", import.meta.u
 const htmlSource = await readFile(new URL("../public/index.html", import.meta.url), "utf8");
 const pedSource = await readFile(new URL("../lib/ped.js", import.meta.url), "utf8");
 const clientDriveSource = await readFile(new URL("../lib/client-drive-api.js", import.meta.url), "utf8");
+const galleryMetadataSource = await readFile(new URL("../public/ped-gallery-metadata.js", import.meta.url), "utf8");
 const instagramOrderMigration = await readFile(new URL("../supabase/20260717_ped_instagram_order.sql", import.meta.url), "utf8");
 const feedCalendarSyncMigration = await readFile(new URL("../supabase/20260717_ped_feed_calendar_sync.sql", import.meta.url), "utf8");
 const publishingStatusMigration = await readFile(new URL("../supabase/20260718_ped_publishing_status.sql", import.meta.url), "utf8");
@@ -66,6 +69,48 @@ const numberedPedDownloadFilename = Function(`${numberedFilenameSource}; return 
 assert.equal(numberedPedDownloadFilename("foto principale.jpg", 0), "01 - foto principale.jpg");
 assert.equal(numberedPedDownloadFilename("ultima foto.jpg", 19), "20 - ultima foto.jpg");
 assert.equal(numberedPedDownloadFilename("foto:non valida?.jpg", 2), "03 - foto-non valida-.jpg");
+
+const galleryMetadata = globalThis.BmgPedGalleryMetadata;
+assert.ok(galleryMetadata, "le utilità metadata per Foto devono essere disponibili");
+const minimalJpeg = Uint8Array.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x04, 0x00, 0x00, 0xff, 0xda, 0x00, 0x02, 0xff, 0xd9]);
+const orderedJpeg = await galleryMetadata.orderGalleryMediaBlob(
+  new Blob([minimalJpeg], { type: "image/jpeg" }),
+  { filename: "01 - foto principale.JPG", takenAt: new Date(2026, 7, 4, 15, 43, 1) }
+);
+assert.equal(orderedJpeg.metadataApplied, true, "le copie JPEG devono ricevere i metadata di ordinamento");
+const orderedJpegBytes = new Uint8Array(await orderedJpeg.blob.arrayBuffer());
+const orderedJpegText = new TextDecoder("latin1").decode(orderedJpegBytes);
+assert.match(orderedJpegText, /2026:08:04 15:43:01/, "EXIF deve contenere la data assegnata alla posizione");
+assert.match(orderedJpegText, /01 - foto principale\.JPG/, "EXIF deve conservare numero e nome come descrizione");
+assert.equal(galleryMetadata.jpegOrientation(orderedJpegBytes), 1, "la copia deve conservare un orientamento JPEG valido");
+const rotatedInputBytes = orderedJpegBytes.slice();
+const orientationTagOffset = rotatedInputBytes.findIndex((value, index, bytes) => value === 0x12 && bytes[index + 1] === 0x01 && bytes[index + 2] === 0x03 && bytes[index + 3] === 0x00);
+assert.ok(orientationTagOffset > 0, "il blocco EXIF deve contenere il tag Orientation");
+rotatedInputBytes[orientationTagOffset + 8] = 6;
+const rotatedJpeg = await galleryMetadata.orderGalleryMediaBlob(
+  new Blob([rotatedInputBytes], { type: "image/jpeg" }),
+  { filename: "01 - foto verticale.JPG", takenAt: new Date(2026, 7, 4, 15, 43, 1) }
+);
+assert.equal(
+  galleryMetadata.jpegOrientation(new Uint8Array(await rotatedJpeg.blob.arrayBuffer())),
+  6,
+  "la standardizzazione deve preservare la rotazione della foto originale"
+);
+assert.deepEqual(
+  [...orderedJpegBytes.slice(orderedJpegBytes.indexOf(0xda) - 1)],
+  [...minimalJpeg.slice(minimalJpeg.indexOf(0xda) - 1)],
+  "i dati compressi dopo il marker SOS non devono essere ricodificati"
+);
+const secondPass = await galleryMetadata.orderGalleryMediaBlob(
+  orderedJpeg.blob,
+  { filename: "02 - foto principale.JPG", takenAt: new Date(2026, 7, 4, 15, 43, 2) }
+);
+const secondPassText = new TextDecoder("latin1").decode(await secondPass.blob.arrayBuffer());
+assert.equal(secondPassText.split("Exif\u0000\u0000").length - 1, 1, "la copia deve contenere un solo blocco EXIF");
+const untouchedPng = new Blob([Uint8Array.from([0x89, 0x50, 0x4e, 0x47])], { type: "image/png" });
+const pngResult = await galleryMetadata.orderGalleryMediaBlob(untouchedPng, { filename: "03.png", takenAt: new Date() });
+assert.equal(pngResult.blob, untouchedPng, "i formati non JPEG non devono essere ricompressi");
+assert.equal(pngResult.metadataApplied, false);
 assert.doesNotMatch(appSource, /data-ped-picker-preview-type/, "il selettore Drive non deve aprire anteprime al passaggio del mouse");
 assert.doesNotMatch(appSource, /function showPedPickerPreview/, "la vecchia anteprima hover deve essere rimossa");
 assert.match(appSource, /Il codec di questo video MOV non è supportato/, "i video incompatibili devono mostrare una spiegazione chiara");
@@ -81,12 +126,16 @@ assert.match(appSource, /function isIosDownloadDevice\(\)/, "iPhone e iPad devon
 assert.match(appSource, /if \(isIosDownloadDevice\(\)\) \{\s*openPedCarouselGallery\(item, files\);\s*return;/, "su iPhone la coda download deve essere sostituita dal salvataggio in Foto");
 assert.match(appSource, /navigator\.canShare\(\{ files: preparedFiles \}\)/, "Safari deve verificare che tutti i contenuti possano essere inviati insieme");
 assert.match(appSource, /navigator\.share\(\{ files \}\)/, "iPhone deve ricevere i contenuti tramite il pannello nativo");
-assert.match(appSource, /new File\(\[blob\], filename/, "ogni contenuto condiviso deve conservare il nome numerato");
-assert.match(appSource, /lastModified: Date\.now\(\) \+ \(index \* 1000\)/, "i file preparati devono avere una sequenza temporale coerente con l'ordine");
+assert.match(appSource, /new File\(\[orderedMedia\.blob\], filename/, "ogni contenuto condiviso deve conservare il nome numerato");
+assert.match(appSource, /batchStart \+ \(index \* 1000\)/, "i file preparati devono avere date crescenti coerenti con l'ordine");
+assert.match(appSource, /orderGalleryMediaBlob\(blob, \{ filename, takenAt \}\)/, "le copie iPhone devono ricevere metadata interni ordinati");
+assert.match(galleryMetadataSource, /0x9003/, "il metadata JPEG deve includere EXIF DateTimeOriginal");
+assert.match(galleryMetadataSource, /0x010d/, "il metadata JPEG deve includere il nome numerato come DocumentName");
 assert.match(appSource, /url\.searchParams\.set\("download_name", filename\)/, "i download diretti devono richiedere il nome numerato");
 assert.match(htmlSource, /id="pedDownloadModal"/, "iPhone deve mostrare la lista download dedicata");
 assert.match(htmlSource, /id="pedDownloadList"/, "il modal iPhone deve contenere i file numerati");
 assert.match(htmlSource, /id="pedGalleryShareButton"/, "il modal iPhone deve offrire un solo comando per l'app Foto");
+assert.match(htmlSource, /src="ped-gallery-metadata\.js"/, "le utilità EXIF devono essere caricate prima dell'applicazione");
 assert.match(styleSource, /\.ped-download-item/, "la lista download iPhone deve avere uno stile dedicato");
 assert.match(clientDriveSource, /url\.searchParams\.get\("download_name"\)/, "il backend Drive deve applicare il nome numerato richiesto");
 assert.doesNotMatch(appSource, /Scarica ZIP|Preparo ZIP|ZIP scaricato/, "l'interfaccia non deve più proporre archivi ZIP");

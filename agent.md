@@ -59,6 +59,28 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-08-04 — Ordine stabile delle JPEG nella galleria iPhone
+
+- Richiesta: correggere il nome diverso e l'ordine errato mostrati da Foto su
+  iPhone dopo il salvataggio di un multipost numerato.
+- Modifiche: le copie JPEG inviate a Foto ricevono date EXIF consecutive in
+  ordine `01→N`, conservando orientamento, dimensioni e dati compressi; numero e
+  nome originale sono inseriti anche nei metadata descrittivi. Il pannello ora
+  chiarisce che iOS assegna comunque nomi interni `IMG_…`, non controllabili da
+  Safari, e mostra la posizione effettiva prevista nella galleria.
+- File: `public/ped-gallery-metadata.js`, `public/index.html`, `public/app.js`,
+  `scripts/test-ped-carousel.mjs`, `package.json`,
+  `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run check`, `npm run test:ped-carousel`, `git diff --check`;
+  prova su JPEG reale con dimensioni invariate; lettura Apple Image I/O di
+  `DateTimeOriginal`, `DateTime`, `ImageDescription`; controllo responsive a
+  390×844 e 1280×900 senza overflow.
+- Pubblicazione: GitHub `main` e Vercel produzione.
+- Note: il nome visualizzato `IMG_…` è deciso da Foto; soltanto un'app iOS nativa
+  può impostare `PHAssetResource.originalFilename`. Per formati diversi da JPEG
+  resta l'ordine fornito al pannello di condivisione iOS, senza riscrittura dei
+  metadata.
+
 ### 2026-08-04 — Multipost direttamente nella galleria iPhone
 
 - Richiesta: salvare i contenuti multipost già ordinati direttamente nell'app

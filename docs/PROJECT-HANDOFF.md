@@ -164,10 +164,14 @@ supabase/                     schema e migration
   antepone `01`, `02`, ... `20` ai nomi in base all'ordine del multipost.
 - Su iPhone/iPad il multipost viene preparato come sequenza di file `01`, `02`,
   ... e passato in un'unica operazione al pannello nativo di iOS; scegliendo
-  `Salva in Foto`, foto e video entrano direttamente nella galleria nello stesso
-  ordine del PED. La conferma nel pannello iOS è obbligatoria per sicurezza e la
-  lista di download diretti resta disponibile soltanto come ripiego quando un
-  formato non può essere condiviso.
+  `Salva in Foto`, i contenuti entrano direttamente nella galleria. Per le JPEG,
+  BMG Hub crea copie temporanee senza ricompressione e assegna date EXIF
+  consecutive in ordine `01→N`, preservando orientamento e pixel; numero e nome
+  originale vengono inseriti anche in `DocumentName` e `ImageDescription`. Gli
+  originali Drive non cambiano. iOS può comunque mostrare un nome interno
+  `IMG_…`: un sito web non può impostare `PHAssetResource.originalFilename`,
+  disponibile soltanto alle app native. La conferma nel pannello iOS è
+  obbligatoria e la lista di download diretti resta come ripiego.
 - L'editor carosello è una griglia compatta senza scorrimento orizzontale, sei
   elementi per riga su desktop; mostra anche il primo frame dei video senza
   patina scura.
