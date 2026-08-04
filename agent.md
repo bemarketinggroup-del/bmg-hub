@@ -59,6 +59,21 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-08-04 — Creazione utenti rimossa dall'editor
+
+- Richiesta: togliere la creazione di nuovi utenti dal pannello di modifica.
+- Modifiche: rimossi dalla pagina il pulsante `Nuovo utente`, il form PrimeNG e
+  tutti gli handler frontend collegati; il drawer è ora dedicato esclusivamente
+  alla modifica degli account esistenti. L'endpoint backend di provisioning è
+  stato conservato, ma non è più raggiungibile da questa interfaccia.
+- File: `public/index.html`, `public/app.js`, `public/styles.css`,
+  `scripts/test-user-management.mjs`, `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run check`, `npm run test:users`,
+  `npm run test:permissions`, `npm run test:mobile-navigation`,
+  `git diff --check`; controllo desktop e smartphone della pagina Utenti.
+- Pubblicazione: GitHub `main` e Vercel produzione.
+- Note: Nessuna.
+
 ### 2026-08-04 — Editor utente a tab PrimeNG
 
 - Richiesta: dividere la modifica dell'utente in tab, mostrare per primo il

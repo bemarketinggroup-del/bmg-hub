@@ -745,7 +745,6 @@
             </div>
             <div class="users-heading-actions admin-only">
               <button class="ghost-button" id="provisionClickUpUsersButton" type="button">Sincronizza ClickUp</button>
-              <button class="primary-button" id="userNewButton" type="button"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Nuovo utente</button>
             </div>
           </div>
           <div class="users-summary" aria-label="Riepilogo account">
@@ -791,43 +790,6 @@
               </div>
               <div class="p-drawer-content user-editor-content">
                 <div id="userEditContent" hidden></div>
-                <form class="user-create-form" id="userCreateForm" hidden>
-                <div class="user-create-fields">
-                  <label>Nome
-                    <input class="p-inputtext" name="first_name" autocomplete="given-name" placeholder="Nome" required>
-                  </label>
-                  <label>Cognome
-                    <input class="p-inputtext" name="last_name" autocomplete="family-name" placeholder="Cognome" required>
-                  </label>
-                  <label>Email personale
-                    <input class="p-inputtext" name="email" type="email" autocomplete="email" placeholder="nome@azienda.it" required>
-                  </label>
-                  <label>Password temporanea
-                    <input class="p-inputtext" name="password" type="password" autocomplete="new-password" minlength="12" placeholder="Minimo 12 caratteri" required>
-                  </label>
-                </div>
-                <p class="p-message p-message-info user-create-note">La persona riceverà anche l’invito al workspace ClickUp con la stessa email.</p>
-                <fieldset class="p-fieldset user-create-permissions">
-                  <legend>Funzioni iniziali</legend>
-                  <label class="permission-toggle p-checkbox"><input class="p-checkbox-input" name="module_tasks" type="checkbox" checked><span class="p-checkbox-box" aria-hidden="true">✓</span><span class="p-checkbox-label">Task</span></label>
-                  <label class="permission-toggle p-checkbox"><input class="p-checkbox-input" name="module_ped" type="checkbox" checked><span class="p-checkbox-box" aria-hidden="true">✓</span><span class="p-checkbox-label">PED</span></label>
-                  <label class="permission-toggle p-checkbox"><input class="p-checkbox-input" name="module_clients" type="checkbox" checked><span class="p-checkbox-box" aria-hidden="true">✓</span><span class="p-checkbox-label">Clienti</span></label>
-                  <label class="permission-toggle p-checkbox"><input class="p-checkbox-input" name="module_calendar" type="checkbox" checked><span class="p-checkbox-box" aria-hidden="true">✓</span><span class="p-checkbox-label">Calendario</span></label>
-                  <label class="permission-toggle p-checkbox"><input class="p-checkbox-input" name="module_chat" type="checkbox" checked><span class="p-checkbox-box" aria-hidden="true">✓</span><span class="p-checkbox-label">Chat</span></label>
-                  <label class="permission-toggle p-checkbox"><input class="p-checkbox-input" name="module_graphics" type="checkbox"><span class="p-checkbox-box" aria-hidden="true">✓</span><span class="p-checkbox-label">Grafiche</span></label>
-                  <label class="permission-toggle p-checkbox"><input class="p-checkbox-input" name="module_site_backend" type="checkbox"><span class="p-checkbox-box" aria-hidden="true">✓</span><span class="p-checkbox-label">Backend sito</span></label>
-                  <label class="permission-toggle p-checkbox"><input class="p-checkbox-input" name="module_users" type="checkbox"><span class="p-checkbox-box" aria-hidden="true">✓</span><span class="p-checkbox-label">Utenti</span></label>
-                  <label class="permission-toggle p-checkbox"><input class="p-checkbox-input" name="module_smart_working" type="checkbox" checked><span class="p-checkbox-box" aria-hidden="true">✓</span><span class="p-checkbox-label">Turni</span></label>
-                  <label class="permission-toggle p-checkbox"><input class="p-checkbox-input" name="module_settings" type="checkbox"><span class="p-checkbox-box" aria-hidden="true">✓</span><span class="p-checkbox-label">Setup</span></label>
-                </fieldset>
-                <div class="p-toolbar user-create-actions">
-                  <p id="userCreateMessage" role="status"></p>
-                  <div>
-                    <button class="p-button p-button-outlined ghost-button" data-close-user-editor type="button"><span class="p-button-label">Annulla</span></button>
-                    <button class="p-button primary-button" type="submit"><span class="p-button-label">Crea utente e invita</span></button>
-                  </div>
-                </div>
-                </form>
               </div>
             </aside>
           </div>

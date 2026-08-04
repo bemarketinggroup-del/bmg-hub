@@ -6203,8 +6203,6 @@ function closeUserEditorPanel() {
   const panel = document.getElementById("userEditorPanel");
   const overlay = document.getElementById("userEditorOverlay");
   const editContent = document.getElementById("userEditContent");
-  const createForm = document.getElementById("userCreateForm");
-  const returnMode = userEditorMode;
   const returnProfileId = editingUserProfileId;
   const wasVisible = panel && !panel.hidden;
   if (userEditorCloseTimer) window.clearTimeout(userEditorCloseTimer);
@@ -6223,11 +6221,10 @@ function closeUserEditorPanel() {
       editContent.hidden = true;
       editContent.innerHTML = "";
     }
-    if (createForm) createForm.hidden = true;
-    const returnTarget = returnMode === "edit" && returnProfileId
+    const returnTarget = returnProfileId
       ? document.querySelector(`[data-edit-user="${CSS.escape(returnProfileId)}"]`)
-      : document.getElementById("userNewButton");
-    returnTarget?.focus();
+      : null;
+    (returnTarget || document.getElementById("userDirectorySearch"))?.focus();
   };
 
   if (!wasVisible || window.matchMedia("(prefers-reduced-motion: reduce)").matches) finishClose();
@@ -6240,33 +6237,12 @@ function focusUserEditor(target) {
   });
 }
 
-function openUserCreatePanel() {
-  if (currentProfile?.role !== "admin") return;
-  userEditorMode = "create";
-  editingUserProfileId = "";
-  const form = document.getElementById("userCreateForm");
-  const editContent = document.getElementById("userEditContent");
-  document.getElementById("userEditorEyebrow").textContent = "Nuovo account CMS";
-  document.getElementById("userEditorTitle").textContent = "Nuovo utente";
-  document.getElementById("userEditorSubtitle").textContent = "Configura credenziali, invito ClickUp e funzioni iniziali.";
-  form.reset();
-  document.getElementById("userCreateMessage").textContent = "";
-  document.getElementById("userCreateMessage").className = "";
-  form.hidden = false;
-  editContent.hidden = true;
-  editContent.innerHTML = "";
-  showUserEditorPanel();
-  renderUsers();
-  focusUserEditor(form.elements.first_name);
-}
-
 function openUserEditPanel(profileId) {
   if (currentProfile?.role !== "admin") return;
   const profile = (state.staffProfiles || []).find((item) => String(item.id) === String(profileId));
   if (!profile) return;
   userEditorMode = "edit";
   editingUserProfileId = String(profile.id);
-  document.getElementById("userCreateForm").hidden = true;
   showUserEditorPanel();
   renderUsers();
   focusUserEditor(document.getElementById("userEditorActivityTab"));
@@ -6535,52 +6511,6 @@ async function saveUserProfile(row) {
   } catch (error) {
     renderBackendStatus(error.message);
     alert("Non riesco a salvare il ruolo utente.");
-  }
-}
-
-async function createUserAccount(form) {
-  const submit = form.querySelector('button[type="submit"]');
-  const message = document.getElementById("userCreateMessage");
-  const data = new FormData(form);
-  const payload = {
-    action: "create_workspace_user",
-    first_name: String(data.get("first_name") || "").trim(),
-    last_name: String(data.get("last_name") || "").trim(),
-    email: String(data.get("email") || "").trim(),
-    password: String(data.get("password") || ""),
-    role: "staff",
-    active: true,
-    module_permissions: Object.fromEntries(MODULE_DEFINITIONS.map(({ key }) => [
-      key,
-      data.get(`module_${key}`) === "on"
-    ]))
-  };
-
-  submit.disabled = true;
-  message.className = "";
-  message.textContent = "Creazione accesso in corso...";
-  try {
-    const response = await apiFetch("/api/users", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
-    const result = await response.json();
-    if (!response.ok) throw new Error(result.error || `Users backend error ${response.status}`);
-    form.reset();
-    message.className = "is-success";
-    message.textContent = result.clickup_pending
-      ? `Utente creato per ${result.email || payload.email}. Invito ClickUp inviato: il collegamento sara completato dopo l'accettazione.`
-      : result.clickup_invited
-        ? `Utente creato e invitato su ClickUp: ${result.email || payload.email}.`
-        : `Utente creato e collegato al membro ClickUp esistente: ${result.email || payload.email}.`;
-    await Promise.all([loadUsersFromBackend(), loadClickUpTeam()]);
-  } catch (error) {
-    message.className = "is-error";
-    message.textContent = error.message || "Non riesco a creare l'accesso.";
-    renderBackendStatus(error.message);
-  } finally {
-    submit.disabled = false;
   }
 }
 
@@ -10875,11 +10805,6 @@ document.getElementById("taskForm").addEventListener("submit", async (event) => 
   if (saved) document.getElementById("taskModal").close();
 });
 
-document.getElementById("userCreateForm").addEventListener("submit", (event) => {
-  event.preventDefault();
-  createUserAccount(event.currentTarget);
-});
-document.getElementById("userNewButton").addEventListener("click", openUserCreatePanel);
 document.getElementById("userEditorCloseButton").addEventListener("click", closeUserEditorPanel);
 document.getElementById("userDirectorySearch").addEventListener("input", renderUsers);
 document.getElementById("userRoleFilter").addEventListener("change", renderUsers);

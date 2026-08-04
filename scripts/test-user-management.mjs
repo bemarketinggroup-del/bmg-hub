@@ -9,31 +9,24 @@ const [apiSource, clickUpSource, appSource, htmlSource, styleSource] = await Pro
   readFile(new URL("../public/styles.css", import.meta.url), "utf8")
 ]);
 
-assert.match(htmlSource, /id="userNewButton"/, "la directory deve offrire il comando Nuovo utente");
+assert.doesNotMatch(htmlSource, /id="userNewButton"/, "la directory non deve offrire il comando Nuovo utente");
 assert.match(htmlSource, /class="p-datatable-header user-directory-toolbar"/, "la directory deve usare una toolbar in stile PrimeNG DataTable");
 assert.match(htmlSource, /id="userDirectorySearch"[^>]*type="search"/, "la tabella deve poter cercare nome ed email");
 assert.match(htmlSource, /id="userRoleFilter"/, "la tabella deve filtrare il ruolo");
 assert.match(htmlSource, /id="userStatusFilter"/, "la tabella deve filtrare lo stato");
 assert.match(htmlSource, /id="userEditorOverlay"[^>]*data-close-user-editor/, "il drawer deve avere un overlay che lo chiude");
-assert.match(htmlSource, /id="userEditorPanel"[^>]*role="dialog"[^>]*aria-modal="true"[\s\S]*id="userCreateForm"/, "creazione e modifica devono restare nel drawer modale");
+assert.match(htmlSource, /id="userEditorPanel"[^>]*role="dialog"[^>]*aria-modal="true"/, "la modifica deve restare nel drawer modale");
+assert.doesNotMatch(htmlSource, /id="userCreateForm"/, "il drawer non deve contenere il form di creazione utenti");
 assert.match(htmlSource, /class="p-drawer-mask user-editor-overlay"/, "l'overlay deve seguire il componente Drawer PrimeNG");
 assert.match(htmlSource, /class="p-drawer user-editor-panel[^"]*"/, "il pannello deve usare la struttura Drawer PrimeNG");
 assert.match(htmlSource, /class="p-drawer-content user-editor-content"/, "il contenuto deve usare la sezione Drawer PrimeNG");
-assert.match(htmlSource, /class="p-inputtext" name="first_name"/, "gli input di creazione devono usare InputText PrimeNG");
-assert.match(htmlSource, /class="permission-toggle p-checkbox"/, "i permessi iniziali devono usare Checkbox PrimeNG");
-assert.match(htmlSource, /class="p-button primary-button" type="submit"/, "l'azione di creazione deve usare Button PrimeNG");
-assert.match(htmlSource, /name="first_name"[^>]*autocomplete="given-name"/, "il modulo deve richiedere il nome");
-assert.match(htmlSource, /name="last_name"[^>]*autocomplete="family-name"/, "il modulo deve richiedere il cognome");
-assert.match(htmlSource, /name="email" type="email"[^>]*required/, "l'email deve essere modificabile e obbligatoria");
-assert.match(htmlSource, /name="password" type="password"[^>]*minlength="12"/, "la password deve avere almeno 12 caratteri");
-assert.doesNotMatch(htmlSource, /id="newUserClickUpMember"/, "il nuovo utente non deve essere preselezionato da ClickUp");
-assert.match(htmlSource, /Crea utente e invita/, "l'interfaccia deve spiegare l'invito a ClickUp");
+assert.doesNotMatch(htmlSource, /Crea utente e invita|name="first_name"/, "il drawer non deve esporre campi o azioni di creazione");
 
-assert.match(appSource, /action: "create_workspace_user"/, "il frontend deve usare la creazione coordinata");
+assert.doesNotMatch(appSource, /action: "create_workspace_user"/, "il frontend non deve più esporre la creazione coordinata");
 assert.match(appSource, /<table class="p-datatable-table"[^>]*aria-label="Elenco utenti del gestionale"/, "l'elenco deve essere una tabella semantica PrimeNG-style");
 assert.match(appSource, /function renderUserTableRow\(profile, canManage\)/, "il frontend deve renderizzare righe CMS dedicate");
 assert.match(appSource, /data-edit-user=/, "ogni account gestibile deve aprire l'editor interno");
-assert.match(appSource, /function openUserCreatePanel\(\)/, "la creazione deve aprirsi nel pannello interno");
+assert.doesNotMatch(appSource, /function openUserCreatePanel\(\)|function createUserAccount\(/, "il frontend non deve mantenere handler di creazione utenti");
 assert.match(appSource, /function openUserEditPanel\(profileId\)/, "la modifica deve aprirsi nel pannello interno");
 assert.match(appSource, /class="p-tabs user-editor-tabs"/, "l'editor deve usare Tabs PrimeNG");
 assert.match(appSource, /data-user-editor-tab="activity"[^>]*aria-selected="true"/, "Registro attività deve essere la prima tab attiva");
