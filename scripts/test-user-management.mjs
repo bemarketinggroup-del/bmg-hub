@@ -1,12 +1,14 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
-const [apiSource, clickUpSource, appSource, htmlSource, styleSource] = await Promise.all([
+const [apiSource, clickUpSource, appSource, htmlSource, styleSource, schemaSource, migrationSource] = await Promise.all([
   readFile(new URL("../api/users.js", import.meta.url), "utf8"),
   readFile(new URL("../lib/clickup-members.js", import.meta.url), "utf8"),
   readFile(new URL("../public/app.js", import.meta.url), "utf8"),
   readFile(new URL("../public/index.html", import.meta.url), "utf8"),
-  readFile(new URL("../public/styles.css", import.meta.url), "utf8")
+  readFile(new URL("../public/styles.css", import.meta.url), "utf8"),
+  readFile(new URL("../supabase/schema.sql", import.meta.url), "utf8"),
+  readFile(new URL("../supabase/migrations/20260805103000_staff_email_aliases.sql", import.meta.url), "utf8")
 ]);
 
 assert.doesNotMatch(htmlSource, /id="userNewButton"/, "la directory non deve offrire il comando Nuovo utente");
@@ -35,6 +37,10 @@ assert.match(appSource, /class="p-tabs user-editor-tabs"/, "l'editor deve usare 
 assert.doesNotMatch(appSource, /data-user-editor-tab="activity"|id="userEditorActivityPanel"/, "il registro attività non deve più essere dentro il pannello di modifica");
 assert.match(appSource, /data-user-editor-tab="profile"[^>]*aria-selected="true"/, "Profilo deve essere la prima tab attiva dell'editor");
 assert.match(appSource, /class="p-toggleswitch"[\s\S]*class="p-inputtext" data-user-name[\s\S]*class="p-select" data-user-role/, "profilo e stato devono usare i controlli PrimeNG");
+assert.match(appSource, /Email integrazioni[\s\S]*data-user-email-input[\s\S]*data-user-email-service[\s\S]*data-add-user-email/, "il profilo deve permettere di aggiungere email per Calendar e ClickUp");
+assert.match(appSource, /email_aliases: collectUserEmailAliases\(row\)/, "il salvataggio utente deve inviare tutte le email collegate");
+assert.match(appSource, /preferredUserProfileEmail\(member, "calendar"\)/, "gli inviti Calendar devono usare l'email Calendar preferita");
+assert.match(appSource, /userProfileServiceEmails\(member, "calendar"\)\.includes\(email\)/, "gli eventi devono riconoscere tutte le email Calendar dell'utente");
 assert.match(appSource, /class="permission-toggle p-checkbox"[\s\S]*class="p-checkbox-box"/, "i permessi di modifica devono usare Checkbox PrimeNG");
 assert.match(appSource, /function activateUserEditorTab\(tabName[\s\S]*aria-selected[\s\S]*panel\.hidden = !selected/, "le tab devono aggiornare stato e pannelli accessibili");
 assert.match(appSource, /function openUserActivityDialog\(profileId\)[\s\S]*dialog\.showModal\(\)[\s\S]*void loadUserActivity\(profile\.id\)/, "il pulsante attività deve aprire e caricare il registro autonomo");
@@ -57,6 +63,10 @@ assert.match(apiSource, /ensureClickUpWorkspaceMember\(email\)/, "la creazione d
 assert.match(apiSource, /rollbackCreatedUser\(authUser\.id, profile\?\.id\)/, "un errore ClickUp deve annullare l'account interno");
 assert.match(apiSource, /profileId === session\.profile\.id/, "un amministratore non deve potersi eliminare da solo");
 assert.match(apiSource, /clickup_membership_preserved/, "la rimozione interna deve dichiarare che ClickUp viene conservato");
+assert.match(apiSource, /validateStaffEmailAliases[\s\S]*massimo 12 email/, "l'API deve validare e limitare le email collegate");
+assert.match(apiSource, /reservedEmails[\s\S]*già collegata a un altro utente/, "l'API deve impedire che la stessa email venga collegata a profili diversi");
+assert.match(schemaSource, /email_aliases jsonb not null default '\[\]'::jsonb/, "lo schema deve conservare le email integrazione sul profilo staff");
+assert.match(migrationSource, /add column if not exists email_aliases jsonb/, "la migration deve aggiungere la colonna in modo idempotente");
 
 assert.match(clickUpSource, /\/team\/\$\{encodeURIComponent\(workspaceId\)\}\/user/, "l'invito deve usare l'endpoint membri del workspace");
 assert.match(clickUpSource, /JSON\.stringify\(\{ email: normalizedEmail, admin: false \}\)/, "l'utente ClickUp deve essere invitato come membro non amministratore");
@@ -79,6 +89,8 @@ assert.match(styleSource, /\.user-activity-chart\s*\{[^}]*grid-template-columns:
 assert.match(styleSource, /\.user-activity-bar-meta b\s*\{[^}]*font-size:\s*10px[^}]*\}[\s\S]*\.user-activity-bar-meta small\s*\{[^}]*font-size:\s*9px/, "giorno e durata sotto le barre devono essere più leggibili");
 assert.match(styleSource, /\.user-editor-panel \.p-toggleswitch-input:checked \+ \.p-toggleswitch-slider/, "ToggleSwitch PrimeNG deve mostrare lo stato attivo");
 assert.match(styleSource, /\.user-editor-panel \.p-checkbox-input:checked \+ \.p-checkbox-box/, "Checkbox PrimeNG deve mostrare lo stato selezionato");
+assert.match(styleSource, /\.user-email-add-row\s*\{[^}]*grid-template-columns:[^}]*128px[^}]*auto/, "l'aggiunta email deve avere un layout desktop leggibile");
+assert.match(styleSource, /@media \(max-width: 760px\)[\s\S]*\.user-email-add-row \{ grid-template-columns: 1fr; \}/, "su smartphone i campi email devono impilarsi senza overflow");
 assert.match(styleSource, /@media \(max-width: 760px\)[\s\S]*\.p-datatable-tbody td::before[^}]*attr\(data-label\)/, "su mobile le righe devono mantenere le etichette delle colonne");
 
 console.log("User management tests passed");

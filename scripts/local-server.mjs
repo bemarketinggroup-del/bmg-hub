@@ -274,7 +274,8 @@ async function handleUsers(request, response) {
       full_name: String(body.full_name || "").trim() || null,
       role: body.role === "admin" ? "admin" : "staff",
       clickup_user_id: String(body.clickup_user_id || "").trim() || null,
-      active: body.active !== false
+      active: body.active !== false,
+      email_aliases: Array.isArray(body.email_aliases) ? body.email_aliases : []
     };
     const result = await supabaseFetch(`/staff_profiles?id=eq.${encodeURIComponent(id)}`, {
       method: "PATCH",

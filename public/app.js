@@ -6183,7 +6183,7 @@ function renderUsers() {
   const role = document.getElementById("userRoleFilter")?.value || "all";
   const status = document.getElementById("userStatusFilter")?.value || "all";
   const visibleProfiles = profiles.filter((profile) => {
-    const matchesSearch = !search || normalizeUserDirectoryText(`${profile.full_name || ""} ${profile.email || ""}`).includes(search);
+    const matchesSearch = !search || normalizeUserDirectoryText(`${profile.full_name || ""} ${profile.email || ""} ${userProfileEmailAliases(profile).map((item) => item.email).join(" ")}`).includes(search);
     const matchesRole = role === "all" || profile.role === role;
     const isActive = profile.active !== false;
     const matchesStatus = status === "all" || (status === "active" ? isActive : !isActive);
@@ -6230,6 +6230,102 @@ function renderUsers() {
 
 function normalizeUserDirectoryText(value) {
   return String(value || "").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
+function userProfileEmailAliases(profile) {
+  const primary = String(profile?.email || "").trim().toLowerCase();
+  const aliases = new Map();
+  (Array.isArray(profile?.email_aliases) ? profile.email_aliases : []).forEach((item) => {
+    const email = String(typeof item === "string" ? item : item?.email || "").trim().toLowerCase();
+    if (!email || email === primary || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return;
+    const requestedService = String(typeof item === "string" ? "both" : item?.service || "both").trim().toLowerCase();
+    const service = ["calendar", "clickup", "both"].includes(requestedService) ? requestedService : "both";
+    const existing = aliases.get(email);
+    aliases.set(email, { email, service: existing && existing.service !== service ? "both" : service });
+  });
+  return [...aliases.values()];
+}
+
+function userEmailServiceLabel(service) {
+  if (service === "calendar") return "Calendar";
+  if (service === "clickup") return "ClickUp";
+  return "Calendar e ClickUp";
+}
+
+function userProfileServiceEmails(profile, service) {
+  const primary = String(profile?.email || "").trim().toLowerCase();
+  const aliases = userProfileEmailAliases(profile)
+    .filter((item) => item.service === "both" || item.service === service)
+    .map((item) => item.email);
+  return [...new Set([primary, ...aliases].filter(Boolean))];
+}
+
+function preferredUserProfileEmail(profile, service) {
+  const aliases = userProfileEmailAliases(profile);
+  return aliases.find((item) => item.service === service)?.email
+    || aliases.find((item) => item.service === "both")?.email
+    || String(profile?.email || "").trim().toLowerCase();
+}
+
+function userEmailAliasesMarkup(profile) {
+  const aliases = userProfileEmailAliases(profile);
+  return aliases.length ? aliases.map((alias) => `
+    <article class="user-email-alias p-chip" data-user-email-alias data-email="${escapeHtml(alias.email)}" data-service="${escapeHtml(alias.service)}">
+      <span class="user-email-alias-copy"><strong>${escapeHtml(alias.email)}</strong><small>${escapeHtml(userEmailServiceLabel(alias.service))}</small></span>
+      <button class="p-button p-button-text p-button-rounded" data-remove-user-email type="button" aria-label="Rimuovi ${escapeHtml(alias.email)}" title="Rimuovi email">
+        <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </article>`).join("") : `<p class="user-email-alias-empty">Nessuna email aggiuntiva.</p>`;
+}
+
+function renderUserEmailAliases(row, aliases) {
+  const list = row?.querySelector("[data-user-email-list]");
+  if (!list) return;
+  list.innerHTML = userEmailAliasesMarkup({
+    email: row.dataset.primaryEmail,
+    email_aliases: aliases
+  });
+}
+
+function collectUserEmailAliases(row) {
+  return [...(row?.querySelectorAll("[data-user-email-alias]") || [])].map((item) => ({
+    email: item.dataset.email,
+    service: item.dataset.service
+  }));
+}
+
+function addUserEmailAlias(button) {
+  const row = button?.closest("[data-user-id]");
+  const input = row?.querySelector("[data-user-email-input]");
+  const service = row?.querySelector("[data-user-email-service]")?.value || "calendar";
+  const message = row?.querySelector("[data-user-email-message]");
+  const email = String(input?.value || "").trim().toLowerCase();
+  if (!row || !input || !message) return;
+  message.textContent = "";
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    message.textContent = "Inserisci un indirizzo email valido.";
+    input.focus();
+    return;
+  }
+  if (email === String(row.dataset.primaryEmail || "").toLowerCase()) {
+    message.textContent = "Questa è già l’email di accesso.";
+    input.focus();
+    return;
+  }
+  const aliases = collectUserEmailAliases(row);
+  const existing = aliases.find((item) => item.email === email);
+  if (existing) existing.service = existing.service === service ? service : "both";
+  else aliases.push({ email, service });
+  renderUserEmailAliases(row, aliases);
+  input.value = "";
+  input.focus();
+}
+
+function removeUserEmailAlias(button) {
+  const row = button?.closest("[data-user-id]");
+  const alias = button?.closest("[data-user-email-alias]");
+  if (!row || !alias) return;
+  renderUserEmailAliases(row, collectUserEmailAliases(row).filter((item) => item.email !== alias.dataset.email));
 }
 
 function setUserDirectoryMetric(id, value) {
@@ -6338,7 +6434,7 @@ function renderUserEditPanel(profile) {
   document.getElementById("userEditorTitle").textContent = label;
   document.getElementById("userEditorSubtitle").textContent = profile.email || "Configura ruolo e accessi";
   target.hidden = false;
-  target.innerHTML = `<div class="user-editor-form" data-user-id="${escapeHtml(profile.id)}">
+  target.innerHTML = `<div class="user-editor-form" data-user-id="${escapeHtml(profile.id)}" data-primary-email="${escapeHtml(profile.email || "")}">
     <div class="p-tabs user-editor-tabs">
       <div class="p-tablist">
         <div class="p-tablist-content">
@@ -6376,6 +6472,19 @@ function renderUserEditPanel(profile) {
               </select>
             </label>
           </div>
+          <section class="user-email-section p-panel" aria-labelledby="userEmailSectionTitle">
+            <div class="user-email-section-head">
+              <div><strong id="userEmailSectionTitle">Email integrazioni</strong><span>L’email di accesso non cambia. Collega gli indirizzi usati da Calendar e ClickUp.</span></div>
+              <span class="p-tag user-primary-email-tag"><span class="p-tag-label">Accesso · ${escapeHtml(profile.email || "Email non disponibile")}</span></span>
+            </div>
+            <div class="user-email-alias-list" data-user-email-list>${userEmailAliasesMarkup(profile)}</div>
+            <div class="user-email-add-row p-fluid">
+              <label>Email aggiuntiva<input class="p-inputtext" data-user-email-input type="email" placeholder="nome@azienda.it" autocomplete="off"></label>
+              <label>Usata su<select class="p-select" data-user-email-service><option value="calendar">Calendar</option><option value="clickup">ClickUp</option><option value="both">Entrambi</option></select></label>
+              <button class="p-button p-button-outlined" data-add-user-email type="button"><span class="p-button-label">Aggiungi email</span></button>
+            </div>
+            <p class="user-email-message" data-user-email-message role="status" aria-live="polite"></p>
+          </section>
           <p class="p-tag user-clickup-link-status ${profile.clickup_user_id ? "is-linked" : "is-unlinked"}">
             <span class="p-tag-label">${profile.clickup_user_id
               ? `Collegato all'ID ClickUp ${escapeHtml(profile.clickup_user_id)}`
@@ -6647,6 +6756,8 @@ async function saveUserProfile(row) {
   if (!profile) return;
   const payload = {
     id,
+    email: profile.email,
+    email_aliases: collectUserEmailAliases(row),
     full_name: row.querySelector("[data-user-name]").value,
     role: row.querySelector("[data-user-role]").value,
     clickup_user_id: row.querySelector("[data-user-clickup]").value,
@@ -7130,9 +7241,9 @@ function teamMembers() {
   const profileByClickUp = new Map((state.staffProfiles || [])
     .filter((profile) => profile.clickup_user_id)
     .map((profile) => [String(profile.clickup_user_id), profile]));
-  const profileByEmail = new Map((state.staffProfiles || [])
-    .filter((profile) => profile.email)
-    .map((profile) => [normalizeIdentity(profile.email), profile]));
+  const profileByEmail = new Map((state.staffProfiles || []).flatMap((profile) =>
+    userProfileServiceEmails(profile, "clickup").map((email) => [normalizeIdentity(email), profile])
+  ));
   const sourceMembers = new Map();
   const addSourceMember = (user) => {
     const id = clickupUserId(user);
@@ -8302,10 +8413,11 @@ function renderCalendarTeamAttendees(selectedEmails = []) {
   const team = [...personalAreaState.team].sort((left, right) => String(left.full_name || left.email).localeCompare(String(right.full_name || right.email), "it"));
   target.innerHTML = team.length
     ? team.map((member) => {
-      const email = String(member.email || "").trim().toLowerCase();
+      const email = preferredUserProfileEmail(member, "calendar");
+      const memberEmails = userProfileServiceEmails(member, "calendar");
       return `<label class="calendar-attendee-option">
-        <input type="checkbox" name="team_attendee" value="${escapeHtml(email)}"${selected.has(email) ? " checked" : ""}>
-        <span><strong>${escapeHtml(member.full_name || member.email)}</strong><small>${escapeHtml(member.email)}</small></span>
+        <input type="checkbox" name="team_attendee" value="${escapeHtml(email)}"${memberEmails.some((item) => selected.has(item)) ? " checked" : ""}>
+        <span><strong>${escapeHtml(member.full_name || member.email)}</strong><small>${escapeHtml(email)}${email !== String(member.email || "").trim().toLowerCase() ? " · Calendar" : ""}</small></span>
       </label>`;
     }).join("")
     : `<p class="empty-state compact">Nessun utente staff attivo.</p>`;
@@ -8344,7 +8456,7 @@ function calendarEventDisplayDate(event) {
 
 function calendarAttendeeLabel(attendee) {
   const email = String(attendee?.email || attendee || "").trim().toLowerCase();
-  const teamMember = personalAreaState.team.find((member) => String(member.email || "").trim().toLowerCase() === email);
+  const teamMember = personalAreaState.team.find((member) => userProfileServiceEmails(member, "calendar").includes(email));
   return String(teamMember?.full_name || attendee?.name || email || "Partecipante").trim();
 }
 
@@ -8401,7 +8513,7 @@ function openGoogleCalendarEvent(eventId = "", dateKey = "") {
   form.elements.all_day.checked = Boolean(event?.all_day);
   form.elements.event_category.value = event?.event_category || "auto";
   const existingAttendees = attendeeEmails(event?.attendees || []);
-  const teamEmails = new Set(personalAreaState.team.map((member) => String(member.email || "").trim().toLowerCase()).filter(Boolean));
+  const teamEmails = new Set(personalAreaState.team.flatMap((member) => userProfileServiceEmails(member, "calendar")));
   renderCalendarTeamAttendees(existingAttendees);
   form.elements.external_attendees.value = existingAttendees.filter((email) => !teamEmails.has(email)).join(", ");
 
@@ -9793,6 +9905,8 @@ document.body.addEventListener("click", (event) => {
   const closeUserEditor = event.target.closest("[data-close-user-editor]");
   const saveUser = event.target.closest("[data-save-user]");
   const deleteUser = event.target.closest("[data-delete-user]");
+  const addUserEmail = event.target.closest("[data-add-user-email]");
+  const removeUserEmail = event.target.closest("[data-remove-user-email]");
   const copyProvisionPasswordButton = event.target.closest("[data-copy-provision-password]");
   const applyAiClient = event.target.closest("[data-apply-ai-client]");
   const deleteAlias = event.target.closest("[data-delete-alias]");
@@ -9981,6 +10095,8 @@ document.body.addEventListener("click", (event) => {
   if (taskRow && !event.target.closest("a, button, input, select, textarea")) return openTaskDetailModal(taskRow.dataset.taskDetail);
   if (editUser) return openUserEditPanel(editUser.dataset.editUser);
   if (closeUserEditor) return closeUserEditorPanel();
+  if (addUserEmail) return addUserEmailAlias(addUserEmail);
+  if (removeUserEmail) return removeUserEmailAlias(removeUserEmail);
   if (saveUser) return saveUserProfile(saveUser.closest("[data-user-id]"));
   if (deleteUser) return deleteUserProfile(deleteUser.dataset.deleteUser);
   if (copyProvisionPasswordButton) return copyProvisionPassword(copyProvisionPasswordButton);

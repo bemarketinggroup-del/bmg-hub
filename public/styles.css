@@ -5038,6 +5038,27 @@ body.user-editor-visible { overflow: hidden; }
 }
 .user-editor-panel .user-access-actions > div { display: flex; align-items: center; gap: 8px; }
 .user-editor-panel .user-clickup-link-status { display: flex; width: 100%; min-height: 40px; align-items: center; margin: 0; white-space: normal; }
+.user-email-section.p-panel { display: grid; gap: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); padding: 14px; }
+.user-email-section-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.user-email-section-head > div { display: grid; gap: 3px; }
+.user-email-section-head strong { color: var(--ink); font-size: 13px; }
+.user-email-section-head span { color: var(--muted); font-size: 10px; line-height: 1.45; }
+.user-primary-email-tag.p-tag { flex: 0 0 auto; max-width: 210px; border: 1px solid var(--line); background: var(--surface-soft); color: var(--ink); white-space: normal; }
+.user-primary-email-tag .p-tag-label { overflow-wrap: anywhere; }
+.user-email-alias-list { display: grid; gap: 7px; }
+.user-email-alias.p-chip { display: flex; min-height: 44px; align-items: center; justify-content: space-between; gap: 10px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface-soft); padding: 7px 8px 7px 11px; }
+.user-email-alias-copy { display: grid; min-width: 0; gap: 2px; }
+.user-email-alias-copy strong { overflow: hidden; color: var(--ink); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.user-email-alias-copy small { color: var(--terracotta); font-size: 9px; font-weight: 800; text-transform: uppercase; }
+.user-email-alias button { width: 30px; height: 30px; min-height: 30px; flex: 0 0 30px; padding: 7px; }
+.user-email-alias button svg { width: 14px; height: 14px; }
+.user-email-alias-empty { margin: 0; border: 1px dashed var(--line); border-radius: 8px; color: var(--muted); padding: 11px; font-size: 10px; text-align: center; }
+.user-email-add-row { display: grid; grid-template-columns: minmax(0, 1fr) 128px auto; align-items: end; gap: 8px; }
+.user-email-add-row label { display: grid; gap: 5px; color: var(--muted); font-size: 10px; font-weight: 800; }
+.user-email-add-row .p-inputtext,
+.user-email-add-row .p-select,
+.user-email-add-row .p-button { min-height: 38px; }
+.user-email-message { min-height: 14px; margin: -5px 0 0; color: var(--danger); font-size: 10px; }
 .user-editor-panel .p-toggleswitch-field { display: inline-flex; align-items: center; gap: 9px; }
 .user-editor-panel .p-toggleswitch { position: relative; width: 42px; height: 24px; display: inline-flex; flex: 0 0 42px; }
 .user-editor-panel .p-toggleswitch-input { position: absolute; inset: 0; z-index: 1; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
@@ -8197,6 +8218,9 @@ body.chat-view-active #chatView {
   .user-editor-panel .user-access-fields,
   .user-editor-panel .user-permission-grid { grid-template-columns: 1fr; }
   .user-editor-panel .user-access-fields label:last-child { grid-column: auto; }
+  .user-email-section-head { align-items: stretch; flex-direction: column; }
+  .user-primary-email-tag.p-tag { max-width: none; }
+  .user-email-add-row { grid-template-columns: 1fr; }
   .user-editor-panel input,
   .user-editor-panel select { font-size: 16px; }
   .user-editor-panel .user-access-actions { align-items: stretch; flex-direction: column-reverse; }

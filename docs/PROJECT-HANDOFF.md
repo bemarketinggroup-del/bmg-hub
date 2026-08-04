@@ -145,6 +145,12 @@ supabase/                     schema e migration
   vengono registrati con il relativo cliente.
 - La pagina Utenti non espone la creazione di nuovi account; il provisioning
   coordinato resta disponibile soltanto nel backend.
+- Nel tab `Profilo` ogni account può avere più email di integrazione, marcate
+  per `Calendar`, `ClickUp` o entrambi. L'email principale resta l'unica email
+  di accesso; gli alias permettono di riconoscere lo stesso utente quando i due
+  servizi usano indirizzi diversi. Gli inviti creati dal calendario CRM usano
+  l'indirizzo Calendar preferito e le email non possono essere condivise tra
+  profili diversi.
 - Il layer PrimeNG condiviso converte trasversalmente Button, InputText,
   Textarea, Select, Checkbox, RadioButton, FileUpload, Card, Panel, Toolbar,
   Table, Tabs, Dialog, Drawer, Popover, Tag, Badge, Avatar, Message,
@@ -403,7 +409,7 @@ Baseline: `supabase/schema.sql`.
 
 Le migration successive coprono ruoli, ClickUp, AI, smart working, PED, permessi,
 audit, notifiche, inviti Calendar, chat, revisioni grafiche, contenuti momentanei
-ed editor carosello. Le più recenti sono:
+editor carosello ed email integrazione del team. Le più recenti sono:
 
 ```text
 supabase/migrations/20260724183000_team_chat.sql
@@ -411,6 +417,7 @@ supabase/migrations/20260729123000_graphic_reviews.sql
 supabase/migrations/20260729160000_ped_notes_staging.sql
 supabase/migrations/20260729170000_ped_carousel_editor.sql
 supabase/migrations/20260729173000_ped_staging_rich_editor.sql
+supabase/migrations/20260805103000_staff_email_aliases.sql
 ```
 
 Non modificare retroattivamente migration già applicate in produzione. Creare

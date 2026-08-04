@@ -45,6 +45,8 @@ create table if not exists public.staff_profiles (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null unique references auth.users(id) on delete cascade,
   email text not null unique,
+  email_aliases jsonb not null default '[]'::jsonb
+    check (jsonb_typeof(email_aliases) = 'array'),
   full_name text,
   role text not null default 'staff'
     check (role in ('admin', 'staff')),

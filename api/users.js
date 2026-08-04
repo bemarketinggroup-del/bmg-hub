@@ -3,6 +3,11 @@ import { jsonHeaders, readJson, requireUser, supabaseFetch } from "./_auth.js";
 import { normalizeModulePermissions, profileWithPermissions } from "../lib/staff-permissions.js";
 import { ensureClickUpWorkspaceMember, fetchClickUpMembers } from "../lib/clickup-members.js";
 import { normalizedEmail, profileEmailMatchesMember, profileMatchesClickUpMember } from "../lib/clickup-identity.js";
+import {
+  normalizeStaffEmailAliases,
+  staffProfileEmails,
+  validStaffEmail
+} from "../lib/staff-email-identities.js";
 
 const headers = jsonHeaders("GET,POST,PATCH,DELETE,OPTIONS");
 const noStoreHeaders = { ...headers, "Cache-Control": "no-store, max-age=0" };
@@ -35,6 +40,33 @@ function userPayload(body) {
     active: body.active !== false,
     module_permissions: normalizeModulePermissions(body.module_permissions, role)
   };
+}
+
+async function validateStaffEmailAliases(value, primaryEmail, currentProfileId = "", preserveWhenMissing = false) {
+  const profilesResult = await supabaseFetch("/staff_profiles?select=id,email,email_aliases");
+  if (!profilesResult.ok) return { ok: false, status: 502, error: "Non riesco a verificare le email collegate" };
+  const profiles = await profilesResult.json();
+  const current = profiles.find((profile) => String(profile.id) === String(currentProfileId));
+  const source = preserveWhenMissing && !Array.isArray(value) ? (current?.email_aliases || []) : value;
+  if (!Array.isArray(source)) return { ok: false, status: 400, error: "Le email collegate non sono valide" };
+  if (source.length > 12) return { ok: false, status: 400, error: "Puoi collegare al massimo 12 email" };
+  if (source.some((item) => !validStaffEmail(typeof item === "string" ? item : item?.email))) {
+    return { ok: false, status: 400, error: "Controlla gli indirizzi email collegati" };
+  }
+
+  const primary = normalizedEmail(primaryEmail || current?.email);
+  const aliases = normalizeStaffEmailAliases(source, primary);
+  const reservedEmails = new Set(profiles
+    .filter((profile) => String(profile.id) !== String(currentProfileId))
+    .flatMap((profile) => staffProfileEmails(profile)));
+  if (primary && reservedEmails.has(primary)) {
+    return { ok: false, status: 409, error: `${primary} è già collegata a un altro utente` };
+  }
+  const duplicate = aliases.find((alias) => reservedEmails.has(alias.email));
+  if (duplicate) {
+    return { ok: false, status: 409, error: `${duplicate.email} è già collegata a un altro utente` };
+  }
+  return { ok: true, aliases };
 }
 
 export default async function handler(request, response) {
@@ -97,6 +129,13 @@ export default async function handler(request, response) {
     }
 
     const payloadInput = userPayload(body);
+    const emailAliases = await validateStaffEmailAliases(body.email_aliases || [], body.email);
+    if (!emailAliases.ok) {
+      response.writeHead(emailAliases.status, headers);
+      response.end(JSON.stringify({ error: emailAliases.error }));
+      return;
+    }
+    payloadInput.email_aliases = emailAliases.aliases;
     const clickUpMember = await validateClickUpIdentity(payloadInput, body.email);
     if (!clickUpMember.ok) {
       response.writeHead(clickUpMember.status, headers);
@@ -175,6 +214,18 @@ export default async function handler(request, response) {
     }
 
     const payload = userPayload(body);
+    const emailAliases = await validateStaffEmailAliases(
+      body.email_aliases,
+      body.email,
+      id,
+      !Object.prototype.hasOwnProperty.call(body, "email_aliases")
+    );
+    if (!emailAliases.ok) {
+      response.writeHead(emailAliases.status, headers);
+      response.end(JSON.stringify({ error: emailAliases.error }));
+      return;
+    }
+    payload.email_aliases = emailAliases.aliases;
     const clickUpMember = await validateClickUpIdentity(payload, body.email, id);
     if (!clickUpMember.ok) {
       response.writeHead(clickUpMember.status, headers);
@@ -383,7 +434,7 @@ async function validateClickUpIdentity(payload, requestedEmail, currentProfileId
   const member = source.members.find((item) => String(item.id) === String(payload.clickup_user_id));
   if (!member) return { ok: false, status: 400, error: "Utente ClickUp non trovato nel workspace" };
   if (!member.email) return { ok: false, status: 400, error: "Il membro ClickUp non ha un indirizzo email utilizzabile" };
-  if (requestedEmail && normalizedEmail(requestedEmail) !== normalizedEmail(member.email)) {
+  if (!currentProfileId && requestedEmail && normalizedEmail(requestedEmail) !== normalizedEmail(member.email)) {
     return { ok: false, status: 400, error: "L'email deve coincidere con quella del membro ClickUp" };
   }
   const linkedResult = await supabaseFetch(`/staff_profiles?select=id,clickup_user_id&clickup_user_id=eq.${encodeURIComponent(member.id)}&limit=1`);
@@ -431,7 +482,7 @@ async function provisionClickUpMembers(response) {
     return;
   }
   const [profilesResult, authSource] = await Promise.all([
-    supabaseFetch("/staff_profiles?select=id,user_id,email,full_name,role,clickup_user_id"),
+    supabaseFetch("/staff_profiles?select=id,user_id,email,email_aliases,full_name,role,clickup_user_id"),
     listAuthUsers()
   ]);
   if (!profilesResult.ok || !authSource.ok) {

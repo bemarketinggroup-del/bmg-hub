@@ -11,7 +11,8 @@ const profile = {
   id: "11111111-1111-4111-8111-111111111111",
   email: "marta@bemarketinggroup.it",
   full_name: "Marta Rossi",
-  clickup_user_id: "42"
+  clickup_user_id: "42",
+  email_aliases: [{ email: "marta.calendar@example.com", service: "calendar" }]
 };
 
 assert.equal(taskAssignedToProfile({ assignees: [{ id: 42 }] }, profile), true);
@@ -21,6 +22,7 @@ assert.equal(isCompletedTaskStatus("Completato"), true);
 assert.equal(isCompletedTaskStatus("In corso"), false);
 assert.equal(eventIncludesProfile({ attendees: [{ email: "MARTA@bemarketinggroup.it" }] }, profile), true);
 assert.equal(eventIncludesProfile({ attendees: [{ email: "altro@example.com" }] }, profile), false);
+assert.equal(eventIncludesProfile({ attendees: [{ email: "MARTA.CALENDAR@example.com" }] }, profile), true);
 assert.deepEqual(filterActiveNotifications([
   { id: "notification-active", source_type: "task", source_id: "task-active" },
   { id: "notification-completed", source_type: "task", source_id: "task-completed" },

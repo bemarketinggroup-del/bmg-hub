@@ -1,6 +1,6 @@
 # BMG Hub — memoria operativa degli interventi
 
-Ultimo aggiornamento: 4 agosto 2026
+Ultimo aggiornamento: 5 agosto 2026
 
 ## Scopo del file
 
@@ -58,6 +58,36 @@ più recente alla più vecchia:
 ```
 
 ## Registro modifiche
+
+### 2026-08-05 — Email multiple per identità Calendar e ClickUp
+
+- Richiesta: permettere all'utente Davide De Luca di collegare più indirizzi
+  email perché ClickUp e Google Calendar usano account differenti.
+- Modifiche: aggiunta nel tab `Profilo` una sezione PrimeNG-style per inserire,
+  classificare e rimuovere fino a dodici email aggiuntive per `Calendar`,
+  `ClickUp` o entrambi, senza modificare l'email di accesso. Il backend
+  normalizza gli indirizzi, impedisce duplicati tra profili e conserva gli
+  alias nel profilo staff. Task, provisioning e area personale riconoscono le
+  email del servizio corretto; il calendario CRM mostra e invita l'indirizzo
+  Calendar preferito, continuando a riconoscere anche l'email principale e gli
+  altri alias associati.
+- File: `api/users.js`, `lib/staff-email-identities.js`,
+  `lib/clickup-identity.js`, `lib/personal-area.js`, `public/app.js`,
+  `public/styles.css`, `scripts/local-server.mjs`,
+  `scripts/test-clickup-access-linking.mjs`,
+  `scripts/test-personal-area.mjs`, `scripts/test-user-management.mjs`,
+  `supabase/schema.sql`,
+  `supabase/migrations/20260805103000_staff_email_aliases.sql`, `package.json`,
+  `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run check`, `npm run test:clickup-access`,
+  `npm run test:personal-area`, `npm run test:users`,
+  `npm run test:google-calendar`, `npm run test:permissions`,
+  `npm run test:primeng-components`, `npm run test:mobile-navigation`,
+  `npm run test:session-persistence`, `git diff --check`; controllo desktop e
+  smartphone del drawer Utenti e verifica della colonna in Supabase.
+- Pubblicazione: migration Supabase, GitHub `main` e Vercel produzione.
+- Note: gli indirizzi reali di Davide non sono stati inseriti automaticamente;
+  vanno aggiunti dal suo profilo scegliendo il servizio corrispondente.
 
 ### 2026-08-04 — Registro attività più leggibile e navigabile
 
