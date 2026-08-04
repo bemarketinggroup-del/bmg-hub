@@ -59,6 +59,30 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-08-04 — Spazi operativi più ampi per chat, PED, grafiche e attività
+
+- Richiesta: eliminare lo scroll esterno della chat e ingrandirla; rendere più
+  riconoscibili e centrate le scelte nell'agenda PED; dividere Grafiche in
+  archivio clienti e revisioni; aumentare l'altezza di dettaglio giornaliero e
+  azioni nel registro utenti.
+- Modifiche: la vista Chat ora blocca il viewport e lascia lo scroll soltanto a
+  conversazioni e messaggi, con lo stato live nella testata; i due select PED
+  hanno resa da pulsante, testo centrato e controlli più ampi; Grafiche usa due
+  panel impilati con testate dedicate mantenendo il badge delle richieste; le
+  due liste attività ricevono più spazio verticale e continuano a scorrere al
+  loro interno.
+- File: `public/index.html`, `public/app.js`, `public/styles.css`,
+  `scripts/test-team-chat.mjs`, `scripts/test-graphic-reviews.mjs`,
+  `scripts/test-ped-carousel.mjs`, `scripts/test-user-management.mjs`,
+  `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run check`, `npm run test:team-chat`,
+  `npm run test:graphic-reviews`, `npm run test:ped-carousel`,
+  `npm run test:users`, `npm run test:primeng-components`,
+  `npm run test:mobile-navigation`, `git diff --check` e controllo visivo
+  desktop/smartphone delle quattro aree.
+- Pubblicazione: GitHub `main` e Vercel produzione.
+- Note: Nessuna.
+
 ### 2026-08-04 — Eventi calendario rossi invece che neri
 
 - Richiesta: sostituire il colore nero degli eventi nel calendario CRM con il

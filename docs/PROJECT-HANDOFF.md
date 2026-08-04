@@ -136,7 +136,9 @@ supabase/                     schema e migration
   larghezza e, subito sotto, le azioni. Su smartphone il grafico mantiene le
   etichette leggibili tramite scroll orizzontale interno. La modal e la pagina
   sottostante non scorrono: soltanto le due liste hanno uno scroll interno
-  indipendente. Le azioni PED riportano cliente, mese/PED, data e contenuto
+  indipendente; entrambe le aree sono dimensionate con una quota verticale
+  ampia, con più spazio assegnato al registro delle azioni. Le azioni PED
+  riportano cliente, mese/PED, data e contenuto
   quando disponibili; anche apertura del PED, cambio cliente e cambio mese
   vengono registrati con il relativo cliente.
 - La pagina Utenti non espone la creazione di nuovi account; il provisioning
@@ -187,6 +189,9 @@ supabase/                     schema e migration
   - rosso: Programmato Meta;
   - verde: Programmato telefono.
 - Le caselle del calendario usano il colore dello stato di programmazione.
+- Nell'agenda i selettori di formato e programmazione hanno aspetto da pulsante,
+  altezza maggiorata, bordo marcato, freccia esplicita e testo centrato anche su
+  smartphone.
 - Ogni giorno può contenere una breve nota testuale.
 - I contenuti possono essere scelti dal Drive senza uscire dal gestionale.
 - Il selettore Drive ricorda l'ultima cartella visitata per cliente.
@@ -245,7 +250,9 @@ supabase/                     schema e migration
 
 ### Revisioni grafiche
 
-- Sezione `Grafiche` dedicata al team creativo.
+- Sezione `Grafiche` dedicata al team creativo, divisa in due finestre verticali:
+  `Archivio grafiche` per le cartelle dei clienti e `Revisioni grafiche` per le
+  richieste di modifica.
 - Da Drive e PED si può inviare una foto/grafica in revisione con istruzioni.
 - I grafici possono scaricare l'originale, caricare una nuova versione e cambiare
   lo stato della revisione.
@@ -255,11 +262,16 @@ supabase/                     schema e migration
 - Clienti mostrati in una griglia alfabetica completa e a tutta larghezza, con
   cartelle grandi, ricerca mantenuta e nessuno scorrimento interno; la griglia
   cresce con la pagina e resta disponibile il comando per richiudere la cartella.
+- Il contatore notifiche della voce `Grafiche` continua a mostrare le revisioni
+  nuove ancora da prendere in carico.
 
 ### Chat interna
 
 - Chat generale e conversazioni private tra membri del team.
-- Layout a pagina, senza un contenitore principale che scorre separatamente.
+- Layout vincolato all'altezza del viewport, senza scroll della pagina esterna:
+  la chat occupa tutto lo spazio sotto la topbar e scorrono soltanto elenco
+  conversazioni e messaggi. Su smartphone la stessa regola mantiene composer e
+  testata sempre visibili.
 - Allegati dal computer e dal Drive.
 - Anteprime Drive uguali al visualizzatore Drive, senza ritagli.
 - Menzioni con `@nome` e riferimenti a task e clienti.

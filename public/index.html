@@ -364,51 +364,66 @@
       </section>
 
       <section class="view" id="graphicsView" data-view-panel="graphics">
-        <section class="panel graphics-workspace">
+        <section class="graphics-workspace">
           <header class="graphics-workspace-head">
             <button class="ghost-button" id="graphicsRefreshButton" type="button">
               <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8.1 8.1 0 0 0-15.5-2M4 4v5h5"/><path d="M4 13a8.1 8.1 0 0 0 15.5 2M20 20v-5h-5"/></svg>
               Aggiorna
             </button>
           </header>
-          <section class="graphics-drive-access">
-            <div class="graphics-drive-access-head">
+          <section class="panel graphics-surface graphics-archive-surface" aria-labelledby="graphicsArchiveTitle">
+            <header class="graphics-surface-head">
+              <span class="graphics-surface-icon" aria-hidden="true"><svg class="lc" viewBox="0 0 24 24"><path d="M3 7h6l2 2h10v10H3z"/><path d="M3 7V5h6l2 2"/></svg></span>
               <div>
-                <h3>Archivio clienti</h3>
+                <h2 id="graphicsArchiveTitle">Archivio grafiche</h2>
+                <p>Tutte le cartelle GRAFICHE dei clienti.</p>
               </div>
-              <div class="graphics-drive-client-picker">
-                <label class="graphics-drive-client-search" for="graphicsDriveClientSearch">
-                  <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
-                  <input id="graphicsDriveClientSearch" type="search" placeholder="Cerca cliente..." autocomplete="off">
-                </label>
-                <div class="graphics-drive-client-grid" id="graphicsDriveClientGrid" role="list" aria-label="Cartelle GRAFICHE dei clienti"></div>
+            </header>
+            <section class="graphics-drive-access">
+              <div class="graphics-drive-access-head">
+                <div class="graphics-drive-client-picker">
+                  <label class="graphics-drive-client-search" for="graphicsDriveClientSearch">
+                    <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+                    <input id="graphicsDriveClientSearch" type="search" placeholder="Cerca cliente..." autocomplete="off">
+                  </label>
+                  <div class="graphics-drive-client-grid" id="graphicsDriveClientGrid" role="list" aria-label="Cartelle GRAFICHE dei clienti"></div>
+                </div>
               </div>
-            </div>
-            <div class="graphics-drive-placeholder" id="graphicsDrivePlaceholder">
-              <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h6l2 2h10v10H3z"/><path d="M3 7V5h6l2 2"/></svg>
-              <span>Seleziona un cliente per aprire la sua cartella GRAFICHE.</span>
-            </div>
-            <div class="graphics-drive-open-bar is-hidden" id="graphicsDriveOpenBar">
-              <div>
-                <span>Cartella aperta</span>
-                <strong id="graphicsDriveOpenLabel"></strong>
+              <div class="graphics-drive-placeholder" id="graphicsDrivePlaceholder">
+                <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h6l2 2h10v10H3z"/><path d="M3 7V5h6l2 2"/></svg>
+                <span>Seleziona un cliente per aprire la sua cartella GRAFICHE.</span>
               </div>
-              <button class="ghost-button graphics-drive-close-button" id="graphicsDriveCloseButton" type="button">
-                <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
-                Chiudi cartella
-              </button>
-            </div>
-            <div class="graphics-client-drive is-hidden" data-graphics-drive-panel aria-live="polite"></div>
+              <div class="graphics-drive-open-bar is-hidden" id="graphicsDriveOpenBar">
+                <div>
+                  <span>Cartella aperta</span>
+                  <strong id="graphicsDriveOpenLabel"></strong>
+                </div>
+                <button class="ghost-button graphics-drive-close-button" id="graphicsDriveCloseButton" type="button">
+                  <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+                  Chiudi cartella
+                </button>
+              </div>
+              <div class="graphics-client-drive is-hidden" data-graphics-drive-panel aria-live="polite"></div>
+            </section>
           </section>
-          <div class="graphics-summary" id="graphicsSummary" aria-live="polite"></div>
-          <div class="graphics-filter-bar" id="graphicsFilters" aria-label="Filtra revisioni">
-            <button class="is-active" data-graphics-filter="active" type="button">Da lavorare</button>
-            <button data-graphics-filter="pending" type="button">Nuove</button>
-            <button data-graphics-filter="in_progress" type="button">In lavorazione</button>
-            <button data-graphics-filter="completed" type="button">Completate</button>
-            <button data-graphics-filter="all" type="button">Tutte</button>
-          </div>
-          <div class="graphics-review-list" id="graphicsReviewList" aria-live="polite"></div>
+          <section class="panel graphics-surface graphics-review-surface" aria-labelledby="graphicsReviewTitle">
+            <header class="graphics-surface-head">
+              <span class="graphics-surface-icon is-review" aria-hidden="true"><svg class="lc" viewBox="0 0 24 24"><path d="M4 20h16"/><path d="m14 4 6 6L9 21H3v-6Z"/><path d="m12 6 6 6"/></svg></span>
+              <div>
+                <h2 id="graphicsReviewTitle">Revisioni grafiche</h2>
+                <p>Richieste di modifica ricevute da Drive e PED.</p>
+              </div>
+            </header>
+            <div class="graphics-summary" id="graphicsSummary" aria-live="polite"></div>
+            <div class="graphics-filter-bar" id="graphicsFilters" aria-label="Filtra revisioni">
+              <button class="is-active" data-graphics-filter="active" type="button">Da lavorare</button>
+              <button data-graphics-filter="pending" type="button">Nuove</button>
+              <button data-graphics-filter="in_progress" type="button">In lavorazione</button>
+              <button data-graphics-filter="completed" type="button">Completate</button>
+              <button data-graphics-filter="all" type="button">Tutte</button>
+            </div>
+            <div class="graphics-review-list" id="graphicsReviewList" aria-live="polite"></div>
+          </section>
         </section>
       </section>
 
@@ -434,9 +449,6 @@
 
       <section class="view" id="chatView" data-view-panel="chat">
         <section class="panel team-chat-workspace">
-          <header class="team-chat-head">
-            <span class="team-chat-live"><i aria-hidden="true"></i>Aggiornamento automatico</span>
-          </header>
           <div class="team-chat-layout">
             <aside class="team-chat-sidebar" aria-label="Conversazioni">
               <label class="team-chat-search">
@@ -449,6 +461,7 @@
               <header class="team-chat-room-head">
                 <span class="team-chat-avatar is-general" id="chatRoomAvatar" aria-hidden="true">BMG</span>
                 <div><h3 id="chatRoomTitle">Chat generale</h3><span id="chatRoomSubtitle">Tutto il team</span></div>
+                <span class="team-chat-live"><i aria-hidden="true"></i>Aggiornamento automatico</span>
               </header>
               <div class="team-chat-messages" id="chatMessageList" aria-live="polite" aria-busy="false"></div>
               <form class="team-chat-composer" id="chatComposer">

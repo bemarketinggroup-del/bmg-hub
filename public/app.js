@@ -1096,6 +1096,7 @@ function setView(view) {
   if (!Object.hasOwn(titles, view) || !canAccessView(view)) view = "dashboard";
   rememberLastView(view);
   setMobileNavOpen(false);
+  document.body.classList.toggle("chat-view-active", view === "chat");
   document.querySelectorAll(".nav-item").forEach((item) => item.classList.toggle("is-active", item.dataset.view === view));
   document.querySelectorAll("[data-view-panel]").forEach((panel) => panel.classList.toggle("is-active", panel.dataset.viewPanel === view));
   document.getElementById("viewTitle").textContent = titles[view];

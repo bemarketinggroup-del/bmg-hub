@@ -300,6 +300,8 @@ assert.match(styleSource, /\.ped-agenda-item\[data-ped-publishing-tone="ped_only
 assert.match(styleSource, /\.ped-agenda-item\[data-ped-publishing-tone="meta"\]/, "Programmato Meta deve colorare l'intera riga dell'agenda");
 assert.match(styleSource, /\.ped-agenda-item\[data-ped-publishing-tone="phone"\]/, "Programmato telefono deve colorare l'intera riga dell'agenda");
 assert.match(styleSource, /\.ped-agenda-item \{[\s\S]*?border-left: 4px solid var\(--ped-publishing-color\)[\s\S]*?background: var\(--ped-publishing-tint\)/, "la riga dell'agenda non deve più usare il colore della tipologia di post");
+assert.match(styleSource, /\.ped-agenda-format select \{[\s\S]*?min-height: 44px;[\s\S]*?appearance: none;[\s\S]*?text-align-last: center;/, "il formato deve apparire come un vero pulsante con testo centrato");
+assert.match(styleSource, /\.ped-agenda-publishing select \{[\s\S]*?min-height: 44px;[\s\S]*?appearance: none;[\s\S]*?text-align-last: center;/, "lo stato PED deve apparire come un vero pulsante con testo centrato");
 assert.match(appSource, /data-ped-editor=/, "il clic su un contenuto del calendario deve aprire il pannello editoriale");
 assert.match(htmlSource, /contenteditable="true"/, "il copy deve usare una vera area rich text");
 assert.match(htmlSource, /name="viewport" content="width=device-width, initial-scale=1"/, "il layout mobile deve usare la larghezza reale del dispositivo");
