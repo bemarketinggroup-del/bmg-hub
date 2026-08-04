@@ -6447,6 +6447,7 @@ async function loadUserActivity(profileId, forceRefresh = false) {
   if (!panel) return;
   if (!forceRefresh && userActivityCache.has(profileId)) {
     panel.innerHTML = renderUserActivityDetails(userActivityCache.get(profileId));
+    scrollUserActivityChartToLatest(panel);
     return;
   }
   panel.innerHTML = `<div class="p-message p-message-info user-activity-loading">Caricamento registro...</div>`;
@@ -6456,9 +6457,17 @@ async function loadUserActivity(profileId, forceRefresh = false) {
     if (!response.ok) throw new Error(data.error || "Registro attivita non disponibile");
     userActivityCache.set(profileId, data);
     panel.innerHTML = renderUserActivityDetails(data);
+    scrollUserActivityChartToLatest(panel);
   } catch (error) {
     panel.innerHTML = `<div class="p-message p-message-error user-activity-error">${escapeHtml(error.message)}</div>`;
   }
+}
+
+function scrollUserActivityChartToLatest(panel) {
+  window.requestAnimationFrame(() => {
+    const chart = panel?.querySelector(".user-activity-chart");
+    if (chart) chart.scrollLeft = chart.scrollWidth;
+  });
 }
 
 function renderUserActivityDetails(data) {
@@ -6486,7 +6495,14 @@ function renderUserActivityDetails(data) {
         const seconds = Number(day.active_seconds || 0);
         const height = seconds ? Math.max(8, Math.round((seconds / maximum) * 100)) : 2;
         const title = `${formatActivityDate(day.date)}: ${formatActiveDuration(seconds)}`;
-        return `<span class="user-activity-bar-wrap" title="${escapeHtml(title)}"><i class="user-activity-bar ${seconds ? "is-active" : ""}" style="height:${height}%"></i></span>`;
+        return `
+          <span class="user-activity-bar-wrap ${seconds ? "is-active" : ""}" title="${escapeHtml(title)}">
+            <span class="user-activity-bar-track"><i class="user-activity-bar ${seconds ? "is-active" : ""}" style="height:${height}%"></i></span>
+            <span class="user-activity-bar-meta">
+              <b>${escapeHtml(formatActivityChartDate(day.date))}</b>
+              <small>${escapeHtml(formatActivityChartDuration(seconds))}</small>
+            </span>
+          </span>`;
       }).join("")}
     </div>
     <div class="user-activity-columns">
@@ -6549,6 +6565,23 @@ function formatActivityDate(value) {
   const date = new Date(`${value}T12:00:00`);
   if (Number.isNaN(date.getTime())) return value || "-";
   return new Intl.DateTimeFormat("it-IT", { weekday: "short", day: "2-digit", month: "short" }).format(date);
+}
+
+function formatActivityChartDate(value) {
+  const date = new Date(`${value}T12:00:00`);
+  if (Number.isNaN(date.getTime())) return value || "-";
+  return new Intl.DateTimeFormat("it-IT", { weekday: "short", day: "numeric", month: "short" })
+    .format(date)
+    .replace(/\.$/, "");
+}
+
+function formatActivityChartDuration(value) {
+  const seconds = Math.max(0, Number(value || 0));
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  if (hours) return `${hours} h ${minutes} min`;
+  if (minutes) return `${minutes} min`;
+  return seconds ? "< 1 min" : "0 min";
 }
 
 function formatActiveDuration(value) {

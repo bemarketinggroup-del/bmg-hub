@@ -59,6 +59,21 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-08-04 — Etichette giornaliere nel grafico attività
+
+- Richiesta: indicare sotto ogni barra arancione del registro utenti il giorno
+  rappresentato e il relativo totale di ore o minuti.
+- Modifiche: aggiunte a ogni colonna del grafico le etichette con giorno, data e
+  durata totale; mantenute tutte le 30 giornate e introdotto uno scroll
+  orizzontale interno sulle larghezze ridotte per non comprimere i dati. Il
+  grafico si apre automaticamente sulle giornate più recenti.
+- File: `public/app.js`, `public/styles.css`,
+  `scripts/test-user-management.mjs`, `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run check`, `npm run test:users`, `git diff --check` e
+  controllo visuale desktop e smartphone del registro attività.
+- Pubblicazione: GitHub `main` e Vercel produzione.
+- Note: Nessuna.
+
 ### 2026-08-04 — Registro attività con contesto PED
 
 - Richiesta: mostrare il dettaglio giornaliero sopra le azioni per ogni utente
