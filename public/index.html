@@ -87,11 +87,24 @@
           <span class="icon"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></svg></span>
           <span>PED</span>
         </button>
-        <button class="p-ripple nav-item" data-view="graphics" data-module="graphics" type="button">
-          <span class="icon"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h16"/><path d="m14 4 6 6L9 21H3v-6Z"/><path d="m12 6 6 6"/><path d="M15 3h6v6"/></svg></span>
-          <span>Grafiche</span>
-          <span class="p-badge nav-unread-badge is-hidden" id="graphicsNavBadge">0</span>
-        </button>
+        <div class="sidebar-nav-branch" id="graphicsNavBranch" data-module="graphics">
+          <button class="p-ripple nav-item nav-item-parent" id="graphicsNavToggle" data-module="graphics" type="button" aria-expanded="false" aria-controls="graphicsSubnav">
+            <span class="icon"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h16"/><path d="m14 4 6 6L9 21H3v-6Z"/><path d="m12 6 6 6"/><path d="M15 3h6v6"/></svg></span>
+            <span>Grafiche</span>
+            <span class="nav-branch-trailing">
+              <span class="p-badge nav-unread-badge is-hidden" id="graphicsNavBadge">0</span>
+              <svg class="lc nav-branch-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+            </span>
+          </button>
+          <div class="sidebar-subnav" id="graphicsSubnav" hidden>
+            <button class="p-ripple nav-item nav-subitem" data-view="graphics" data-module="graphics" type="button">
+              <span>Archivio grafiche</span>
+            </button>
+            <button class="p-ripple nav-item nav-subitem" data-view="graphics-reviews" data-module="graphics" type="button">
+              <span>Revisioni grafiche</span>
+            </button>
+          </div>
+        </div>
             </div>
           </section>
 
@@ -406,6 +419,17 @@
               <div class="graphics-client-drive is-hidden" data-graphics-drive-panel aria-live="polite"></div>
             </section>
           </section>
+        </section>
+      </section>
+
+      <section class="view" id="graphicsReviewsView" data-view-panel="graphics-reviews">
+        <section class="graphics-workspace">
+          <header class="graphics-workspace-head">
+            <button class="ghost-button" id="graphicsReviewsRefreshButton" type="button">
+              <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8.1 8.1 0 0 0-15.5-2M4 4v5h5"/><path d="M4 13a8.1 8.1 0 0 0 15.5 2M20 20v-5h-5"/></svg>
+              Aggiorna
+            </button>
+          </header>
           <section class="panel graphics-surface graphics-review-surface" aria-labelledby="graphicsReviewTitle">
             <header class="graphics-surface-head">
               <span class="graphics-surface-icon is-review" aria-hidden="true"><svg class="lc" viewBox="0 0 24 24"><path d="M4 20h16"/><path d="m14 4 6 6L9 21H3v-6Z"/><path d="m12 6 6 6"/></svg></span>

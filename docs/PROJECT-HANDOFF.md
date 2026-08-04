@@ -254,9 +254,10 @@ supabase/                     schema e migration
 
 ### Revisioni grafiche
 
-- Sezione `Grafiche` dedicata al team creativo, divisa in due finestre verticali:
-  `Archivio grafiche` per le cartelle dei clienti e `Revisioni grafiche` per le
-  richieste di modifica.
+- La voce `Grafiche` della sidebar è espandibile e mostra due destinazioni
+  autonome: `Archivio grafiche` per le cartelle dei clienti e
+  `Revisioni grafiche` per le richieste di modifica. Ogni destinazione ha una
+  pagina separata e conserva lo stesso permesso del modulo `graphics`.
 - Da Drive e PED si può inviare una foto/grafica in revisione con istruzioni.
 - I grafici possono scaricare l'originale, caricare una nuova versione e cambiare
   lo stato della revisione.
@@ -266,8 +267,9 @@ supabase/                     schema e migration
 - Clienti mostrati in una griglia alfabetica completa e a tutta larghezza, con
   cartelle grandi, ricerca mantenuta e nessuno scorrimento interno; la griglia
   cresce con la pagina e resta disponibile il comando per richiudere la cartella.
-- Il contatore notifiche della voce `Grafiche` continua a mostrare le revisioni
-  nuove ancora da prendere in carico.
+- Il contatore notifiche resta sulla voce padre `Grafiche` e continua a mostrare
+  le revisioni nuove ancora da prendere in carico; una notifica apre
+  direttamente la pagina `Revisioni grafiche`.
 
 ### Chat interna
 

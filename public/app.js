@@ -43,6 +43,7 @@ const VIEW_MODULES = Object.freeze({
   calendar: "calendar",
   chat: "chat",
   graphics: "graphics",
+  "graphics-reviews": "graphics",
   team: "tasks",
   smart: "smart_working",
   counter: "smart_working",
@@ -1077,12 +1078,21 @@ function restoreLastView() {
   setView(loadLastView());
 }
 
+function setGraphicsNavExpanded(expanded) {
+  const toggle = document.getElementById("graphicsNavToggle");
+  const subnav = document.getElementById("graphicsSubnav");
+  if (!toggle || !subnav) return;
+  toggle.setAttribute("aria-expanded", String(expanded));
+  subnav.hidden = !expanded;
+}
+
 function setView(view) {
   const titles = {
     dashboard: "Home",
     personal: "La mia area",
     chat: "Chat",
-    graphics: "Grafiche",
+    graphics: "Archivio grafiche",
+    "graphics-reviews": "Revisioni grafiche",
     content: "Backend sito",
     clients: "Clienti",
     ped: "PED",
@@ -1098,15 +1108,18 @@ function setView(view) {
   setMobileNavOpen(false);
   document.body.classList.toggle("chat-view-active", view === "chat");
   document.querySelectorAll(".nav-item").forEach((item) => item.classList.toggle("is-active", item.dataset.view === view));
+  const isGraphicsView = view === "graphics" || view === "graphics-reviews";
+  document.getElementById("graphicsNavToggle")?.classList.toggle("is-active", isGraphicsView);
+  setGraphicsNavExpanded(isGraphicsView);
   document.querySelectorAll("[data-view-panel]").forEach((panel) => panel.classList.toggle("is-active", panel.dataset.viewPanel === view));
   document.getElementById("viewTitle").textContent = titles[view];
   if (view === "ped") {
     ensurePedClientSelection();
     auditPedView();
     loadPedCalendar();
-  } else auditModuleView(view);
+  } else auditModuleView(isGraphicsView ? "graphics" : view);
   if (view === "calendar") loadGoogleCalendar();
-  if (view === "graphics") loadGraphicReviews();
+  if (isGraphicsView) loadGraphicReviews();
   if (view === "personal") loadPersonalArea();
   if (view === "chat") {
     loadTeamChat();
@@ -9650,6 +9663,11 @@ function renderAll() {
 }
 
 document.getElementById("navList").addEventListener("click", (event) => {
+  const graphicsToggle = event.target.closest("#graphicsNavToggle");
+  if (graphicsToggle) {
+    setGraphicsNavExpanded(graphicsToggle.getAttribute("aria-expanded") !== "true");
+    return;
+  }
   const button = event.target.closest("[data-view]");
   if (button) setView(button.dataset.view);
 });
@@ -9785,7 +9803,7 @@ document.body.addEventListener("click", (event) => {
   }
   if (openGraphicsReview) {
     if (!canAccessModule("graphics")) return;
-    setView("graphics");
+    setView("graphics-reviews");
     document.getElementById("notificationPanel")?.classList.add("is-hidden");
     return loadGraphicReviews({ quiet: true });
   }
@@ -10869,6 +10887,9 @@ document.getElementById("graphicsRefreshButton").addEventListener("click", () =>
     const folder = clientDriveState.path[clientDriveState.path.length - 1];
     if (folder) void loadClientDriveFolder(folder.id, folder.name, { fresh: true, source: clientDriveState.source });
   }
+});
+document.getElementById("graphicsReviewsRefreshButton").addEventListener("click", () => {
+  void loadGraphicReviews();
 });
 document.getElementById("graphicsDriveClientGrid").addEventListener("click", (event) => {
   const option = event.target.closest("[data-graphics-drive-client]");

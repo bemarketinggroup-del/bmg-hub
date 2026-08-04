@@ -9,6 +9,8 @@ assert.match(htmlSource, /id="mobileNavToggle"[\s\S]*?aria-controls="appSidebar"
 assert.match(htmlSource, /class="p-sidebar p-component p-sidebar-left sidebar"[^>]*data-pc-name="sidebar"[^>]*role="complementary"/, "la navigazione deve usare la struttura Sidebar PrimeNG");
 assert.match(htmlSource, /class="p-sidebar-header sidebar-header"[\s\S]*class="p-sidebar-content sidebar-content"[\s\S]*class="p-sidebar-footer sidebar-footer"/, "la Sidebar PrimeNG deve avere header, content e footer");
 assert.match(htmlSource, /id="sidebarWorkspaceLabel">Workspace<[\s\S]*id="sidebarContentLabel">Contenuti e clienti<[\s\S]*id="sidebarOrganizationLabel">Organizzazione<[\s\S]*id="sidebarAdministrationLabel">Amministrazione</, "la navigazione deve essere organizzata in gruppi CMS leggibili");
+assert.match(htmlSource, /id="graphicsNavToggle"[^>]*aria-expanded="false"[^>]*aria-controls="graphicsSubnav"/, "Grafiche deve aprire un sottomenu accessibile");
+assert.match(htmlSource, /id="graphicsSubnav"[^>]*hidden[\s\S]*data-view="graphics"[\s\S]*data-view="graphics-reviews"/, "archivio e revisioni devono essere raggiungibili dalla sidebar");
 assert.match(htmlSource, /class="p-sidebar-content sidebar-content"[\s\S]*id="notificationButton"[\s\S]*class="p-sidebar-footer sidebar-footer"/, "le notifiche devono essere integrate nella navigazione laterale");
 assert.match(htmlSource, /class="p-sidebar-footer sidebar-footer"[\s\S]*id="sidebarUserAvatar"[\s\S]*id="sidebarUserName"[\s\S]*id="sessionBadge"[\s\S]*id="logoutButton"/, "account, ruolo e logout devono stare nel footer della sidebar");
 assert.doesNotMatch(htmlSource, /id="connectedServices"|Servizi collegati/, "il footer della sidebar deve mostrare soltanto l'account");
@@ -35,6 +37,7 @@ assert.match(styleSource, /@media \(max-width: 980px\)[\s\S]*?\.drive-file-grid 
 assert.match(styleSource, /@media \(max-width: 980px\)[\s\S]*?\.drive-entry-preview img \{ object-fit: contain; object-position: center; \}/, "le foto del Drive mobile devono restare interamente visibili");
 assert.match(styleSource, /@media \(max-width: 980px\)[\s\S]*?\.client-toolbar \.search \{[\s\S]*?max-height: 44px;[\s\S]*?flex: 0 0 44px;/, "la ricerca clienti mobile deve restare compatta");
 assert.match(appSource, /function setMobileNavOpen\(open, \{ restoreFocus = false \} = \{\}\)/, "il menu mobile deve avere uno stato centralizzato");
+assert.match(appSource, /function setGraphicsNavExpanded\(expanded\)[\s\S]*subnav\.hidden = !expanded/, "il sottomenu Grafiche deve aprirsi e chiudersi senza cambiare pagina");
 assert.match(appSource, /matchMedia\("\(max-width: 980px\)"\)/, "il burger deve seguire la larghezza mobile senza dipendere dal rilevamento touch");
 assert.match(appSource, /sidebar\.inert = mobileNavigationMedia\.matches && !shouldOpen/, "il menu chiuso non deve restare raggiungibile da tastiera");
 assert.match(appSource, /classList\.toggle\("p-sidebar-active", shouldOpen\)[\s\S]*classList\.toggle\("p-sidebar-mask-active", shouldOpen\)/, "stato e mask devono usare le classi PrimeNG");

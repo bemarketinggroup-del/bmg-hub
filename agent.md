@@ -59,6 +59,28 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-08-04 — Archivio e revisioni grafiche in pagine separate
+
+- Richiesta: mostrare al clic sulla voce laterale `Grafiche` le destinazioni
+  `Archivio grafiche` e `Revisioni grafiche`, ognuna con una pagina propria.
+- Modifiche: trasformata `Grafiche` in una voce espandibile e accessibile della
+  sidebar; aggiunte due voci secondarie con stato attivo indipendente; separati
+  archivio e revisioni in due viste autonome; mantenuti permesso `graphics`,
+  badge delle nuove revisioni, filtri, cartelle, ricerca e apertura diretta
+  delle revisioni dalle notifiche.
+- File: `public/index.html`, `public/app.js`, `public/styles.css`,
+  `scripts/test-graphic-reviews.mjs`, `scripts/test-mobile-navigation.mjs`,
+  `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run check`, `npm run test:graphic-reviews`,
+  `npm run test:mobile-navigation`, `npm run test:permissions`,
+  `npm run test:session-persistence`, `npm run test:primeng-components`,
+  `git diff --check` e controllo responsive di markup, stati accessibili e CSS
+  desktop/smartphone; il browser locale non disponeva di una sessione staff
+  autenticata per acquisire le due viste con dati reali.
+- Pubblicazione: GitHub `main` e Vercel produzione.
+- Note: la verifica in una sessione staff reale resta da confermare dopo il
+  deploy; i flussi sono coperti dai test automatici mirati.
+
 ### 2026-08-04 — Icone feed e proporzioni del mockup Instagram
 
 - Richiesta: ripristinare le icone della tipologia di contenuto nella griglia

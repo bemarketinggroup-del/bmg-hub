@@ -276,6 +276,59 @@ svg.lc {
 
 .sidebar-nav-items { display: grid; gap: 3px; }
 
+.sidebar-nav-branch {
+  display: grid;
+  gap: 2px;
+}
+
+.nav-item-parent { overflow: visible; }
+
+.nav-branch-trailing {
+  min-width: 20px;
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 7px;
+}
+
+.nav-branch-trailing .nav-unread-badge { margin-left: 0; }
+
+.nav-branch-chevron {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  color: #91a0b7;
+  transition: transform .18s ease, color .14s ease;
+}
+
+.nav-item-parent[aria-expanded="true"] .nav-branch-chevron {
+  transform: rotate(90deg);
+}
+
+.nav-item-parent:hover .nav-branch-chevron,
+.nav-item-parent.is-active .nav-branch-chevron { color: #687995; }
+
+.sidebar-subnav {
+  display: grid;
+  gap: 2px;
+  padding: 2px 0 5px 44px;
+}
+
+.sidebar-subnav[hidden] { display: none; }
+
+.sidebar-subnav .nav-subitem {
+  min-height: 36px;
+  border-radius: 9px;
+  padding: 0 12px;
+  font-size: 13px;
+}
+
+.sidebar-subnav .nav-subitem.is-active {
+  background: #f1f3f6;
+  color: #263247;
+}
+
 .nav-item {
   position: relative;
   display: flex;
