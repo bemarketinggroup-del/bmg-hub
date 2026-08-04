@@ -6,6 +6,7 @@ const htmlSource = await readFile(new URL("../public/index.html", import.meta.ur
 const styleSource = await readFile(new URL("../public/styles.css", import.meta.url), "utf8");
 
 assert.match(appSource, /const LAST_VIEW_KEY = "bmg-hub-last-view-v1"/, "la sezione attiva deve avere una chiave persistente");
+assert.match(appSource, /storedView === "settings" \? "dashboard" : storedView/, "una vecchia sessione Setup deve tornare alla Home");
 assert.match(appSource, /function setView\(view\) \{[\s\S]*?rememberLastView\(view\)/, "ogni cambio sezione deve essere memorizzato");
 assert.match(appSource, /showApp\(\);\s*restoreLastView\(\);/, "la sezione precedente deve essere ripristinata dopo l'autenticazione");
 assert.match(appSource, /let authRefreshPromise = null/, "il rinnovo della sessione deve essere condiviso tra richieste concorrenti");

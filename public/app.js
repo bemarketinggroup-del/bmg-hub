@@ -954,7 +954,8 @@ function consumeRecoverySessionFromUrl() {
 
 function loadLastView() {
   try {
-    return localStorage.getItem(LAST_VIEW_KEY) || "dashboard";
+    const storedView = localStorage.getItem(LAST_VIEW_KEY) || "dashboard";
+    return storedView === "settings" ? "dashboard" : storedView;
   } catch {
     return "dashboard";
   }

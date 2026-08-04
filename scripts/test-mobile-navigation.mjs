@@ -7,6 +7,8 @@ const styleSource = await readFile(new URL("../public/styles.css", import.meta.u
 
 assert.match(htmlSource, /id="mobileNavToggle"[\s\S]*?aria-controls="appSidebar"[\s\S]*?aria-expanded="false"/, "il burger deve dichiarare il drawer controllato");
 assert.doesNotMatch(htmlSource, /id="mobileNavClose"/, "la X ridondante non deve comparire nella sidebar");
+assert.doesNotMatch(htmlSource, /class="nav-item"[^>]*data-view="settings"/, "Setup non deve comparire nella sidebar");
+assert.match(htmlSource, /id="settingsView"[^>]*data-view-panel="settings"/, "la pagina tecnica deve restare disponibile nel codice");
 assert.match(htmlSource, /id="mobileNavBackdrop"/, "il menu deve chiudersi anche toccando lo sfondo");
 assert.match(styleSource, /\.icon-button\.mobile-nav-toggle,[\s\S]*?\.mobile-nav-backdrop \{ display: none; \}/, "su desktop il burger e lo sfondo del drawer devono restare nascosti");
 assert.match(styleSource, /@media \(max-width: 980px\)[\s\S]*?\.sidebar \{[\s\S]*?position: fixed;[\s\S]*?transform: translateX\(-105%\);/, "su smartphone la sidebar deve diventare un drawer laterale");

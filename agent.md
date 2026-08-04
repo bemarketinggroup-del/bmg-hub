@@ -59,6 +59,22 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-08-04 — Setup rimosso dalla sidebar
+
+- Richiesta: togliere la voce `Setup` dalla navigazione laterale.
+- Modifiche: rimossa soltanto la voce dalla sidebar desktop/mobile, conservando
+  nel codice la pagina tecnica e il relativo permesso; le sessioni che avevano
+  memorizzato `Setup` come ultima vista vengono riportate alla Home.
+- File: `public/index.html`, `public/app.js`,
+  `scripts/test-mobile-navigation.mjs`, `scripts/test-session-persistence.mjs`,
+  `agent.md`.
+- Verifiche: `npm run check`, `npm run test:mobile-navigation`,
+  `npm run test:session-persistence`, `git diff --check`; controllo sidebar
+  desktop e drawer smartphone.
+- Pubblicazione: GitHub `main` e Vercel produzione.
+- Note: la pagina Setup non viene eliminata e resta disponibile nel codice per
+  eventuali necessità tecniche future.
+
 ### 2026-08-04 — Salvataggio sequenziale misto nella galleria iPhone
 
 - Richiesta: correggere il persistente raggruppamento di tutte le foto prima dei
