@@ -7217,6 +7217,23 @@ body.user-activity-dialog-visible { overflow: hidden; }
   animation: notification-bell-reminder 9s ease-in-out infinite;
 }
 
+.notification-icon { position: relative; }
+
+.notification-attention-dot {
+  position: absolute;
+  z-index: 1;
+  top: -2px;
+  right: -2px;
+  width: 8px;
+  height: 8px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: #d5602e;
+  box-shadow: 0 0 0 0 rgba(213, 96, 46, .38);
+  pointer-events: none;
+  animation: notification-dot-pulse 1.8s ease-out infinite;
+}
+
 .notification-badge {
   position: static;
   display: inline-grid;
@@ -7250,9 +7267,16 @@ body.user-activity-dialog-visible { overflow: hidden; }
   77% { box-shadow: 0 0 0 7px rgba(185, 84, 44, .20); }
 }
 
+@keyframes notification-dot-pulse {
+  0%, 45% { box-shadow: 0 0 0 0 rgba(213, 96, 46, .38); opacity: 1; }
+  75% { box-shadow: 0 0 0 6px rgba(213, 96, 46, 0); opacity: .82; }
+  100% { box-shadow: 0 0 0 0 rgba(213, 96, 46, 0); opacity: 1; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .notification-button.has-notifications .icon > .lc,
-  .notification-button.has-notifications .notification-badge { animation: none; }
+  .notification-button.has-notifications .notification-badge,
+  .notification-attention-dot { animation: none; }
 }
 
 .notification-panel {

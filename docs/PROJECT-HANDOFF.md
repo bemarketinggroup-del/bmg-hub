@@ -297,7 +297,9 @@ supabase/                     schema e migration
 ### Backend sito, notifiche e setup
 
 - CMS leggero per testi, immagini e contenuti del sito.
-- Notifiche più evidenti, animazione periodica non invasiva e chiusura persistente.
+- Notifiche più evidenti con contatore e punto arancione pulsante visibile solo
+  quando sono presenti nuovi elementi; animazione non invasiva, compatibile con
+  `prefers-reduced-motion`, e chiusura persistente.
 - Le notifiche legate a task completate spariscono automaticamente.
 - Setup e indicatori sintetici dei servizi collegati.
 

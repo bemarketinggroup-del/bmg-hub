@@ -8513,8 +8513,9 @@ function positionNotificationPanel(button, panel) {
 function renderNotifications() {
   const button = document.getElementById("notificationButton");
   const badge = document.getElementById("notificationBadge");
+  const attentionDot = document.getElementById("notificationAttentionDot");
   const list = document.getElementById("notificationList");
-  if (!button || !badge || !list) return;
+  if (!button || !badge || !attentionDot || !list) return;
   const notifications = personalAreaState.notifications;
   button.classList.toggle("has-notifications", Boolean(notifications.length));
   button.title = notifications.length === 1
@@ -8523,6 +8524,7 @@ function renderNotifications() {
   button.setAttribute("aria-label", button.title);
   badge.textContent = notifications.length > 99 ? "99+" : String(notifications.length);
   badge.classList.toggle("is-hidden", !notifications.length);
+  attentionDot.classList.toggle("is-hidden", !notifications.length);
   list.innerHTML = notifications.length ? notifications.map((item) => {
     const link = safeExternalUrl(item.link);
     const isTask = item.source_type === "task" && item.source_id;

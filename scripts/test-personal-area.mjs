@@ -44,7 +44,11 @@ assert.doesNotMatch(personalTaskNavigationSource, /selectedTeamMemberId = ALL_TE
 assert.doesNotMatch(appSource, /Apri in ClickUp/, "l'interfaccia non deve rimandare l'utente a ClickUp");
 assert.doesNotMatch(htmlSource, /taskDetailClickUpLink/, "il dettaglio task non deve contenere collegamenti esterni");
 assert.match(appSource, /button\.classList\.toggle\("has-notifications", Boolean\(notifications\.length\)\)/, "il campanello deve evidenziare la presenza di notifiche");
+assert.match(htmlSource, /id="notificationAttentionDot"[^>]*aria-hidden="true"/, "il campanello deve includere il punto arancione decorativo");
+assert.match(appSource, /attentionDot\.classList\.toggle\("is-hidden", !notifications\.length\)/, "il punto arancione deve comparire soltanto quando ci sono notifiche");
 assert.match(appSource, /notificationPanel"\)\.addEventListener\("click", \(event\) => \{[\s\S]*?data-notification-dismiss[\s\S]*?dismissPersonalNotification\(dismissButton\.dataset\.notificationDismiss\)/, "la chiusura deve essere gestita anche dentro il pannello notifiche");
 assert.match(styleSource, /\.notification-button\.has-notifications[\s\S]*?@keyframes notification-bell-reminder/, "il campanello deve richiamare periodicamente l'attenzione");
+assert.match(styleSource, /\.notification-attention-dot \{[\s\S]*?background: #d5602e;[\s\S]*?animation: notification-dot-pulse/, "il punto notifiche deve essere arancione e pulsante");
+assert.match(styleSource, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.notification-attention-dot \{ animation: none; \}/, "il punto notifiche deve rispettare la preferenza di movimento ridotto");
 
 console.log("Personal area tests passed");

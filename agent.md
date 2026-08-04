@@ -59,6 +59,22 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-08-04 — Punto arancione per le notifiche presenti
+
+- Richiesta: rendere più visibili le notifiche con un dettaglio arancione che
+  lampeggia quando il contatore è maggiore di zero.
+- Modifiche: aggiunto un punto arancione pulsante sull'icona della campanella,
+  mostrato e nascosto insieme allo stato reale delle notifiche; mantenuti il
+  contatore numerico e il richiamo esistente, con animazione disattivata per chi
+  usa la preferenza di sistema `prefers-reduced-motion`.
+- File: `public/index.html`, `public/app.js`, `public/styles.css`,
+  `scripts/test-personal-area.mjs`, `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run check`, `npm run test:personal-area`,
+  `npm run test:mobile-navigation`, `git diff --check`, controllo visivo desktop
+  e smartphone.
+- Pubblicazione: GitHub `main` e Vercel produzione.
+- Note: Nessuna.
+
 ### 2026-08-04 — Componenti PrimeNG estesi a tutto il gestionale
 
 - Richiesta: usare l'MCP PrimeNG per individuare dove sostituire il maggior
