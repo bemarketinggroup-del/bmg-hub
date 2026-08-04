@@ -162,9 +162,12 @@ supabase/                     schema e migration
 - Il primo elemento del carosello è la copertina usata nel feed Instagram.
 - Il download del carosello non crea ZIP: scarica i singoli file in coda e
   antepone `01`, `02`, ... `20` ai nomi in base all'ordine del multipost.
-- Su iPhone/iPad il download usa una lista numerata con link diretti, un file
-  alla volta, evitando la coda `fetch`/Blob che Safari può interrompere con
-  `Load failed`.
+- Su iPhone/iPad il multipost viene preparato come sequenza di file `01`, `02`,
+  ... e passato in un'unica operazione al pannello nativo di iOS; scegliendo
+  `Salva in Foto`, foto e video entrano direttamente nella galleria nello stesso
+  ordine del PED. La conferma nel pannello iOS è obbligatoria per sicurezza e la
+  lista di download diretti resta disponibile soltanto come ripiego quando un
+  formato non può essere condiviso.
 - L'editor carosello è una griglia compatta senza scorrimento orizzontale, sei
   elementi per riga su desktop; mostra anche il primo frame dei video senza
   patina scura.

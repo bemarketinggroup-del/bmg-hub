@@ -246,6 +246,7 @@ let pedMediaViewerState = {
 };
 let drivePreviewKeyboardState = { isPhoto: false, navigate: null };
 let pedShareState = { active: false, shareUrl: "" };
+let pedGalleryShareState = { loadId: 0, groupId: "", files: [] };
 let pedLoadingKey = "";
 let editingPedCaptionId = "";
 let editingPedStagingId = "";
@@ -3524,6 +3525,10 @@ function pedAgendaItemMarkup(item) {
     ? `<img src="${escapeHtml(previewUrl)}" alt="" loading="lazy" decoding="async">`
     : driveFileIcon({ is_folder: false, mime_type: mime });
   const publishingStatus = pedPublishingStatus(item.publishing_status);
+  const multiDownloadLabel = isIosDownloadDevice() ? "Foto" : "Download";
+  const multiDownloadTitle = isIosDownloadDevice()
+    ? `Salva i ${files.length} contenuti nella galleria Foto in ordine numerico`
+    : `Scarica separatamente i ${files.length} contenuti in ordine numerico`;
   return `<article class="ped-agenda-item ped-type-${format.type}" data-ped-publishing-tone="${escapeHtml(publishingStatus)}">
     <button class="ped-agenda-preview" data-ped-caption-preview="${escapeHtml(item.id)}" type="button" title="${files.length > 1 ? `Apri e scorri i ${files.length} contenuti del carosello` : "Apri anteprima"}">
       ${media}${isVideo ? `<span class="ped-video-mini"><svg class="lc" viewBox="0 0 24 24"><path d="m9 7 8 5-8 5z"/></svg></span>` : ""}${files.length > 1 ? `<b class="ped-carousel-count">${files.length}</b>` : ""}
@@ -3545,9 +3550,9 @@ function pedAgendaItemMarkup(item) {
       <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
       <span>${item.caption ? "Copy" : "Scrivi copy"}</span>
     </button>`}
-    ${files.length > 1 ? `<button class="ped-agenda-download" data-ped-carousel-download="${escapeHtml(item.id)}" data-ped-download-name="${escapeHtml(title)}" type="button" title="Scarica separatamente i ${files.length} contenuti in ordine numerico">` : `<button class="ped-agenda-download" data-drive-download-url="${escapeHtml(primary.download_url || "")}" data-drive-download-name="${escapeHtml(primary.drive_file_name || title)}" type="button" title="Scarica ${escapeHtml(primary.drive_file_name)}">`}
+    ${files.length > 1 ? `<button class="ped-agenda-download" data-ped-carousel-download="${escapeHtml(item.id)}" data-ped-download-name="${escapeHtml(title)}" type="button" title="${escapeHtml(multiDownloadTitle)}">` : `<button class="ped-agenda-download" data-drive-download-url="${escapeHtml(primary.download_url || "")}" data-drive-download-name="${escapeHtml(primary.drive_file_name || title)}" type="button" title="Scarica ${escapeHtml(primary.drive_file_name)}">`}
       <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
-      <span>${files.length > 1 ? "Download" : "Scarica"}</span>
+      <span>${files.length > 1 ? multiDownloadLabel : "Scarica"}</span>
     </button>
   </article>`;
 }
@@ -3599,11 +3604,17 @@ function openPedCarouselDownloadList(item, files) {
   const modal = document.getElementById("pedDownloadModal");
   const list = document.getElementById("pedDownloadList");
   const subtitle = document.getElementById("pedDownloadSubtitle");
+  const intro = document.getElementById("pedDownloadIntro");
   const message = document.getElementById("pedDownloadMessage");
-  if (!modal || !list || !subtitle || !message) return;
+  const shareButton = document.getElementById("pedGalleryShareButton");
+  if (!modal || !list || !subtitle || !intro || !message || !shareButton) return;
 
+  document.getElementById("pedDownloadEyebrow").textContent = "Download diretto";
+  document.getElementById("pedDownloadTitle").textContent = "Scarica il multipost";
   subtitle.textContent = `${files.length} file · da 01 a ${String(files.length).padStart(2, "0")}`;
+  intro.textContent = "Tocca ogni file nell'ordine indicato. Il browser lo invierà ai Download senza creare uno ZIP.";
   message.textContent = "Inizia dal file 01 e prosegui fino all'ultimo.";
+  shareButton.classList.add("is-hidden");
   list.innerHTML = files.map((file, index) => {
     const filename = numberedPedDownloadFilename(file.drive_file_name, index);
     return `<a class="ped-download-item" data-ped-direct-download="${index}" href="${escapeHtml(pedDirectDownloadUrl(file, filename))}" download="${escapeHtml(filename)}">
@@ -3613,7 +3624,118 @@ function openPedCarouselDownloadList(item, files) {
     </a>`;
   }).join("");
   modal.dataset.pedDownloadGroup = String(item.id || "");
-  modal.showModal();
+  if (!modal.open) modal.showModal();
+}
+
+function pedGalleryItemStatus(index, status, label) {
+  const row = document.querySelector(`[data-ped-gallery-item="${index}"]`);
+  if (!row) return;
+  row.classList.toggle("is-loading", status === "loading");
+  row.classList.toggle("is-ready", status === "ready");
+  row.classList.toggle("is-error", status === "error");
+  const action = row.querySelector(".ped-download-action b");
+  if (action) action.textContent = label;
+}
+
+function closePedGalleryModal() {
+  pedGalleryShareState = { loadId: pedGalleryShareState.loadId + 1, groupId: "", files: [] };
+  document.getElementById("pedDownloadModal").close();
+}
+
+async function preparePedCarouselForGallery(item, files, loadId) {
+  const button = document.getElementById("pedGalleryShareButton");
+  const message = document.getElementById("pedDownloadMessage");
+  const preparedFiles = [];
+
+  try {
+    for (let index = 0; index < files.length; index += 1) {
+      if (pedGalleryShareState.loadId !== loadId) return;
+      const file = files[index];
+      const filename = numberedPedDownloadFilename(file.drive_file_name, index);
+      pedGalleryItemStatus(index, "loading", "Preparo");
+      button.textContent = `Preparo ${index + 1}/${files.length}`;
+      message.textContent = `Preparazione del contenuto ${String(index + 1).padStart(2, "0")}…`;
+
+      const response = await fetch(file.content_url || file.download_url, { cache: "no-store" });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || `Preparazione di ${filename} non riuscita`);
+      }
+      const blob = await response.blob();
+      const mimeType = String(blob.type || file.drive_mime_type || "application/octet-stream").split(";")[0];
+      preparedFiles.push(new File([blob], filename, {
+        type: mimeType,
+        lastModified: Date.now() + (index * 1000)
+      }));
+      pedGalleryItemStatus(index, "ready", "Pronto");
+    }
+
+    if (pedGalleryShareState.loadId !== loadId) return;
+    if (typeof navigator.share !== "function" || typeof navigator.canShare !== "function" || !navigator.canShare({ files: preparedFiles })) {
+      throw new Error("Questo iPhone non consente di inviare insieme questi contenuti all'app Foto");
+    }
+    pedGalleryShareState.files = preparedFiles;
+    button.disabled = false;
+    button.textContent = `Salva ${preparedFiles.length} in Foto`;
+    message.textContent = `Tocca “Salva ${preparedFiles.length} in Foto”, poi scegli “Salva in Foto” nel pannello iPhone.`;
+  } catch (error) {
+    if (pedGalleryShareState.loadId !== loadId) return;
+    const pendingIndex = preparedFiles.length;
+    pedGalleryItemStatus(pendingIndex, "error", "Errore");
+    message.textContent = `${error.message}. Uso il download singolo come alternativa.`;
+    openPedCarouselDownloadList(item, files);
+  }
+}
+
+function openPedCarouselGallery(item, files) {
+  const modal = document.getElementById("pedDownloadModal");
+  const list = document.getElementById("pedDownloadList");
+  const shareButton = document.getElementById("pedGalleryShareButton");
+  const loadId = pedGalleryShareState.loadId + 1;
+  pedGalleryShareState = { loadId, groupId: String(item.id || ""), files: [] };
+
+  document.getElementById("pedDownloadEyebrow").textContent = "Galleria iPhone";
+  document.getElementById("pedDownloadTitle").textContent = "Salva il multipost in Foto";
+  document.getElementById("pedDownloadSubtitle").textContent = `${files.length} contenuti · ordine da 01 a ${String(files.length).padStart(2, "0")}`;
+  document.getElementById("pedDownloadIntro").textContent = "Attendi la preparazione, poi usa un solo pulsante: iPhone riceverà tutti i contenuti nello stesso ordine del multipost.";
+  document.getElementById("pedDownloadMessage").textContent = "Preparazione per l'app Foto…";
+  shareButton.classList.remove("is-hidden");
+  shareButton.disabled = true;
+  shareButton.textContent = `Preparo 0/${files.length}`;
+  list.innerHTML = files.map((file, index) => {
+    const filename = numberedPedDownloadFilename(file.drive_file_name, index);
+    return `<div class="ped-download-item" data-ped-gallery-item="${index}">
+      <span class="ped-download-number">${String(index + 1).padStart(2, "0")}</span>
+      <span class="ped-download-file"><strong>${escapeHtml(file.drive_file_name || filename)}</strong><small>${escapeHtml(filename)}</small></span>
+      <span class="ped-download-action"><span class="drive-spinner" aria-hidden="true"></span><svg class="lc ped-gallery-ready-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg><b>Attesa</b></span>
+    </div>`;
+  }).join("");
+  modal.dataset.pedDownloadGroup = String(item.id || "");
+  if (!modal.open) modal.showModal();
+  void preparePedCarouselForGallery(item, files, loadId);
+}
+
+function sharePreparedPedGallery() {
+  const files = pedGalleryShareState.files;
+  const message = document.getElementById("pedDownloadMessage");
+  if (!files.length || typeof navigator.share !== "function") return;
+  message.textContent = "Nel pannello iPhone scegli “Salva in Foto” per aggiungere i contenuti alla galleria.";
+  let shareResult;
+  try {
+    shareResult = navigator.share({ files });
+  } catch (error) {
+    message.textContent = error.message || "Non riesco ad aprire il pannello di condivisione iPhone.";
+    return;
+  }
+  Promise.resolve(shareResult).then(() => {
+    message.textContent = `${files.length} contenuti consegnati a iPhone nello stesso ordine del multipost.`;
+  }).catch((error) => {
+    if (error?.name === "AbortError") {
+      message.textContent = "Salvataggio annullato. Puoi riprovare quando vuoi.";
+      return;
+    }
+    message.textContent = error.message || "Non riesco ad aprire il pannello di condivisione iPhone.";
+  });
 }
 
 async function downloadPedCarousel(groupId, button) {
@@ -3625,7 +3747,7 @@ async function downloadPedCarousel(groupId, button) {
   }
 
   if (isIosDownloadDevice()) {
-    openPedCarouselDownloadList(item, files);
+    openPedCarouselGallery(item, files);
     return;
   }
 
@@ -9937,8 +10059,12 @@ document.getElementById("contentStatusFilter").addEventListener("change", render
 document.getElementById("contentSearch").addEventListener("input", renderContent);
 document.getElementById("clientSearch").addEventListener("input", renderClients);
 document.getElementById("pedClientSearch").addEventListener("input", renderPedClientTabs);
-document.getElementById("pedDownloadCloseButton").addEventListener("click", () => document.getElementById("pedDownloadModal").close());
-document.getElementById("pedDownloadDoneButton").addEventListener("click", () => document.getElementById("pedDownloadModal").close());
+document.getElementById("pedDownloadCloseButton").addEventListener("click", closePedGalleryModal);
+document.getElementById("pedDownloadDoneButton").addEventListener("click", closePedGalleryModal);
+document.getElementById("pedGalleryShareButton").addEventListener("click", sharePreparedPedGallery);
+document.getElementById("pedDownloadModal").addEventListener("close", () => {
+  pedGalleryShareState = { loadId: pedGalleryShareState.loadId + 1, groupId: "", files: [] };
+});
 document.getElementById("pedDownloadList").addEventListener("click", (event) => {
   const link = event.target.closest("[data-ped-direct-download]");
   if (!link) return;

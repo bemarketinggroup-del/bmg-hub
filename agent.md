@@ -59,6 +59,24 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-08-04 — Multipost direttamente nella galleria iPhone
+
+- Richiesta: salvare i contenuti multipost già ordinati direttamente nell'app
+  Foto di iPhone, senza lasciarli nell'app File.
+- Modifiche: il flusso iPhone prepara foto e video nell'ordine `01`, `02`, ... e
+  li consegna insieme al pannello nativo iOS tramite Web Share; dopo la
+  preparazione basta il comando `Salva in Foto` e una sola conferma nel pannello
+  Apple. Il download diretto singolo rimane come ripiego per formati non
+  condivisibili, mentre il comportamento desktop non cambia.
+- File: `public/index.html`, `public/app.js`, `public/styles.css`,
+  `scripts/test-ped-carousel.mjs`, `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run check`, `npm run test:ped-carousel`, `git diff --check`,
+  controllo responsive del pannello a 390×844 e 1280×900 senza overflow.
+- Pubblicazione: GitHub `main` e Vercel produzione.
+- Note: Safari non permette a un sito di scrivere silenziosamente nella
+  libreria Foto; la scelta `Salva in Foto` nel pannello iOS resta quindi una
+  conferma obbligatoria del sistema.
+
 ### 2026-08-04 — Download multipost compatibile con iPhone
 
 - Richiesta: correggere l'errore `Load failed` mostrato su iPhone durante il

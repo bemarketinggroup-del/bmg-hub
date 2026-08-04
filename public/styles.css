@@ -3967,7 +3967,7 @@ code { font-family: var(--font-mono); font-size: 12px; }
   text-decoration: none;
   transition: border-color .15s, background .15s, transform .15s;
 }
-.ped-download-item:hover { transform: translateY(-1px); border-color: var(--terracotta); background: var(--terra-tint); }
+.ped-download-item[href]:hover { transform: translateY(-1px); border-color: var(--terracotta); background: var(--terra-tint); }
 .ped-download-number {
   width: 42px;
   height: 42px;
@@ -4000,7 +4000,19 @@ code { font-family: var(--font-mono); font-size: 12px; }
 .ped-download-item.is-started { border-color: rgba(77, 121, 95, .42); background: rgba(77, 121, 95, .09); }
 .ped-download-item.is-started .ped-download-number { background: rgba(77, 121, 95, .16); color: #386449; }
 .ped-download-item.is-started .ped-download-action { background: #4d795f; }
+.ped-download-item.is-loading { border-color: rgba(201, 91, 50, .38); background: var(--terra-tint); }
+.ped-download-item.is-loading .ped-download-action { background: var(--terracotta); }
+.ped-download-item.is-loading .ped-download-action .drive-spinner { display: block; width: 14px; height: 14px; border-color: rgba(255, 255, 255, .45); border-top-color: #fff; }
+.ped-download-item.is-ready { border-color: rgba(77, 121, 95, .42); background: rgba(77, 121, 95, .09); }
+.ped-download-item.is-ready .ped-download-number { background: rgba(77, 121, 95, .16); color: #386449; }
+.ped-download-item.is-ready .ped-download-action { background: #4d795f; }
+.ped-download-item.is-error { border-color: rgba(178, 63, 49, .42); background: rgba(178, 63, 49, .08); }
+.ped-download-item .ped-download-action .drive-spinner { display: none; }
+.ped-download-item .ped-gallery-ready-icon { display: none; width: 15px; height: 15px; }
+.ped-download-item.is-ready .ped-gallery-ready-icon { display: block; }
 .ped-download-modal .form-message { min-height: 18px; margin-top: 12px; }
+.ped-download-modal .modal-actions { justify-content: space-between; }
+#pedGalleryShareButton { min-width: 190px; }
 
 @media (max-width: 680px) {
   .modal.ped-download-modal {
@@ -4019,7 +4031,9 @@ code { font-family: var(--font-mono); font-size: 12px; }
   .ped-download-file strong { font-size: 12px; }
   .ped-download-file small { font-size: 9.5px; }
   .ped-download-modal .modal-actions { margin-top: 14px; padding-top: 14px; }
+  .ped-download-modal .modal-actions { display: grid; grid-template-columns: 1fr; }
   .ped-download-modal .modal-actions button { width: 100%; }
+  #pedGalleryShareButton { grid-row: 1; min-width: 0; }
 }
 .drive-preview-body {
   min-height: 520px;
