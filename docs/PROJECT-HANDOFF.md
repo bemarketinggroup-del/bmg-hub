@@ -115,6 +115,10 @@ supabase/                     schema e migration
 - La navigazione principale usa la struttura `Sidebar` PrimeNG 17 con template
   header/content/footer: resta persistente su desktop e diventa un overlay da
   sinistra su smartphone, con mask, blocco pagina, `Esc` e focus intrappolato.
+  Le voci sono divise nei gruppi `Workspace`, `Contenuti e clienti`,
+  `Organizzazione` e `Amministrazione`; notifiche e relativo contatore sono
+  dentro la navigazione, mentre nome, iniziali, ruolo, profilo e logout sono
+  fissati nel footer. La topbar non duplica più queste azioni.
 - Directory utenti in linguaggio CMS, con tabella PrimeNG-style, ricerca e
   filtri per ruolo/stato; la modifica avviene in un drawer modale sovrapposto
   alla pagina, con overlay e ingresso animato da destra. L'editor usa

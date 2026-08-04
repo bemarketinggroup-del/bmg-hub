@@ -59,6 +59,27 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-08-04 — Sidebar CMS completa con account e notifiche
+
+- Richiesta: riprodurre anche la disposizione della sidebar PrimeNG di
+  riferimento, portando nome utente, notifiche e azioni nella colonna laterale
+  invece di limitarsi a cambiarne l'aspetto.
+- Modifiche: la sidebar è stata riorganizzata in gruppi CMS (`Workspace`,
+  `Contenuti e clienti`, `Organizzazione`, `Amministrazione`), con notifiche e
+  badge integrati tra le voci. Il footer mostra servizi collegati, avatar con
+  iniziali, nome reale, ruolo, accesso al profilo e logout; queste azioni sono
+  state rimosse dalla topbar. Il pannello notifiche si apre accanto alla sidebar
+  su desktop e come overlay ampio su smartphone, mantenendo tutte le funzioni e
+  i permessi esistenti.
+- File: `public/index.html`, `public/app.js`, `public/styles.css`,
+  `scripts/test-mobile-navigation.mjs`, `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run check`, `npm run test:mobile-navigation`,
+  `npm run test:personal-area`, `npm run test:permissions`,
+  `npm run test:connected-services`, `git diff --check`; controllo funzionale
+  e visivo desktop e smartphone.
+- Pubblicazione: GitHub `main` e Vercel produzione.
+- Note: Nessuna.
+
 ### 2026-08-04 — Navigazione convertita in Sidebar PrimeNG
 
 - Richiesta: sostituire la sidebar principale con quella di PrimeNG.

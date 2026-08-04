@@ -8,6 +8,11 @@ const styleSource = await readFile(new URL("../public/styles.css", import.meta.u
 assert.match(htmlSource, /id="mobileNavToggle"[\s\S]*?aria-controls="appSidebar"[\s\S]*?aria-expanded="false"/, "il burger deve dichiarare il drawer controllato");
 assert.match(htmlSource, /class="p-sidebar p-component p-sidebar-left sidebar"[^>]*data-pc-name="sidebar"[^>]*role="complementary"/, "la navigazione deve usare la struttura Sidebar PrimeNG");
 assert.match(htmlSource, /class="p-sidebar-header sidebar-header"[\s\S]*class="p-sidebar-content sidebar-content"[\s\S]*class="p-sidebar-footer sidebar-footer"/, "la Sidebar PrimeNG deve avere header, content e footer");
+assert.match(htmlSource, /id="sidebarWorkspaceLabel">Workspace<[\s\S]*id="sidebarContentLabel">Contenuti e clienti<[\s\S]*id="sidebarOrganizationLabel">Organizzazione<[\s\S]*id="sidebarAdministrationLabel">Amministrazione</, "la navigazione deve essere organizzata in gruppi CMS leggibili");
+assert.match(htmlSource, /class="p-sidebar-content sidebar-content"[\s\S]*id="notificationButton"[\s\S]*class="p-sidebar-footer sidebar-footer"/, "le notifiche devono essere integrate nella navigazione laterale");
+assert.match(htmlSource, /class="p-sidebar-footer sidebar-footer"[\s\S]*id="sidebarUserAvatar"[\s\S]*id="sidebarUserName"[\s\S]*id="sessionBadge"[\s\S]*id="logoutButton"/, "account, ruolo e logout devono stare nel footer della sidebar");
+const topbarSource = htmlSource.slice(htmlSource.indexOf('<header class="topbar">'), htmlSource.indexOf('</header>', htmlSource.indexOf('<header class="topbar">')));
+assert.doesNotMatch(topbarSource, /id="(?:notificationButton|profileButton|logoutButton|sessionBadge)"/, "la topbar non deve duplicare le azioni spostate nella sidebar");
 assert.doesNotMatch(htmlSource, /id="mobileNavClose"/, "la X ridondante non deve comparire nella sidebar");
 assert.doesNotMatch(htmlSource, /class="[^"]*nav-item[^"]*"[^>]*data-view="settings"/, "Setup non deve comparire nella sidebar");
 assert.match(htmlSource, /id="settingsView"[^>]*data-view-panel="settings"/, "la pagina tecnica deve restare disponibile nel codice");
@@ -17,6 +22,8 @@ assert.match(styleSource, /@media \(max-width: 980px\)[\s\S]*?\.sidebar\.p-sideb
 assert.match(styleSource, /@media \(max-width: 980px\)[\s\S]*?\.icon-button\.mobile-nav-toggle \{[\s\S]*?display: grid;/, "su smartphone deve comparire il burger");
 assert.match(styleSource, /\.sidebar\.is-mobile-open,[\s\S]*?\.sidebar\.p-sidebar-active \{[^}]*transform: translateX\(0\)/, "la Sidebar PrimeNG attiva deve entrare completamente nello schermo");
 assert.match(styleSource, /\.mobile-nav-backdrop\.is-active,[\s\S]*?\.mobile-nav-backdrop\.p-sidebar-mask-active \{ opacity: 1; pointer-events: auto; \}/, "la mask PrimeNG deve intercettare il tocco solo a menu aperto");
+assert.match(styleSource, /\.sidebar-account \{[\s\S]*?grid-template-columns: minmax\(0, 1fr\) 38px;/, "il profilo deve restare ancorato in basso con il logout affiancato");
+assert.match(styleSource, /\.sidebar-nav-section \{[\s\S]*?padding-bottom:/, "i gruppi della navigazione devono avere una gerarchia visiva distinta");
 assert.match(styleSource, /@media \(max-width: 980px\)[\s\S]*?\.drive-file-grid \{ grid-template-columns: repeat\(2, minmax\(0, 1fr\)\);/, "su smartphone il Drive deve mostrare due elementi per riga");
 assert.match(styleSource, /@media \(max-width: 980px\)[\s\S]*?\.drive-entry-preview img \{ object-fit: contain; object-position: center; \}/, "le foto del Drive mobile devono restare interamente visibili");
 assert.match(styleSource, /@media \(max-width: 980px\)[\s\S]*?\.client-toolbar \.search \{[\s\S]*?max-height: 44px;[\s\S]*?flex: 0 0 44px;/, "la ricerca clienti mobile deve restare compatta");
@@ -27,5 +34,7 @@ assert.match(appSource, /classList\.toggle\("p-sidebar-active", shouldOpen\)[\s\
 assert.match(appSource, /event\.key === "Tab" && mobileSidebar\?\.classList\.contains\("p-sidebar-active"\)[\s\S]*mobileSidebar\.querySelectorAll[\s\S]*document\.activeElement/, "il focus da tastiera deve restare nella Sidebar PrimeNG aperta");
 assert.match(appSource, /event\.key === "Escape"[\s\S]*?setMobileNavOpen\(false, \{ restoreFocus: true \}\)/, "Escape deve chiudere il menu e restituire il focus");
 assert.match(appSource, /function setView\(view\) \{[\s\S]*?setMobileNavOpen\(false\);/, "scegliere una sezione deve chiudere il menu");
+assert.match(appSource, /function renderSession\(\)[\s\S]*?sidebarUserName[\s\S]*?sidebarUserAvatar[\s\S]*?Amministratore/, "il footer deve mostrare nome, iniziali e ruolo dell'utente corrente");
+assert.match(appSource, /function positionNotificationPanel\(button, panel\)[\s\S]*?getBoundingClientRect/, "il pannello notifiche deve aprirsi accanto alla nuova voce laterale");
 
 console.log("Mobile navigation tests passed");

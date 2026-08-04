@@ -37,7 +37,7 @@
       <div class="p-sidebar-header sidebar-header" data-pc-section="header">
         <div class="brand">
           <span class="brand-logo"><img src="logo.svg" alt="BMG · be marketing group"></span>
-          <div>
+          <div class="brand-copy">
             <strong>BMG Hub</strong>
             <span>Internal OS</span>
           </div>
@@ -46,6 +46,9 @@
 
       <div class="p-sidebar-content sidebar-content" data-pc-section="content">
         <nav class="p-menu p-component nav-list" id="navList" aria-label="Sezioni del gestionale">
+          <section class="sidebar-nav-section" data-nav-group aria-labelledby="sidebarWorkspaceLabel">
+            <span class="sidebar-nav-label" id="sidebarWorkspaceLabel">Workspace</span>
+            <div class="sidebar-nav-items">
         <button class="p-ripple nav-item is-active" data-view="dashboard" type="button">
           <span class="icon"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg></span>
           <span>Home</span>
@@ -59,6 +62,19 @@
           <span>Chat</span>
           <span class="p-badge nav-unread-badge is-hidden" id="chatNavBadge">0</span>
         </button>
+              <div class="notification-center sidebar-notification">
+                <button class="p-ripple nav-item notification-button" id="notificationButton" type="button" title="Notifiche" aria-label="Notifiche" aria-controls="notificationPanel" aria-expanded="false">
+                  <span class="icon"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg></span>
+                  <span>Notifiche</span>
+                  <span class="p-badge notification-badge is-hidden" id="notificationBadge">0</span>
+                </button>
+              </div>
+            </div>
+          </section>
+
+          <section class="sidebar-nav-section" data-nav-group aria-labelledby="sidebarContentLabel">
+            <span class="sidebar-nav-label" id="sidebarContentLabel">Contenuti e clienti</span>
+            <div class="sidebar-nav-items">
         <button class="p-ripple nav-item" data-view="content" data-module="site_backend" type="button">
           <span class="icon"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"/></svg></span>
           <span>Backend sito</span>
@@ -76,6 +92,12 @@
           <span>Grafiche</span>
           <span class="p-badge nav-unread-badge is-hidden" id="graphicsNavBadge">0</span>
         </button>
+            </div>
+          </section>
+
+          <section class="sidebar-nav-section" data-nav-group aria-labelledby="sidebarOrganizationLabel">
+            <span class="sidebar-nav-label" id="sidebarOrganizationLabel">Organizzazione</span>
+            <div class="sidebar-nav-items">
         <button class="p-ripple nav-item" data-view="calendar" data-module="calendar" type="button">
           <span class="icon"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/><path d="M8 14h2M14 14h2M8 18h2M14 18h2"/></svg></span>
           <span>Calendario</span>
@@ -88,6 +110,12 @@
           <span class="icon"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3.5"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h5"/><circle cx="16" cy="16" r="6"/><path d="M16 14v2l1.5 1"/></svg></span>
           <span>Turni / Smart Working</span>
         </button>
+            </div>
+          </section>
+
+          <section class="sidebar-nav-section" data-nav-group aria-labelledby="sidebarAdministrationLabel">
+            <span class="sidebar-nav-label" id="sidebarAdministrationLabel">Amministrazione</span>
+            <div class="sidebar-nav-items">
         <button class="p-ripple nav-item admin-only" data-view="counter" type="button">
           <span class="icon"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V9"/><path d="M10 19V5"/><path d="M16 19v-7"/><path d="M22 19V3"/><path d="M2 19h22"/></svg></span>
           <span>Contatore</span>
@@ -96,16 +124,37 @@
           <span class="icon"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
           <span>Utenti</span>
         </button>
+            </div>
+          </section>
         </nav>
       </div>
 
-      <div class="p-sidebar-footer sidebar-footer" data-pc-section="footer" aria-label="Stato dei servizi">
-        <span class="sidebar-services-title">Servizi</span>
-        <div class="sidebar-services" id="connectedServices"></div>
+      <div class="p-sidebar-footer sidebar-footer" data-pc-section="footer" aria-label="Account e stato dei servizi">
+        <div class="sidebar-services-block">
+          <span class="sidebar-services-title">Servizi collegati</span>
+          <div class="sidebar-services" id="connectedServices"></div>
+        </div>
+        <div class="sidebar-account">
+          <button class="p-button p-component p-button-text sidebar-account-profile" id="profileButton" type="button" title="Apri profilo">
+            <span class="sidebar-user-avatar" id="sidebarUserAvatar" aria-hidden="true">BM</span>
+            <span class="sidebar-account-copy">
+              <strong id="sidebarUserName">Account BMG</strong>
+              <small id="sessionBadge">Sessione</small>
+            </span>
+          </button>
+          <button class="p-button p-component p-button-text p-button-icon-only sidebar-account-logout" id="logoutButton" type="button" title="Esci" aria-label="Esci dall’account">
+            <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
+          </button>
+        </div>
       </div>
     </aside>
 
     <button class="p-sidebar-mask p-component-overlay mobile-nav-backdrop" id="mobileNavBackdrop" type="button" tabindex="-1" aria-label="Chiudi menu" aria-hidden="true"></button>
+
+    <section class="notification-panel is-hidden" id="notificationPanel" aria-label="Notifiche recenti">
+      <header><strong>Notifiche</strong><small>Restano visibili finché non le chiudi</small></header>
+      <div class="notification-list" id="notificationList"></div>
+    </section>
 
     <main class="main">
       <header class="topbar">
@@ -119,19 +168,6 @@
           </div>
         </div>
         <div class="topbar-actions">
-          <span class="session-badge" id="sessionBadge">Sessione</span>
-          <div class="notification-center">
-            <button class="icon-button notification-button" id="notificationButton" type="button" title="Notifiche" aria-label="Notifiche" aria-expanded="false">
-              <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg>
-              <span class="notification-badge is-hidden" id="notificationBadge">0</span>
-            </button>
-            <section class="notification-panel is-hidden" id="notificationPanel" aria-label="Notifiche recenti">
-              <header><strong>Notifiche</strong><small>Restano visibili finché non le chiudi</small></header>
-              <div class="notification-list" id="notificationList"></div>
-            </section>
-          </div>
-          <button class="ghost-button" id="profileButton" type="button"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></svg>Profilo</button>
-          <button class="ghost-button" id="logoutButton" type="button"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>Logout</button>
           <button class="icon-button" id="exportButton" type="button" title="Esporta dati"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg></button>
         </div>
       </header>

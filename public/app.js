@@ -798,8 +798,21 @@ async function loadCurrentUser() {
 
 function renderSession() {
   const badge = document.getElementById("sessionBadge");
-  if (!badge || !currentProfile) return;
-  badge.textContent = `${currentProfile.full_name || currentProfile.email} · ${currentProfile.role}`;
+  const name = document.getElementById("sidebarUserName");
+  const avatar = document.getElementById("sidebarUserAvatar");
+  const profileButton = document.getElementById("profileButton");
+  if (!badge || !name || !avatar || !currentProfile) return;
+  const displayName = currentProfile.full_name || currentProfile.email || "Account BMG";
+  const initials = displayName
+    .split(/\s+|@/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() || "")
+    .join("") || "BM";
+  name.textContent = displayName;
+  badge.textContent = currentProfile.role === "admin" ? "Amministratore" : "Staff";
+  avatar.textContent = initials;
+  if (profileButton) profileButton.title = `Apri il profilo di ${displayName}`;
 }
 
 function canAccessModule(moduleKey) {
@@ -817,6 +830,11 @@ function applyRoleAccess() {
   document.querySelectorAll(".admin-only").forEach((item) => item.classList.toggle("is-hidden", !isAdmin));
   document.querySelectorAll("[data-module]").forEach((item) => {
     item.classList.toggle("is-hidden", !canAccessModule(item.dataset.module));
+  });
+  document.querySelectorAll("[data-nav-group]").forEach((group) => {
+    const hasVisibleItem = [...group.querySelectorAll(".nav-item")]
+      .some((item) => !item.classList.contains("is-hidden"));
+    group.classList.toggle("is-hidden", !hasVisibleItem);
   });
   const activeView = document.querySelector("[data-view-panel].is-active")?.dataset.viewPanel;
   if (activeView && !canAccessView(activeView)) setView("dashboard");
@@ -8479,6 +8497,21 @@ function renderPersonalArea() {
   }).join("") : `<div class="personal-empty"><strong>Nessun evento in arrivo</strong><span>Gli eventi ai quali sei invitato compariranno qui.</span></div>`;
 }
 
+function positionNotificationPanel(button, panel) {
+  if (!button || !panel || mobileNavigationMedia.matches) {
+    panel?.style.removeProperty("--notification-panel-top");
+    panel?.style.removeProperty("--notification-panel-left");
+    return;
+  }
+  const anchor = button.getBoundingClientRect();
+  const panelWidth = Math.min(390, window.innerWidth - 32);
+  const panelHeight = Math.min(520, window.innerHeight - 32);
+  const top = Math.max(16, Math.min(anchor.top, window.innerHeight - panelHeight - 16));
+  const left = Math.max(16, Math.min(anchor.right + 14, window.innerWidth - panelWidth - 16));
+  panel.style.setProperty("--notification-panel-top", `${top}px`);
+  panel.style.setProperty("--notification-panel-left", `${left}px`);
+}
+
 function renderNotifications() {
   const button = document.getElementById("notificationButton");
   const badge = document.getElementById("notificationBadge");
@@ -10281,6 +10314,7 @@ document.getElementById("notificationButton").addEventListener("click", (event) 
   const button = event.currentTarget;
   const panel = document.getElementById("notificationPanel");
   const willOpen = panel.classList.contains("is-hidden");
+  if (willOpen) positionNotificationPanel(button, panel);
   panel.classList.toggle("is-hidden", !willOpen);
   button.setAttribute("aria-expanded", String(willOpen));
 });
