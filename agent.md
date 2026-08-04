@@ -59,6 +59,20 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-08-04 — Notifiche eventi nel calendario CRM
+
+- Richiesta: fare in modo che il clic sulle notifiche degli eventi apra il
+  calendario interno anziché Google Calendar.
+- Modifiche: sostituito il link esterno delle notifiche evento con un comando
+  interno che apre il calendario CRM sul mese dell'evento e ne mostra il
+  dettaglio; le nuove notifiche non salvano più il collegamento Google.
+- File: `public/app.js`, `lib/personal-area.js`,
+  `scripts/test-personal-area.mjs`, `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run check`, `npm run test:personal-area`, `git diff --check`
+  e verifica del flusso di navigazione interno.
+- Pubblicazione: GitHub `main` e Vercel produzione.
+- Note: Nessuna.
+
 ### 2026-08-04 — Etichette giornaliere nel grafico attività
 
 - Richiesta: indicare sotto ogni barra arancione del registro utenti il giorno

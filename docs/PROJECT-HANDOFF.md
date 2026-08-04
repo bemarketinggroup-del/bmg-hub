@@ -123,7 +123,9 @@ supabase/                     schema e migration
   dentro la navigazione, mentre nome, iniziali, ruolo, profilo e logout sono
   fissati nel footer, senza il riepilogo visivo dei servizi collegati. La topbar
   mostra soltanto il titolo della vista e il menu mobile, senza esportazione
-  dati o altre azioni globali ridondanti.
+  dati o altre azioni globali ridondanti. Le notifiche degli eventi aprono il
+  mese e il dettaglio dell'evento nel calendario interno del CRM, senza
+  rimandare direttamente a Google Calendar.
 - Directory utenti in linguaggio CMS, con tabella PrimeNG-style, ricerca e
   filtri per ruolo/stato; la modifica avviene in un drawer modale sovrapposto
   alla pagina, con overlay e ingresso animato da destra. L'editor usa

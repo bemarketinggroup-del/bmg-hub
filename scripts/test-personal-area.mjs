@@ -47,6 +47,10 @@ assert.match(appSource, /button\.classList\.toggle\("has-notifications", Boolean
 assert.match(htmlSource, /id="notificationAttentionDot"[^>]*aria-hidden="true"/, "il campanello deve includere il punto arancione decorativo");
 assert.match(appSource, /attentionDot\.classList\.toggle\("is-hidden", !notifications\.length\)/, "il punto arancione deve comparire soltanto quando ci sono notifiche");
 assert.match(appSource, /notificationPanel"\)\.addEventListener\("click", \(event\) => \{[\s\S]*?data-notification-dismiss[\s\S]*?dismissPersonalNotification\(dismissButton\.dataset\.notificationDismiss\)/, "la chiusura deve essere gestita anche dentro il pannello notifiche");
+assert.match(appSource, /data-calendar-notification-event="\$\{escapeHtml\(item\.source_id\)\}"/, "le notifiche evento devono usare un comando interno");
+assert.match(appSource, /async function openCalendarNotification\(eventId, eventDate = ""\)[\s\S]*googleCalendarState\.anchor[\s\S]*setView\("calendar"\)[\s\S]*openGoogleCalendarEventDetails\(eventId\)/, "una notifica evento deve aprire data e dettaglio nel calendario CRM");
+assert.match(appSource, /: isCalendarEvent\s*\? `<button[\s\S]*data-calendar-notification-event[\s\S]*:\s*link \? `<a/, "il comando CRM deve avere priorità sull'eventuale vecchio link Google");
+assert.match(await readFile(new URL("../lib/personal-area.js", import.meta.url), "utf8"), /source_type: "event"[\s\S]*?link: ""/, "le nuove notifiche evento non devono salvare collegamenti esterni");
 assert.match(styleSource, /\.notification-button\.has-notifications[\s\S]*?@keyframes notification-bell-reminder/, "il campanello deve richiamare periodicamente l'attenzione");
 assert.match(styleSource, /\.notification-attention-dot \{[\s\S]*?background: #d5602e;[\s\S]*?animation: notification-dot-pulse/, "il punto notifiche deve essere arancione e pulsante");
 assert.match(styleSource, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.notification-attention-dot \{ animation: none; \}/, "il punto notifiche deve rispettare la preferenza di movimento ridotto");

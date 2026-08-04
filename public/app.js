@@ -8601,13 +8601,16 @@ function renderNotifications() {
     const isTask = item.source_type === "task" && item.source_id;
     const isChat = item.source_type === "chat" && item.source_id;
     const isGraphicReview = item.source_type === "graphic_review" && item.source_id;
+    const isCalendarEvent = item.source_type === "event" && item.source_id;
     const title = isTask
       ? `<button type="button" data-personal-task="${escapeHtml(item.source_id)}"><strong>${escapeHtml(item.title)}</strong></button>`
       : isChat
         ? `<button type="button" data-chat-open="${escapeHtml(item.source_id)}"><strong>${escapeHtml(item.title)}</strong></button>`
         : isGraphicReview
           ? `<button type="button" data-open-graphics-review="${escapeHtml(item.source_id)}"><strong>${escapeHtml(item.title)}</strong></button>`
-      : link ? `<a href="${escapeHtml(link)}" target="_blank" rel="noopener"><strong>${escapeHtml(item.title)}</strong></a>` : `<strong>${escapeHtml(item.title)}</strong>`;
+        : isCalendarEvent
+          ? `<button type="button" data-calendar-notification-event="${escapeHtml(item.source_id)}" data-calendar-notification-date="${escapeHtml(item.occurred_at || "")}"><strong>${escapeHtml(item.title)}</strong></button>`
+          : link ? `<a href="${escapeHtml(link)}" target="_blank" rel="noopener"><strong>${escapeHtml(item.title)}</strong></a>` : `<strong>${escapeHtml(item.title)}</strong>`;
     return `<article class="notification-item" data-notification-type="${escapeHtml(item.source_type)}">
       <span class="notification-type is-${escapeHtml(item.source_type)}" aria-hidden="true"></span>
       <div class="notification-item-body">${title}<span>${escapeHtml(item.message || "")}</span><small>${escapeHtml(formatPersonalDate(item.occurred_at))}</small></div>
@@ -8633,6 +8636,28 @@ async function dismissPersonalNotification(notificationId) {
     personalAreaState.notifications.unshift(notification);
     renderNotifications();
     alert(error.message || "Non sono riuscito a chiudere la notifica. Riprova.");
+  }
+}
+
+async function openCalendarNotification(eventId, eventDate = "") {
+  if (!eventId || !canAccessModule("calendar")) return;
+  const targetDate = new Date(eventDate);
+  if (!Number.isNaN(targetDate.valueOf())) {
+    googleCalendarState.anchor = new Date(targetDate.getFullYear(), targetDate.getMonth(), 1);
+  }
+  googleCalendarState.mode = "month";
+  document.getElementById("notificationPanel")?.classList.add("is-hidden");
+  document.getElementById("notificationButton")?.setAttribute("aria-expanded", "false");
+  setView("calendar");
+
+  if (!googleCalendarState.loading && !googleCalendarState.events.some((item) => item.id === eventId)) {
+    await loadGoogleCalendar({ fresh: true });
+  }
+  for (let attempt = 0; googleCalendarState.loading && attempt < 100; attempt += 1) {
+    await new Promise((resolve) => window.setTimeout(resolve, 50));
+  }
+  if (googleCalendarState.events.some((item) => item.id === eventId)) {
+    openGoogleCalendarEventDetails(eventId);
   }
 }
 
@@ -10388,6 +10413,12 @@ document.getElementById("notificationPanel").addEventListener("click", (event) =
   if (personalTask) {
     event.preventDefault();
     void openPersonalTask(personalTask.dataset.personalTask);
+    return;
+  }
+  const calendarEvent = event.target.closest("[data-calendar-notification-event]");
+  if (calendarEvent) {
+    event.preventDefault();
+    void openCalendarNotification(calendarEvent.dataset.calendarNotificationEvent, calendarEvent.dataset.calendarNotificationDate);
     return;
   }
   const chatOpen = event.target.closest("[data-chat-open]");
