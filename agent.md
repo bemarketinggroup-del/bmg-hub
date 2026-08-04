@@ -59,6 +59,29 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-08-04 — Componenti PrimeNG estesi a tutto il gestionale
+
+- Richiesta: usare l'MCP PrimeNG per individuare dove sostituire il maggior
+  numero possibile di controlli custom e rendere il gestionale più moderno e
+  coerente.
+- Modifiche: interrogato l'MCP PrimeNG per componenti, classi e requisiti di
+  accessibilità; introdotto un adapter condiviso che converte controlli statici
+  e dinamici in Button, InputText, Textarea, Select, Checkbox, RadioButton,
+  FileUpload, Card, Panel, Toolbar, Table, Tabs, Dialog, Drawer, Popover, Tag,
+  Badge, Avatar, Message, ProgressBar e ProgressSpinner. Aggiunti token
+  semantici PrimeNG, focus ring, select coerenti, stati, progress e ripple,
+  mantenendo stack vanilla, funzioni, permessi, ID e API esistenti.
+- File: `public/primeng-adapter.js`, `public/index.html`,
+  `public/styles.css`, `scripts/test-primeng-components.mjs`, `package.json`,
+  `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run check`, `npm run test:primeng-components`, test dei
+  moduli principali, `git diff --check`; controllo visivo desktop e smartphone
+  di Home, Calendario, Utenti, filtri e Dialog.
+- Pubblicazione: GitHub `main` e Vercel produzione.
+- Note: il progetto non usa PrimeUI né Angular; il layer riproduce nella SPA
+  vanilla i contratti DOM, gli stati e il linguaggio visivo dei componenti
+  PrimeNG gratuiti indicati dall'MCP.
+
 ### 2026-08-04 — CMS semplificato con titoli unici e barre compatte
 
 - Richiesta: modernizzare e semplificare tutte le aree del gestionale,

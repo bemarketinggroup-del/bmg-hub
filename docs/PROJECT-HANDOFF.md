@@ -73,7 +73,9 @@ gestiti con messaggi comprensibili e senza perdere lo stato della pagina.
 ## Architettura attuale
 
 - Frontend SPA senza framework in `public/index.html`, `public/app.js` e
-  `public/styles.css`.
+  `public/styles.css`; `public/primeng-adapter.js` applica in modo condiviso i
+  contratti visuali e accessibili dei componenti PrimeNG anche ai contenuti
+  generati dinamicamente.
 - Pagina PED condivisa in `public/ped-share.html`, `public/ped-share.js` e
   `public/ped-share.css`.
 - API serverless Vercel in `api/`.
@@ -88,6 +90,7 @@ File principali:
 
 ```text
 public/app.js                  UI e stato applicativo
+public/primeng-adapter.js      layer componenti PrimeNG per la SPA vanilla
 public/styles.css             design desktop/mobile
 public/ped-share.*            PED pubblico in sola lettura
 api/app.js                    router principale delle API
@@ -129,6 +132,12 @@ supabase/                     schema e migration
   le liste del dettaglio e delle azioni hanno uno scroll interno indipendente.
 - La pagina Utenti non espone la creazione di nuovi account; il provisioning
   coordinato resta disponibile soltanto nel backend.
+- Il layer PrimeNG condiviso converte trasversalmente Button, InputText,
+  Textarea, Select, Checkbox, RadioButton, FileUpload, Card, Panel, Toolbar,
+  Table, Tabs, Dialog, Drawer, Popover, Tag, Badge, Avatar, Message,
+  ProgressBar e ProgressSpinner. Il progetto resta vanilla: non usare PrimeUI
+  e non introdurre Angular soltanto per la resa grafica. Gli ID, i `name`, i
+  `data-*`, gli handler e le API applicative devono restare invariati.
 - Collegamento univoco dell'utente al membro ClickUp.
 - Gestione permessi, eliminazione/disattivazione utenti e audit accessi.
 
@@ -412,6 +421,7 @@ npm run test:users
 npm run test:team-chat
 npm run test:graphic-reviews
 npm run test:session-persistence
+npm run test:primeng-components
 ```
 
 Alcuni test interagiscono con servizi reali: leggerli prima di eseguirli e non
