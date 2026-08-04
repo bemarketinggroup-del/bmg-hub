@@ -59,6 +59,26 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-08-04 — Ordine unico di foto e video nella galleria iPhone
+
+- Richiesta: conservare nella galleria iPhone la sequenza del carosello PED
+  senza separare o rimescolare foto e video.
+- Modifiche: ogni elemento riceve una data interna univoca sulla stessa linea
+  temporale, con la posizione `01` più recente e le successive distanziate di un
+  secondo. Le JPEG vengono ordinate tramite EXIF e i video MP4/MOV tramite gli
+  header QuickTime `mvhd`, `tkhd`, `mdhd` e le date testuali incorporate, senza
+  ricodificare pixel o flussi multimediali `mdat`; su iPhone viene caricato in
+  memoria soltanto il blocco `moov` da modificare e non l'intero video.
+- File: `public/ped-gallery-metadata.js`, `public/app.js`,
+  `scripts/test-ped-carousel.mjs`, `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: test sintetico misto JPEG/QuickTime, controllo dei timestamp e
+  dell'integrità `mdat`; prove su MP4 reale da 80 MB e MOV reale da 143 MB con
+  zero byte modificati in `mdat`; `npm run check`, `npm run test:ped-carousel`,
+  `git diff --check`.
+- Pubblicazione: GitHub `main` e Vercel produzione.
+- Note: i contenuti già presenti in Foto conservano i vecchi metadata e devono
+  essere eliminati e riscaricati; il nome `IMG_…` resta assegnato da iOS.
+
 ### 2026-08-04 — Ordine stabile delle JPEG nella galleria iPhone
 
 - Richiesta: correggere il nome diverso e l'ordine errato mostrati da Foto su

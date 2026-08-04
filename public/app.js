@@ -3646,9 +3646,8 @@ async function preparePedCarouselForGallery(item, files, loadId) {
   const button = document.getElementById("pedGalleryShareButton");
   const message = document.getElementById("pedDownloadMessage");
   const preparedFiles = [];
-  let orderedMetadataCount = 0;
-  const batchEnd = Date.now();
-  const batchStart = batchEnd - (Math.max(0, files.length - 1) * 1000);
+  let orderedMediaCount = 0;
+  const batchNewest = Date.now();
 
   try {
     for (let index = 0; index < files.length; index += 1) {
@@ -3666,9 +3665,9 @@ async function preparePedCarouselForGallery(item, files, loadId) {
       }
       const blob = await response.blob();
       const mimeType = String(blob.type || file.drive_mime_type || "application/octet-stream").split(";")[0];
-      const takenAt = new Date(batchStart + (index * 1000));
+      const takenAt = new Date(batchNewest - (index * 1000));
       const orderedMedia = await window.BmgPedGalleryMetadata.orderGalleryMediaBlob(blob, { filename, takenAt });
-      if (orderedMedia.metadataApplied) orderedMetadataCount += 1;
+      if (orderedMedia.metadataApplied) orderedMediaCount += 1;
       preparedFiles.push(new File([orderedMedia.blob], filename, {
         type: orderedMedia.blob.type || mimeType,
         lastModified: takenAt.getTime()
@@ -3683,9 +3682,9 @@ async function preparePedCarouselForGallery(item, files, loadId) {
     pedGalleryShareState.files = preparedFiles;
     button.disabled = false;
     button.textContent = `Salva ${preparedFiles.length} in Foto`;
-    message.textContent = orderedMetadataCount === preparedFiles.length
+    message.textContent = orderedMediaCount === preparedFiles.length
       ? `Ordine 01→${String(preparedFiles.length).padStart(2, "0")} applicato. Tocca “Salva ${preparedFiles.length} in Foto”, poi scegli “Salva in Foto”.`
-      : `${orderedMetadataCount} JPEG ordinate; gli altri contenuti seguiranno l'ordine del pannello iOS. Tocca “Salva ${preparedFiles.length} in Foto”.`;
+      : `${orderedMediaCount} contenuti ordinati; gli altri seguiranno l'ordine del pannello iOS. Tocca “Salva ${preparedFiles.length} in Foto”.`;
   } catch (error) {
     if (pedGalleryShareState.loadId !== loadId) return;
     const pendingIndex = preparedFiles.length;

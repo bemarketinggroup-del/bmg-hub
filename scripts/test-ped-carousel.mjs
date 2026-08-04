@@ -111,6 +111,48 @@ const untouchedPng = new Blob([Uint8Array.from([0x89, 0x50, 0x4e, 0x47])], { typ
 const pngResult = await galleryMetadata.orderGalleryMediaBlob(untouchedPng, { filename: "03.png", takenAt: new Date() });
 assert.equal(pngResult.blob, untouchedPng, "i formati non JPEG non devono essere ricompressi");
 assert.equal(pngResult.metadataApplied, false);
+
+function isoBox(type, payload) {
+  const box = new Uint8Array(8 + payload.length);
+  const view = new DataView(box.buffer);
+  view.setUint32(0, box.length, false);
+  for (let index = 0; index < 4; index += 1) box[4 + index] = type.charCodeAt(index);
+  box.set(payload, 8);
+  return box;
+}
+
+const quickTimeInputDate = "2024-01-02T03:04:05+0200";
+const mvhdPayload = new Uint8Array(24);
+const mvhd = isoBox("mvhd", mvhdPayload);
+const creationDateMetadata = isoBox("free", new TextEncoder().encode(quickTimeInputDate));
+const ftyp = isoBox("ftyp", Uint8Array.from([0x71, 0x74, 0x20, 0x20, 0, 0, 0, 0]));
+const moov = isoBox("moov", new Uint8Array([...mvhd, ...creationDateMetadata]));
+const mdat = isoBox("mdat", Uint8Array.from([0xde, 0xad, 0xbe, 0xef]));
+const quickTimeInput = new Uint8Array([...ftyp, ...moov, ...mdat]);
+const quickTimeTakenAt = new Date("2026-08-04T14:06:01.000Z");
+const orderedQuickTime = await galleryMetadata.orderGalleryMediaBlob(
+  new Blob([quickTimeInput], { type: "video/quicktime" }),
+  { filename: "02 - video.mov", takenAt: quickTimeTakenAt }
+);
+assert.equal(orderedQuickTime.metadataApplied, true, "anche MP4 e MOV devono ricevere la data della propria posizione");
+assert.equal(orderedQuickTime.metadataKind, "quicktime");
+const orderedQuickTimeBytes = new Uint8Array(await orderedQuickTime.blob.arrayBuffer());
+const quickTimeCreationOffset = ftyp.length + 8 + 8 + 4;
+assert.equal(
+  new DataView(orderedQuickTimeBytes.buffer).getUint32(quickTimeCreationOffset, false),
+  Math.floor(quickTimeTakenAt.getTime() / 1000) + 2082844800,
+  "mvhd deve contenere l'istante assegnato al video"
+);
+assert.match(
+  new TextDecoder().decode(orderedQuickTimeBytes),
+  /2026-08-04T14:06:01\+0000/,
+  "la data testuale QuickTime deve usare lo stesso istante UTC"
+);
+assert.deepEqual(
+  [...orderedQuickTimeBytes.slice(-mdat.length)],
+  [...mdat],
+  "i dati multimediali mdat non devono essere ricodificati"
+);
 assert.doesNotMatch(appSource, /data-ped-picker-preview-type/, "il selettore Drive non deve aprire anteprime al passaggio del mouse");
 assert.doesNotMatch(appSource, /function showPedPickerPreview/, "la vecchia anteprima hover deve essere rimossa");
 assert.match(appSource, /Il codec di questo video MOV non è supportato/, "i video incompatibili devono mostrare una spiegazione chiara");
@@ -127,10 +169,12 @@ assert.match(appSource, /if \(isIosDownloadDevice\(\)\) \{\s*openPedCarouselGall
 assert.match(appSource, /navigator\.canShare\(\{ files: preparedFiles \}\)/, "Safari deve verificare che tutti i contenuti possano essere inviati insieme");
 assert.match(appSource, /navigator\.share\(\{ files \}\)/, "iPhone deve ricevere i contenuti tramite il pannello nativo");
 assert.match(appSource, /new File\(\[orderedMedia\.blob\], filename/, "ogni contenuto condiviso deve conservare il nome numerato");
-assert.match(appSource, /batchStart \+ \(index \* 1000\)/, "i file preparati devono avere date crescenti coerenti con l'ordine");
+assert.match(appSource, /batchNewest - \(index \* 1000\)/, "foto e video devono condividere date decrescenti per mantenere l'ordine nel rullino recente");
 assert.match(appSource, /orderGalleryMediaBlob\(blob, \{ filename, takenAt \}\)/, "le copie iPhone devono ricevere metadata interni ordinati");
 assert.match(galleryMetadataSource, /0x9003/, "il metadata JPEG deve includere EXIF DateTimeOriginal");
 assert.match(galleryMetadataSource, /0x010d/, "il metadata JPEG deve includere il nome numerato come DocumentName");
+assert.match(galleryMetadataSource, /\["mvhd", "tkhd", "mdhd"\]/, "i metadata temporali dei video devono essere aggiornati a ogni livello QuickTime");
+assert.match(galleryMetadataSource, /QUICKTIME_EPOCH_OFFSET/, "i video devono usare l'epoca temporale QuickTime");
 assert.match(appSource, /url\.searchParams\.set\("download_name", filename\)/, "i download diretti devono richiedere il nome numerato");
 assert.match(htmlSource, /id="pedDownloadModal"/, "iPhone deve mostrare la lista download dedicata");
 assert.match(htmlSource, /id="pedDownloadList"/, "il modal iPhone deve contenere i file numerati");

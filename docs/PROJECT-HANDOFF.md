@@ -164,10 +164,15 @@ supabase/                     schema e migration
   antepone `01`, `02`, ... `20` ai nomi in base all'ordine del multipost.
 - Su iPhone/iPad il multipost viene preparato come sequenza di file `01`, `02`,
   ... e passato in un'unica operazione al pannello nativo di iOS; scegliendo
-  `Salva in Foto`, i contenuti entrano direttamente nella galleria. Per le JPEG,
-  BMG Hub crea copie temporanee senza ricompressione e assegna date EXIF
-  consecutive in ordine `01→N`, preservando orientamento e pixel; numero e nome
-  originale vengono inseriti anche in `DocumentName` e `ImageDescription`. Gli
+  `Salva in Foto`, i contenuti entrano direttamente nella galleria. BMG Hub crea
+  copie temporanee senza ricompressione e assegna a foto JPEG e video MP4/MOV
+  date interne appartenenti alla stessa sequenza: la posizione `01` è la più
+  recente e ogni posizione successiva è più vecchia di un secondo, così Foto
+  mantiene intercalati foto e video come nel PED. Le JPEG usano EXIF e i video
+  gli header QuickTime `mvhd`/`tkhd`/`mdhd`; pixel e dati `mdat` restano
+  invariati e soltanto il blocco `moov` viene caricato in memoria. Numero e nome
+  originale vengono inseriti anche in `DocumentName` e `ImageDescription` per
+  le JPEG. Gli
   originali Drive non cambiano. iOS può comunque mostrare un nome interno
   `IMG_…`: un sito web non può impostare `PHAssetResource.originalFilename`,
   disponibile soltanto alle app native. La conferma nel pannello iOS è
