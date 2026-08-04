@@ -59,6 +59,26 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-08-04 — Registro attività con contesto PED
+
+- Richiesta: mostrare il dettaglio giornaliero sopra le azioni per ogni utente
+  e indicare precisamente quale PED e quale cliente vengono aperti o modificati.
+- Modifiche: impilati a tutta larghezza `Dettaglio giornaliero` e `Azioni nel
+  gestionale`, mantenendo lo scroll indipendente delle due liste. Esteso l'audit
+  con un contesto leggibile e persistente; apertura PED, cambio cliente/mese,
+  aggiunta, programmazione, modifica, riordino, note, caroselli, rimozione e
+  condivisione riportano cliente, mese, data e contenuto disponibili.
+- File: `public/app.js`, `public/styles.css`, `api/me.js`, `api/users.js`,
+  `supabase/schema.sql`,
+  `supabase/migrations/20260804230500_staff_action_context.sql`,
+  `scripts/test-access-logs.mjs`, `scripts/test-user-management.mjs`,
+  `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run check`, `npm run test:access-logs`, `npm run test:users`,
+  `git diff --check`, controllo visuale desktop e smartphone del registro.
+- Pubblicazione: migration Supabase, GitHub `main` e Vercel produzione.
+- Note: le azioni già registrate prima della migration conservano l'etichetta
+  generica; il nuovo contesto compare sulle azioni successive al deploy.
+
 ### 2026-08-04 — Archivio Grafiche a tutta larghezza
 
 - Richiesta: eliminare lo scorrimento interno dei clienti nella sezione

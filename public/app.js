@@ -537,10 +537,70 @@ function recordAuditAction(endpoint, method = "VIEW", moduleKey = activeModuleKe
     endpoint,
     method,
     module_key: moduleKey,
-    action_key: method === "VIEW" ? "view_module" : metadata.action_key,
+    action_key: metadata.action_key || (method === "VIEW" ? "view_module" : ""),
     entity_type: metadata.entity_type,
-    entity_id: metadata.entity_id
+    entity_id: metadata.entity_id,
+    context_label: metadata.context_label
   }).catch(() => null);
+}
+
+function formatPedAuditMonth(value = pedMonthKey()) {
+  const key = String(value || pedMonthKey()).slice(0, 7);
+  const date = new Date(`${key}-01T12:00:00`);
+  return Number.isNaN(date.getTime())
+    ? key
+    : new Intl.DateTimeFormat("it-IT", { month: "long", year: "numeric" }).format(date);
+}
+
+function formatPedAuditDate(value) {
+  if (!value) return "";
+  const date = new Date(`${String(value).slice(0, 10)}T12:00:00`);
+  return Number.isNaN(date.getTime())
+    ? ""
+    : new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "long", year: "numeric" }).format(date);
+}
+
+function pedAuditMetadata(body = {}, requestUrl = null, actionKey = "") {
+  const itemId = body.id || body.staging_id || body.staging_append_id || requestUrl?.searchParams.get("id") || requestUrl?.searchParams.get("staging_id") || "";
+  const item = itemId
+    ? pedStateItem(itemId) || (state.pedStagingItems || []).find((entry) => String(entry.id) === String(itemId))
+    : null;
+  const clientId = String(body.client_id || item?.client_id || selectedPedClientId || "");
+  const client = state.clients.find((entry) => String(entry.id) === clientId);
+  const scheduledDate = String(body.scheduled_date || item?.scheduled_date || "");
+  const month = scheduledDate.slice(0, 7) || String(body.month || pedMonthKey());
+  const context = [
+    client?.name || "Cliente non identificato",
+    `PED ${formatPedAuditMonth(month)}`
+  ];
+  if (scheduledDate) context.push(formatPedAuditDate(scheduledDate));
+  if (body.staging === true || actionKey.includes("staging")) context.push("Contenuti in attesa");
+  const selectedFiles = Array.isArray(pedPickerState?.selectedFiles) ? pedPickerState.selectedFiles : [];
+  const requestedFileIds = Array.isArray(body.drive_file_ids)
+    ? body.drive_file_ids.map(String)
+    : Array.isArray(body.append_drive_file_ids) ? body.append_drive_file_ids.map(String) : [];
+  const requestedNames = requestedFileIds
+    .map((fileId) => selectedFiles.find((file) => String(file.id) === fileId)?.name)
+    .filter(Boolean);
+  const contentLabel = requestedNames.length
+    ? requestedNames.length === 1 ? requestedNames[0] : `${requestedNames.length} contenuti: ${requestedNames.slice(0, 3).join(", ")}${requestedNames.length > 3 ? "…" : ""}`
+    : item ? pedItemTitle(item) : "";
+  if (contentLabel) context.push(contentLabel);
+  return {
+    entity_type: actionKey === "view_ped" ? "ped" : "ped_content",
+    entity_id: String(itemId || clientId),
+    context_label: context.filter(Boolean).join(" · ")
+  };
+}
+
+function pedAuditActionKey(method, body, requestUrl) {
+  if (method === "POST") return body.staging === true ? "create_ped_staging" : "create_ped_content";
+  if (method === "DELETE") return requestUrl.searchParams.get("staging_id") ? "remove_ped_staging" : "remove_ped_content";
+  if (body.staging_id && body.scheduled_date) return "schedule_ped_content";
+  if (body.note_date) return "update_ped_note";
+  if (Array.isArray(body.instagram_order)) return "reorder_ped";
+  if (Array.isArray(body.carousel_member_ids) || Array.isArray(body.append_drive_file_ids) || body.staging_append_id) return "update_ped_carousel";
+  return "update_ped_content";
 }
 
 function auditMetadata(url, method, options = {}) {
@@ -557,7 +617,7 @@ function auditMetadata(url, method, options = {}) {
     if (endpoint === "/api/clients/sync-clickup") return "sync_clients";
     if (endpoint === "/api/clients") return method === "POST" ? "create_client" : "update_client";
     if (endpoint === "/api/clickup/tasks") return method === "POST" ? "create_task" : "update_task";
-    if (endpoint === "/api/ped") return method === "POST" ? "create_ped_content" : method === "DELETE" ? "remove_ped_content" : "update_ped_content";
+    if (endpoint === "/api/ped") return pedAuditActionKey(method, body, requestUrl);
     if (endpoint === "/api/ped-share") return method === "DELETE" ? "disable_ped_share" : "create_ped_share";
     if (endpoint === "/api/google-calendar") return method === "POST" ? "create_calendar_event" : method === "PATCH" ? "update_calendar_event" : method === "DELETE" ? "delete_calendar_event" : "sync_calendar_events";
     if (endpoint === "/api/team-chat") return "send_chat_message";
@@ -591,17 +651,39 @@ function auditMetadata(url, method, options = {}) {
         : endpoint.includes("site-content") ? "site_content"
           : endpoint.includes("users") ? "user"
             : "";
-  return { action_key: actionKey, entity_type: entityType, entity_id: String(entityId || "") };
+  const pedMetadata = endpoint === "/api/ped"
+    ? pedAuditMetadata(body, requestUrl, actionKey)
+    : endpoint === "/api/ped-share"
+      ? pedAuditMetadata({ ...body, client_id: body.client_id || requestUrl.searchParams.get("client_id"), month: body.month || pedMonthKey() }, requestUrl, actionKey)
+      : null;
+  return {
+    action_key: actionKey,
+    entity_type: pedMetadata?.entity_type || entityType,
+    entity_id: pedMetadata?.entity_id || String(entityId || ""),
+    context_label: pedMetadata?.context_label || ""
+  };
 }
 
-function auditModuleView(view) {
+function auditModuleView(view, metadata = {}) {
   if (!currentProfile) return;
   const moduleKey = VIEW_MODULES[view] || "dashboard";
+  const auditKey = `${moduleKey}:${metadata.entity_id || ""}:${metadata.context_label || ""}`;
   const now = Date.now();
-  if (lastAuditedView === moduleKey && now - lastAuditedViewAt < 10000) return;
-  lastAuditedView = moduleKey;
+  if (lastAuditedView === auditKey && now - lastAuditedViewAt < 10000) return;
+  lastAuditedView = auditKey;
   lastAuditedViewAt = now;
-  void recordAuditAction(`/view/${view}`, "VIEW", moduleKey);
+  void recordAuditAction(`/view/${view}`, "VIEW", moduleKey, metadata);
+}
+
+function auditPedView() {
+  const client = selectedPedClient();
+  if (!client) return;
+  auditModuleView("ped", {
+    action_key: "view_ped",
+    entity_type: "ped",
+    entity_id: String(client.id),
+    context_label: `${client.name} · PED ${formatPedAuditMonth()}`
+  });
 }
 
 async function updateCurrentPassword(currentPassword, newPassword, recoveryMode = false) {
@@ -1017,11 +1099,11 @@ function setView(view) {
   document.querySelectorAll(".nav-item").forEach((item) => item.classList.toggle("is-active", item.dataset.view === view));
   document.querySelectorAll("[data-view-panel]").forEach((panel) => panel.classList.toggle("is-active", panel.dataset.viewPanel === view));
   document.getElementById("viewTitle").textContent = titles[view];
-  auditModuleView(view);
   if (view === "ped") {
     ensurePedClientSelection();
+    auditPedView();
     loadPedCalendar();
-  }
+  } else auditModuleView(view);
   if (view === "calendar") loadGoogleCalendar();
   if (view === "graphics") loadGraphicReviews();
   if (view === "personal") loadPersonalArea();
@@ -3879,6 +3961,7 @@ async function loadPedCalendar() {
 
 function shiftPedMonth(delta) {
   selectedPedMonth = new Date(selectedPedMonth.getFullYear(), selectedPedMonth.getMonth() + delta, 1);
+  auditPedView();
   loadPedCalendar();
 }
 
@@ -6427,7 +6510,11 @@ function renderUserActivityDetails(data) {
           ${actions.length ? actions.map((action) => `
             <article class="p-listbox-option">
               <span class="p-tag user-action-method"><span class="p-tag-label">${escapeHtml(action.method || "VIEW")}</span></span>
-              <div><strong>${escapeHtml(action.action_label || "Operazione")}</strong><small>${escapeHtml(formatUserAccessTime(action.created_at))}</small></div>
+              <div>
+                <strong>${escapeHtml(action.action_label || "Operazione")}</strong>
+                ${action.context_label ? `<span class="user-action-context">${escapeHtml(action.context_label)}</span>` : ""}
+                <small>${escapeHtml(formatUserAccessTime(action.created_at))}</small>
+              </div>
             </article>
           `).join("") : `<p class="p-message p-message-secondary user-activity-empty">Nessuna azione registrata nel periodo.</p>`}
         </div>
@@ -9703,6 +9790,7 @@ document.body.addEventListener("click", (event) => {
     state.pedStagingItems = [];
     pedUsedFileIds = new Set();
     pedShareState = { active: false, shareUrl: "" };
+    auditPedView();
     return loadPedCalendar();
   }
   if (pedStagingAdd) return openPedDrivePicker("", { staging: true });

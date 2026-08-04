@@ -99,6 +99,7 @@ create table if not exists public.staff_action_logs (
   method text,
   entity_type text,
   entity_id text,
+  context_label text,
   created_at timestamptz not null default now()
 );
 

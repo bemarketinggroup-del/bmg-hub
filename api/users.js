@@ -539,7 +539,7 @@ async function sendUserActivity(response, session, profileId, requestedDays) {
   const [profileResult, dailyResult, actionsResult] = await Promise.all([
     supabaseFetch(`/staff_profiles?select=id,email,full_name&id=eq.${profileFilter}&limit=1`),
     supabaseFetch(`/staff_activity_daily?select=activity_date,first_access_at,last_activity_at,active_seconds,session_count&profile_id=eq.${profileFilter}&activity_date=gte.${firstDate}&order=activity_date.asc`),
-    supabaseFetch(`/staff_action_logs?select=id,action_key,action_label,module_key,endpoint,method,created_at&profile_id=eq.${profileFilter}&created_at=gte.${encodeURIComponent(actionsSince)}&order=created_at.desc&limit=300`)
+    supabaseFetch(`/staff_action_logs?select=id,action_key,action_label,context_label,module_key,endpoint,method,entity_type,entity_id,created_at&profile_id=eq.${profileFilter}&created_at=gte.${encodeURIComponent(actionsSince)}&order=created_at.desc&limit=300`)
   ]);
   if (!profileResult.ok || !dailyResult.ok || !actionsResult.ok) {
     response.writeHead(502, headers);

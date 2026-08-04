@@ -5058,8 +5058,10 @@ body.user-editor-visible { overflow: hidden; }
 }
 .user-action-list article > div { min-width: 0; }
 .user-action-list strong,
-.user-action-list small { display: block; }
-.user-action-list strong { overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.user-action-list small,
+.user-action-context { display: block; }
+.user-action-list strong { font-size: 11px; line-height: 1.35; }
+.user-action-context { margin-top: 3px; color: var(--terra-deep); font-size: 10px; line-height: 1.4; }
 .user-action-list small { margin-top: 2px; color: var(--muted); font-size: 10px; }
 .user-action-method {
   flex: 0 0 52px;
@@ -5148,7 +5150,7 @@ body.user-activity-dialog-visible { overflow: hidden; }
 .user-activity-dialog .user-activity-kpis > div { padding: 15px 16px; }
 .user-activity-dialog .user-activity-kpis strong { font-size: 22px; }
 .user-activity-dialog .user-activity-chart { height: 100%; min-height: 105px; overflow: hidden; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); padding: 14px 14px 0; }
-.user-activity-dialog .user-activity-columns { min-height: 0; display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(300px, .65fr); align-items: stretch; gap: 20px; overflow: hidden; }
+.user-activity-dialog .user-activity-columns { min-height: 0; display: grid; grid-template-columns: 1fr; grid-template-rows: minmax(0, .8fr) minmax(0, 1.2fr); align-items: stretch; gap: 12px; overflow: hidden; }
 .user-activity-dialog .user-activity-columns > section { width: auto; min-height: 0; display: grid; grid-template-rows: auto minmax(0, 1fr); overflow: hidden; }
 .user-activity-dialog .user-activity-columns h4 { font-size: 14px; }
 .user-activity-dialog .user-activity-days,
@@ -8000,7 +8002,7 @@ body.user-activity-dialog-visible { overflow: hidden; }
   .user-activity-dialog .user-activity-kpis > div { width: auto; padding: 8px; }
   .user-activity-dialog .user-activity-kpis span { font-size: 8px; }
   .user-activity-dialog .user-activity-kpis strong { font-size: 14px; }
-  .user-activity-dialog .user-activity-columns { grid-template-columns: 1fr; grid-template-rows: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .user-activity-dialog .user-activity-columns { grid-template-columns: 1fr; grid-template-rows: minmax(0, .8fr) minmax(0, 1.2fr); gap: 10px; }
   .user-activity-dialog .user-activity-columns h4 { margin-bottom: 5px; font-size: 11px; }
   .user-activity-dialog .user-activity-chart { height: 100%; min-height: 82px; padding: 8px 6px 0; }
   .user-activity-dialog .user-activity-note { padding-top: 6px; font-size: 8px; line-height: 1.35; }

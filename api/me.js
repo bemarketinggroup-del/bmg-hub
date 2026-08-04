@@ -81,6 +81,7 @@ const ENDPOINT_MODULES = Object.freeze({
 });
 
 const ACTION_LABELS = Object.freeze({
+  view_ped: "Ha aperto un PED",
   change_password: "Ha cambiato la propria password",
   create_user: "Ha creato un account utente",
   update_user: "Ha modificato un account utente",
@@ -90,8 +91,14 @@ const ACTION_LABELS = Object.freeze({
   create_task: "Ha creato una task",
   update_task: "Ha modificato una task",
   create_ped_content: "Ha aggiunto un contenuto al PED",
+  create_ped_staging: "Ha aggiunto un contenuto in attesa nel PED",
   update_ped_content: "Ha modificato un contenuto PED",
+  update_ped_carousel: "Ha modificato un carosello PED",
+  update_ped_note: "Ha aggiornato una nota del PED",
+  reorder_ped: "Ha riordinato il feed del PED",
+  schedule_ped_content: "Ha programmato un contenuto nel PED",
   remove_ped_content: "Ha rimosso un contenuto dal PED",
+  remove_ped_staging: "Ha rimosso un contenuto in attesa dal PED",
   create_calendar_event: "Ha creato un evento in Google Calendar",
   update_calendar_event: "Ha modificato un evento in Google Calendar",
   delete_calendar_event: "Ha eliminato un evento da Google Calendar",
@@ -187,26 +194,35 @@ function auditAction(body, requestedModule) {
   const verbs = { POST: "Creazione o sincronizzazione", PATCH: "Modifica", PUT: "Aggiornamento", DELETE: "Eliminazione" };
   const requestedAction = String(body.action_key || "").trim();
   const actionKey = isView
-    ? "view_module"
+    ? requestedAction === "view_ped" ? "view_ped" : "view_module"
     : Object.hasOwn(ACTION_LABELS, requestedAction)
       ? requestedAction
       : `${method.toLowerCase()}_operation`;
   return {
     action_key: actionKey,
     action_label: isView
-      ? `Ha aperto il modulo ${moduleLabel}`
+      ? actionKey === "view_ped" ? ACTION_LABELS.view_ped : `Ha aperto il modulo ${moduleLabel}`
       : ACTION_LABELS[actionKey] || `${verbs[method] || "Operazione"} in ${moduleLabel}`,
     module_key: moduleKey,
     endpoint: isView ? null : endpoint || null,
     method,
     entity_type: safeAuditValue(body.entity_type, 40),
-    entity_id: safeAuditValue(body.entity_id, 120)
+    entity_id: safeAuditValue(body.entity_id, 120),
+    context_label: safeAuditText(body.context_label, 300)
   };
 }
 
 function safeAuditValue(value, maxLength) {
   const normalized = String(value || "").trim().slice(0, maxLength);
   return normalized && /^[a-zA-Z0-9_:.@-]+$/.test(normalized) ? normalized : null;
+}
+
+function safeAuditText(value, maxLength) {
+  return String(value || "")
+    .replace(/[\u0000-\u001f\u007f]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, maxLength) || null;
 }
 
 async function changePassword(request, response, session) {

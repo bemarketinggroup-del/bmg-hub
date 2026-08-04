@@ -130,8 +130,11 @@ supabase/                     schema e migration
   componenti PrimeNG-style e due tab: `Profilo` e `Permessi`. Il
   `Registro attività` si apre invece da un pulsante dedicato accanto a
   `Modifica`, in un dialog fullscreen che mostra KPI, grafico, dettaglio
-  giornaliero e azioni. La modal e la pagina sottostante non scorrono: soltanto
-  le liste del dettaglio e delle azioni hanno uno scroll interno indipendente.
+  giornaliero a tutta larghezza e, subito sotto, le azioni. La modal e la pagina
+  sottostante non scorrono: soltanto le due liste hanno uno scroll interno
+  indipendente. Le azioni PED riportano cliente, mese/PED, data e contenuto
+  quando disponibili; anche apertura del PED, cambio cliente e cambio mese
+  vengono registrati con il relativo cliente.
 - La pagina Utenti non espone la creazione di nuovi account; il provisioning
   coordinato resta disponibile soltanto nel backend.
 - Il layer PrimeNG condiviso converte trasversalmente Button, InputText,
