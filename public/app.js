@@ -6358,6 +6358,7 @@ function openUserActivityDialog(profileId) {
     <div class="user-last-login"><span>Ultima attività</span><strong>${escapeHtml(lastAccess)}</strong></div>
   </div>
   <div class="user-activity-panel p-panel-content" data-user-activity-panel="${escapeHtml(profile.id)}"></div>`;
+  document.body.classList.add("user-activity-dialog-visible");
   if (!dialog.open) dialog.showModal();
   focusUserEditor(document.getElementById("userActivityDialogCloseButton"));
   void loadUserActivity(profile.id);
@@ -6367,6 +6368,7 @@ function closeUserActivityDialog() {
   const profileId = userActivityDialogProfileId;
   const dialog = document.getElementById("userActivityDialog");
   userActivityDialogProfileId = "";
+  document.body.classList.remove("user-activity-dialog-visible");
   if (dialog?.open) dialog.close();
   window.requestAnimationFrame(() => {
     document.querySelector(`[data-user-activity="${CSS.escape(profileId)}"]`)?.focus();

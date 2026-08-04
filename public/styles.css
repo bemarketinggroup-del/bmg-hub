@@ -5031,17 +5031,30 @@ body.user-editor-visible { overflow: hidden; }
 .user-activity-note { margin: 0; color: var(--muted); font-size: 10px; }
 .user-activity-note { border-top: 1px solid var(--line); padding-top: 10px; }
 .user-activity-dialog.modal {
-  width: min(1180px, calc(100vw - 40px));
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100dvh;
   max-width: none;
-  max-height: calc(100dvh - 40px);
-  overflow: auto;
+  max-height: none;
+  margin: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 0;
   padding: 0;
 }
-.user-activity-dialog-shell { min-width: 0; }
+body.user-activity-dialog-visible { overflow: hidden; }
+.user-activity-dialog-shell {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+}
 .user-activity-dialog-head {
-  position: sticky;
   z-index: 4;
-  top: 0;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -5054,7 +5067,15 @@ body.user-editor-visible { overflow: hidden; }
 .user-activity-dialog-head .eyebrow { margin: 0 0 3px; }
 .user-activity-dialog-head h2 { margin: 0; color: var(--ink); font-size: 24px; }
 .user-activity-dialog-head > div > span { display: block; margin-top: 5px; color: var(--muted); font-size: 12px; }
-.user-activity-dialog-content { display: grid; gap: 20px; padding: 22px 24px 26px; }
+.user-activity-dialog-content {
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 16px;
+  overflow: hidden;
+  padding: 18px 24px 22px;
+}
 .user-activity-dialog-profile {
   display: flex;
   align-items: center;
@@ -5069,16 +5090,25 @@ body.user-editor-visible { overflow: hidden; }
 .user-activity-dialog-profile .user-identity strong { display: block; color: var(--ink); font-size: 14px; }
 .user-activity-dialog-profile .user-identity span { display: block; margin-top: 3px; }
 .user-activity-dialog-profile .user-last-login { min-width: 230px; }
-.user-activity-dialog .user-activity-panel { grid-column: auto; border: 0; background: transparent; padding: 0; }
+.user-activity-dialog .user-activity-panel {
+  min-width: 0;
+  min-height: 0;
+  grid-column: auto;
+  grid-template-rows: auto auto minmax(105px, .55fr) minmax(180px, 1.45fr) auto;
+  overflow: hidden;
+  border: 0;
+  background: transparent;
+  padding: 0;
+}
 .user-activity-dialog .user-activity-kpis { gap: 12px; }
 .user-activity-dialog .user-activity-kpis > div { padding: 15px 16px; }
 .user-activity-dialog .user-activity-kpis strong { font-size: 22px; }
-.user-activity-dialog .user-activity-chart { height: 168px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); padding: 18px 14px 0; }
-.user-activity-dialog .user-activity-columns { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(300px, .65fr); gap: 20px; }
-.user-activity-dialog .user-activity-columns > section { width: auto; }
+.user-activity-dialog .user-activity-chart { height: 100%; min-height: 105px; overflow: hidden; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); padding: 14px 14px 0; }
+.user-activity-dialog .user-activity-columns { min-height: 0; display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(300px, .65fr); align-items: stretch; gap: 20px; overflow: hidden; }
+.user-activity-dialog .user-activity-columns > section { width: auto; min-height: 0; display: grid; grid-template-rows: auto minmax(0, 1fr); overflow: hidden; }
 .user-activity-dialog .user-activity-columns h4 { font-size: 14px; }
 .user-activity-dialog .user-activity-days,
-.user-activity-dialog .user-action-list { max-height: none; overflow: visible; }
+.user-activity-dialog .user-action-list { min-height: 0; max-height: none; overflow: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
 .user-activity-dialog .user-activity-days article { padding: 12px 13px; }
 .user-activity-dialog .user-action-list { border: 1px solid var(--line); border-radius: 9px; background: var(--surface); padding: 5px 12px; }
 .user-access-head,
@@ -7936,17 +7966,24 @@ body.user-editor-visible { overflow: hidden; }
   .user-activity-kpis > div,
   .user-activity-columns > section { width: 100%; }
   .user-activity-days article { grid-template-columns: 1fr 1fr; }
-  .user-activity-dialog.modal { width: calc(100vw - 16px); max-height: calc(100dvh - 16px); }
-  .user-activity-dialog-head { padding: 16px; }
-  .user-activity-dialog-head h2 { font-size: 20px; }
-  .user-activity-dialog-content { gap: 14px; padding: 14px; }
+  .user-activity-dialog.modal { width: 100vw; height: 100dvh; max-height: none; }
+  .user-activity-dialog-head { padding: 12px 14px; }
+  .user-activity-dialog-head h2 { font-size: 18px; }
+  .user-activity-dialog-head > div > span { margin-top: 2px; font-size: 10px; }
+  .user-activity-dialog-content { gap: 10px; padding: 10px 12px 12px; }
   .user-activity-dialog-profile { align-items: stretch; flex-direction: column; }
   .user-activity-dialog-profile .user-last-login { min-width: 0; }
   .user-activity-dialog .user-activity-toolbar { align-items: stretch; flex-direction: column; }
-  .user-activity-dialog .user-activity-toolbar button { width: 100%; }
-  .user-activity-dialog .user-activity-kpis,
-  .user-activity-dialog .user-activity-columns { display: grid; grid-template-columns: 1fr; }
-  .user-activity-dialog .user-activity-chart { height: 132px; padding: 14px 8px 0; }
+  .user-activity-dialog .user-activity-toolbar button { width: 100%; min-height: 32px; }
+  .user-activity-dialog .user-activity-panel { gap: 10px; grid-template-rows: auto auto minmax(82px, .5fr) minmax(190px, 1.5fr) auto; }
+  .user-activity-dialog .user-activity-kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; }
+  .user-activity-dialog .user-activity-kpis > div { width: auto; padding: 8px; }
+  .user-activity-dialog .user-activity-kpis span { font-size: 8px; }
+  .user-activity-dialog .user-activity-kpis strong { font-size: 14px; }
+  .user-activity-dialog .user-activity-columns { grid-template-columns: 1fr; grid-template-rows: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .user-activity-dialog .user-activity-columns h4 { margin-bottom: 5px; font-size: 11px; }
+  .user-activity-dialog .user-activity-chart { height: 100%; min-height: 82px; padding: 8px 6px 0; }
+  .user-activity-dialog .user-activity-note { padding-top: 6px; font-size: 8px; line-height: 1.35; }
 }
 
 @media (prefers-reduced-motion: reduce) {

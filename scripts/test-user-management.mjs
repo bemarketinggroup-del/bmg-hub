@@ -39,6 +39,7 @@ assert.match(appSource, /class="permission-toggle p-checkbox"[\s\S]*class="p-che
 assert.match(appSource, /function activateUserEditorTab\(tabName[\s\S]*aria-selected[\s\S]*panel\.hidden = !selected/, "le tab devono aggiornare stato e pannelli accessibili");
 assert.match(appSource, /function openUserActivityDialog\(profileId\)[\s\S]*dialog\.showModal\(\)[\s\S]*void loadUserActivity\(profile\.id\)/, "il pulsante attività deve aprire e caricare il registro autonomo");
 assert.match(appSource, /function closeUserActivityDialog\(\)[\s\S]*data-user-activity=/, "la chiusura del registro deve restituire il focus al pulsante di origine");
+assert.match(appSource, /classList\.add\("user-activity-dialog-visible"\)[\s\S]*classList\.remove\("user-activity-dialog-visible"\)/, "il registro fullscreen deve bloccare lo scroll della pagina sottostante");
 assert.match(appSource, /\["ArrowLeft", "ArrowRight", "Home", "End"\]/, "le tab devono supportare la navigazione da tastiera PrimeNG");
 assert.match(appSource, /panel\.classList\.add\("is-open"\)[\s\S]*overlay\.classList\.add\("is-open"\)/, "drawer e overlay devono animarsi insieme");
 assert.match(appSource, /document\.body\.classList\.add\("user-editor-visible"\)/, "la pagina deve bloccarsi mentre il drawer e aperto");
@@ -65,8 +66,9 @@ assert.match(styleSource, /\.user-editor-overlay\s*\{[^}]*position:\s*fixed[^}]*
 assert.match(styleSource, /\.user-editor-panel\s*\{[^}]*position:\s*fixed[^}]*right:\s*0[^}]*transform:\s*translate3d\(100%/, "il drawer deve partire fuori schermo sulla destra");
 assert.match(styleSource, /\.user-editor-panel\.is-open\s*\{[^}]*translate3d\(0, 0, 0\)/, "il drawer aperto deve scorrere nella pagina da destra");
 assert.match(styleSource, /\.user-editor-tabs \.p-tablist-tab-list\s*\{[^}]*grid-template-columns:\s*repeat\(2/, "il drawer deve mostrare le due tab Profilo e Permessi");
-assert.match(styleSource, /\.user-activity-dialog\.modal\s*\{[^}]*width:\s*min\(1180px/, "il registro attività deve usare una schermata ampia");
-assert.match(styleSource, /\.user-activity-dialog \.user-activity-days,[\s\S]*max-height:\s*none[^}]*overflow:\s*visible/, "il registro ampio deve mostrare tutti i dati senza liste interne compresse");
+assert.match(styleSource, /\.user-activity-dialog\.modal\s*\{[^}]*width:\s*100vw[^}]*height:\s*100dvh[^}]*overflow:\s*hidden/, "il registro attività deve occupare lo schermo senza scroll esterno");
+assert.match(styleSource, /\.user-activity-dialog-content\s*\{[^}]*min-height:\s*0[^}]*overflow:\s*hidden/, "il contenuto fullscreen deve restare vincolato al viewport");
+assert.match(styleSource, /\.user-activity-dialog \.user-activity-days,[\s\S]*min-height:\s*0[^}]*overflow:\s*auto/, "dettaglio giornaliero e azioni devono scorrere soltanto al loro interno");
 assert.match(styleSource, /\.user-editor-panel \.p-toggleswitch-input:checked \+ \.p-toggleswitch-slider/, "ToggleSwitch PrimeNG deve mostrare lo stato attivo");
 assert.match(styleSource, /\.user-editor-panel \.p-checkbox-input:checked \+ \.p-checkbox-box/, "Checkbox PrimeNG deve mostrare lo stato selezionato");
 assert.match(styleSource, /@media \(max-width: 760px\)[\s\S]*\.p-datatable-tbody td::before[^}]*attr\(data-label\)/, "su mobile le righe devono mantenere le etichette delle colonne");

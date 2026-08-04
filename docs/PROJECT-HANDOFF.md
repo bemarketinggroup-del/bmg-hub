@@ -117,8 +117,9 @@ supabase/                     schema e migration
   alla pagina, con overlay e ingresso animato da destra. L'editor usa
   componenti PrimeNG-style e due tab: `Profilo` e `Permessi`. Il
   `Registro attività` si apre invece da un pulsante dedicato accanto a
-  `Modifica`, in un dialog ampio che mostra KPI, grafico, dettaglio giornaliero
-  e azioni senza comprimere le liste in scroll interni.
+  `Modifica`, in un dialog fullscreen che mostra KPI, grafico, dettaglio
+  giornaliero e azioni. La modal e la pagina sottostante non scorrono: soltanto
+  le liste del dettaglio e delle azioni hanno uno scroll interno indipendente.
 - La pagina Utenti non espone la creazione di nuovi account; il provisioning
   coordinato resta disponibile soltanto nel backend.
 - Collegamento univoco dell'utente al membro ClickUp.

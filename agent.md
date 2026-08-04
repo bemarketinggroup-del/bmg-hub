@@ -59,6 +59,22 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-08-04 — Registro attività fullscreen con scroll interni
+
+- Richiesta: impedire lo scroll della pagina del Registro attività e lasciare
+  scorrere soltanto i singoli elementi interni che contengono molti dati.
+- Modifiche: il Dialog attività ora occupa l'intero viewport e usa una griglia
+  ad altezza vincolata; pagina, modal e contenitore principale restano fermi,
+  mentre dettaglio giornaliero e azioni hanno aree di scroll indipendenti. Su
+  smartphone i due registri sono impilati conservando lo stesso comportamento.
+- File: `public/app.js`, `public/styles.css`,
+  `scripts/test-user-management.mjs`, `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run check`, `npm run test:users`,
+  `npm run test:permissions`, `npm run test:mobile-navigation`,
+  `git diff --check`; controllo funzionale e visivo desktop e smartphone.
+- Pubblicazione: GitHub `main` e Vercel produzione.
+- Note: Nessuna.
+
 ### 2026-08-04 — Registro attività utenti in schermata ampia
 
 - Richiesta: spostare il registro attività fuori dal pannello di modifica e
