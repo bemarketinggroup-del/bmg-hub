@@ -59,6 +59,25 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-08-04 — Navigazione convertita in Sidebar PrimeNG
+
+- Richiesta: sostituire la sidebar principale con quella di PrimeNG.
+- Modifiche: la navigazione usa ora la struttura gratuita `Sidebar` di PrimeNG
+  17 (`p-sidebar`) con header, content, footer, mask e stati attivi del
+  componente. Su desktop resta persistente; su smartphone entra da sinistra
+  come overlay, blocca la pagina, mantiene il focus al proprio interno e si
+  chiude con mask, selezione della vista o `Esc`, senza modificare permessi e
+  navigazione esistenti.
+- File: `public/index.html`, `public/app.js`, `public/styles.css`,
+  `scripts/test-mobile-navigation.mjs`, `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run check`, `npm run test:mobile-navigation`,
+  `npm run test:session-persistence`, `npm run test:permissions`,
+  `npm run test:connected-services`, `git diff --check`; controllo funzionale
+  e visivo desktop e smartphone.
+- Pubblicazione: GitHub `main` e Vercel produzione.
+- Note: il progetto resta vanilla e non introduce Angular; markup, stati,
+  accessibilità e linguaggio visivo seguono il componente PrimeNG 17 gratuito.
+
 ### 2026-08-04 — Registro attività fullscreen con scroll interni
 
 - Richiesta: impedire lo scroll della pagina del Registro attività e lasciare

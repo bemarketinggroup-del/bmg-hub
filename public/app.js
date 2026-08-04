@@ -1025,9 +1025,14 @@ function setMobileNavOpen(open, { restoreFocus = false } = {}) {
   if (!sidebar || !toggle || !backdrop) return;
   const shouldOpen = Boolean(open && mobileNavigationMedia.matches);
   sidebar.classList.toggle("is-mobile-open", shouldOpen);
+  sidebar.classList.toggle("p-sidebar-active", shouldOpen);
   backdrop.classList.toggle("is-active", shouldOpen);
+  backdrop.classList.toggle("p-sidebar-mask-active", shouldOpen);
   backdrop.setAttribute("aria-hidden", shouldOpen ? "false" : "true");
   toggle.setAttribute("aria-expanded", shouldOpen ? "true" : "false");
+  sidebar.setAttribute("aria-modal", shouldOpen ? "true" : "false");
+  if (mobileNavigationMedia.matches) sidebar.setAttribute("aria-hidden", shouldOpen ? "false" : "true");
+  else sidebar.removeAttribute("aria-hidden");
   document.body.classList.toggle("mobile-nav-open", shouldOpen);
   sidebar.inert = mobileNavigationMedia.matches && !shouldOpen;
   if (shouldOpen) {
@@ -10117,6 +10122,18 @@ document.body.addEventListener("keydown", (event) => {
       return;
     }
   }
+  const mobileSidebar = document.getElementById("appSidebar");
+  if (event.key === "Tab" && mobileSidebar?.classList.contains("p-sidebar-active")) {
+    const focusable = [...mobileSidebar.querySelectorAll('button:not([disabled]):not(.is-hidden), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')]
+      .filter((element) => !element.hidden && element.getClientRects().length);
+    const first = focusable[0];
+    const last = focusable.at(-1);
+    if (first && last && (!mobileSidebar.contains(document.activeElement) || (event.shiftKey ? document.activeElement === first : document.activeElement === last))) {
+      event.preventDefault();
+      (event.shiftKey ? last : first).focus();
+      return;
+    }
+  }
   const userEditorTab = event.target.closest?.("[data-user-editor-tab]");
   if (userEditorTab && ["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) {
     const tabs = [...userEditorTab.parentElement.querySelectorAll("[data-user-editor-tab]")];
@@ -10131,6 +10148,7 @@ document.body.addEventListener("keydown", (event) => {
     return;
   }
   if (event.key === "Escape" && document.getElementById("appSidebar")?.classList.contains("is-mobile-open")) {
+    event.preventDefault();
     setMobileNavOpen(false, { restoreFocus: true });
     return;
   }

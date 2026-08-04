@@ -112,6 +112,9 @@ supabase/                     schema e migration
 - Login tramite Supabase Auth.
 - Ruoli `admin` e `staff` con permessi per modulo.
 - Sessione e pagina attiva persistono dopo il refresh.
+- La navigazione principale usa la struttura `Sidebar` PrimeNG 17 con template
+  header/content/footer: resta persistente su desktop e diventa un overlay da
+  sinistra su smartphone, con mask, blocco pagina, `Esc` e focus intrappolato.
 - Directory utenti in linguaggio CMS, con tabella PrimeNG-style, ricerca e
   filtri per ruolo/stato; la modifica avviene in un drawer modale sovrapposto
   alla pagina, con overlay e ingresso animato da destra. L'editor usa

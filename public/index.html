@@ -33,80 +33,84 @@
   </section>
 
   <div class="app-shell is-hidden" id="appShell">
-    <aside class="sidebar" id="appSidebar" aria-label="Navigazione BMG Hub">
-      <div class="brand">
-        <span class="brand-logo"><img src="logo.svg" alt="BMG · be marketing group"></span>
-        <div>
-          <strong>BMG Hub</strong>
-          <span>Internal OS</span>
+    <aside class="p-sidebar p-component p-sidebar-left sidebar" id="appSidebar" data-pc-name="sidebar" data-pc-section="root" role="complementary" aria-label="Navigazione BMG Hub" aria-modal="false">
+      <div class="p-sidebar-header sidebar-header" data-pc-section="header">
+        <div class="brand">
+          <span class="brand-logo"><img src="logo.svg" alt="BMG · be marketing group"></span>
+          <div>
+            <strong>BMG Hub</strong>
+            <span>Internal OS</span>
+          </div>
         </div>
       </div>
 
-      <nav class="nav-list" id="navList">
-        <button class="nav-item is-active" data-view="dashboard" type="button">
+      <div class="p-sidebar-content sidebar-content" data-pc-section="content">
+        <nav class="p-menu p-component nav-list" id="navList" aria-label="Sezioni del gestionale">
+        <button class="p-ripple nav-item is-active" data-view="dashboard" type="button">
           <span class="icon"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg></span>
           <span>Home</span>
         </button>
-        <button class="nav-item" data-view="personal" type="button">
+        <button class="p-ripple nav-item" data-view="personal" type="button">
           <span class="icon"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></span>
           <span>La mia area</span>
         </button>
-        <button class="nav-item" data-view="chat" data-module="chat" type="button">
+        <button class="p-ripple nav-item" data-view="chat" data-module="chat" type="button">
           <span class="icon"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/><path d="M8 9h8M8 13h5"/></svg></span>
           <span>Chat</span>
-          <span class="nav-unread-badge is-hidden" id="chatNavBadge">0</span>
+          <span class="p-badge nav-unread-badge is-hidden" id="chatNavBadge">0</span>
         </button>
-        <button class="nav-item" data-view="content" data-module="site_backend" type="button">
+        <button class="p-ripple nav-item" data-view="content" data-module="site_backend" type="button">
           <span class="icon"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"/></svg></span>
           <span>Backend sito</span>
         </button>
-        <button class="nav-item" data-view="clients" data-module="clients" type="button">
+        <button class="p-ripple nav-item" data-view="clients" data-module="clients" type="button">
           <span class="icon"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg></span>
           <span>Clienti</span>
         </button>
-        <button class="nav-item" data-view="ped" data-module="ped" type="button">
+        <button class="p-ripple nav-item" data-view="ped" data-module="ped" type="button">
           <span class="icon"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></svg></span>
           <span>PED</span>
         </button>
-        <button class="nav-item" data-view="graphics" data-module="graphics" type="button">
+        <button class="p-ripple nav-item" data-view="graphics" data-module="graphics" type="button">
           <span class="icon"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h16"/><path d="m14 4 6 6L9 21H3v-6Z"/><path d="m12 6 6 6"/><path d="M15 3h6v6"/></svg></span>
           <span>Grafiche</span>
-          <span class="nav-unread-badge is-hidden" id="graphicsNavBadge">0</span>
+          <span class="p-badge nav-unread-badge is-hidden" id="graphicsNavBadge">0</span>
         </button>
-        <button class="nav-item" data-view="calendar" data-module="calendar" type="button">
+        <button class="p-ripple nav-item" data-view="calendar" data-module="calendar" type="button">
           <span class="icon"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/><path d="M8 14h2M14 14h2M8 18h2M14 18h2"/></svg></span>
           <span>Calendario</span>
         </button>
-        <button class="nav-item" data-view="team" data-module="tasks" type="button">
+        <button class="p-ripple nav-item" data-view="team" data-module="tasks" type="button">
           <span class="icon"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M8 7v7"/><path d="M12 7v4"/><path d="M16 7v9"/></svg></span>
           <span>Task del team</span>
         </button>
-        <button class="nav-item" data-view="smart" data-module="smart_working" type="button">
+        <button class="p-ripple nav-item" data-view="smart" data-module="smart_working" type="button">
           <span class="icon"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3.5"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h5"/><circle cx="16" cy="16" r="6"/><path d="M16 14v2l1.5 1"/></svg></span>
           <span>Turni / Smart Working</span>
         </button>
-        <button class="nav-item admin-only" data-view="counter" type="button">
+        <button class="p-ripple nav-item admin-only" data-view="counter" type="button">
           <span class="icon"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V9"/><path d="M10 19V5"/><path d="M16 19v-7"/><path d="M22 19V3"/><path d="M2 19h22"/></svg></span>
           <span>Contatore</span>
         </button>
-        <button class="nav-item" data-view="users" data-module="users" type="button">
+        <button class="p-ripple nav-item" data-view="users" data-module="users" type="button">
           <span class="icon"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
           <span>Utenti</span>
         </button>
-      </nav>
+        </nav>
+      </div>
 
-      <div class="sidebar-footer" aria-label="Stato dei servizi">
+      <div class="p-sidebar-footer sidebar-footer" data-pc-section="footer" aria-label="Stato dei servizi">
         <span class="sidebar-services-title">Servizi</span>
         <div class="sidebar-services" id="connectedServices"></div>
       </div>
     </aside>
 
-    <button class="mobile-nav-backdrop" id="mobileNavBackdrop" type="button" tabindex="-1" aria-label="Chiudi menu" aria-hidden="true"></button>
+    <button class="p-sidebar-mask p-component-overlay mobile-nav-backdrop" id="mobileNavBackdrop" type="button" tabindex="-1" aria-label="Chiudi menu" aria-hidden="true"></button>
 
     <main class="main">
       <header class="topbar">
         <div class="topbar-heading">
-          <button class="icon-button mobile-nav-toggle" id="mobileNavToggle" type="button" aria-label="Apri menu" aria-controls="appSidebar" aria-expanded="false">
+          <button class="p-button p-component p-button-icon-only p-button-text icon-button mobile-nav-toggle" id="mobileNavToggle" type="button" aria-label="Apri menu" aria-controls="appSidebar" aria-expanded="false">
             <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h16"/></svg>
           </button>
           <div>
