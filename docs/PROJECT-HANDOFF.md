@@ -113,8 +113,8 @@ supabase/                     schema e migration
 - Ruoli `admin` e `staff` con permessi per modulo.
 - Sessione e pagina attiva persistono dopo il refresh.
 - Directory utenti in linguaggio CMS, con tabella PrimeNG-style, ricerca e
-  filtri per ruolo/stato; creazione e modifica avvengono nel pannello della
-  stessa pagina.
+  filtri per ruolo/stato; creazione e modifica avvengono in un drawer modale
+  sovrapposto alla pagina, con overlay e ingresso animato da destra.
 - Utenti creabili con nome, cognome, email e password.
 - Collegamento univoco dell'utente al membro ClickUp.
 - Gestione permessi, eliminazione/disattivazione utenti e audit accessi.

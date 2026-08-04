@@ -779,7 +779,8 @@
               <div class="user-list" id="userList"></div>
             </section>
 
-            <aside class="user-editor-panel admin-only" id="userEditorPanel" aria-labelledby="userEditorTitle" hidden>
+            <div class="user-editor-overlay" id="userEditorOverlay" data-close-user-editor aria-hidden="true" hidden></div>
+            <aside class="user-editor-panel admin-only" id="userEditorPanel" role="dialog" aria-modal="true" aria-labelledby="userEditorTitle" tabindex="-1" hidden>
               <div class="user-editor-head">
                 <div>
                   <p class="eyebrow" id="userEditorEyebrow">Account CMS</p>

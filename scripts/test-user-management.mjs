@@ -14,7 +14,8 @@ assert.match(htmlSource, /class="p-datatable-header user-directory-toolbar"/, "l
 assert.match(htmlSource, /id="userDirectorySearch"[^>]*type="search"/, "la tabella deve poter cercare nome ed email");
 assert.match(htmlSource, /id="userRoleFilter"/, "la tabella deve filtrare il ruolo");
 assert.match(htmlSource, /id="userStatusFilter"/, "la tabella deve filtrare lo stato");
-assert.match(htmlSource, /id="userEditorPanel"[\s\S]*id="userCreateForm"/, "creazione e modifica devono restare nel pannello della pagina");
+assert.match(htmlSource, /id="userEditorOverlay"[^>]*data-close-user-editor/, "il drawer deve avere un overlay che lo chiude");
+assert.match(htmlSource, /id="userEditorPanel"[^>]*role="dialog"[^>]*aria-modal="true"[\s\S]*id="userCreateForm"/, "creazione e modifica devono restare nel drawer modale");
 assert.match(htmlSource, /name="first_name"[^>]*autocomplete="given-name"/, "il modulo deve richiedere il nome");
 assert.match(htmlSource, /name="last_name"[^>]*autocomplete="family-name"/, "il modulo deve richiedere il cognome");
 assert.match(htmlSource, /name="email" type="email"[^>]*required/, "l'email deve essere modificabile e obbligatoria");
@@ -28,6 +29,10 @@ assert.match(appSource, /function renderUserTableRow\(profile, canManage\)/, "il
 assert.match(appSource, /data-edit-user=/, "ogni account gestibile deve aprire l'editor interno");
 assert.match(appSource, /function openUserCreatePanel\(\)/, "la creazione deve aprirsi nel pannello interno");
 assert.match(appSource, /function openUserEditPanel\(profileId\)/, "la modifica deve aprirsi nel pannello interno");
+assert.match(appSource, /panel\.classList\.add\("is-open"\)[\s\S]*overlay\.classList\.add\("is-open"\)/, "drawer e overlay devono animarsi insieme");
+assert.match(appSource, /document\.body\.classList\.add\("user-editor-visible"\)/, "la pagina deve bloccarsi mentre il drawer e aperto");
+assert.match(appSource, /event\.key === "Escape" && userEditorMode[\s\S]*closeUserEditorPanel\(\)/, "il tasto Escape deve chiudere il drawer");
+assert.match(appSource, /event\.key === "Tab" && userEditorMode[\s\S]*panel\?\.querySelectorAll[\s\S]*document\.activeElement/, "il focus da tastiera deve restare nel drawer modale");
 assert.match(appSource, /normalizeUserDirectoryText[\s\S]*matchesSearch[\s\S]*matchesRole[\s\S]*matchesStatus/, "ricerca e filtri devono essere applicati insieme");
 assert.match(appSource, /data-delete-user=/, "ogni utente eliminabile deve avere il relativo comando");
 assert.match(appSource, /method: "DELETE"[\s\S]*?JSON\.stringify\(\{ id: profileId \}\)/, "la cancellazione deve passare dall'API utenti");
@@ -44,8 +49,10 @@ assert.match(apiSource, /clickup_membership_preserved/, "la rimozione interna de
 assert.match(clickUpSource, /\/team\/\$\{encodeURIComponent\(workspaceId\)\}\/user/, "l'invito deve usare l'endpoint membri del workspace");
 assert.match(clickUpSource, /JSON\.stringify\(\{ email: normalizedEmail, admin: false \}\)/, "l'utente ClickUp deve essere invitato come membro non amministratore");
 
-assert.match(styleSource, /\.user-management-layout\.is-editor-open\s*\{[^}]*grid-template-columns:/, "il pannello editor deve affiancarsi alla directory su desktop");
 assert.match(styleSource, /\.p-datatable-table\s*\{[^}]*width:\s*100%/, "la DataTable deve occupare il pannello disponibile");
+assert.match(styleSource, /\.user-editor-overlay\s*\{[^}]*position:\s*fixed[^}]*opacity:\s*0/, "l'overlay deve coprire la pagina ed entrare con dissolvenza");
+assert.match(styleSource, /\.user-editor-panel\s*\{[^}]*position:\s*fixed[^}]*right:\s*0[^}]*transform:\s*translate3d\(100%/, "il drawer deve partire fuori schermo sulla destra");
+assert.match(styleSource, /\.user-editor-panel\.is-open\s*\{[^}]*translate3d\(0, 0, 0\)/, "il drawer aperto deve scorrere nella pagina da destra");
 assert.match(styleSource, /@media \(max-width: 760px\)[\s\S]*\.p-datatable-tbody td::before[^}]*attr\(data-label\)/, "su mobile le righe devono mantenere le etichette delle colonne");
 
 console.log("User management tests passed");

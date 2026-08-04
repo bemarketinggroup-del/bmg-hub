@@ -59,6 +59,23 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-08-04 — Drawer utenti sovrapposto con slide da destra
+
+- Richiesta: mostrare il pannello laterale di creazione/modifica utenti sopra la
+  pagina, con overlay e animazione di ingresso da destra.
+- Modifiche: il pannello Utenti è ora un drawer modale fisso che non ridimensiona
+  la tabella sottostante; lo sfondo viene oscurato e bloccato, il drawer scorre
+  da destra e può essere chiuso dal pulsante, dall'overlay, da `Annulla` o con
+  `Esc`. Su smartphone occupa tutta la larghezza e rispetta la riduzione delle
+  animazioni richiesta dal sistema.
+- File: `public/index.html`, `public/app.js`, `public/styles.css`,
+  `scripts/test-user-management.mjs`, `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run check`, `npm run test:users`,
+  `npm run test:permissions`, `git diff --check`; controllo visivo e funzionale
+  desktop e smartphone.
+- Pubblicazione: GitHub `main` e Vercel produzione.
+- Note: Nessuna.
+
 ### 2026-08-04 — Directory utenti in stile CMS PrimeNG
 
 - Richiesta: trasformare la pagina Utenti in una tabella più vicina al

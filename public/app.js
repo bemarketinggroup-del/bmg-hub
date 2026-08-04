@@ -323,6 +323,7 @@ let currentProfile = null;
 const userActivityCache = new Map();
 let userEditorMode = "";
 let editingUserProfileId = "";
+let userEditorCloseTimer = null;
 let activityHeartbeatTimer = null;
 let lastAuditedView = "";
 let lastAuditedViewAt = 0;
@@ -6184,33 +6185,58 @@ function renderUserTableRow(profile, canManage) {
 
 function showUserEditorPanel() {
   const panel = document.getElementById("userEditorPanel");
-  const layout = document.getElementById("userManagementLayout");
-  if (!panel || !layout) return;
+  const overlay = document.getElementById("userEditorOverlay");
+  if (!panel || !overlay) return;
+  if (userEditorCloseTimer) window.clearTimeout(userEditorCloseTimer);
   panel.hidden = false;
-  layout.classList.add("is-editor-open");
+  overlay.hidden = false;
+  document.body.classList.add("user-editor-visible");
+  window.requestAnimationFrame(() => {
+    window.requestAnimationFrame(() => {
+      panel.classList.add("is-open");
+      overlay.classList.add("is-open");
+    });
+  });
 }
 
 function closeUserEditorPanel() {
   const panel = document.getElementById("userEditorPanel");
-  const layout = document.getElementById("userManagementLayout");
+  const overlay = document.getElementById("userEditorOverlay");
   const editContent = document.getElementById("userEditContent");
   const createForm = document.getElementById("userCreateForm");
+  const returnMode = userEditorMode;
+  const returnProfileId = editingUserProfileId;
+  const wasVisible = panel && !panel.hidden;
+  if (userEditorCloseTimer) window.clearTimeout(userEditorCloseTimer);
   userEditorMode = "";
   editingUserProfileId = "";
-  if (panel) panel.hidden = true;
-  if (layout) layout.classList.remove("is-editor-open");
-  if (editContent) {
-    editContent.hidden = true;
-    editContent.innerHTML = "";
-  }
-  if (createForm) createForm.hidden = true;
+  panel?.classList.remove("is-open");
+  overlay?.classList.remove("is-open");
+  document.body.classList.remove("user-editor-visible");
   document.querySelectorAll("[data-user-table-id].is-selected").forEach((row) => row.classList.remove("is-selected"));
+
+  const finishClose = () => {
+    userEditorCloseTimer = null;
+    if (panel) panel.hidden = true;
+    if (overlay) overlay.hidden = true;
+    if (editContent) {
+      editContent.hidden = true;
+      editContent.innerHTML = "";
+    }
+    if (createForm) createForm.hidden = true;
+    const returnTarget = returnMode === "edit" && returnProfileId
+      ? document.querySelector(`[data-edit-user="${CSS.escape(returnProfileId)}"]`)
+      : document.getElementById("userNewButton");
+    returnTarget?.focus();
+  };
+
+  if (!wasVisible || window.matchMedia("(prefers-reduced-motion: reduce)").matches) finishClose();
+  else userEditorCloseTimer = window.setTimeout(finishClose, 280);
 }
 
 function focusUserEditor(target) {
   window.requestAnimationFrame(() => {
-    if (window.matchMedia("(max-width: 980px)").matches) document.getElementById("userEditorPanel")?.scrollIntoView({ behavior: "smooth", block: "start" });
-    target?.focus();
+    window.requestAnimationFrame(() => target?.focus());
   });
 }
 
@@ -10089,6 +10115,24 @@ document.getElementById("driveManageForm").addEventListener("submit", (event) =>
 });
 
 document.body.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && userEditorMode) {
+    event.preventDefault();
+    closeUserEditorPanel();
+    return;
+  }
+  if (event.key === "Tab" && userEditorMode) {
+    const panel = document.getElementById("userEditorPanel");
+    const focusable = [...(panel?.querySelectorAll('button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [href], [tabindex]:not([tabindex="-1"])') || [])]
+      .filter((element) => !element.hidden && element.getClientRects().length);
+    const first = focusable[0];
+    const last = focusable.at(-1);
+    const activeInsidePanel = panel?.contains(document.activeElement);
+    if (first && last && (!activeInsidePanel || (event.shiftKey ? document.activeElement === first : document.activeElement === last))) {
+      event.preventDefault();
+      (event.shiftKey ? last : first).focus();
+      return;
+    }
+  }
   if (event.key === "Escape" && document.getElementById("appSidebar")?.classList.contains("is-mobile-open")) {
     setMobileNavOpen(false, { restoreFocus: true });
     return;
