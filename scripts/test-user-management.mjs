@@ -69,11 +69,14 @@ assert.match(styleSource, /\.user-editor-tabs \.p-tablist-tab-list\s*\{[^}]*grid
 assert.match(styleSource, /\.user-activity-dialog\.modal\s*\{[^}]*width:\s*100vw[^}]*height:\s*100dvh[^}]*overflow:\s*hidden/, "il registro attività deve occupare lo schermo senza scroll esterno");
 assert.match(styleSource, /\.user-activity-dialog-content\s*\{[^}]*min-height:\s*0[^}]*overflow:\s*hidden/, "il contenuto fullscreen deve restare vincolato al viewport");
 assert.match(styleSource, /\.user-activity-dialog \.user-activity-days,[\s\S]*min-height:\s*0[^}]*overflow:\s*auto/, "dettaglio giornaliero e azioni devono scorrere soltanto al loro interno");
-assert.match(styleSource, /\.user-activity-dialog \.user-activity-columns\s*\{[^}]*grid-template-columns:\s*1fr[^}]*grid-template-rows:\s*minmax\(150px, 1fr\) minmax\(230px, 1\.45fr\)/, "dettaglio giornaliero e azioni devono avere aree verticali ampie");
+assert.match(styleSource, /\.user-activity-dialog \.user-activity-columns\s*\{[^}]*grid-template-columns:\s*1fr[^}]*grid-template-rows:\s*minmax\(180px, \.95fr\) minmax\(270px, 1\.5fr\)/, "dettaglio giornaliero e azioni devono avere aree verticali più ampie");
 assert.match(appSource, /action\.context_label[\s\S]*user-action-context/, "ogni azione deve mostrare il contesto operativo disponibile");
 assert.match(appSource, /user-activity-bar-meta[\s\S]*formatActivityChartDate\(day\.date\)[\s\S]*formatActivityChartDuration\(seconds\)/, "ogni barra deve mostrare giorno e tempo totale");
 assert.match(appSource, /function scrollUserActivityChartToLatest\(panel\)[\s\S]*chart\.scrollLeft = chart\.scrollWidth/, "il grafico deve aprirsi sulle giornate più recenti quando scorre internamente");
-assert.match(styleSource, /\.user-activity-chart\s*\{[^}]*grid-template-columns:\s*repeat\(30, minmax\(48px, 1fr\)\)[^}]*overflow-x:\s*auto/, "il grafico deve mantenere etichette leggibili con scroll interno");
+assert.match(appSource, /10 giorni per schermata[\s\S]*data-user-activity-chart-scroll="-1"[\s\S]*data-user-activity-chart-scroll="1"/, "il grafico deve offrire i comandi per i gruppi di giorni precedenti e successivi");
+assert.match(appSource, /function scrollUserActivityChart\(button\)[\s\S]*chart\.scrollBy\(\{ left: direction \* chart\.clientWidth/, "i controlli devono scorrere il grafico di una schermata");
+assert.match(styleSource, /\.user-activity-chart\s*\{[^}]*grid-template-columns:\s*repeat\(var\(--activity-day-count, 30\), max\(64px, calc\(\(100% - 54px\) \/ 10\)\)\)[^}]*overflow-x:\s*auto/, "il grafico deve mostrare dieci giorni alla volta mantenendo lo scroll interno");
+assert.match(styleSource, /\.user-activity-bar-meta b\s*\{[^}]*font-size:\s*10px[^}]*\}[\s\S]*\.user-activity-bar-meta small\s*\{[^}]*font-size:\s*9px/, "giorno e durata sotto le barre devono essere più leggibili");
 assert.match(styleSource, /\.user-editor-panel \.p-toggleswitch-input:checked \+ \.p-toggleswitch-slider/, "ToggleSwitch PrimeNG deve mostrare lo stato attivo");
 assert.match(styleSource, /\.user-editor-panel \.p-checkbox-input:checked \+ \.p-checkbox-box/, "Checkbox PrimeNG deve mostrare lo stato selezionato");
 assert.match(styleSource, /@media \(max-width: 760px\)[\s\S]*\.p-datatable-tbody td::before[^}]*attr\(data-label\)/, "su mobile le righe devono mantenere le etichette delle colonne");

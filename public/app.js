@@ -6480,8 +6480,28 @@ async function loadUserActivity(profileId, forceRefresh = false) {
 function scrollUserActivityChartToLatest(panel) {
   window.requestAnimationFrame(() => {
     const chart = panel?.querySelector(".user-activity-chart");
-    if (chart) chart.scrollLeft = chart.scrollWidth;
+    if (!chart) return;
+    chart.scrollLeft = chart.scrollWidth;
+    syncUserActivityChartControls(chart);
+    chart.addEventListener("scroll", () => syncUserActivityChartControls(chart), { passive: true });
   });
+}
+
+function syncUserActivityChartControls(chart) {
+  const shell = chart?.closest(".user-activity-chart-shell");
+  if (!shell) return;
+  const maximumScroll = Math.max(0, chart.scrollWidth - chart.clientWidth);
+  const previous = shell.querySelector('[data-user-activity-chart-scroll="-1"]');
+  const next = shell.querySelector('[data-user-activity-chart-scroll="1"]');
+  if (previous) previous.disabled = chart.scrollLeft <= 1;
+  if (next) next.disabled = chart.scrollLeft >= maximumScroll - 1;
+}
+
+function scrollUserActivityChart(button) {
+  const chart = button?.closest(".user-activity-chart-shell")?.querySelector(".user-activity-chart");
+  if (!chart) return;
+  const direction = Number(button.dataset.userActivityChartScroll || 0);
+  chart.scrollBy({ left: direction * chart.clientWidth, behavior: "smooth" });
 }
 
 function renderUserActivityDetails(data) {
@@ -6504,20 +6524,33 @@ function renderUserActivityDetails(data) {
       <div class="p-card"><span>Giorni attivi</span><strong>${activeDays}</strong></div>
       <div class="p-card"><span>Azioni registrate</span><strong>${actions.length}</strong></div>
     </div>
-    <div class="p-chart user-activity-chart" role="img" aria-label="Tempo attivo giorno per giorno negli ultimi ${daily.length} giorni">
-      ${daily.map((day) => {
-        const seconds = Number(day.active_seconds || 0);
-        const height = seconds ? Math.max(8, Math.round((seconds / maximum) * 100)) : 2;
-        const title = `${formatActivityDate(day.date)}: ${formatActiveDuration(seconds)}`;
-        return `
-          <span class="user-activity-bar-wrap ${seconds ? "is-active" : ""}" title="${escapeHtml(title)}">
-            <span class="user-activity-bar-track"><i class="user-activity-bar ${seconds ? "is-active" : ""}" style="height:${height}%"></i></span>
-            <span class="user-activity-bar-meta">
-              <b>${escapeHtml(formatActivityChartDate(day.date))}</b>
-              <small>${escapeHtml(formatActivityChartDuration(seconds))}</small>
-            </span>
-          </span>`;
-      }).join("")}
+    <div class="user-activity-chart-shell">
+      <div class="user-activity-chart-head">
+        <span>10 giorni per schermata</span>
+        <div class="user-activity-chart-controls" aria-label="Navigazione giorni del grafico">
+          <button class="p-button p-button-text p-button-rounded icon-button" data-user-activity-chart-scroll="-1" type="button" aria-label="Mostra i 10 giorni precedenti" title="Giorni precedenti">
+            <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+          </button>
+          <button class="p-button p-button-text p-button-rounded icon-button" data-user-activity-chart-scroll="1" type="button" aria-label="Mostra i 10 giorni successivi" title="Giorni successivi">
+            <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="p-chart user-activity-chart" style="--activity-day-count:${Math.max(1, daily.length)}" role="img" tabindex="0" aria-label="Tempo attivo giorno per giorno negli ultimi ${daily.length} giorni, 10 giorni visibili alla volta">
+        ${daily.map((day) => {
+          const seconds = Number(day.active_seconds || 0);
+          const height = seconds ? Math.max(8, Math.round((seconds / maximum) * 100)) : 2;
+          const title = `${formatActivityDate(day.date)}: ${formatActiveDuration(seconds)}`;
+          return `
+            <span class="user-activity-bar-wrap ${seconds ? "is-active" : ""}" title="${escapeHtml(title)}">
+              <span class="user-activity-bar-track"><i class="user-activity-bar ${seconds ? "is-active" : ""}" style="height:${height}%"></i></span>
+              <span class="user-activity-bar-meta">
+                <b>${escapeHtml(formatActivityChartDate(day.date))}</b>
+                <small>${escapeHtml(formatActivityChartDuration(seconds))}</small>
+              </span>
+            </span>`;
+        }).join("")}
+      </div>
     </div>
     <div class="user-activity-columns">
       <section>
@@ -9754,6 +9787,7 @@ document.body.addEventListener("click", (event) => {
   const pedCaption = event.target.closest("[data-ped-caption]");
   const activityUser = event.target.closest("[data-user-activity]");
   const refreshUserActivityButton = event.target.closest("[data-refresh-user-activity]");
+  const userActivityChartScroll = event.target.closest("[data-user-activity-chart-scroll]");
   const userEditorTab = event.target.closest("[data-user-editor-tab]");
   const editUser = event.target.closest("[data-edit-user]");
   const closeUserEditor = event.target.closest("[data-close-user-editor]");
@@ -9935,6 +9969,7 @@ document.body.addEventListener("click", (event) => {
   if (pedCaption) return openPedCaptionModal(pedCaption.dataset.pedCaption);
   if (userEditorTab) return activateUserEditorTab(userEditorTab.dataset.userEditorTab);
   if (activityUser) return openUserActivityDialog(activityUser.dataset.userActivity);
+  if (userActivityChartScroll) return scrollUserActivityChart(userActivityChartScroll);
   if (refreshUserActivityButton) {
     userActivityCache.delete(refreshUserActivityButton.dataset.refreshUserActivity);
     return loadUserActivity(refreshUserActivityButton.dataset.refreshUserActivity, true);

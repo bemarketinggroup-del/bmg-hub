@@ -132,12 +132,14 @@ supabase/                     schema e migration
   componenti PrimeNG-style e due tab: `Profilo` e `Permessi`. Il
   `Registro attività` si apre invece da un pulsante dedicato accanto a
   `Modifica`, in un dialog fullscreen che mostra KPI, grafico con giorno e
-  durata totale indicati sotto ogni barra, dettaglio giornaliero a tutta
-  larghezza e, subito sotto, le azioni. Su smartphone il grafico mantiene le
-  etichette leggibili tramite scroll orizzontale interno. La modal e la pagina
-  sottostante non scorrono: soltanto le due liste hanno uno scroll interno
-  indipendente; entrambe le aree sono dimensionate con una quota verticale
-  ampia, con più spazio assegnato al registro delle azioni. Le azioni PED
+  durata totale indicati sotto ogni barra. Su desktop mostra dieci giorni alla
+  volta, si apre sui dieci più recenti e permette di raggiungere i precedenti o
+  successivi con scroll orizzontale e pulsanti dedicati; su smartphone mantiene
+  una larghezza minima per non comprimere le etichette. Dettaglio giornaliero e
+  azioni sono impilati a tutta larghezza, con testi e quote verticali maggiorati.
+  La modal e la pagina sottostante non scorrono: soltanto grafico e due liste
+  hanno scroll interni indipendenti, con più spazio assegnato al registro delle
+  azioni. Le azioni PED
   riportano cliente, mese/PED, data e contenuto
   quando disponibili; anche apertura del PED, cambio cliente e cambio mese
   vengono registrati con il relativo cliente.

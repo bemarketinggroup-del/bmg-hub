@@ -59,6 +59,26 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-08-04 — Registro attività più leggibile e navigabile
+
+- Richiesta: ingrandire i testi sotto le barre, mostrare dieci giorni alla volta
+  con scorrimento verso i giorni precedenti e ampliare dettaglio giornaliero e
+  azioni nel gestionale.
+- Modifiche: il grafico mostra dieci colonne per schermata su desktop, conserva
+  una larghezza minima leggibile su smartphone e si apre sui giorni più recenti;
+  aggiunti comandi per scorrere un gruppo alla volta, stato disabilitato alle
+  estremità e supporto allo scroll orizzontale nativo. Aumentati font di giorno,
+  durata, righe giornaliere e azioni; compattate testata, profilo e KPI per
+  assegnare più altezza alle due liste, che continuano a scorrere internamente.
+- File: `public/app.js`, `public/styles.css`,
+  `scripts/test-user-management.mjs`, `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run check`, `npm run test:users`,
+  `npm run test:primeng-components`, `npm run test:mobile-navigation`,
+  `git diff --check` e controllo visivo in Safari desktop con sessione staff;
+  controllo responsive smartphone del layout e degli scroll interni.
+- Pubblicazione: GitHub `main` e Vercel produzione.
+- Note: Nessuna.
+
 ### 2026-08-04 — Archivio e revisioni grafiche in pagine separate
 
 - Richiesta: mostrare al clic sulla voce laterale `Grafiche` le destinazioni
