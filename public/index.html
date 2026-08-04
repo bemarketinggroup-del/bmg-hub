@@ -1448,6 +1448,25 @@
     </form>
   </dialog>
 
+  <dialog class="modal ped-download-modal" id="pedDownloadModal" aria-labelledby="pedDownloadTitle">
+    <div class="ped-download-shell">
+      <div class="modal-head">
+        <div>
+          <p class="eyebrow">Download diretto</p>
+          <h2 id="pedDownloadTitle">Scarica il multipost</h2>
+          <span id="pedDownloadSubtitle">I file sono già ordinati e numerati.</span>
+        </div>
+        <button class="icon-button" id="pedDownloadCloseButton" type="button" title="Chiudi" aria-label="Chiudi"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+      </div>
+      <p class="ped-download-intro">Tocca ogni file nell'ordine indicato. Il browser lo invierà direttamente ai Download senza creare uno ZIP e senza caricarlo nella memoria della pagina.</p>
+      <div class="ped-download-list" id="pedDownloadList" aria-live="polite"></div>
+      <p class="form-message" id="pedDownloadMessage" role="status">Inizia dal file 01 e prosegui fino all'ultimo.</p>
+      <div class="modal-actions">
+        <button class="ghost-button" id="pedDownloadDoneButton" type="button">Chiudi</button>
+      </div>
+    </div>
+  </dialog>
+
   <dialog class="modal drive-manage-modal" id="driveManageModal">
     <form method="dialog" id="driveManageForm">
       <div class="modal-head">

@@ -3584,11 +3584,48 @@ function numberedPedDownloadFilename(value, index) {
   return `${prefix} - ${safeName}`;
 }
 
+function isIosDownloadDevice() {
+  return /iPad|iPhone|iPod/i.test(navigator.userAgent)
+    || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+}
+
+function pedDirectDownloadUrl(file, filename) {
+  const url = new URL(file.download_url, window.location.origin);
+  url.searchParams.set("download_name", filename);
+  return url.origin === window.location.origin ? `${url.pathname}${url.search}` : url.toString();
+}
+
+function openPedCarouselDownloadList(item, files) {
+  const modal = document.getElementById("pedDownloadModal");
+  const list = document.getElementById("pedDownloadList");
+  const subtitle = document.getElementById("pedDownloadSubtitle");
+  const message = document.getElementById("pedDownloadMessage");
+  if (!modal || !list || !subtitle || !message) return;
+
+  subtitle.textContent = `${files.length} file · da 01 a ${String(files.length).padStart(2, "0")}`;
+  message.textContent = "Inizia dal file 01 e prosegui fino all'ultimo.";
+  list.innerHTML = files.map((file, index) => {
+    const filename = numberedPedDownloadFilename(file.drive_file_name, index);
+    return `<a class="ped-download-item" data-ped-direct-download="${index}" href="${escapeHtml(pedDirectDownloadUrl(file, filename))}" download="${escapeHtml(filename)}">
+      <span class="ped-download-number">${String(index + 1).padStart(2, "0")}</span>
+      <span class="ped-download-file"><strong>${escapeHtml(file.drive_file_name || filename)}</strong><small>Scarica come ${escapeHtml(filename)}</small></span>
+      <span class="ped-download-action"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg><b>Scarica</b></span>
+    </a>`;
+  }).join("");
+  modal.dataset.pedDownloadGroup = String(item.id || "");
+  modal.showModal();
+}
+
 async function downloadPedCarousel(groupId, button) {
   const item = pedStateItem(groupId);
   const files = item ? pedItemFiles(item) : [];
   if (!files.length || files.some((file) => !file.download_url)) {
     alert("I file del multipost non sono disponibili per il download");
+    return;
+  }
+
+  if (isIosDownloadDevice()) {
+    openPedCarouselDownloadList(item, files);
     return;
   }
 
@@ -3628,7 +3665,11 @@ async function downloadPedCarousel(groupId, button) {
     transfer.complete(`${files.length} file scaricati in ordine numerico`);
   } catch (error) {
     transfer.fail(error.message || "Download del multipost non riuscito");
-    alert(error.message);
+    if (/load failed|failed to fetch|network/i.test(String(error.message || ""))) {
+      openPedCarouselDownloadList(item, files);
+    } else {
+      alert(error.message);
+    }
   } finally {
     button.disabled = false;
     button.innerHTML = original;
@@ -9896,6 +9937,17 @@ document.getElementById("contentStatusFilter").addEventListener("change", render
 document.getElementById("contentSearch").addEventListener("input", renderContent);
 document.getElementById("clientSearch").addEventListener("input", renderClients);
 document.getElementById("pedClientSearch").addEventListener("input", renderPedClientTabs);
+document.getElementById("pedDownloadCloseButton").addEventListener("click", () => document.getElementById("pedDownloadModal").close());
+document.getElementById("pedDownloadDoneButton").addEventListener("click", () => document.getElementById("pedDownloadModal").close());
+document.getElementById("pedDownloadList").addEventListener("click", (event) => {
+  const link = event.target.closest("[data-ped-direct-download]");
+  if (!link) return;
+  link.classList.add("is-started");
+  link.querySelector(".ped-download-action b").textContent = "Avviato";
+  const started = document.querySelectorAll("#pedDownloadList .ped-download-item.is-started").length;
+  const total = document.querySelectorAll("#pedDownloadList .ped-download-item").length;
+  document.getElementById("pedDownloadMessage").textContent = `${started} di ${total} download avviati.`;
+});
 document.getElementById("chatSearch").addEventListener("input", () => renderTeamChat({ quiet: true }));
 document.getElementById("chatComputerFileButton").addEventListener("click", () => document.getElementById("chatComputerFileInput").click());
 document.getElementById("chatComputerFileInput").addEventListener("change", (event) => {

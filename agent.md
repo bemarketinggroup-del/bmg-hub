@@ -59,6 +59,24 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-08-04 — Download multipost compatibile con iPhone
+
+- Richiesta: correggere l'errore `Load failed` mostrato su iPhone durante il
+  download numerato di un multipost.
+- Modifiche: su iPhone/iPad il download non usa più la coda `fetch`/Blob ma apre
+  una lista numerata con download diretti, uno per file; il backend assegna il
+  nome `01`, `02`, ... anche alla risposta nativa di Safari. Il computer mantiene
+  la coda automatica esistente e gli errori di rete possono usare la nuova lista
+  come ripiego.
+- File: `public/index.html`, `public/app.js`, `public/styles.css`,
+  `lib/client-drive-api.js`, `scripts/test-ped-carousel.mjs`,
+  `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run check`, `npm run test:ped-carousel`, `git diff --check`,
+  controllo desktop e viewport iPhone del modal numerato.
+- Pubblicazione: GitHub `main` e Vercel produzione.
+- Note: su iPhone ogni file richiede un tocco esplicito, così Safari conserva il
+  gesto utente e non interrompe il trasferimento.
+
 ### 2026-08-04 — Download multipost senza ZIP
 
 - Richiesta: eliminare il file ZIP dal download dei multipost e scaricare i file

@@ -3932,6 +3932,95 @@ code { font-family: var(--font-mono); font-size: 12px; }
 .ped-share-security { display: flex; align-items: flex-start; gap: 9px; border-top: 1px solid var(--line); margin: 18px 0 0; padding-top: 15px; color: var(--muted); font-size: 11px; line-height: 1.5; }
 .ped-share-security .lc { width: 16px; height: 16px; flex: 0 0 auto; color: #4d795f; }
 .ped-share-actions { justify-content: space-between; }
+
+.modal.ped-download-modal {
+  width: min(680px, calc(100vw - 28px));
+  max-height: min(88vh, 760px);
+  max-height: min(88dvh, 760px);
+  overflow: hidden;
+}
+.ped-download-shell { padding: 22px 24px 24px; }
+.ped-download-modal .modal-head { margin-bottom: 14px; }
+.ped-download-modal .modal-head > div { min-width: 0; }
+.ped-download-modal .modal-head > div > span { display: block; margin-top: 4px; color: var(--muted); font-size: 11px; }
+.ped-download-intro { margin: 0 0 16px; color: var(--muted); font-size: 12px; line-height: 1.55; }
+.ped-download-list {
+  max-height: min(52vh, 430px);
+  max-height: min(52dvh, 430px);
+  display: grid;
+  gap: 8px;
+  overflow-y: auto;
+  padding: 2px 4px 2px 2px;
+}
+.ped-download-item {
+  min-width: 0;
+  min-height: 68px;
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink);
+  padding: 10px 12px;
+  text-decoration: none;
+  transition: border-color .15s, background .15s, transform .15s;
+}
+.ped-download-item:hover { transform: translateY(-1px); border-color: var(--terracotta); background: var(--terra-tint); }
+.ped-download-number {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--terra-tint);
+  color: var(--terracotta);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 800;
+}
+.ped-download-file { min-width: 0; display: grid; gap: 4px; }
+.ped-download-file strong,
+.ped-download-file small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ped-download-file strong { font-size: 12.5px; }
+.ped-download-file small { color: var(--muted); font-size: 10.5px; }
+.ped-download-action {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: var(--pill);
+  background: var(--terracotta);
+  color: #fff;
+  padding: 0 12px;
+}
+.ped-download-action .lc { width: 15px; height: 15px; }
+.ped-download-action b { font-size: 10.5px; }
+.ped-download-item.is-started { border-color: rgba(77, 121, 95, .42); background: rgba(77, 121, 95, .09); }
+.ped-download-item.is-started .ped-download-number { background: rgba(77, 121, 95, .16); color: #386449; }
+.ped-download-item.is-started .ped-download-action { background: #4d795f; }
+.ped-download-modal .form-message { min-height: 18px; margin-top: 12px; }
+
+@media (max-width: 680px) {
+  .modal.ped-download-modal {
+    width: calc(100vw - 16px);
+    max-width: calc(100vw - 16px);
+    max-height: calc(100dvh - 16px);
+  }
+  .ped-download-shell { padding: 16px; }
+  .ped-download-modal .modal-head h2 { font-size: 20px; }
+  .ped-download-intro { font-size: 11.5px; }
+  .ped-download-list { max-height: 52dvh; }
+  .ped-download-item { min-height: 64px; grid-template-columns: 38px minmax(0, 1fr) 38px; gap: 9px; padding: 9px; }
+  .ped-download-number { width: 38px; height: 38px; }
+  .ped-download-action { width: 38px; min-height: 38px; justify-content: center; padding: 0; }
+  .ped-download-action b { display: none; }
+  .ped-download-file strong { font-size: 12px; }
+  .ped-download-file small { font-size: 9.5px; }
+  .ped-download-modal .modal-actions { margin-top: 14px; padding-top: 14px; }
+  .ped-download-modal .modal-actions button { width: 100%; }
+}
 .drive-preview-body {
   min-height: 520px;
   display: grid;

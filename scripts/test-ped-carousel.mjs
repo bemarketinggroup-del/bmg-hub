@@ -54,6 +54,7 @@ const appSource = await readFile(new URL("../public/app.js", import.meta.url), "
 const styleSource = await readFile(new URL("../public/styles.css", import.meta.url), "utf8");
 const htmlSource = await readFile(new URL("../public/index.html", import.meta.url), "utf8");
 const pedSource = await readFile(new URL("../lib/ped.js", import.meta.url), "utf8");
+const clientDriveSource = await readFile(new URL("../lib/client-drive-api.js", import.meta.url), "utf8");
 const instagramOrderMigration = await readFile(new URL("../supabase/20260717_ped_instagram_order.sql", import.meta.url), "utf8");
 const feedCalendarSyncMigration = await readFile(new URL("../supabase/20260717_ped_feed_calendar_sync.sql", import.meta.url), "utf8");
 const publishingStatusMigration = await readFile(new URL("../supabase/20260718_ped_publishing_status.sql", import.meta.url), "utf8");
@@ -76,6 +77,13 @@ assert.match(appSource, /String\(position\)\.padStart\(2, "0"\)/, "la numerazion
 assert.match(appSource, /for \(let index = 0; index < files\.length; index \+= 1\)/, "il download multipost deve usare una coda ordinata");
 assert.match(appSource, /saveDownloadedBlob\(blob, filename\)/, "ogni file del multipost deve essere scaricato separatamente");
 assert.match(appSource, /files\.length > 1 \? "Download" : "Scarica"/, "il multipost deve mostrare un comando download compatto");
+assert.match(appSource, /function isIosDownloadDevice\(\)/, "iPhone e iPad devono usare un download compatibile con WebKit");
+assert.match(appSource, /if \(isIosDownloadDevice\(\)\) \{\s*openPedCarouselDownloadList\(item, files\);\s*return;/, "su iPhone la coda blob deve essere evitata");
+assert.match(appSource, /url\.searchParams\.set\("download_name", filename\)/, "i download diretti devono richiedere il nome numerato");
+assert.match(htmlSource, /id="pedDownloadModal"/, "iPhone deve mostrare la lista download dedicata");
+assert.match(htmlSource, /id="pedDownloadList"/, "il modal iPhone deve contenere i file numerati");
+assert.match(styleSource, /\.ped-download-item/, "la lista download iPhone deve avere uno stile dedicato");
+assert.match(clientDriveSource, /url\.searchParams\.get\("download_name"\)/, "il backend Drive deve applicare il nome numerato richiesto");
 assert.doesNotMatch(appSource, /Scarica ZIP|Preparo ZIP|ZIP scaricato/, "l'interfaccia non deve più proporre archivi ZIP");
 assert.doesNotMatch(pedSource, /application\/zip|archiver\(/, "il backend PED non deve più creare archivi ZIP");
 assert.match(appSource, /data-drive-download-url/, "i download Drive devono passare dal gestore tracciato");
