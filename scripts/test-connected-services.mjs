@@ -11,17 +11,11 @@ const [appSource, htmlSource, styleSource, healthSource, calendarSource, apiSour
   readFile(new URL("../vercel.json", import.meta.url), "utf8")
 ]);
 
-assert.match(htmlSource, /id="connectedServices"/, "la sidebar deve contenere il riepilogo dei servizi");
-assert.match(appSource, /label: "Clienti"/, "il servizio clienti deve avere un nome breve");
-assert.match(appSource, /label: "ClickUp"/, "ClickUp deve avere un indicatore dedicato");
-assert.match(appSource, /label: "Sito"/, "il backend del sito deve avere un nome breve");
-assert.match(appSource, /label: "Calendar"/, "Google Calendar deve avere un indicatore dedicato");
-assert.match(appSource, /data-service-state="\$\{stateName\}"/, "ogni servizio deve mostrare il proprio stato");
+assert.doesNotMatch(htmlSource, /id="connectedServices"|Servizi collegati/, "la sidebar non deve mostrare il riepilogo dei servizi");
+assert.doesNotMatch(styleSource, /\.sidebar-services|\.sidebar-service(?:\W|$)/, "gli stili del riepilogo servizi rimosso non devono restare nel bundle");
 assert.match(appSource, /loadServiceHealth/, "il gestionale deve controllare lo stato dei servizi");
 assert.match(appSource, /5 \* 60 \* 1000/, "lo stato dei servizi deve essere ricontrollato periodicamente");
-assert.match(styleSource, /\.sidebar-service\[data-service-state="online"\]/, "i servizi collegati devono avere uno stato visivo");
-assert.match(styleSource, /\.sidebar-service\[data-service-state="offline"\]/, "i servizi non disponibili devono avere uno stato visivo");
-assert.match(styleSource, /\.sidebar-service\[data-service-state="pending"\]/, "i servizi in verifica devono avere uno stato visivo");
+assert.match(appSource, /function renderBackendStatus\(message = "", serviceKey = ""\)[\s\S]*?backendServiceErrors\[serviceKey\] = message;/, "gli errori tecnici devono restare registrati internamente");
 assert.match(healthSource, /HEALTH_CACHE_TTL_MS = 60 \* 1000/, "il controllo deve limitare le richieste a Google");
 assert.match(healthSource, /googleCalendarHealth/, "il controllo deve verificare realmente Google Calendar");
 assert.match(calendarSource, /export async function googleCalendarHealth/, "Calendar deve esporre un controllo operativo");

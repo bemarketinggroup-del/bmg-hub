@@ -1330,47 +1330,9 @@ async function smartWorkingAction(action, payload = {}, options = {}) {
 }
 
 function renderBackendStatus(message = "", serviceKey = "") {
-  const footer = document.querySelector(".sidebar-footer");
-  const container = document.getElementById("connectedServices");
-  if (!footer || !container) return;
   if (serviceKey && Object.hasOwn(backendServiceErrors, serviceKey)) {
     backendServiceErrors[serviceKey] = message;
-  } else if (message) {
-    footer.title = message;
   }
-  const services = [
-    {
-      key: "clients",
-      label: "Clienti",
-      online: clientsOnline,
-      visible: canAccessModule("clients") || canAccessModule("ped") || canAccessModule("tasks") || canAccessModule("graphics")
-    },
-    {
-      key: "clickup",
-      label: "ClickUp",
-      online: clickupOnline,
-      visible: canAccessModule("tasks") || canAccessModule("smart_working")
-    },
-    {
-      key: "site",
-      label: "Sito",
-      online: contentOnline,
-      visible: canAccessModule("site_backend")
-    },
-    {
-      key: "calendar",
-      label: "Calendar",
-      online: calendarOnline,
-      visible: canAccessModule("calendar") || canAccessModule("smart_working")
-    }
-  ].filter((service) => service.visible);
-  container.innerHTML = services.map((service) => {
-    const stateName = service.online === null ? "pending" : service.online ? "online" : "offline";
-    const stateLabel = stateName === "online" ? "collegato" : stateName === "offline" ? "non disponibile" : "verifica in corso";
-    const detail = backendServiceErrors[service.key];
-    const title = `${service.label}: ${stateLabel}${detail ? ` · ${detail}` : ""}`;
-    return `<span class="sidebar-service" data-service-state="${stateName}" title="${escapeHtml(title)}" aria-label="${escapeHtml(title)}"><i class="sidebar-service-dot" aria-hidden="true"></i><span>${service.label}</span></span>`;
-  }).join("");
 }
 
 async function loadServiceHealth({ quiet = false } = {}) {
@@ -7512,17 +7474,6 @@ function emptyState(text) {
   return `<div class="lead-card"><p>${text}</p></div>`;
 }
 
-function exportData() {
-  const { leads: _legacyLeads, tasks: _legacyTasks, ...exportableState } = state;
-  const blob = new Blob([JSON.stringify(exportableState, null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `bmg-hub-export-${new Date().toISOString().slice(0, 10)}.json`;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
 function openContentModal(id = "") {
   const form = document.getElementById("contentForm");
   const item = state.content.find((content) => content.id === id);
@@ -10344,7 +10295,6 @@ document.addEventListener("click", () => {
   panel.classList.add("is-hidden");
   document.getElementById("notificationButton")?.setAttribute("aria-expanded", "false");
 });
-document.getElementById("exportButton").addEventListener("click", exportData);
 document.getElementById("contentPageFilter").addEventListener("change", () => {
   selectedContentSection = "all";
   renderContent();

@@ -121,7 +121,9 @@ supabase/                     schema e migration
   Le voci sono divise nei gruppi `Workspace`, `Contenuti e clienti`,
   `Organizzazione` e `Amministrazione`; notifiche e relativo contatore sono
   dentro la navigazione, mentre nome, iniziali, ruolo, profilo e logout sono
-  fissati nel footer. La topbar non duplica più queste azioni.
+  fissati nel footer, senza il riepilogo visivo dei servizi collegati. La topbar
+  mostra soltanto il titolo della vista e il menu mobile, senza esportazione
+  dati o altre azioni globali ridondanti.
 - Directory utenti in linguaggio CMS, con tabella PrimeNG-style, ricerca e
   filtri per ruolo/stato; la modifica avviene in un drawer modale sovrapposto
   alla pagina, con overlay e ingresso animato da destra. L'editor usa
@@ -301,7 +303,8 @@ supabase/                     schema e migration
   quando sono presenti nuovi elementi; animazione non invasiva, compatibile con
   `prefers-reduced-motion`, e chiusura persistente.
 - Le notifiche legate a task completate spariscono automaticamente.
-- Setup e indicatori sintetici dei servizi collegati.
+- Il controllo di salute delle integrazioni resta attivo in background, senza
+  indicatori sintetici nella sidebar.
 
 ## Regole UX da non perdere
 

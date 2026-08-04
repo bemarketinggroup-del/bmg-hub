@@ -59,6 +59,23 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-08-04 — Sidebar e topbar alleggerite
+
+- Richiesta: eliminare la sezione `Servizi collegati` in basso a sinistra e il
+  comando `Scarica dati` in alto a destra.
+- Modifiche: rimosso il riepilogo visuale dei servizi dalla sidebar, lasciando
+  nel footer soltanto account e logout; eliminati pulsante, funzione e listener
+  dell'esportazione JSON dalla topbar. Il controllo tecnico delle integrazioni
+  e il relativo aggiornamento periodico restano attivi in background.
+- File: `public/index.html`, `public/app.js`, `public/styles.css`,
+  `scripts/test-connected-services.mjs`, `scripts/test-mobile-navigation.mjs`,
+  `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run check`, `npm run test:connected-services`,
+  `npm run test:mobile-navigation`, `git diff --check`, controllo visivo desktop
+  e smartphone.
+- Pubblicazione: GitHub `main` e Vercel produzione.
+- Note: Nessuna.
+
 ### 2026-08-04 — Punto arancione per le notifiche presenti
 
 - Richiesta: rendere più visibili le notifiche con un dettaglio arancione che

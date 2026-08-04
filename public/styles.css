@@ -339,55 +339,6 @@ svg.lc {
   color: var(--stone);
 }
 
-.sidebar-services-block {
-  display: grid;
-  gap: 7px;
-  padding: 0 4px;
-}
-
-.sidebar-services-title {
-  color: #8692a5;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: .04em;
-}
-
-.sidebar-services {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 5px;
-}
-
-.sidebar-service {
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: #fafbfc;
-  color: var(--subtle);
-  padding: 5px 4px;
-  font-size: 8px;
-  font-weight: 700;
-  letter-spacing: .02em;
-  text-transform: none;
-}
-
-.sidebar-service-dot {
-  width: 6px;
-  height: 6px;
-  flex: 0 0 auto;
-  border-radius: 50%;
-  background: currentColor;
-  box-shadow: 0 0 0 2px color-mix(in srgb, currentColor 14%, transparent);
-}
-
-.sidebar-service[data-service-state="online"] { color: #5b9b68; }
-.sidebar-service[data-service-state="offline"] { color: #c84d45; }
-.sidebar-service[data-service-state="pending"] { color: #b58a25; }
-
 .sidebar-account {
   min-width: 0;
   display: grid;
@@ -478,14 +429,6 @@ svg.lc {
 
 .topbar-heading { min-width: 0; display: flex; align-items: center; gap: 12px; }
 .topbar-heading > div { min-width: 0; }
-
-.topbar-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
 
 /* ============================================================
    BUTTONS
@@ -6715,7 +6658,6 @@ body.user-activity-dialog-visible { overflow: hidden; }
   .topbar-heading { min-width: 0; flex: 1 1 auto; }
   .topbar-heading .eyebrow { margin-bottom: 4px; }
   .topbar-heading h1 { overflow-wrap: anywhere; font-size: 25px; }
-  .topbar-actions { flex: 0 0 auto; justify-content: flex-end; }
   .toolbar { flex-direction: column; }
   .client-toolbar .search {
     width: 100%;

@@ -11,8 +11,11 @@ assert.match(htmlSource, /class="p-sidebar-header sidebar-header"[\s\S]*class="p
 assert.match(htmlSource, /id="sidebarWorkspaceLabel">Workspace<[\s\S]*id="sidebarContentLabel">Contenuti e clienti<[\s\S]*id="sidebarOrganizationLabel">Organizzazione<[\s\S]*id="sidebarAdministrationLabel">Amministrazione</, "la navigazione deve essere organizzata in gruppi CMS leggibili");
 assert.match(htmlSource, /class="p-sidebar-content sidebar-content"[\s\S]*id="notificationButton"[\s\S]*class="p-sidebar-footer sidebar-footer"/, "le notifiche devono essere integrate nella navigazione laterale");
 assert.match(htmlSource, /class="p-sidebar-footer sidebar-footer"[\s\S]*id="sidebarUserAvatar"[\s\S]*id="sidebarUserName"[\s\S]*id="sessionBadge"[\s\S]*id="logoutButton"/, "account, ruolo e logout devono stare nel footer della sidebar");
+assert.doesNotMatch(htmlSource, /id="connectedServices"|Servizi collegati/, "il footer della sidebar deve mostrare soltanto l'account");
 const topbarSource = htmlSource.slice(htmlSource.indexOf('<header class="topbar">'), htmlSource.indexOf('</header>', htmlSource.indexOf('<header class="topbar">')));
 assert.doesNotMatch(topbarSource, /id="(?:notificationButton|profileButton|logoutButton|sessionBadge)"/, "la topbar non deve duplicare le azioni spostate nella sidebar");
+assert.doesNotMatch(topbarSource, /id="exportButton"|Esporta dati|Scarica dati/, "la topbar non deve mostrare l'esportazione dati");
+assert.doesNotMatch(appSource, /function exportData\(|getElementById\("exportButton"\)/, "la funzione di esportazione rimossa non deve lasciare listener orfani");
 assert.doesNotMatch(htmlSource, /id="viewKicker"/, "ogni pagina deve mostrare un solo titolo senza kicker ripetuto");
 assert.doesNotMatch(htmlSource, /<h2>Calendario BeViral Agency<|<h2>Task del team<|<h2>Revisioni grafiche<|<h2>Directory utenti</, "le viste principali non devono ripetere il nome già presente nella topbar");
 assert.doesNotMatch(htmlSource, /id="mobileNavClose"/, "la X ridondante non deve comparire nella sidebar");
