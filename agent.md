@@ -59,6 +59,30 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-08-05 — Miniature PED full-bleed con simboli editoriali
+
+- Richiesta: eliminare le cornici o fasce nere dalle miniature, riempire tutto
+  il rettangolo con foto o poster e distinguere Post, Reel, multipost e Stories
+  tramite simboli dedicati.
+- Modifiche: calendario, contenuti in attesa, agenda, selettori degli editor e
+  PED condiviso usano immagini assolute full-bleed con `object-fit: cover` e
+  fondale neutro; rimosso dalle viste compatte il velo video esteso a tutta la
+  miniatura. Aggiunti quattro badge iconografici nell'angolo superiore sinistro;
+  nei caroselli il contatore resta separato in basso a destra. Le regole
+  specifiche per i pulsanti adattati da PrimeNG impediscono al componente di
+  alterare i livelli di foto, simbolo e contatore.
+- File: `public/app.js`, `public/styles.css`, `public/ped-share.js`,
+  `public/ped-share.css`, `scripts/test-ped-carousel.mjs`,
+  `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run check`, `npm run test:ped-carousel`,
+  `npm run test:mobile-navigation`, `npm run test:primeng-components`,
+  `git diff --check`; controllo browser locale dei quattro formati a dimensione
+  agenda e compatta: immagine coincidente con il rettangolo, `cover`, badge e
+  contatore interamente interni senza sovrapposizioni.
+- Pubblicazione: commit corrente pubblicato su GitHub `main`; deploy Vercel
+  produzione completato e verificato su `https://bmg-hub.vercel.app`.
+- Note: Nessuna.
+
 ### 2026-08-05 — Comandi e caricamento separati dal video
 
 - Richiesta: impedire sia ai comandi del player sia alla barra di caricamento di

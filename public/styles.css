@@ -8397,7 +8397,7 @@ body.chat-view-active #chatView {
   height: 42px;
   border: 0;
   border-radius: 8px;
-  background: #181614;
+  background: var(--surface-tint);
   box-shadow: 0 2px 7px rgba(29, 24, 19, .13);
 }
 .ped-content-card.is-carousel .ped-content-thumb {
@@ -8448,7 +8448,7 @@ body.chat-view-active #chatView {
   height: 86px;
   border: 0;
   border-radius: 10px;
-  background: #181614;
+  background: var(--surface-tint);
   box-shadow: 0 3px 10px rgba(29, 24, 19, .11);
 }
 .ped-staging-card.ped-type-carousel .ped-staging-thumb {
@@ -8497,7 +8497,7 @@ body.chat-view-active #chatView {
   overflow: hidden;
   border: 0;
   border-radius: 10px;
-  background: #181614;
+  background: var(--surface-tint);
   box-shadow: 0 3px 10px rgba(29, 24, 19, .12);
 }
 .ped-agenda-preview img,
@@ -8507,6 +8507,56 @@ body.chat-view-active #chatView {
   margin: 0;
   box-shadow: 0 3px 10px rgba(29, 24, 19, .12);
 }
+.ped-content-thumb,
+.ped-staging-thumb,
+.ped-agenda-preview,
+.ped-caption-day-thumb { isolation: isolate; }
+.ped-content-thumb > img,
+.ped-staging-thumb > img,
+.ped-agenda-preview > img,
+.ped-caption-day-thumb > img {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  border-radius: inherit;
+  background: transparent;
+  object-fit: cover !important;
+  object-position: center;
+}
+.ped-media-type-badge {
+  position: absolute;
+  z-index: 4;
+  top: 4px;
+  left: 4px;
+  width: 21px;
+  height: 21px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255,255,255,.68);
+  border-radius: 7px;
+  background: rgba(28,24,21,.78);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(20,16,12,.22);
+  pointer-events: none;
+  backdrop-filter: blur(5px);
+}
+.ped-media-type-badge .lc { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 1.8; }
+.ped-media-type-badge.is-reel .lc path:last-child { fill: currentColor; stroke: currentColor; }
+.ped-content-thumb .ped-media-type-badge,
+.ped-caption-day-thumb .ped-media-type-badge { top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 6px; }
+.ped-content-thumb .ped-media-type-badge .lc,
+.ped-caption-day-thumb .ped-media-type-badge .lc { width: 11px; height: 11px; }
+.ped-content-thumb .ped-carousel-count,
+.ped-staging-thumb .ped-carousel-count,
+.ped-agenda-preview .ped-carousel-count,
+.ped-caption-day-thumb > b { z-index: 5; }
+.ped-agenda-preview.p-button > img { position: absolute; z-index: 0; }
+.ped-agenda-preview.p-button > .ped-media-type-badge { position: absolute; z-index: 4; }
+.ped-agenda-preview.p-button > .ped-carousel-count { position: absolute; z-index: 5; }
 .ped-agenda-copy { gap: 5px; }
 .ped-agenda-copy strong { font-size: 13.5px; }
 .ped-agenda-copy span {

@@ -2818,6 +2818,17 @@ function pedTypeMeta(value) {
   return { type, ...PED_CONTENT_TYPES[type] };
 }
 
+function pedTypeIconMarkup(value, className = "ped-media-type-badge") {
+  const { type, label } = pedTypeMeta(value);
+  const icon = {
+    post: `<rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="9" cy="9" r="1.5"/><path d="m6 17 4-4 3 3 2-2 3 3"/>`,
+    story: `<rect x="5" y="3" width="14" height="18" rx="6"/><circle cx="12" cy="9" r="2"/><path d="M8.5 17c1.6-2.4 5.4-2.4 7 0"/>`,
+    reel: `<rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 9h18M8 4l3 5M14 4l3 5"/><path d="m10 12 5 3-5 3z"/>`,
+    carousel: `<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/>`
+  }[type];
+  return `<span class="${escapeHtml(className)} is-${escapeHtml(type)}" aria-label="${escapeHtml(label)}" title="${escapeHtml(label)}"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true">${icon}</svg></span>`;
+}
+
 function pedTypeOptions(selected, { carouselOnly = false } = {}) {
   const current = pedContentType(selected);
   const entries = carouselOnly
@@ -3345,14 +3356,13 @@ function pedStagingItemMarkup(item) {
   const title = pedItemTitle(item) || "Contenuto Drive";
   const mime = String(primary.drive_mime_type || "");
   const isImage = mime.startsWith("image/");
-  const isVideo = mime.startsWith("video/");
   const previewUrl = primary.thumbnail_url || (isImage ? primary.content_url : "");
   const caption = String(item.caption || "").replace(/\s+/g, " ").trim();
   const media = previewUrl
     ? `<img src="${escapeHtml(previewUrl)}" alt="" loading="lazy" decoding="async">`
     : `<span class="ped-staging-icon">${driveFileIcon({ is_folder: false, mime_type: mime })}</span>`;
   return `<article class="ped-staging-card ped-type-${format.type}" data-ped-staging="${escapeHtml(item.id)}" data-ped-staging-open="${escapeHtml(item.id)}" draggable="true" aria-grabbed="false" tabindex="0" role="button" title="Apri e modifica il copy oppure trascina il contenuto sul calendario">
-    <span class="ped-staging-thumb">${media}${isVideo ? `<span class="ped-video-mini"><svg class="lc" viewBox="0 0 24 24"><path d="m9 7 8 5-8 5z"/></svg></span>` : ""}${files.length > 1 ? `<b class="ped-carousel-count">${files.length}</b>` : ""}</span>
+    <span class="ped-staging-thumb">${media}${pedTypeIconMarkup(format.type)}${files.length > 1 ? `<b class="ped-carousel-count">${files.length}</b>` : ""}</span>
     <span class="ped-staging-copy">
       <strong>${escapeHtml(title)}</strong>
       <small>${format.label} · trascina nel calendario</small>
@@ -3399,7 +3409,7 @@ function renderPedStagingEditorItems(item) {
   const previewUrl = primary.thumbnail_url || (mime.startsWith("image/") ? primary.content_url : "");
   const publishing = pedPublishingStatusMeta(item.publishing_status);
   document.getElementById("pedStagingEditorItems").innerHTML = `<div class="ped-caption-day-item is-active">
-    <span class="ped-caption-day-thumb">${previewUrl ? `<img src="${escapeHtml(previewUrl)}" alt="" loading="eager" decoding="async">` : driveFileIcon({ is_folder: false, mime_type: mime })}${files.length > 1 ? `<b>${files.length}</b>` : ""}</span>
+    <span class="ped-caption-day-thumb">${previewUrl ? `<img src="${escapeHtml(previewUrl)}" alt="" loading="eager" decoding="async">` : driveFileIcon({ is_folder: false, mime_type: mime })}${pedTypeIconMarkup(format.type)}${files.length > 1 ? `<b>${files.length}</b>` : ""}</span>
     <span><strong>${escapeHtml(pedItemTitle(item))}</strong><small>${escapeHtml(format.label)} · in attesa di programmazione</small></span>
     <i class="ped-publishing-dot" data-ped-publishing-tone="${escapeHtml(publishing.value)}" aria-label="${escapeHtml(publishing.label)}"></i>
   </div>`;
@@ -3565,7 +3575,7 @@ function pedItemMarkup(item) {
 
   return `<article class="ped-content-card ped-type-${format.type}${files.length > 1 ? " is-carousel" : ""}" data-ped-content="${escapeHtml(item.id)}" data-ped-publishing-tone="${escapeHtml(publishing.value)}" draggable="true" aria-grabbed="false" tabindex="0" title="${escapeHtml(publishing.label)} · trascina su un altro giorno per riprogrammare">
     <button class="ped-content-main" data-ped-editor="${escapeHtml(item.id)}" type="button" title="Apri contenuti e copy del giorno">
-      <span class="ped-content-thumb">${media}${isVideo ? `<span class="ped-video-mini"><svg class="lc" viewBox="0 0 24 24"><path d="m9 7 8 5-8 5z"/></svg></span>` : ""}${files.length > 1 ? `<b class="ped-carousel-count">${files.length}</b>` : ""}</span>
+      <span class="ped-content-thumb">${media}${pedTypeIconMarkup(format.type)}${files.length > 1 ? `<b class="ped-carousel-count">${files.length}</b>` : ""}</span>
       <span class="ped-content-copy"><strong>${escapeHtml(title)}</strong><small><span class="ped-type-dot" aria-hidden="true"></span>${format.label} · ${typeLabel}${format.type !== "story" && item.caption ? " · Copy pronto" : ""}</small></span>
     </button>
     <button class="ped-content-remove" data-ped-remove="${escapeHtml(item.id)}" type="button" title="Rimuovi dal PED" aria-label="Rimuovi ${escapeHtml(title)} dal PED">
@@ -3626,7 +3636,6 @@ function pedAgendaItemMarkup(item) {
   const title = pedItemTitle(item);
   const mime = String(primary.drive_mime_type || "");
   const isImage = mime.startsWith("image/");
-  const isVideo = mime.startsWith("video/");
   const previewUrl = primary.thumbnail_url || (isImage ? primary.content_url : "");
   const media = previewUrl
     ? `<img src="${escapeHtml(previewUrl)}" alt="" loading="lazy" decoding="async">`
@@ -3638,7 +3647,7 @@ function pedAgendaItemMarkup(item) {
     : `Scarica separatamente i ${files.length} contenuti in ordine numerico`;
   return `<article class="ped-agenda-item ped-type-${format.type}" data-ped-publishing-tone="${escapeHtml(publishingStatus)}">
     <button class="ped-agenda-preview" data-ped-caption-preview="${escapeHtml(item.id)}" type="button" title="${files.length > 1 ? `Apri e scorri i ${files.length} contenuti del carosello` : "Apri anteprima"}">
-      ${media}${isVideo ? `<span class="ped-video-mini"><svg class="lc" viewBox="0 0 24 24"><path d="m9 7 8 5-8 5z"/></svg></span>` : ""}${files.length > 1 ? `<b class="ped-carousel-count">${files.length}</b>` : ""}
+      ${media}${pedTypeIconMarkup(format.type)}${files.length > 1 ? `<b class="ped-carousel-count">${files.length}</b>` : ""}
     </button>
     <div class="ped-agenda-copy">
       <strong>${escapeHtml(title)}</strong>
@@ -5110,7 +5119,7 @@ function renderPedCaptionDayItems(selectedItem) {
     const previewUrl = primary.thumbnail_url || (mime.startsWith("image/") ? primary.content_url : "");
     const publishing = pedPublishingStatusMeta(item.publishing_status);
     return `<button class="ped-caption-day-item${String(item.id) === String(selectedItem.id) ? " is-active" : ""}" data-ped-caption-select="${escapeHtml(item.id)}" type="button">
-      <span class="ped-caption-day-thumb">${previewUrl ? `<img src="${escapeHtml(previewUrl)}" alt="" loading="lazy" decoding="async">` : driveFileIcon({ is_folder: false, mime_type: mime })}${files.length > 1 ? `<b>${files.length}</b>` : ""}</span>
+      <span class="ped-caption-day-thumb">${previewUrl ? `<img src="${escapeHtml(previewUrl)}" alt="" loading="lazy" decoding="async">` : driveFileIcon({ is_folder: false, mime_type: mime })}${pedTypeIconMarkup(format.type)}${files.length > 1 ? `<b>${files.length}</b>` : ""}</span>
       <span><strong>${escapeHtml(pedItemTitle(item))}</strong><small>${escapeHtml(format.label)}</small></span>
       <i class="ped-publishing-dot" data-ped-publishing-tone="${escapeHtml(publishing.value)}" aria-label="${escapeHtml(publishing.label)}"></i>
     </button>`;

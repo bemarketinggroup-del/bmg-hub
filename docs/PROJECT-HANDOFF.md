@@ -273,8 +273,10 @@ supabase/                     schema e migration
   resta interno al binario e non allarga la pagina.
 - Le miniature compatte di calendario, contenuti in attesa e agenda sono
   full-bleed: foto o poster video riempiono l'intero rettangolo senza cornici
-  bianche o livelli bianchi impilati. Badge quantità e play restano sovrapposti
-  all'interno dell'immagine.
+  bianche, fondali neri o livelli impilati. Ogni formato mostra nell'angolo un
+  simbolo dedicato per Post, Storia, Reel o Carosello/multipost; il badge
+  quantità del carosello resta separato nell'angolo opposto. Le stesse regole
+  valgono negli editor compatti e nel calendario PED condiviso.
 - Sezione “Contenuti momentanei / In attesa di programmazione”: import dal Drive,
   anteprima del copy, editor completo uguale al PED e trascinamento nel giorno.
 - L'agenda carica tutti i contenuti fino in fondo nella pagina e non usa una
