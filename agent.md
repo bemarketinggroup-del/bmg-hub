@@ -79,7 +79,9 @@ più recente alla più vecchia:
   (dialogo 1260×702, stage 1238×587 e dock interno senza overflow) e verifica
   delle regole responsive/safe-area smartphone. Media mantenuti con
   `object-fit: contain`; fallback fullscreen iOS dedicato.
-- Pubblicazione: da completare su GitHub `main` e Vercel produzione.
+- Pubblicazione: commit applicativo `5d170b7` pubblicato su GitHub `main`; deploy
+  Vercel produzione completato e verificato su `https://bmg-hub.vercel.app`
+  (home e asset aggiornati con risposta `200`).
 - Note: Safari/iPhone può ignorare il controllo volume programmatico, ma mute e
   fullscreen nativo restano disponibili.
 
