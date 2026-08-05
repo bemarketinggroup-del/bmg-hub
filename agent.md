@@ -59,6 +59,24 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-08-05 — Anteprime PED senza cornice bianca
+
+- Richiesta: rimuovere la cornice bianca attorno alle anteprime e fare in modo
+  che tutto il rettangolo sia occupato dalla foto o dal video.
+- Modifiche: le miniature di calendario, contenuti in attesa e agenda ora sono
+  full-bleed, senza bordo bianco né livelli bianchi impilati; immagini e poster
+  video usano `cover`, mentre badge quantità e comando play restano sovrapposti
+  dentro il rettangolo e non vengono tagliati.
+- File: `public/styles.css`, `scripts/test-ped-carousel.mjs`,
+  `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run check`, `npm run test:ped-carousel`,
+  `npm run test:mobile-navigation`, `npm run test:primeng-components`,
+  `git diff --check`; controllo browser locale delle miniature agenda desktop
+  e smartphone, con media a pieno rettangolo e badge/play leggibili.
+- Pubblicazione: commit corrente pubblicato su GitHub `main`; deploy Vercel
+  produzione completato e verificato su `https://bmg-hub.vercel.app`.
+- Note: Nessuna.
+
 ### 2026-08-05 — Media verticali interi e player antracite
 
 - Richiesta: evitare qualsiasi crop di foto e video, correggere i video

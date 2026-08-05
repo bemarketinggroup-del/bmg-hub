@@ -266,6 +266,10 @@ supabase/                     schema e migration
   nell'editor. L'editor usa un binario orizzontale con card verticali 4:5,
   snap su smartphone e primo frame dei video senza patina scura. Lo scroll
   resta interno al binario e non allarga la pagina.
+- Le miniature compatte di calendario, contenuti in attesa e agenda sono
+  full-bleed: foto o poster video riempiono l'intero rettangolo senza cornici
+  bianche o livelli bianchi impilati. Badge quantità e play restano sovrapposti
+  all'interno dell'immagine.
 - Sezione “Contenuti momentanei / In attesa di programmazione”: import dal Drive,
   anteprima del copy, editor completo uguale al PED e trascinamento nel giorno.
 - L'agenda carica tutti i contenuti fino in fondo nella pagina e non usa una

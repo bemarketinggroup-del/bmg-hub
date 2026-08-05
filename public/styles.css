@@ -8402,16 +8402,14 @@ body.chat-view-active #chatView {
 .ped-content-thumb {
   width: 38px;
   height: 42px;
-  border: 1px solid rgba(255, 255, 255, .82);
+  border: 0;
   border-radius: 8px;
+  background: #181614;
   box-shadow: 0 2px 7px rgba(29, 24, 19, .13);
 }
 .ped-content-card.is-carousel .ped-content-thumb {
-  margin: 0 4px 4px 0;
-  box-shadow:
-    3px 3px 0 var(--surface),
-    3px 3px 0 1px color-mix(in srgb, var(--ped-type-color) 28%, var(--line)),
-    6px 6px 0 color-mix(in srgb, var(--ped-type-tint) 56%, var(--surface));
+  margin: 0;
+  box-shadow: 0 2px 7px rgba(29, 24, 19, .13);
 }
 .ped-carousel-count {
   right: -5px;
@@ -8423,6 +8421,9 @@ body.chat-view-active #chatView {
   font-size: 9.5px;
   font-variant-numeric: tabular-nums;
 }
+.ped-content-thumb .ped-carousel-count,
+.ped-staging-thumb .ped-carousel-count,
+.ped-agenda-preview .ped-carousel-count { right: 4px; bottom: 4px; }
 .ped-content-copy { gap: 3px; }
 .ped-content-copy strong { font-size: 11px; }
 .ped-content-copy small { font-size: 9.5px; font-weight: 650; }
@@ -8452,18 +8453,16 @@ body.chat-view-active #chatView {
 .ped-staging-thumb {
   width: 76px;
   height: 86px;
-  border: 1px solid color-mix(in srgb, var(--ped-type-color) 18%, var(--line));
+  border: 0;
   border-radius: 10px;
-  background: var(--surface);
+  background: #181614;
   box-shadow: 0 3px 10px rgba(29, 24, 19, .11);
 }
 .ped-staging-card.ped-type-carousel .ped-staging-thumb {
-  margin: 0 4px 4px 0;
-  box-shadow:
-    3px 3px 0 var(--surface),
-    3px 3px 0 1px color-mix(in srgb, var(--ped-type-color) 27%, var(--line)),
-    6px 6px 0 color-mix(in srgb, var(--ped-type-tint) 60%, var(--surface));
+  margin: 0;
+  box-shadow: 0 3px 10px rgba(29, 24, 19, .11);
 }
+.ped-staging-thumb > img { object-fit: cover; background: transparent; }
 .ped-staging-copy { gap: 6px; }
 .ped-staging-copy strong { font-size: 13px; }
 .ped-staging-copy small {
@@ -8502,18 +8501,18 @@ body.chat-view-active #chatView {
 .ped-agenda-preview {
   width: 62px;
   height: 72px;
-  overflow: visible;
+  overflow: hidden;
+  border: 0;
   border-radius: 10px;
+  background: #181614;
   box-shadow: 0 3px 10px rgba(29, 24, 19, .12);
 }
 .ped-agenda-preview img,
-.ped-agenda-preview > .ped-video-mini { overflow: hidden; border-radius: 9px; }
+.ped-agenda-preview > .ped-video-mini { overflow: hidden; border-radius: inherit; }
+.ped-agenda-preview img { object-fit: cover; background: transparent; }
 .ped-agenda-item.ped-type-carousel .ped-agenda-preview {
-  margin: 0 5px 5px 0;
-  box-shadow:
-    4px 4px 0 var(--surface),
-    4px 4px 0 1px color-mix(in srgb, var(--ped-publishing-color) 25%, var(--line)),
-    8px 8px 0 color-mix(in srgb, var(--ped-publishing-tint) 72%, var(--surface));
+  margin: 0;
+  box-shadow: 0 3px 10px rgba(29, 24, 19, .12);
 }
 .ped-agenda-copy { gap: 5px; }
 .ped-agenda-copy strong { font-size: 13.5px; }

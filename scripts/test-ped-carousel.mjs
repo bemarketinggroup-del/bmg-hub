@@ -304,6 +304,10 @@ assert.match(styleSource, /\.ped-agenda-item\[data-ped-publishing-tone="ped_only
 assert.match(styleSource, /\.ped-agenda-item\[data-ped-publishing-tone="meta"\]/, "Programmato Meta deve colorare l'intera riga dell'agenda");
 assert.match(styleSource, /\.ped-agenda-item\[data-ped-publishing-tone="phone"\]/, "Programmato telefono deve colorare l'intera riga dell'agenda");
 assert.match(styleSource, /\.ped-agenda-item \{[\s\S]*?border-left: 4px solid var\(--ped-publishing-color\)[\s\S]*?background: var\(--ped-publishing-tint\)/, "la riga dell'agenda non deve più usare il colore della tipologia di post");
+assert.match(styleSource, /\.ped-agenda-preview \{[\s\S]*?overflow: hidden;[\s\S]*?border: 0;[\s\S]*?background: #181614;/, "la miniatura agenda non deve avere una cornice bianca");
+assert.match(styleSource, /\.ped-agenda-preview img \{ object-fit: cover; background: transparent; \}/, "foto e poster video devono riempire tutto il rettangolo dell'anteprima agenda");
+assert.match(styleSource, /\.ped-staging-thumb > img \{ object-fit: cover; background: transparent; \}/, "anche i contenuti in attesa devono usare miniature a pieno rettangolo");
+assert.doesNotMatch(styleSource, /\.ped-agenda-item\.ped-type-carousel \.ped-agenda-preview \{[^}]*var\(--surface\)/, "il carosello agenda non deve ricreare cornici bianche impilate");
 assert.match(styleSource, /\.ped-agenda-format select \{[\s\S]*?min-height: 44px;[\s\S]*?appearance: none;[\s\S]*?text-align-last: center;/, "il formato deve apparire come un vero pulsante con testo centrato");
 assert.match(styleSource, /\.ped-agenda-publishing select \{[\s\S]*?min-height: 44px;[\s\S]*?appearance: none;[\s\S]*?text-align-last: center;/, "lo stato PED deve apparire come un vero pulsante con testo centrato");
 assert.match(appSource, /data-ped-editor=/, "il clic su un contenuto del calendario deve aprire il pannello editoriale");
