@@ -59,6 +59,24 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-08-05 — Registro attività in due pannelli verticali
+
+- Richiesta: rendere più grandi e leggibili `Dettaglio giornaliero` e `Azioni
+  nel gestionale`, affiancandoli come due quadrati o rettangoli verticali con
+  scorrimento interno.
+- Modifiche: su desktop le due sezioni sono ora due card verticali affiancate,
+  della stessa altezza, con testata, descrizione, contatore e scrollbar
+  indipendente; aumentati font, spazi e altezza delle righe. Sotto i 900 px i
+  pannelli si impilano senza riattivare lo scroll della modal o della pagina.
+- File: `public/app.js`, `public/styles.css`,
+  `scripts/test-user-management.mjs`, `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run check`, `npm run test:users`,
+  `npm run test:primeng-components`, `npm run test:mobile-navigation`,
+  `git diff --check`; controllo visivo desktop e smartphone con scroll interno
+  confinato ai due pannelli.
+- Pubblicazione: GitHub `main` e Vercel produzione.
+- Note: Nessuna.
+
 ### 2026-08-05 — Sistema visuale moderno per i caroselli PED
 
 - Richiesta: modernizzare tutte le visualizzazioni dei caroselli nel PED,

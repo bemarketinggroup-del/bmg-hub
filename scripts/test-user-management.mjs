@@ -79,7 +79,9 @@ assert.match(styleSource, /\.user-editor-tabs \.p-tablist-tab-list\s*\{[^}]*grid
 assert.match(styleSource, /\.user-activity-dialog\.modal\s*\{[^}]*width:\s*100vw[^}]*height:\s*100dvh[^}]*overflow:\s*hidden/, "il registro attività deve occupare lo schermo senza scroll esterno");
 assert.match(styleSource, /\.user-activity-dialog-content\s*\{[^}]*min-height:\s*0[^}]*overflow:\s*hidden/, "il contenuto fullscreen deve restare vincolato al viewport");
 assert.match(styleSource, /\.user-activity-dialog \.user-activity-days,[\s\S]*min-height:\s*0[^}]*overflow:\s*auto/, "dettaglio giornaliero e azioni devono scorrere soltanto al loro interno");
-assert.match(styleSource, /\.user-activity-dialog \.user-activity-columns\s*\{[^}]*grid-template-columns:\s*1fr[^}]*grid-template-rows:\s*minmax\(180px, \.95fr\) minmax\(270px, 1\.5fr\)/, "dettaglio giornaliero e azioni devono avere aree verticali più ampie");
+assert.match(styleSource, /\.user-activity-dialog \.user-activity-columns\s*\{[^}]*grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\)[^}]*grid-template-rows:\s*minmax\(0, 1fr\)/, "dettaglio giornaliero e azioni devono essere due pannelli verticali affiancati");
+assert.match(styleSource, /\.user-activity-column-head\s*\{[^}]*min-height:\s*64px[^}]*border-bottom:/, "ogni pannello deve avere una testata ampia e leggibile");
+assert.match(appSource, /userActivityDailyTitle[\s\S]*dayRows\.length[\s\S]*userActivityActionsTitle[\s\S]*actions\.length/, "i due pannelli devono mostrare titolo, descrizione e quantità");
 assert.match(appSource, /action\.context_label[\s\S]*user-action-context/, "ogni azione deve mostrare il contesto operativo disponibile");
 assert.match(appSource, /user-activity-bar-meta[\s\S]*formatActivityChartDate\(day\.date\)[\s\S]*formatActivityChartDuration\(seconds\)/, "ogni barra deve mostrare giorno e tempo totale");
 assert.match(appSource, /function scrollUserActivityChartToLatest\(panel\)[\s\S]*chart\.scrollLeft = chart\.scrollWidth/, "il grafico deve aprirsi sulle giornate più recenti quando scorre internamente");

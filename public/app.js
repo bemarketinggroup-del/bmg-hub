@@ -6669,9 +6669,12 @@ function renderUserActivityDetails(data) {
       </div>
     </div>
     <div class="user-activity-columns">
-      <section>
-        <h4>Dettaglio giornaliero</h4>
-        <div class="p-listbox user-activity-days">
+      <section class="p-card p-component user-activity-column">
+        <header class="user-activity-column-head">
+          <div><h4 id="userActivityDailyTitle">Dettaglio giornaliero</h4><span>Accessi, presenza e sessioni</span></div>
+          <span class="p-badge p-component">${dayRows.length}</span>
+        </header>
+        <div class="p-listbox user-activity-days" aria-labelledby="userActivityDailyTitle">
           ${dayRows.length ? dayRows.map((day) => `
             <article class="p-card">
               <strong>${escapeHtml(formatActivityDate(day.date))}</strong>
@@ -6683,9 +6686,12 @@ function renderUserActivityDetails(data) {
           `).join("") : `<p class="p-message p-message-secondary user-activity-empty">Nessuna presenza misurata nel periodo.</p>`}
         </div>
       </section>
-      <section>
-        <h4>Azioni nel gestionale</h4>
-        <div class="p-listbox user-action-list">
+      <section class="p-card p-component user-activity-column">
+        <header class="user-activity-column-head">
+          <div><h4 id="userActivityActionsTitle">Azioni nel gestionale</h4><span>Operazioni e relativo contesto</span></div>
+          <span class="p-badge p-component">${actions.length}</span>
+        </header>
+        <div class="p-listbox user-action-list" aria-labelledby="userActivityActionsTitle">
           ${actions.length ? actions.map((action) => `
             <article class="p-listbox-option">
               <span class="p-tag user-action-method"><span class="p-tag-label">${escapeHtml(action.method || "VIEW")}</span></span>

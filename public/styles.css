@@ -5320,7 +5320,7 @@ body.user-activity-dialog-visible { overflow: hidden; }
   min-width: 0;
   min-height: 0;
   grid-column: auto;
-  grid-template-rows: auto auto minmax(174px, .72fr) minmax(462px, 2.25fr) auto;
+  grid-template-rows: auto auto minmax(160px, .68fr) minmax(330px, 1.7fr) auto;
   gap: 10px;
   overflow: hidden;
   border: 0;
@@ -5332,14 +5332,64 @@ body.user-activity-dialog-visible { overflow: hidden; }
 .user-activity-dialog .user-activity-kpis strong { font-size: 22px; }
 .user-activity-dialog .user-activity-chart-shell { height: 100%; min-height: 174px; }
 .user-activity-dialog .user-activity-chart { height: 100%; min-height: 0; }
-.user-activity-dialog .user-activity-columns { min-height: 0; display: grid; grid-template-columns: 1fr; grid-template-rows: minmax(180px, .95fr) minmax(270px, 1.5fr); align-items: stretch; gap: 12px; overflow: hidden; }
-.user-activity-dialog .user-activity-columns > section { width: auto; min-height: 0; display: grid; grid-template-rows: auto minmax(0, 1fr); overflow: hidden; }
-.user-activity-dialog .user-activity-columns h4 { font-size: 15px; }
+.user-activity-dialog .user-activity-columns { min-height: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: minmax(0, 1fr); align-items: stretch; gap: 16px; overflow: hidden; }
+.user-activity-dialog .user-activity-columns > section {
+  width: auto;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: var(--surface);
+  box-shadow: 0 4px 14px rgba(29, 24, 19, .06);
+}
+.user-activity-column-head {
+  min-height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-soft);
+  padding: 11px 14px;
+}
+.user-activity-column-head > div { min-width: 0; }
+.user-activity-dialog .user-activity-columns h4 { margin: 0; color: var(--ink); font-size: 17px; }
+.user-activity-column-head > div > span { display: block; margin-top: 3px; color: var(--muted); font-size: 11px; }
+.user-activity-column-head > .p-badge { min-width: 30px; min-height: 26px; border: 1px solid var(--terra-line); background: var(--terra-tint); color: var(--terra-deep); }
 .user-activity-dialog .user-activity-days,
 .user-activity-dialog .user-action-list { min-height: 0; max-height: none; overflow: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
-.user-activity-dialog .user-activity-days article { padding: 15px 14px; }
-.user-activity-dialog .user-action-list { border: 1px solid var(--line); border-radius: 9px; background: var(--surface); padding: 7px 14px; }
-.user-activity-dialog .user-action-list article { padding: 10px 3px; }
+.user-activity-dialog .user-activity-days { gap: 9px; padding: 12px; }
+.user-activity-dialog .user-activity-days article { border-radius: 10px; background: var(--surface-soft); padding: 15px 14px; }
+.user-activity-dialog .user-activity-days article > strong { font-size: 14px; }
+.user-activity-dialog .user-activity-days article > span { font-size: 12px; }
+.user-activity-dialog .user-activity-days article b { font-size: 13px; }
+.user-activity-dialog .user-activity-days article small { font-size: 11.5px; }
+.user-activity-dialog .user-action-list { border: 0; border-radius: 0; background: var(--surface); padding: 4px 14px 10px; }
+.user-activity-dialog .user-action-list article { min-height: 64px; padding: 12px 3px; }
+.user-activity-dialog .user-action-list strong { font-size: 14px; }
+.user-activity-dialog .user-action-context { font-size: 12px; }
+.user-activity-dialog .user-action-list small { font-size: 11.5px; }
+
+@media (max-width: 1300px) {
+  .user-activity-dialog .user-activity-days article { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 11px 14px; }
+  .user-activity-dialog .user-activity-days article > strong { grid-column: 1 / -1; }
+}
+
+@media (max-width: 900px) {
+  .user-activity-dialog .user-activity-panel { grid-template-rows: auto auto minmax(145px, .65fr) minmax(360px, 1.8fr) auto; }
+  .user-activity-dialog .user-activity-columns { grid-template-columns: 1fr; grid-template-rows: repeat(2, minmax(170px, 1fr)); gap: 10px; }
+}
+
+@media (max-height: 820px) and (min-width: 901px) {
+  .user-activity-dialog-head { padding-block: 9px; }
+  .user-activity-dialog-content { gap: 8px; padding-block: 8px 10px; }
+  .user-activity-dialog-profile { padding-block: 7px; }
+  .user-activity-dialog .user-activity-panel { gap: 7px; grid-template-rows: auto auto minmax(120px, .52fr) minmax(245px, 1.45fr) auto; }
+  .user-activity-dialog .user-activity-chart-shell { min-height: 120px; }
+  .user-activity-column-head { min-height: 54px; padding-block: 8px; }
+}
 .user-access-head,
 .user-identity,
 .user-access-actions { display: flex; align-items: center; }
@@ -8203,8 +8253,12 @@ body.chat-view-active #chatView {
   .user-activity-dialog .user-activity-kpis > div { width: auto; padding: 8px; }
   .user-activity-dialog .user-activity-kpis span { font-size: 8px; }
   .user-activity-dialog .user-activity-kpis strong { font-size: 14px; }
-  .user-activity-dialog .user-activity-columns { grid-template-columns: 1fr; grid-template-rows: minmax(140px, 1fr) minmax(200px, 1.45fr); gap: 10px; }
-  .user-activity-dialog .user-activity-columns h4 { margin-bottom: 5px; font-size: 13px; }
+  .user-activity-dialog .user-activity-columns { grid-template-columns: 1fr; grid-template-rows: repeat(2, minmax(165px, 1fr)); gap: 10px; }
+  .user-activity-dialog .user-activity-columns h4 { font-size: 14px; }
+  .user-activity-column-head { min-height: 50px; padding: 7px 10px; }
+  .user-activity-column-head > div > span { font-size: 9px; }
+  .user-activity-dialog .user-activity-days { padding: 8px; }
+  .user-activity-dialog .user-action-list { padding: 3px 9px 8px; }
   .user-activity-dialog .user-activity-chart-shell { min-height: 145px; }
   .user-activity-dialog .user-activity-chart { height: 100%; min-height: 0; padding: 7px 6px 3px; }
   .user-activity-chart-head { min-height: 34px; padding: 3px 6px 3px 9px; }

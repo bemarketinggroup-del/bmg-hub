@@ -135,11 +135,11 @@ supabase/                     schema e migration
   durata totale indicati sotto ogni barra. Su desktop mostra dieci giorni alla
   volta, si apre sui dieci più recenti e permette di raggiungere i precedenti o
   successivi con scroll orizzontale e pulsanti dedicati; su smartphone mantiene
-  una larghezza minima per non comprimere le etichette. Dettaglio giornaliero e
-  azioni sono impilati a tutta larghezza, con testi e quote verticali maggiorati.
-  La modal e la pagina sottostante non scorrono: soltanto grafico e due liste
-  hanno scroll interni indipendenti, con più spazio assegnato al registro delle
-  azioni. Le azioni PED
+  una larghezza minima per non comprimere le etichette. Su desktop `Dettaglio
+  giornaliero` e `Azioni nel gestionale` sono due pannelli verticali affiancati,
+  della stessa altezza, con testata, contatore e testi maggiorati; sotto i 900 px
+  vengono impilati. La modal e la pagina sottostante non scorrono: soltanto
+  grafico e due liste hanno scroll interni indipendenti. Le azioni PED
   riportano cliente, mese/PED, data e contenuto
   quando disponibili; anche apertura del PED, cambio cliente e cambio mese
   vengono registrati con il relativo cliente.
