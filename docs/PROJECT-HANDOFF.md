@@ -306,8 +306,10 @@ supabase/                     schema e migration
   l'accesso del cliente. Il bearer token resta cifrato AES-256-GCM nel database
   e viene restituito soltanto allo staff autenticato con permesso PED; hash e
   validazione pubblica restano invariati. I link creati prima della migration
-  continuano a funzionare ma, non essendo ricostruibili dal solo hash, devono
-  essere sostituiti una sola volta soltanto se se ne è perso l'URL originale.
+  continuano a funzionare ma non sono ricostruibili dal solo hash. In questo
+  solo caso il dialogo può creare un secondo link recuperabile senza revocare
+  quello storico; resta consentito un solo link cifrato attivo per cliente e la
+  disattivazione esplicita revoca tutti gli accessi attivi.
 - Il pulsante è disponibile agli utenti autorizzati, non solo all'admin.
 - La vista condivisa non mostra il comando `Copia copy`.
 - Il calendario deve essere interamente visibile e responsive, senza scorrimento
@@ -490,6 +492,7 @@ supabase/migrations/20260729170000_ped_carousel_editor.sql
 supabase/migrations/20260729173000_ped_staging_rich_editor.sql
 supabase/migrations/20260805103000_staff_email_aliases.sql
 supabase/migrations/20260805181000_ped_share_recoverable_token.sql
+supabase/migrations/20260805183000_ped_share_parallel_legacy.sql
 ```
 
 Non modificare retroattivamente migration già applicate in produzione. Creare

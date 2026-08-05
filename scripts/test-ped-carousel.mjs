@@ -59,6 +59,7 @@ const htmlSource = await readFile(new URL("../public/index.html", import.meta.ur
 const shareSource = await readFile(new URL("../public/ped-share.js", import.meta.url), "utf8");
 const shareStyleSource = await readFile(new URL("../public/ped-share.css", import.meta.url), "utf8");
 const pedSource = await readFile(new URL("../lib/ped.js", import.meta.url), "utf8");
+const pedShareBackendSource = await readFile(new URL("../lib/ped-share.js", import.meta.url), "utf8");
 const clientDriveSource = await readFile(new URL("../lib/client-drive-api.js", import.meta.url), "utf8");
 const galleryMetadataSource = await readFile(new URL("../public/ped-gallery-metadata.js", import.meta.url), "utf8");
 const instagramOrderMigration = await readFile(new URL("../supabase/20260717_ped_instagram_order.sql", import.meta.url), "utf8");
@@ -67,6 +68,7 @@ const publishingStatusMigration = await readFile(new URL("../supabase/20260718_p
 const richCaptionMigration = await readFile(new URL("../supabase/20260718_ped_rich_caption.sql", import.meta.url), "utf8");
 const carouselEditorMigration = await readFile(new URL("../supabase/migrations/20260729170000_ped_carousel_editor.sql", import.meta.url), "utf8");
 const shareTokenMigration = await readFile(new URL("../supabase/migrations/20260805181000_ped_share_recoverable_token.sql", import.meta.url), "utf8");
+const parallelLegacyShareMigration = await readFile(new URL("../supabase/migrations/20260805183000_ped_share_parallel_legacy.sql", import.meta.url), "utf8");
 const previousServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 process.env.SUPABASE_SERVICE_ROLE_KEY = "ped-share-test-secret";
 const recoverableShareToken = "A".repeat(43);
@@ -76,6 +78,13 @@ assert.equal(decryptPedShareToken(encryptedShareToken, "client-1"), recoverableS
 assert.equal(decryptPedShareToken(encryptedShareToken, "client-2"), "", "il token cifrato deve essere vincolato al cliente corretto");
 if (previousServiceRoleKey === undefined) delete process.env.SUPABASE_SERVICE_ROLE_KEY;
 else process.env.SUPABASE_SERVICE_ROLE_KEY = previousServiceRoleKey;
+assert.match(parallelLegacyShareMigration, /drop index if exists public\.ped_share_links_one_active_per_client_idx/, "il vincolo storico non deve revocare il vecchio link");
+assert.match(parallelLegacyShareMigration, /where is_active and token_ciphertext is not null/, "deve restare un solo nuovo link recuperabile attivo per cliente");
+assert.match(appSource, /preserve_existing: preserveExisting/, "il frontend deve chiedere esplicitamente di conservare il link storico");
+assert.match(appSource, /Crea nuovo link visibile/, "il dialogo deve offrire un'azione quando il link storico non è recuperabile");
+assert.match(appSource, /Il link storico resta attivo/, "il dialogo deve confermare che il vecchio accesso non è stato revocato");
+assert.match(pedShareBackendSource, /function revokeRecoverableClientShares\(clientId\)/, "la sostituzione deve disattivare soltanto eventuali link cifrati precedenti");
+assert.match(pedShareBackendSource, /token_ciphertext=not\.is\.null/, "i link storici senza token cifrato devono restare attivi");
 const numberedFilenameSource = appSource.match(/function numberedPedDownloadFilename\(value, index\) \{[\s\S]*?\n\}/)?.[0];
 assert.ok(numberedFilenameSource, "la funzione di numerazione download deve essere presente");
 const numberedPedDownloadFilename = Function(`${numberedFilenameSource}; return numberedPedDownloadFilename;`)();

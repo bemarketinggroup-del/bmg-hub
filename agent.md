@@ -59,6 +59,29 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-08-05 — Nuovo link PED visibile senza revocare quello storico
+
+- Richiesta: rendere nuovamente visibile il link nella finestra Condividi PED
+  quando il link attivo è stato creato prima del salvataggio cifrato del token.
+- Modifiche: per i soli link storici attivi e non recuperabili il dialogo mostra
+  ora `Crea nuovo link visibile`, la scadenza e una spiegazione esplicita. Il
+  backend crea un nuovo URL cifrato senza disattivare quello storico; il nuovo
+  link resta copiabile nelle aperture successive. Il database consente un link
+  storico insieme a un solo link recuperabile attivo per cliente. Stato e
+  conferma di disattivazione indicano correttamente la presenza di più link.
+- File: `lib/ped-share.js`, `public/app.js`,
+  `supabase/migrations/20260805183000_ped_share_parallel_legacy.sql`,
+  `scripts/test-ped-carousel.mjs`, `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run check`, `npm run test:ped-carousel`,
+  `npm run test:permissions`, `git diff --check`; verifica dei tre stati del
+  dialogo (storico non recuperabile, nuovo recuperabile, più link attivi) e del
+  mantenimento dell'accesso pubblico tramite token hash.
+- Pubblicazione: migration Supabase applicata; commit corrente pubblicato su
+  GitHub `main`; deploy Vercel produzione completato e verificato su
+  `https://bmg-hub.vercel.app`.
+- Note: l'URL testuale del vecchio link non può essere ricostruito dal suo hash;
+  resta comunque valido. Il nuovo link è differente e sarà sempre recuperabile.
+
 ### 2026-08-05 — Selettore Drive stabile e pulsanti secondari moderni
 
 - Richiesta: mantenere fisso sulle anteprime l'avviso `Gia nel PED`, impedire

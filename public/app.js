@@ -3181,14 +3181,15 @@ function renderPedShareState() {
   if (pedShareState.active) {
     const availability = pedShareState.shareUrl
       ? "L'ultimo link generato è pronto per essere copiato."
-      : "Questo link precedente continua a funzionare, ma non è recuperabile perché fu creato prima dell'aggiornamento.";
+      : "Il link storico continua a funzionare. Crea un nuovo link visibile senza disattivarlo.";
     status.innerHTML = `<span class="ped-share-status-dot is-active" aria-hidden="true"></span><span><strong>Link attivo</strong><small>Scadenza: ${escapeHtml(formatPedShareDate(pedShareState.expires_at))}${pedShareState.last_accessed_at ? ` · Ultimo accesso: ${escapeHtml(formatPedShareDate(pedShareState.last_accessed_at))}` : ""}<br>${escapeHtml(availability)}</small></span>`;
     disable.classList.remove("is-hidden");
-    expiry.classList.add("is-hidden");
+    expiry.classList.toggle("is-hidden", Boolean(pedShareState.shareUrl));
     linkInput.value = pedShareState.shareUrl || "";
     linkWrap.classList.toggle("is-hidden", !pedShareState.shareUrl);
-    create.classList.toggle("is-hidden", !pedShareState.shareUrl);
-    create.textContent = "Copia link attivo";
+    create.classList.remove("is-hidden");
+    create.textContent = pedShareState.shareUrl ? "Copia link attivo" : "Crea nuovo link visibile";
+    disable.textContent = Number(pedShareState.active_count || 0) > 1 ? "Disattiva tutti i link" : "Disattiva link";
   } else {
     status.innerHTML = `<span class="ped-share-status-dot" aria-hidden="true"></span><span><strong>Nessun link attivo</strong><small>Crea un accesso in sola lettura per questo cliente.</small></span>`;
     disable.classList.add("is-hidden");
@@ -3239,8 +3240,9 @@ async function createPedShareLink() {
   }
   const button = document.getElementById("pedShareCreateButton");
   const message = document.getElementById("pedShareMessage");
+  const preserveExisting = Boolean(pedShareState.active && !pedShareState.shareUrl);
   button.disabled = true;
-  message.textContent = "Creazione link protetto...";
+  message.textContent = preserveExisting ? "Creazione del nuovo link senza disattivare quello storico..." : "Creazione link protetto...";
   try {
     const response = await apiFetch("/api/ped-share", {
       method: "POST",
@@ -3248,7 +3250,8 @@ async function createPedShareLink() {
       body: JSON.stringify({
         client_id: client.id,
         expires_in_days: Number(document.getElementById("pedShareExpiry").value),
-        share_month: pedMonthKey()
+        share_month: pedMonthKey(),
+        preserve_existing: preserveExisting
       })
     });
     const data = await response.json().catch(() => ({}));
@@ -3256,7 +3259,9 @@ async function createPedShareLink() {
     pedShareState = { ...data, active: true, shareUrl: String(data.share_url || ""), loading: false };
     document.getElementById("pedShareLink").value = pedShareState.shareUrl;
     document.getElementById("pedShareLinkWrap").classList.remove("is-hidden");
-    message.textContent = "Link creato. Copialo e invialo al cliente.";
+    message.textContent = data.preserved_existing
+      ? "Nuovo link creato. Il link storico resta attivo e questo URL rimarrà copiabile qui."
+      : "Link creato. Copialo e invialo al cliente.";
     renderPedShareState();
   } catch (error) {
     message.textContent = error.message;
@@ -3281,7 +3286,11 @@ async function copyPedShareLink() {
 
 async function disablePedShareLink() {
   const client = selectedPedClient();
-  if (!client || !confirm(`Disattivare il link PED di ${client.name}?`)) return;
+  const multiple = Number(pedShareState.active_count || 0) > 1;
+  const question = multiple
+    ? `Disattivare tutti i link PED di ${client?.name || "questo cliente"}?`
+    : `Disattivare il link PED di ${client?.name || "questo cliente"}?`;
+  if (!client || !confirm(question)) return;
   const message = document.getElementById("pedShareMessage");
   message.textContent = "Disattivazione in corso...";
   try {
