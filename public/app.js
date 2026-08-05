@@ -2,6 +2,7 @@ const STORAGE_KEY = "bmg-hub-v1";
 const PASSWORD_RECOVERY_KEY = "bmg-password-recovery";
 const PED_PICKER_LOCATIONS_KEY = "bmg-hub-ped-picker-locations-v1";
 const LAST_VIEW_KEY = "bmg-hub-last-view-v1";
+const WORKSPACE_CONTEXT_KEY = "bmg-hub-workspace-context-v1";
 const ALL_TEAM_TASKS_ID = "__all";
 const UNASSIGNED_TASKS_ID = "__unassigned";
 const TEAM_TASK_LIST_NAME = "task del team";
@@ -317,6 +318,9 @@ const smartCalendarRefreshedMonths = new Set();
 const smartWorkingBackgroundMonths = new Set();
 let smartWorkingLoading = false;
 let selectedContentSection = "all";
+let workspaceContext = {};
+let workspaceContextSaveTimer = null;
+let workspaceContextHydrating = false;
 let authConfig = null;
 let authSession = loadAuthSession();
 let authRefreshPromise = null;
@@ -345,6 +349,110 @@ function loadState() {
 
 function saveState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function workspaceProfileKey() {
+  return String(currentProfile?.id || currentProfile?.user_id || currentProfile?.email || "").trim().toLowerCase();
+}
+
+function readWorkspaceContexts() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(WORKSPACE_CONTEXT_KEY) || "{}");
+    return saved && typeof saved === "object" && !Array.isArray(saved) ? saved : {};
+  } catch {
+    return {};
+  }
+}
+
+function workspaceMonth(value, fallback) {
+  if (!/^\d{4}-\d{2}$/.test(String(value || ""))) return fallback;
+  const parsed = new Date(`${value}-01T12:00:00`);
+  return Number.isNaN(parsed.getTime()) ? fallback : parsed;
+}
+
+function workspaceDate(value, fallback) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(value || ""))) return fallback;
+  const parsed = new Date(`${value}T12:00:00`);
+  return Number.isNaN(parsed.getTime()) ? fallback : parsed;
+}
+
+function applyContentWorkspaceContext() {
+  const pageFilter = document.getElementById("contentPageFilter");
+  const statusFilter = document.getElementById("contentStatusFilter");
+  if (pageFilter && workspaceContext.content_page) pageFilter.value = workspaceContext.content_page;
+  if (statusFilter && workspaceContext.content_status) statusFilter.value = workspaceContext.content_status;
+  if (workspaceContext.content_section) selectedContentSection = workspaceContext.content_section;
+  if (workspaceContext.content_mode) {
+    document.querySelectorAll("[data-content-mode]").forEach((button) => {
+      button.classList.toggle("is-active", button.dataset.contentMode === workspaceContext.content_mode);
+    });
+  }
+}
+
+function restoreWorkspaceContext() {
+  const profileKey = workspaceProfileKey();
+  workspaceContext = profileKey ? (readWorkspaceContexts()[profileKey] || {}) : {};
+  workspaceContextHydrating = true;
+  selectedPedClientId = String(workspaceContext.ped_client_id || selectedPedClientId || "");
+  selectedPedMonth = workspaceMonth(workspaceContext.ped_month, selectedPedMonth);
+  selectedClientId = String(workspaceContext.client_id || "");
+  graphicsDriveClientId = String(workspaceContext.graphics_client_id || "");
+  selectedTeamMemberId = String(workspaceContext.team_member_id || selectedTeamMemberId || ALL_TEAM_TASKS_ID);
+  teamChatState.selectedConversation = String(workspaceContext.chat_conversation || teamChatState.selectedConversation || "general");
+  graphicReviewState.filter = ["active", "all", "pending", "in_progress", "completed"].includes(workspaceContext.graphics_review_filter)
+    ? workspaceContext.graphics_review_filter
+    : graphicReviewState.filter;
+  googleCalendarState.mode = workspaceContext.calendar_mode === "week" ? "week" : "month";
+  googleCalendarState.anchor = workspaceDate(workspaceContext.calendar_anchor, googleCalendarState.anchor);
+  selectedSmartMonth = workspaceMonth(workspaceContext.smart_month, selectedSmartMonth);
+  selectedSmartDate = /^\d{4}-\d{2}-\d{2}$/.test(String(workspaceContext.smart_date || ""))
+    ? workspaceContext.smart_date
+    : selectedSmartDate;
+  selectedSmartOffEmployeeId = String(workspaceContext.smart_off_employee_id || "");
+  selectedSmartOffPeriod = ["month", "quarter", "year"].includes(workspaceContext.smart_off_period)
+    ? workspaceContext.smart_off_period
+    : selectedSmartOffPeriod;
+  applyContentWorkspaceContext();
+}
+
+function rememberWorkspaceContext({ view = "" } = {}) {
+  const profileKey = workspaceProfileKey();
+  if (!profileKey || workspaceContextHydrating) return;
+  const activeView = view || document.querySelector("[data-view-panel].is-active")?.dataset.viewPanel || loadLastView();
+  const context = {
+    view: activeView,
+    ped_client_id: String(selectedPedClientId || ""),
+    ped_month: pedMonthKey(),
+    client_id: String(selectedClientId || ""),
+    graphics_client_id: String(graphicsDriveClientId || ""),
+    team_member_id: String(selectedTeamMemberId || ""),
+    chat_conversation: String(teamChatState.selectedConversation || "general"),
+    graphics_review_filter: String(graphicReviewState.filter || "active"),
+    calendar_mode: googleCalendarState.mode === "week" ? "week" : "month",
+    calendar_anchor: localDateKey(googleCalendarState.anchor),
+    smart_month: smartMonthKey(),
+    smart_date: String(selectedSmartDate || ""),
+    smart_off_employee_id: String(selectedSmartOffEmployeeId || ""),
+    smart_off_period: String(selectedSmartOffPeriod || "month"),
+    content_page: document.getElementById("contentPageFilter")?.value || "all",
+    content_status: document.getElementById("contentStatusFilter")?.value || "all",
+    content_mode: document.querySelector("[data-content-mode].is-active")?.dataset.contentMode || "texts",
+    content_section: String(selectedContentSection || "all"),
+    updated_at: new Date().toISOString()
+  };
+  try {
+    const contexts = readWorkspaceContexts();
+    contexts[profileKey] = context;
+    localStorage.setItem(WORKSPACE_CONTEXT_KEY, JSON.stringify(contexts));
+    workspaceContext = context;
+  } catch {
+    // Il gestionale resta utilizzabile anche se lo storage del browser e' indisponibile.
+  }
+}
+
+function scheduleWorkspaceContextSave(options = {}) {
+  window.clearTimeout(workspaceContextSaveTimer);
+  workspaceContextSaveTimer = window.setTimeout(() => rememberWorkspaceContext(options), 0);
 }
 
 function loadPedPickerLocations() {
@@ -1076,7 +1184,7 @@ function rememberLastView(view) {
 }
 
 function restoreLastView() {
-  setView(loadLastView());
+  setView(workspaceContext.view || loadLastView());
 }
 
 function setGraphicsNavExpanded(expanded) {
@@ -1128,6 +1236,7 @@ function setView(view) {
   } else {
     stopTeamChatUpdates();
   }
+  scheduleWorkspaceContextSave({ view });
 }
 
 const mobileNavigationMedia = window.matchMedia("(max-width: 980px)");
@@ -1232,6 +1341,7 @@ async function loadContentFromBackend() {
     if (!response.ok) throw new Error(`Content backend error ${response.status}`);
     const rows = await response.json();
     state.content = rows.map(normalizeContent);
+    applyContentWorkspaceContext();
     contentOnline = true;
     renderBackendStatus("", "site");
     renderAll();
@@ -1249,6 +1359,10 @@ async function loadClientsFromBackend() {
     const rows = await response.json();
     const previousPedClientId = String(selectedPedClientId || "");
     state.clients = rows.map(normalizeClient).filter((client) => !isArchivedClient(client));
+    const clientIds = new Set(state.clients.map((client) => String(client.id)));
+    if (clientIds.has(String(workspaceContext.ped_client_id || ""))) selectedPedClientId = String(workspaceContext.ped_client_id);
+    if (clientIds.has(String(workspaceContext.client_id || ""))) selectedClientId = String(workspaceContext.client_id);
+    if (clientIds.has(String(workspaceContext.graphics_client_id || ""))) graphicsDriveClientId = String(workspaceContext.graphics_client_id);
     ensurePedClientSelection();
     const pedClientChanged = previousPedClientId !== String(selectedPedClientId || "");
     if (pedClientChanged) {
@@ -1261,6 +1375,9 @@ async function loadClientsFromBackend() {
     renderBackendStatus("", "clients");
     renderAll();
     if (pedClientChanged) void loadPedCalendar();
+    const activeView = document.querySelector("[data-view-panel].is-active")?.dataset.viewPanel;
+    if (activeView === "clients" && selectedClientId) void openClientDetails(selectedClientId);
+    if (activeView === "graphics" && graphicsDriveClientId) void openGraphicsClientDrive(graphicsDriveClientId);
   } catch (error) {
     clientsOnline = false;
     renderBackendStatus(error.message, "clients");
@@ -1289,6 +1406,7 @@ async function loadClickUpTeam() {
     const response = await apiFetch("/api/clickup/team");
     if (!response.ok) throw new Error(`ClickUp team error ${response.status}`);
     state.agencyUsers = await response.json();
+    if (workspaceContext.team_member_id) selectedTeamMemberId = String(workspaceContext.team_member_id);
     ensureTeamSelection();
     clickupOnline = true;
     renderBackendStatus("", "clickup");
@@ -1473,7 +1591,10 @@ function renderContent() {
   const pageItems = state.content.filter((item) => pageFilter === "all" || item.page === pageFilter);
   const modeItems = pageItems.filter((item) => mode === "images" ? isImageContent(item) : isTextContent(item));
   const availableSections = [...new Set(modeItems.map(contentSectionKey))];
-  if (selectedContentSection !== "all" && !availableSections.includes(selectedContentSection)) selectedContentSection = "all";
+  if (selectedContentSection !== "all" && !availableSections.includes(selectedContentSection)) {
+    const pendingRestoredSection = workspaceContextHydrating && selectedContentSection === workspaceContext.content_section;
+    if (!pendingRestoredSection) selectedContentSection = "all";
+  }
   const filtered = pageItems.filter((item) => {
     const pageMatches = pageFilter === "all" || item.page === pageFilter;
     const statusMatches = statusFilter === "all" || item.status === statusFilter;
@@ -1649,7 +1770,9 @@ function previewImageUrl(url) {
 function renderContentFilters() {
   const select = document.getElementById("contentPageFilter");
   if (!select) return;
-  const current = select.dataset.initialized ? (select.value || "all") : "Homepage";
+  const current = select.dataset.initialized
+    ? (select.value || "all")
+    : (workspaceContext.content_page || "Homepage");
   select.dataset.initialized = "true";
   const preferredOrder = ["Homepage", "BeViral", "Pagine progetto", "Tutto il sito"];
   const pages = [...new Set(state.content.map((item) => item.page).filter(Boolean))].sort((a, b) => {
@@ -1731,7 +1854,7 @@ function renderClients() {
   const detail = document.getElementById("clientDetail");
   const selected = state.clients.find((client) => String(client.id) === String(selectedClientId));
 
-  if (selectedClientId && !selected) selectedClientId = "";
+  if (selectedClientId && !selected && !workspaceContextHydrating) selectedClientId = "";
   grid.classList.toggle("is-hidden", Boolean(selected));
   detail.classList.toggle("is-hidden", !selected);
 
@@ -2902,6 +3025,7 @@ function clientHasDrive(client) {
 function ensurePedClientSelection() {
   const available = [...state.clients].sort((a, b) => String(a.name).localeCompare(String(b.name), "it"));
   if (available.some((client) => String(client.id) === String(selectedPedClientId))) return;
+  if (workspaceContextHydrating && String(selectedPedClientId) === String(workspaceContext.ped_client_id || "")) return;
   selectedPedClientId = String(available.find(clientHasDrive)?.id || available[0]?.id || "");
 }
 
@@ -7295,6 +7419,7 @@ function selectedTeamTasks() {
 function ensureTeamSelection() {
   const users = teamMembers();
   const userKeys = new Set(users.map(teamMemberKey));
+  if (workspaceContextHydrating && !users.length && workspaceContext.team_member_id) return;
   if (currentProfile?.role === "admin") {
     const validSelection = selectedTeamMemberId === ALL_TEAM_TASKS_ID || selectedTeamMemberId === UNASSIGNED_TASKS_ID || userKeys.has(selectedTeamMemberId);
     if (!validSelection) selectedTeamMemberId = ALL_TEAM_TASKS_ID;
@@ -9159,7 +9284,7 @@ function renderGraphicsDriveClients() {
   const allClients = state.clients
     .filter(clientHasDrive)
     .sort((a, b) => String(a.name).localeCompare(String(b.name), "it", { sensitivity: "base" }));
-  if (!allClients.some((client) => String(client.id) === String(graphicsDriveClientId))) {
+  if (!allClients.some((client) => String(client.id) === String(graphicsDriveClientId)) && !workspaceContextHydrating) {
     graphicsDriveClientId = "";
     if (clientDriveState.surface === "graphics") resetDriveBrowser("graphics");
   }
@@ -11421,6 +11546,7 @@ async function bootApp() {
   }
 
   showApp();
+  restoreWorkspaceContext();
   restoreLastView();
   startActivityTracker();
   renderAll();
@@ -11449,6 +11575,9 @@ async function bootApp() {
     renderHome();
   } catch (error) {
     renderBackendStatus(error.message);
+  } finally {
+    workspaceContextHydrating = false;
+    rememberWorkspaceContext();
   }
 }
 
@@ -11465,7 +11594,11 @@ document.addEventListener("visibilitychange", () => {
 });
 
 window.addEventListener("pagehide", () => {
+  rememberWorkspaceContext();
   if (currentProfile && authSession?.access_token) void sendActivityEvent("session_end", { keepalive: true });
 });
+
+document.addEventListener("click", () => scheduleWorkspaceContextSave());
+document.addEventListener("change", () => scheduleWorkspaceContextSave());
 
 bootApp();

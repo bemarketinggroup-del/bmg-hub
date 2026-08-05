@@ -59,6 +59,27 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-08-05 — Ripristino della pagina e del contesto dopo il refresh
+
+- Richiesta: mantenere il cliente PED selezionato dopo l'aggiornamento della
+  pagina e applicare lo stesso comportamento alle altre aree del gestionale.
+- Modifiche: aggiunta una memoria locale separata per account che ripristina la
+  pagina attiva e il relativo contesto operativo: cliente e mese PED, scheda
+  Cliente, cartella cliente dell'Archivio grafiche, membro nei Task,
+  conversazione Chat, filtro Revisioni, periodo di Calendario e Turni e pagina,
+  modalità e sezione del Backend sito. Il ripristino attende la validazione dei
+  dati backend, evitando che il primo render sostituisca la selezione salvata
+  con il primo elemento disponibile.
+- File: `public/app.js`, `scripts/test-session-persistence.mjs`, `agent.md`.
+- Verifiche: `npm run check`, `npm run test:session-persistence`,
+  `npm run test:ped-carousel`, `npm run test:client-management`,
+  `npm run test:graphic-reviews`, `npm run test:team-chat`,
+  `npm run test:google-calendar`, `npm run test:smart-working`,
+  `git diff --check`; verifica produzione desktop e smartphone.
+- Pubblicazione: GitHub `main` e Vercel produzione.
+- Note: la memoria è locale al browser e separata per account; non viene
+  sincronizzata tra dispositivi differenti.
+
 ### 2026-08-05 — Badge Gia nel PED resistente al refresh PrimeNG
 
 - Richiesta: impedire che la scritta `Gia nel PED` sulle foto scompaia pochi
