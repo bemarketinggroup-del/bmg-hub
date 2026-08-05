@@ -59,6 +59,26 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-08-05 — Buffering video minimo e senza spostamenti
+
+- Richiesta: rendere molto piccolo l'indicatore `Buffering video`, mostrarlo in
+  basso a destra sul video e impedire che la sua comparsa o scomparsa muova la
+  barra del player.
+- Modifiche: il progresso viene trasferito nella superficie video come overlay
+  assoluto da 158 px massimo, con barra da 2 px e testi ridotti; il dock dei
+  comandi conserva una riga autonoma e dimensioni costanti. Lo stesso
+  comportamento è applicato al fallback Google Drive e lo stato nascosto usa
+  solo opacità e visibilità, senza partecipare al layout.
+- File: `public/app.js`, `public/styles.css`,
+  `scripts/test-ped-carousel.mjs`, `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run check`, `npm run test:ped-carousel`,
+  `npm run test:mobile-navigation`, `npm run test:primeng-components`,
+  `git diff --check`; controllo browser desktop e smartphone con confronto tra
+  indicatore visibile e nascosto senza variazioni della barra dei comandi.
+- Pubblicazione: commit corrente pubblicato su GitHub `main`; deploy Vercel
+  produzione completato e verificato su `https://bmg-hub.vercel.app`.
+- Note: Nessuna.
+
 ### 2026-08-05 — Miniature PED full-bleed con simboli editoriali
 
 - Richiesta: eliminare le cornici o fasce nere dalle miniature, riempire tutto

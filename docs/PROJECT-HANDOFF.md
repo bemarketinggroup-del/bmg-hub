@@ -238,8 +238,10 @@ supabase/                     schema e migration
   mantiene proporzioni, avanzamento, mute e fullscreen coerenti su desktop e
   smartphone; la barra spaziatrice riproduce/mette in pausa quando il contenuto
   aperto è un video. Anche i video verticali restano verticali e interamente
-  visibili, senza forzature orizzontali. Il dock resta in una fascia sotto il
-  video, seguito dall'eventuale barra di caricamento compatta.
+  visibili, senza forzature orizzontali. Il dock resta in una fascia stabile
+  sotto il video; l'eventuale buffering è un indicatore minimo sovrapposto
+  nell'angolo inferiore destro del fotogramma e non modifica mai posizione o
+  altezza dei comandi quando appare o scompare.
 - I caroselli supportano fino a 20 elementi, numero d'ordine visibile, riordino
   drag-and-drop, eliminazione e aggiunta di altri elementi in un secondo momento.
 - Il primo elemento del carosello è la copertina usata nel feed Instagram.

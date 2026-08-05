@@ -4578,9 +4578,12 @@ function createModernVideoPlayer({ source, poster = "", name = "Video", fileId =
   });
 
   mediaRoot.append(player);
+  const surface = player.querySelector(".media-viewer-video-surface");
+  const progress = stage.querySelector(":scope > [data-media-progress]");
+  if (surface && progress) surface.append(progress);
   bindStreamProgress(video, stage, {
     onUnsupported: () => {
-      stage.querySelector(":scope > [data-media-progress]")?.classList.add("is-hidden");
+      progress?.classList.add("is-hidden");
       showEmbeddedDriveVideo(mediaRoot, fileId, name);
     },
     isCurrent: () => loadId === pedMediaViewerState.loadId && video.isConnected
