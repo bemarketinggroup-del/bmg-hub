@@ -196,6 +196,13 @@ assert.match(styleSource, /height: max-content !important/, "Safari non deve est
 assert.match(styleSource, /\.media-load-progress/, "le anteprime devono avere una barra di caricamento");
 assert.match(appSource, /<div data-drive-preview-media><\/div>\$\{mediaProgressMarkup\("Caricamento anteprima"\)\}/, "la barra deve essere inserita dopo il player");
 assert.match(styleSource, /\.drive-preview-body > \.media-load-progress \{[\s\S]*?position: static;/, "la barra del video non deve sovrapporsi al player");
+assert.match(appSource, /stage\.innerHTML = `<div class="ped-media-viewer-media" data-ped-viewer-media><\/div>\$\{mediaProgressMarkup/, "nel viewer grande la barra deve essere inserita dopo il media");
+assert.match(styleSource, /\.ped-media-viewer-stage > \.media-load-progress,[\s\S]*?position: static;/, "la barra del viewer non deve più coprire il video");
+assert.match(styleSource, /\.ped-media-viewer-stage > \.media-load-progress progress,[\s\S]*?height: 3px;/, "la barra del viewer deve restare compatta");
+assert.match(appSource, /<div class="media-viewer-video-surface">[\s\S]*?<video playsinline[\s\S]*?<\/div>\s*<div class="media-viewer-video-controls"/, "video e comandi devono occupare due fasce separate");
+assert.match(styleSource, /\.media-viewer-player \{[^}]*grid-template-rows: minmax\(0, 1fr\) auto;/, "il player deve riservare una riga separata ai comandi");
+assert.match(styleSource, /\.media-viewer-video-controls \{[\s\S]*?position: static;/, "i comandi non devono coprire il video");
+assert.match(appSource, /stage\.querySelector\(":scope > \[data-media-progress\]"\)\?\.classList\.add\("is-hidden"\);[\s\S]*?showEmbeddedDriveVideo\(mediaRoot, fileId, name\)/, "il fallback Drive non deve mostrare due barre di caricamento");
 assert.match(appSource, /const scheduledDays = \[\.\.\.grouped\.entries\(\)\]/, "l'agenda deve derivare i giorni dai contenuti programmati");
 assert.match(appSource, /\.filter\(\(\[dateKey, items\]\) => dateKey >= todayKey && items\.length\)/, "l'agenda deve partire dal giorno corrente");
 assert.match(appSource, /state\.pedAgendaItems/, "l'agenda deve usare i contenuti dei mesi futuri");

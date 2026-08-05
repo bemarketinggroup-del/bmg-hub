@@ -2769,6 +2769,7 @@ function bindStreamProgress(media, container, { autoplay = false, onUnsupported 
 
 function showEmbeddedDriveVideo(container, fileId, name = "Video") {
   if (!container || !fileId) return false;
+  container.classList.add("has-inline-media-progress");
   container.innerHTML = `<iframe title="Player Google Drive per ${escapeHtml(name)}" allow="autoplay; fullscreen" referrerpolicy="strict-origin-when-cross-origin"></iframe>${mediaProgressMarkup("Conversione video Google Drive")}<span class="ped-picker-preview-kind"><svg class="lc" viewBox="0 0 24 24"><path d="m9 7 8 5-8 5z"/></svg> Player Drive</span>`;
   const frame = container.querySelector("iframe");
   const startedAt = performance.now();
@@ -4495,8 +4496,10 @@ function createModernVideoPlayer({ source, poster = "", name = "Video", fileId =
   const player = document.createElement("div");
   player.className = "media-viewer-player is-paused";
   player.dataset.mediaViewerPlayer = "";
-  player.innerHTML = `<video playsinline preload="metadata" aria-label="${escapeHtml(name)}"></video>
-    <button class="media-viewer-big-play" data-media-viewer-play type="button" aria-label="Riproduci ${escapeHtml(name)}">${mediaViewerPlayIcon(true)}</button>
+  player.innerHTML = `<div class="media-viewer-video-surface">
+      <video playsinline preload="metadata" aria-label="${escapeHtml(name)}"></video>
+      <button class="media-viewer-big-play" data-media-viewer-play type="button" aria-label="Riproduci ${escapeHtml(name)}">${mediaViewerPlayIcon(true)}</button>
+    </div>
     <div class="media-viewer-video-controls" data-media-viewer-controls>
       <button data-media-viewer-play type="button" aria-label="Riproduci">${mediaViewerPlayIcon(true)}</button>
       <span data-media-viewer-current>0:00</span>
@@ -4567,7 +4570,10 @@ function createModernVideoPlayer({ source, poster = "", name = "Video", fileId =
 
   mediaRoot.append(player);
   bindStreamProgress(video, stage, {
-    onUnsupported: () => showEmbeddedDriveVideo(mediaRoot, fileId, name),
+    onUnsupported: () => {
+      stage.querySelector(":scope > [data-media-progress]")?.classList.add("is-hidden");
+      showEmbeddedDriveVideo(mediaRoot, fileId, name);
+    },
     isCurrent: () => loadId === pedMediaViewerState.loadId && video.isConnected
   });
   video.src = source;
@@ -4632,7 +4638,7 @@ function openPedMediaViewer(button, options = {}) {
   help.classList.toggle("is-hidden", type !== "image");
   document.getElementById("pedMediaViewerZoomControls")?.classList.toggle("is-hidden", type !== "image");
   stage.className = `ped-media-viewer-stage is-loading is-${type}`;
-  stage.innerHTML = `${mediaProgressMarkup(type === "image" ? "Caricamento foto originale" : "Preparazione video")}<div class="ped-media-viewer-media" data-ped-viewer-media></div>`;
+  stage.innerHTML = `<div class="ped-media-viewer-media" data-ped-viewer-media></div>${mediaProgressMarkup(type === "image" ? "Caricamento foto originale" : "Preparazione video")}`;
   renderPedMediaViewerNavigation(stage, gallery, galleryIndex);
   if (!wasOpen) modal.showModal();
   applyPedMediaViewerTransform();

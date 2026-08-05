@@ -59,6 +59,27 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-08-05 — Comandi e caricamento separati dal video
+
+- Richiesta: impedire sia ai comandi del player sia alla barra di caricamento di
+  coprire il video, spostando il progresso sotto al player e riducendone
+  l'altezza.
+- Modifiche: il viewer video ora è suddiviso in tre righe autonome per
+  fotogramma, controlli e avanzamento; il dock non è più posizionato sopra al
+  contenuto e la barra dati è una fascia compatta con progresso da 3 px. Quando
+  termina scompare senza lasciare spazio; nel fallback Google Drive viene
+  nascosto l'indicatore originario per evitare duplicati.
+- File: `public/app.js`, `public/styles.css`,
+  `scripts/test-ped-carousel.mjs`, `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run check`, `npm run test:ped-carousel`,
+  `npm run test:mobile-navigation`, `npm run test:primeng-components`,
+  `git diff --check`; controllo browser locale con misurazione dei rettangoli:
+  nessuna sovrapposizione tra video, dock e progresso, posizionamento `static`
+  delle due fasce e barra alta 3 px.
+- Pubblicazione: commit corrente da pubblicare su GitHub `main`; deploy Vercel
+  produzione da completare e verificare su `https://bmg-hub.vercel.app`.
+- Note: Nessuna.
+
 ### 2026-08-05 — Anteprime PED senza cornice bianca
 
 - Richiesta: rimuovere la cornice bianca attorno alle anteprime e fare in modo

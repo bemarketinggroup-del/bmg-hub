@@ -194,6 +194,10 @@ supabase/                     schema e migration
   foto o video. Il video occupa il riquadro con `object-fit: contain`; dopo la
   lettura dei metadati conserva il rapporto nativo e il primo fotogramma reale
   sostituisce l'eventuale poster orizzontale/croppato generato da Drive.
+- Nei video l'immagine, i controlli e l'indicatore di caricamento occupano tre
+  righe separate: né il dock del player né il progresso possono sovrapporsi al
+  fotogramma. L'indicatore è compatto, scompare senza lasciare spazio quando il
+  caricamento termina e il fallback Drive non deve duplicarlo.
 - Alla chiusura del visualizzatore resta evidenziato l'ultimo elemento visto.
 - Collegamenti rapidi `GRAFICHE` e `VIDEO` del cliente sempre disponibili anche
   mentre si naviga nelle sottocartelle.
@@ -234,7 +238,8 @@ supabase/                     schema e migration
   mantiene proporzioni, avanzamento, mute e fullscreen coerenti su desktop e
   smartphone; la barra spaziatrice riproduce/mette in pausa quando il contenuto
   aperto è un video. Anche i video verticali restano verticali e interamente
-  visibili, senza forzature orizzontali.
+  visibili, senza forzature orizzontali. Il dock resta in una fascia sotto il
+  video, seguito dall'eventuale barra di caricamento compatta.
 - I caroselli supportano fino a 20 elementi, numero d'ordine visibile, riordino
   drag-and-drop, eliminazione e aggiunta di altri elementi in un secondo momento.
 - Il primo elemento del carosello è la copertina usata nel feed Instagram.
