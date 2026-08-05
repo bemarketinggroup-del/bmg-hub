@@ -65,6 +65,25 @@ function sharePlayIcon(paused = true) {
     : `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5H5v14h4ZM19 5h-4v14h4Z"/></svg>`;
 }
 
+function preserveSharedVideoAspectRatio(video, player) {
+  const applyRatio = () => {
+    const width = Number(video.videoWidth || 0);
+    const height = Number(video.videoHeight || 0);
+    if (!width || !height) return;
+    video.style.setProperty("--media-native-ratio", `${width} / ${height}`);
+    player.classList.toggle("is-portrait", height > width);
+    player.classList.toggle("is-landscape", width > height);
+    player.classList.toggle("is-square", width === height);
+  };
+  video.addEventListener("loadedmetadata", applyRatio);
+  video.addEventListener("resize", applyRatio);
+  video.addEventListener("loadeddata", () => {
+    applyRatio();
+    video.removeAttribute("poster");
+    player.classList.add("has-real-frame");
+  }, { once: true });
+}
+
 function bindShareVideoPlayers(root) {
   root.querySelectorAll("[data-share-video-player]").forEach((player) => {
     const video = player.querySelector("video");
@@ -75,6 +94,8 @@ function bindShareVideoPlayers(root) {
     const mute = player.querySelector("[data-share-video-mute]");
     video.controls = false;
     video.playsInline = true;
+    video.preload = "auto";
+    preserveSharedVideoAspectRatio(video, player);
 
     const toggle = () => video.paused ? video.play().catch(() => {}) : video.pause();
     const renderPlayback = () => {
@@ -120,7 +141,7 @@ function bindShareVideoPlayers(root) {
 function shareVideoMarkup(file) {
   const name = escapeHtml(file.file_name || "Video");
   return `<div class="share-video-player" data-share-video-player>
-    <video src="${escapeHtml(file.content_url)}" poster="${escapeHtml(file.thumbnail_url || "")}" playsinline preload="metadata" aria-label="${name}"></video>
+    <video src="${escapeHtml(file.content_url)}" poster="${escapeHtml(file.thumbnail_url || "")}" playsinline preload="auto" aria-label="${name}"></video>
     <button class="share-video-big-play" data-share-video-play type="button" aria-label="Riproduci ${name}">${sharePlayIcon(true)}</button>
     <div class="share-video-controls">
       <button data-share-video-play type="button" aria-label="Riproduci">${sharePlayIcon(true)}</button>

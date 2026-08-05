@@ -4472,6 +4472,25 @@ function mediaViewerPlayIcon(paused = true) {
     : `<svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5H5v14h4ZM19 5h-4v14h4Z"/></svg>`;
 }
 
+function preserveVideoAspectRatio(video, player) {
+  const applyRatio = () => {
+    const width = Number(video.videoWidth || 0);
+    const height = Number(video.videoHeight || 0);
+    if (!width || !height) return;
+    video.style.setProperty("--media-native-ratio", `${width} / ${height}`);
+    player.classList.toggle("is-portrait", height > width);
+    player.classList.toggle("is-landscape", width > height);
+    player.classList.toggle("is-square", width === height);
+  };
+  video.addEventListener("loadedmetadata", applyRatio);
+  video.addEventListener("resize", applyRatio);
+  video.addEventListener("loadeddata", () => {
+    applyRatio();
+    video.removeAttribute("poster");
+    player.classList.add("has-real-frame");
+  }, { once: true });
+}
+
 function createModernVideoPlayer({ source, poster = "", name = "Video", fileId = "", stage, mediaRoot, loadId }) {
   const player = document.createElement("div");
   player.className = "media-viewer-player is-paused";
@@ -4498,8 +4517,9 @@ function createModernVideoPlayer({ source, poster = "", name = "Video", fileId =
   const mute = player.querySelector("[data-media-viewer-mute]");
   video.controls = false;
   video.playsInline = true;
-  video.preload = "metadata";
+  video.preload = "auto";
   video.poster = poster;
+  preserveVideoAspectRatio(video, player);
 
   const togglePlayback = () => {
     if (video.paused) video.play().catch(() => {});

@@ -59,6 +59,30 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-08-05 — Media verticali interi e player antracite
+
+- Richiesta: evitare qualsiasi crop di foto e video, correggere i video
+  verticali mostrati come orizzontali e schiarire di poco lo sfondo nero del
+  player.
+- Modifiche: foto e video ora restano contenuti integralmente nel viewer e nei
+  caroselli pubblici; il player legge larghezza e altezza native, marca il
+  formato verticale/orizzontale e rimuove il poster Drive appena è disponibile
+  il primo fotogramma reale, evitando che una miniatura croppata alteri la
+  percezione del formato. Impostato `object-fit: contain` in modo vincolante e
+  sostituito il nero quasi assoluto con l'antracite caldo `#181614`.
+- File: `public/app.js`, `public/styles.css`, `public/ped-share.js`,
+  `public/ped-share.css`, `scripts/test-ped-carousel.mjs`,
+  `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run check`, intera suite dei 18 test di progetto,
+  `git diff --check`; controllo browser locale con media verticale 9:16 nel viewer desktop
+  (contenuto intero entro uno stage 900×688) e smartphone (contenuto intero
+  entro 360×640), `object-fit: contain` e sfondo calcolato `rgb(24, 22, 20)`.
+  Le regole non dipendono dai controlli nativi e restano compatibili con
+  Chrome e Safari/iPhone.
+- Pubblicazione: commit corrente pubblicato su GitHub `main`; deploy Vercel
+  produzione completato e verificato su `https://bmg-hub.vercel.app`.
+- Note: Nessuna.
+
 ### 2026-08-05 — Visualizzatore moderno condiviso per foto e video
 
 - Richiesta: modernizzare i player foto e video in tutte le sezioni del

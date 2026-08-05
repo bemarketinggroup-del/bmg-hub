@@ -376,16 +376,24 @@ assert.match(styleSource, /\.modal\.ped-media-viewer-modal[\s\S]*?width: calc\(1
 assert.match(styleSource, /\.ped-media-viewer-shell[\s\S]*?height: calc\(100dvh - 20px\)/, "il visualizzatore deve usare quasi tutta l'altezza disponibile per le foto verticali");
 assert.match(styleSource, /\.ped-media-viewer-media img[\s\S]*?object-fit: contain/, "la foto intera non deve essere ritagliata nel visualizzatore");
 assert.match(appSource, /function createModernVideoPlayer\(/, "foto e video devono usare un visualizzatore centrale condiviso");
+assert.match(appSource, /function preserveVideoAspectRatio\(video, player\)/, "il player deve leggere il rapporto nativo di ogni video");
+assert.match(appSource, /video\.style\.setProperty\("--media-native-ratio"/, "il rapporto nativo deve essere trasferito al layout del player");
+assert.match(appSource, /video\.removeAttribute\("poster"\)/, "il primo fotogramma reale deve sostituire le miniature Drive eventualmente croppate");
 assert.match(appSource, /video\.controls = false/, "il player video moderno non deve mostrare i controlli nativi del browser");
 assert.match(appSource, /data-media-viewer-seek/, "il player video deve offrire una timeline accessibile");
 assert.match(appSource, /video\.webkitEnterFullscreen\?\.\(\)/, "il player deve gestire anche il fullscreen video di Safari e iPhone");
 assert.match(appSource, /type\.startsWith\("image\/"\) \|\| type\.startsWith\("video\/"\)/, "Drive, grafiche, PED e chat devono aprire foto e video nello stesso viewer");
 assert.match(appSource, /function driveMediaViewerGallery\(/, "la navigazione Drive deve mantenere insieme foto e video");
 assert.match(styleSource, /\.media-viewer-video-controls \{/, "il player video deve avere un dock moderno dedicato");
+assert.match(styleSource, /\.media-viewer-player video \{[\s\S]*?width: 100%;[\s\S]*?height: 100%;[\s\S]*?object-fit: contain !important;/, "il riquadro video deve contenere interamente ogni rapporto verticale o orizzontale");
+assert.match(styleSource, /object-fit: contain !important;/, "foto e video devono essere mostrati interamente senza crop");
+assert.match(styleSource, /background: #181614;/, "lo sfondo del player deve usare un nero leggermente piu chiaro");
 assert.match(styleSource, /\.ped-media-viewer-nav \{/, "il visualizzatore deve mostrare controlli laterali moderni per la galleria");
 assert.match(shareSource, /function bindShareVideoPlayers\(root\)/, "anche il PED pubblico deve inizializzare il player video moderno");
+assert.match(shareSource, /function preserveSharedVideoAspectRatio\(video, player\)/, "anche il PED pubblico deve rispettare il rapporto nativo del video");
 assert.match(shareSource, /video\.controls = false/, "il PED pubblico non deve ricadere nei controlli video nativi");
 assert.match(shareStyleSource, /\.preview-modal \{[\s\S]*?height: calc\(100dvh - 20px\)/, "il visualizzatore pubblico deve sfruttare quasi tutta l'altezza disponibile");
+assert.match(shareStyleSource, /\.preview-body video \{[\s\S]*?width: 100%;[\s\S]*?height: 100%;[\s\S]*?object-fit: contain !important;/, "i video verticali condivisi devono restare interi nel riquadro del viewer");
 assert.match(shareStyleSource, /\.share-video-controls \{/, "il PED pubblico deve usare lo stesso linguaggio visivo dei controlli interni");
 
 console.log("PED carousel tests passed");

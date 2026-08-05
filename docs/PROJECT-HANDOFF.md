@@ -190,6 +190,10 @@ supabase/                     schema e migration
   mantiene foto e video intercalati; le foto conservano zoom e trascinamento,
   mentre i video usano controlli BMG dedicati per play/pausa, timeline, audio e
   fullscreen, con fallback `webkitEnterFullscreen` per Safari/iPhone.
+- Il visualizzatore usa uno sfondo antracite caldo `#181614` e non ritaglia mai
+  foto o video. Il video occupa il riquadro con `object-fit: contain`; dopo la
+  lettura dei metadati conserva il rapporto nativo e il primo fotogramma reale
+  sostituisce l'eventuale poster orizzontale/croppato generato da Drive.
 - Alla chiusura del visualizzatore resta evidenziato l'ultimo elemento visto.
 - Collegamenti rapidi `GRAFICHE` e `VIDEO` del cliente sempre disponibili anche
   mentre si naviga nelle sottocartelle.
@@ -229,7 +233,8 @@ supabase/                     schema e migration
 - Il player video non usa i controlli nativi del browser: il dock condiviso
   mantiene proporzioni, avanzamento, mute e fullscreen coerenti su desktop e
   smartphone; la barra spaziatrice riproduce/mette in pausa quando il contenuto
-  aperto è un video.
+  aperto è un video. Anche i video verticali restano verticali e interamente
+  visibili, senza forzature orizzontali.
 - I caroselli supportano fino a 20 elementi, numero d'ordine visibile, riordino
   drag-and-drop, eliminazione e aggiunta di altri elementi in un secondo momento.
 - Il primo elemento del carosello è la copertina usata nel feed Instagram.
@@ -283,7 +288,8 @@ supabase/                     schema e migration
 - Anche la vista condivisa usa il visualizzatore fullscreen moderno: le foto
   restano intere e i video hanno controlli personalizzati; nei caroselli la
   sequenza scorre orizzontalmente all'interno della finestra senza far scorrere
-  la pagina.
+  la pagina. Viewer singolo e caroselli usano `contain` anche per i media
+  verticali e lo stesso sfondo antracite del gestionale.
 - Ultime modifiche pubblicate:
   - `dde2ac1` — condivisione PED per sessioni staff;
   - `f840b96` — calendario condiviso responsive;

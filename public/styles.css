@@ -3810,8 +3810,8 @@ code { font-family: var(--font-mono); font-size: 12px; }
   overflow: hidden;
   border: 1px solid rgba(255,255,255,.1);
   border-radius: 14px;
-  background-color: #090807;
-  background-image: radial-gradient(circle at center, rgba(255,255,255,.045), transparent 65%);
+  background-color: #181614;
+  background-image: radial-gradient(circle at center, rgba(255,255,255,.055), transparent 68%);
   user-select: none;
   overscroll-behavior: contain;
 }
@@ -3856,9 +3856,20 @@ code { font-family: var(--font-mono); font-size: 12px; }
 .ped-media-viewer-media img.is-full-resolution { filter: none; }
 .ped-media-viewer-stage:not(.is-dragging) .ped-media-viewer-media img { transition: transform .12s ease-out; }
 .ped-media-viewer-media video,
-.ped-media-viewer-media iframe { width: 100%; height: 100%; border: 0; object-fit: contain; background: #090807; }
-.media-viewer-player { position: relative; width: 100%; height: 100%; display: grid; place-items: center; overflow: hidden; background: #090807; }
-.media-viewer-player video { width: 100%; height: 100%; object-fit: contain; cursor: pointer; }
+.ped-media-viewer-media iframe { width: 100%; height: 100%; border: 0; object-fit: contain; object-position: center; background: #181614; }
+.media-viewer-player { position: relative; width: 100%; height: 100%; display: grid; place-items: center; overflow: hidden; background: #181614; }
+.media-viewer-player video {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain !important;
+  object-position: center !important;
+  background: #181614;
+  cursor: pointer;
+}
 .media-viewer-big-play {
   position: absolute;
   z-index: 4;
@@ -3907,7 +3918,7 @@ code { font-family: var(--font-mono); font-size: 12px; }
 .media-viewer-video-controls [data-media-viewer-play] .lc { fill: currentColor; stroke: currentColor; }
 .media-viewer-video-controls span { min-width: 36px; color: rgba(255,255,255,.72); font-size: 10px; font-variant-numeric: tabular-nums; text-align: center; }
 .media-viewer-video-controls input[type="range"] { width: 100%; height: 4px; border: 0; border-radius: 999px; background: rgba(255,255,255,.22); padding: 0; accent-color: #d36b42; cursor: pointer; }
-.media-viewer-player:fullscreen { background: #000; }
+.media-viewer-player:fullscreen { background: #181614; }
 .media-viewer-player:fullscreen .media-viewer-video-controls { bottom: max(24px, env(safe-area-inset-bottom)); }
 .ped-media-viewer-stage > .media-load-progress {
   position: absolute;
