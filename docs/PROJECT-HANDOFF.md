@@ -187,6 +187,19 @@ supabase/                     schema e migration
 - Alla chiusura del visualizzatore resta evidenziato l'ultimo elemento visto.
 - Collegamenti rapidi `GRAFICHE` e `VIDEO` del cliente sempre disponibili anche
   mentre si naviga nelle sottocartelle.
+- Il caricamento Drive usa una pipeline ottimizzata: elenco cartella, raccolte
+  collegate e relazioni grafiche necessarie partono in parallelo; PED e chat non
+  interrogano le revisioni che non visualizzano. La radice autorizzata evita una
+  lettura metadati duplicata e gli URL media firmano nome, MIME e miniatura già
+  ottenuti dall'elenco, così il proxy non ripete `files.get` prima di servire il
+  contenuto.
+- Gli elenchi hanno cache privata breve (`20s`, con rivalidazione in background),
+  le URL firmate restano stabili e miniature/contenuti hanno cache privata di
+  un'ora. Il frontend deduplica le richieste per cartella, distingue la versione
+  con revisioni da quella leggera e precarica al passaggio del puntatore. Le
+  prime otto anteprime visibili partono subito ad alta priorità; le successive
+  vengono richieste progressivamente prima di entrare nel viewport. Scritture e
+  aggiornamento manuale continuano a invalidare le cache.
 
 ### PED
 

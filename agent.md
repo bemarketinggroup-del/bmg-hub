@@ -59,6 +59,34 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-08-05 — Caricamento Google Drive più immediato
+
+- Richiesta: velocizzare il più possibile il caricamento di anteprime e
+  contenuti tra BMG Hub e Google Drive.
+- Modifiche: parallelizzati elenco cartella, raccolte collegate e relazioni
+  grafiche; eliminata la lettura metadati duplicata sulla radice e sulle URL
+  media firmando i metadati già restituiti da Drive. PED e chat non attendono
+  più le relazioni delle revisioni, mentre Archivio e Clienti mantengono gli
+  abbinamenti originale/modificata. Aggiunta cache privata breve per gli elenchi,
+  mantenuta la cache media di un'ora, separata la cache frontend tra viste
+  complete e leggere e assegnata priorità alta alle prime otto miniature, con
+  pre-caricamento anticipato delle successive. I contenuti PED, le condivisioni
+  e le revisioni riusano ora nome e MIME firmati evitando una chiamata Google
+  prima di aprire l'originale.
+- File: `lib/client-drive-api.js`, `lib/drive-media-token.js`, `lib/ped.js`,
+  `lib/ped-share.js`, `lib/graphic-reviews.js`, `public/app.js`,
+  `scripts/test-client-drive-libraries.mjs`, `docs/PROJECT-HANDOFF.md`,
+  `agent.md`.
+- Verifiche: `npm run check`, intera suite dei 18 test di progetto,
+  `git diff --check`; verifica browser del fallback di autenticazione e dei
+  contratti di caricamento progressivo. Su Safari/iOS `fetchpriority` viene
+  ignorato se non supportato, mentre `loading`, `IntersectionObserver` e il
+  fallback senza observer mantengono il caricamento funzionante.
+- Pubblicazione: GitHub `main` e Vercel produzione.
+- Note: il primo accesso assoluto dopo un cold start dipende comunque dalla
+  latenza di Google Drive e Vercel; gli accessi successivi e le aperture delle
+  cartelle sono quelli maggiormente accelerati.
+
 ### 2026-08-05 — Registro attività in due pannelli verticali
 
 - Richiesta: rendere più grandi e leggibili `Dettaglio giornaliero` e `Azioni

@@ -4,6 +4,7 @@ import {
   normalizeDriveLibraryName,
   resolveClientDriveLibraries
 } from "../lib/client-drive-libraries.js";
+import { signDriveMediaToken, verifyDriveMediaToken } from "../lib/drive-media-token.js";
 import { readFile } from "node:fs/promises";
 
 const folder = (id, name) => ({ id, name, mimeType: "application/vnd.google-apps.folder" });
@@ -32,12 +33,43 @@ const refreshedLibraries = await resolveClientDriveLibraries("ARTEMA", async (_r
 assert.equal(refreshCalls, 4, "ogni raccolta mancante deve essere riletta senza cache una sola volta");
 assert.deepEqual(refreshedLibraries.map((item) => item.source), ["graphics", "video"]);
 
+const previousSigningSecret = process.env.DRIVE_MEDIA_SIGNING_SECRET;
+process.env.DRIVE_MEDIA_SIGNING_SECRET = "drive-performance-test-secret";
+const mediaToken = signDriveMediaToken({
+  clientId: "client-1",
+  rootId: "root-1",
+  fileId: "file-1",
+  action: "thumbnail",
+  media: {
+    mimeType: "image/jpeg",
+    name: "Anteprima.jpg",
+    modifiedTime: "2026-08-05T10:00:00.000Z",
+    thumbnailLink: "https://drive.google.com/thumbnail/example"
+  }
+});
+const mediaPayload = verifyDriveMediaToken(mediaToken, {
+  clientId: "client-1",
+  fileId: "file-1",
+  action: "thumbnail"
+});
+assert.equal(mediaPayload.mt, "image/jpeg");
+assert.equal(mediaPayload.nm, "Anteprima.jpg");
+assert.equal(mediaPayload.th, "https://drive.google.com/thumbnail/example");
+if (previousSigningSecret === undefined) delete process.env.DRIVE_MEDIA_SIGNING_SECRET;
+else process.env.DRIVE_MEDIA_SIGNING_SECRET = previousSigningSecret;
+
 const driveApiSource = await readFile(new URL("../lib/client-drive-api.js", import.meta.url), "utf8");
 const googleDriveSource = await readFile(new URL("../lib/google-drive.js", import.meta.url), "utf8");
 const appSource = await readFile(new URL("../public/app.js", import.meta.url), "utf8");
 const htmlSource = await readFile(new URL("../public/index.html", import.meta.url), "utf8");
 const styleSource = await readFile(new URL("../public/styles.css", import.meta.url), "utf8");
 assert.match(driveApiSource, /authorizedRootId = clientLibrary\.id/, "le raccolte speciali devono usare la cartella cliente come radice autorizzata");
+assert.match(driveApiSource, /includeReviews \? graphicReviewRelations/, "PED e chat non devono attendere le relazioni delle revisioni che non visualizzano");
+assert.match(driveApiSource, /Promise\.all\(\[[\s\S]*?listDriveFolder\(folderId/, "metadati, contenuti e raccolte Drive devono essere caricati in parallelo");
+assert.match(driveApiSource, /isAuthorizedRoot[\s\S]*?Promise\.resolve\(\{ id: folderId, name: client\.name, mimeType: FOLDER_MIME \}\)/, "la radice autorizzata non deve richiedere una lettura metadati aggiuntiva");
+assert.match(driveApiSource, /mediaUrl\(client\.id, authorizedRootId, file\.id, "thumbnail", file\)/, "le miniature devono firmare i metadati gia ottenuti dall'elenco Drive");
+assert.match(driveApiSource, /trustedMediaMetadata\(fileId, tokenData\)/, "il proxy media deve riusare i metadati firmati senza una seconda chiamata Google");
+assert.match(driveApiSource, /private, max-age=20, stale-while-revalidate=120/, "l'elenco Drive deve poter essere riusato brevemente dal browser");
 assert.match(driveApiSource, /createFolder\(request, response, authorizedRootId\)/, "la gestione cartelle deve funzionare anche dentro GRAFICHE e VIDEO");
 assert.match(driveApiSource, /createUploadSession\(request, response, authorizedRootId\)/, "il caricamento deve funzionare anche dentro GRAFICHE e VIDEO");
 assert.match(driveApiSource, /action === "move"/, "l'API Drive deve consentire lo spostamento degli elementi");
@@ -49,6 +81,9 @@ assert.match(driveApiSource, /isInsideDriveRoot\(targetParentId, rootId, target\
 assert.match(driveApiSource, /isInsideDriveRoot\(targetParentId, fileId, target\)/, "una cartella non deve potersi spostare dentro una propria sottocartella");
 assert.match(googleDriveSource, /export async function moveDriveFile/, "Google Drive deve aggiornare i genitori di file e cartelle");
 assert.match(appSource, /data-drive-move=/, "ogni elemento del Drive interno deve avere il comando Sposta");
+assert.match(appSource, /const eagerImages = images\.slice\(0, 8\)/, "le prime anteprime Drive devono partire immediatamente");
+assert.match(appSource, /rootMargin: "720px"/, "le anteprime vicine al viewport devono essere precaricate prima dello scroll");
+assert.match(appSource, /includeReviews: true/, "la cache frontend deve distinguere il Drive completo dalle viste leggere PED e chat");
 assert.match(appSource, /data-drive-select=/, "ogni elemento del Drive interno deve poter essere selezionato");
 assert.match(appSource, /has-selection-control/, "le schede Drive modificabili devono riservare uno spazio al selettore");
 assert.match(appSource, /file\.is_folder \? " is-folder-card"/, "le cartelle Drive devono usare una scheda visuale della stessa famiglia di foto e video");

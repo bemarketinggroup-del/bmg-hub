@@ -769,12 +769,12 @@ async function apiFetch(url, options = {}) {
   return response;
 }
 
-function driveFolderBrowserCacheKey(clientId, folderId = "", source = "") {
-  return `${String(clientId || "")}:${String(source || "client")}:${String(folderId || "root")}`;
+function driveFolderBrowserCacheKey(clientId, folderId = "", source = "", includeReviews = false) {
+  return `${String(clientId || "")}:${String(source || "client")}:${String(folderId || "root")}:${includeReviews ? "reviews" : "plain"}`;
 }
 
-function cachedDriveFolder(clientId, folderId = "", source = "") {
-  const key = driveFolderBrowserCacheKey(clientId, folderId, source);
+function cachedDriveFolder(clientId, folderId = "", source = "", includeReviews = false) {
+  const key = driveFolderBrowserCacheKey(clientId, folderId, source, includeReviews);
   const cached = driveFolderBrowserCache.get(key);
   if (!cached) return null;
   if (cached.expiresAt <= Date.now()) {
@@ -784,11 +784,11 @@ function cachedDriveFolder(clientId, folderId = "", source = "") {
   return cached.data;
 }
 
-function cacheDriveFolder(clientId, requestedFolderId, data, source = "") {
+function cacheDriveFolder(clientId, requestedFolderId, data, source = "", includeReviews = false) {
   const entry = { data, expiresAt: Date.now() + DRIVE_FOLDER_BROWSER_CACHE_TTL };
-  driveFolderBrowserCache.set(driveFolderBrowserCacheKey(clientId, requestedFolderId, source), entry);
+  driveFolderBrowserCache.set(driveFolderBrowserCacheKey(clientId, requestedFolderId, source, includeReviews), entry);
   if (data?.folder?.id) {
-    driveFolderBrowserCache.set(driveFolderBrowserCacheKey(clientId, data.folder.id, source), entry);
+    driveFolderBrowserCache.set(driveFolderBrowserCacheKey(clientId, data.folder.id, source, includeReviews), entry);
   }
   return data;
 }
@@ -806,10 +806,10 @@ function clearDriveFolderBrowserCache(clientId = "") {
   }
 }
 
-async function fetchDriveFolder(clientId, folderId = "", { fresh = false, source = "" } = {}) {
-  const cacheKey = driveFolderBrowserCacheKey(clientId, folderId, source);
+async function fetchDriveFolder(clientId, folderId = "", { fresh = false, source = "", includeReviews = false } = {}) {
+  const cacheKey = driveFolderBrowserCacheKey(clientId, folderId, source, includeReviews);
   if (!fresh) {
-    const cached = cachedDriveFolder(clientId, folderId, source);
+    const cached = cachedDriveFolder(clientId, folderId, source, includeReviews);
     if (cached) return { data: cached, cached: true };
     const pending = driveFolderBrowserRequests.get(cacheKey);
     if (pending) return { data: await pending, cached: false };
@@ -823,12 +823,13 @@ async function fetchDriveFolder(clientId, folderId = "", { fresh = false, source
     const params = new URLSearchParams({ client_id: clientId });
     if (folderId) params.set("folder_id", folderId);
     if (source) params.set("source", source);
+    if (includeReviews) params.set("include_reviews", "1");
     if (fresh) params.set("refresh", "1");
     const response = await apiFetch(`/api/client-drive?${params}`);
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || "Google Drive non disponibile");
     if ((driveFolderBrowserVersions.get(normalizedClientId) || 0) === cacheVersion) {
-      cacheDriveFolder(clientId, folderId, data, source);
+      cacheDriveFolder(clientId, folderId, data, source, includeReviews);
     }
     return data;
   })();
@@ -856,11 +857,11 @@ function hideDriveFolderLoading(container) {
   container.querySelector("[data-drive-folder-loading]")?.remove();
 }
 
-function scheduleDriveFolderPrefetch(clientId, folderId, source = "") {
+function scheduleDriveFolderPrefetch(clientId, folderId, source = "", includeReviews = false) {
   window.clearTimeout(driveFolderPrefetchTimer);
-  if (!clientId || !folderId || cachedDriveFolder(clientId, folderId, source)) return;
+  if (!clientId || !folderId || cachedDriveFolder(clientId, folderId, source, includeReviews)) return;
   driveFolderPrefetchTimer = window.setTimeout(() => {
-    fetchDriveFolder(clientId, folderId, { source }).catch(() => {});
+    fetchDriveFolder(clientId, folderId, { source, includeReviews }).catch(() => {});
   }, 140);
 }
 
@@ -1863,13 +1864,17 @@ async function loadClientDriveFolder(folderId = "", folderName = "", { fresh = f
     clientDriveSelection.clear();
     clientDriveState.bulkMessage = "";
   }
-  const instantlyAvailable = !fresh && cachedDriveFolder(clientDriveState.clientId, folderId, normalizedSource);
+  const instantlyAvailable = !fresh && cachedDriveFolder(clientDriveState.clientId, folderId, normalizedSource, true);
   panel.classList.remove("is-hidden");
   if (instantlyAvailable) hideDriveFolderLoading(panel);
   else showDriveFolderLoading(panel, fresh ? "Aggiornamento cartella" : "Apertura cartella");
 
   try {
-    const { data } = await fetchDriveFolder(clientDriveState.clientId, folderId, { fresh, source: normalizedSource });
+    const { data } = await fetchDriveFolder(clientDriveState.clientId, folderId, {
+      fresh,
+      source: normalizedSource,
+      includeReviews: true
+    });
     if (loadId !== clientDriveFolderLoadId) return;
 
     const existingIndex = clientDriveState.path.findIndex((item) => item.id === data.folder.id);
@@ -2475,9 +2480,14 @@ function hydrateDriveThumbnails(panel) {
   const images = [...panel.querySelectorAll("[data-drive-thumbnail-url]")];
   if (!images.length) return;
 
+  const eagerImages = images.slice(0, 8);
+  const deferredImages = images.slice(eagerImages.length);
+  eagerImages.forEach((image) => loadDriveThumbnail(image, { highPriority: true }).catch(() => {}));
+  if (!deferredImages.length) return;
+
   const load = (image) => loadDriveThumbnail(image).catch(() => {});
   if (!("IntersectionObserver" in window)) {
-    images.forEach(load);
+    deferredImages.forEach(load);
     return;
   }
 
@@ -2487,13 +2497,17 @@ function hydrateDriveThumbnails(panel) {
       observer.unobserve(entry.target);
       load(entry.target);
     }
-  }, { rootMargin: "240px" });
-  images.forEach((image) => observer.observe(image));
+  }, { rootMargin: "720px" });
+  deferredImages.forEach((image) => observer.observe(image));
 }
 
-async function loadDriveThumbnail(image) {
+async function loadDriveThumbnail(image, { highPriority = false } = {}) {
   const thumbnailUrl = image.dataset.driveThumbnailUrl;
   if (!thumbnailUrl) return;
+  if (highPriority) {
+    image.loading = "eager";
+    if ("fetchPriority" in image) image.fetchPriority = "high";
+  }
   image.addEventListener("load", () => image.classList.add("is-loaded"), { once: true });
   image.src = thumbnailUrl;
 }
@@ -4239,7 +4253,7 @@ function renderPedPicker() {
   }).join("");
   const hasVisibleFolders = sortedVisibleFiles.some((file) => file.is_folder);
   let mediaSectionStarted = false;
-  grid.innerHTML = libraryCards + sortedVisibleFiles.map((file) => {
+  grid.innerHTML = libraryCards + sortedVisibleFiles.map((file, index) => {
     const sectionBreak = !file.is_folder && hasVisibleFolders && !mediaSectionStarted
       ? `<div class="ped-picker-media-section-break" aria-hidden="true"></div>`
       : "";
@@ -4255,8 +4269,9 @@ function renderPedPicker() {
       : -1;
     const selected = selectionIndex >= 0;
     const selectionOrder = selected ? Number(pedPickerState.existingCount || 0) + selectionIndex + 1 : 0;
+    const prioritizePreview = hasPreview && index < 8;
     const mediaContent = `${hasPreview
-      ? `<img src="${escapeHtml(file.thumbnail_url || "")}" alt="" loading="lazy">${isVideo ? `<span class="ped-video-mini"><svg class="lc" viewBox="0 0 24 24"><path d="m9 7 8 5-8 5z"/></svg></span>` : ""}`
+      ? `<img src="${escapeHtml(file.thumbnail_url || "")}" alt="" loading="${prioritizePreview ? "eager" : "lazy"}" decoding="async"${prioritizePreview ? ` fetchpriority="high"` : ""}>${isVideo ? `<span class="ped-video-mini"><svg class="lc" viewBox="0 0 24 24"><path d="m9 7 8 5-8 5z"/></svg></span>` : ""}`
       : driveFileIcon(file)}${used ? `<span class="ped-picker-used-badge">Gia nel PED</span>` : ""}${isCarouselSelection && selected ? `<strong class="ped-picker-order-badge" title="${selectionOrder === 1 ? "Copertina del carosello nel feed Instagram" : `Posizione ${selectionOrder} nel carosello`}">${selectionOrder}</strong>` : ""}`;
     if (file.is_folder) {
       return `<button class="ped-picker-entry is-folder${used ? " is-used" : ""}" data-ped-picker-folder="${escapeHtml(file.id)}" data-ped-picker-name="${escapeHtml(file.name)}" type="button">
@@ -9279,7 +9294,8 @@ async function uploadGraphicDeliverables(reviewId, files) {
     clearDriveFolderBrowserCache(review.client_id);
     void fetchDriveFolder(review.client_id, review.source_folder_id, {
       fresh: true,
-      source: review.source_library || ""
+      source: review.source_library || "",
+      includeReviews: true
     }).catch(() => {});
     transfer.complete("Versione caricata nel Drive del cliente");
     alert("Versione caricata nella cartella originale e collegata alla revisione.");
@@ -10551,7 +10567,8 @@ document.body.addEventListener("pointerover", (event) => {
     scheduleDriveFolderPrefetch(
       clientDriveState.clientId,
       driveLibrary.dataset.driveLibrary,
-      driveLibrary.dataset.driveLibrarySource
+      driveLibrary.dataset.driveLibrarySource,
+      true
     );
   } else if (pedLibrary && !pedLibrary.contains(event.relatedTarget)) {
     scheduleDriveFolderPrefetch(
@@ -10562,7 +10579,7 @@ document.body.addEventListener("pointerover", (event) => {
   } else if (pedFolder && !pedFolder.contains(event.relatedTarget)) {
     scheduleDriveFolderPrefetch(selectedPedClientId, pedFolder.dataset.pedPickerFolder);
   } else if (clientFolder && !clientFolder.contains(event.relatedTarget)) {
-    scheduleDriveFolderPrefetch(clientDriveState.clientId, clientFolder.dataset.driveFolder, clientDriveState.source);
+    scheduleDriveFolderPrefetch(clientDriveState.clientId, clientFolder.dataset.driveFolder, clientDriveState.source, true);
   }
 });
 
