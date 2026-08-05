@@ -4449,11 +4449,129 @@ function pedMediaViewerButton(entry) {
 
 function pedMediaViewerGallery(button, currentEntry) {
   const picker = button?.closest?.("#pedDrivePickerModal");
-  if (!picker || currentEntry.type !== "image") return [currentEntry];
-  const entries = [...picker.querySelectorAll("[data-ped-media-viewer][data-ped-viewer-type='image']")]
+  if (!picker) return [currentEntry];
+  const entries = [...picker.querySelectorAll("[data-ped-media-viewer]")]
     .map(pedMediaViewerEntry)
-    .filter((entry) => entry.src);
+    .filter((entry) => entry.src && ["image", "video"].includes(entry.type));
   return entries.length ? entries : [currentEntry];
+}
+
+function formatMediaClock(value) {
+  const seconds = Math.max(0, Math.floor(Number(value) || 0));
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const remainder = seconds % 60;
+  return hours
+    ? `${hours}:${String(minutes).padStart(2, "0")}:${String(remainder).padStart(2, "0")}`
+    : `${minutes}:${String(remainder).padStart(2, "0")}`;
+}
+
+function mediaViewerPlayIcon(paused = true) {
+  return paused
+    ? `<svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="m8 5 11 7-11 7Z"/></svg>`
+    : `<svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5H5v14h4ZM19 5h-4v14h4Z"/></svg>`;
+}
+
+function createModernVideoPlayer({ source, poster = "", name = "Video", fileId = "", stage, mediaRoot, loadId }) {
+  const player = document.createElement("div");
+  player.className = "media-viewer-player is-paused";
+  player.dataset.mediaViewerPlayer = "";
+  player.innerHTML = `<video playsinline preload="metadata" aria-label="${escapeHtml(name)}"></video>
+    <button class="media-viewer-big-play" data-media-viewer-play type="button" aria-label="Riproduci ${escapeHtml(name)}">${mediaViewerPlayIcon(true)}</button>
+    <div class="media-viewer-video-controls" data-media-viewer-controls>
+      <button data-media-viewer-play type="button" aria-label="Riproduci">${mediaViewerPlayIcon(true)}</button>
+      <span data-media-viewer-current>0:00</span>
+      <input data-media-viewer-seek type="range" min="0" max="1000" value="0" step="1" aria-label="Posizione video">
+      <span data-media-viewer-duration>0:00</span>
+      <button data-media-viewer-mute type="button" aria-label="Disattiva audio">
+        <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6 9H2v6h4l5 4Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18 5a9 9 0 0 1 0 14"/></svg>
+      </button>
+      <button data-media-viewer-fullscreen type="button" aria-label="Apri a schermo intero">
+        <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M21 16v5h-5"/></svg>
+      </button>
+    </div>`;
+  const video = player.querySelector("video");
+  const playButtons = [...player.querySelectorAll("[data-media-viewer-play]")];
+  const seek = player.querySelector("[data-media-viewer-seek]");
+  const current = player.querySelector("[data-media-viewer-current]");
+  const duration = player.querySelector("[data-media-viewer-duration]");
+  const mute = player.querySelector("[data-media-viewer-mute]");
+  video.controls = false;
+  video.playsInline = true;
+  video.preload = "metadata";
+  video.poster = poster;
+
+  const togglePlayback = () => {
+    if (video.paused) video.play().catch(() => {});
+    else video.pause();
+  };
+  const renderPlayback = () => {
+    player.classList.toggle("is-paused", video.paused);
+    player.classList.toggle("is-playing", !video.paused);
+    playButtons.forEach((button) => {
+      button.innerHTML = mediaViewerPlayIcon(video.paused);
+      button.setAttribute("aria-label", video.paused ? "Riproduci" : "Metti in pausa");
+    });
+  };
+  const renderTime = () => {
+    current.textContent = formatMediaClock(video.currentTime);
+    duration.textContent = formatMediaClock(video.duration);
+    seek.value = Number.isFinite(video.duration) && video.duration > 0
+      ? String(Math.round((video.currentTime / video.duration) * 1000))
+      : "0";
+  };
+
+  playButtons.forEach((button) => button.addEventListener("click", (event) => {
+    event.stopPropagation();
+    togglePlayback();
+  }));
+  video.addEventListener("click", togglePlayback);
+  video.addEventListener("play", renderPlayback);
+  video.addEventListener("pause", renderPlayback);
+  video.addEventListener("ended", renderPlayback);
+  video.addEventListener("timeupdate", renderTime);
+  video.addEventListener("durationchange", renderTime);
+  seek.addEventListener("input", () => {
+    if (Number.isFinite(video.duration) && video.duration > 0) video.currentTime = (Number(seek.value) / 1000) * video.duration;
+  });
+  mute.addEventListener("click", () => {
+    video.muted = !video.muted;
+    mute.classList.toggle("is-muted", video.muted);
+    mute.setAttribute("aria-label", video.muted ? "Attiva audio" : "Disattiva audio");
+  });
+  player.querySelector("[data-media-viewer-fullscreen]").addEventListener("click", () => {
+    if (document.fullscreenElement) document.exitFullscreen?.();
+    else if (player.requestFullscreen) player.requestFullscreen();
+    else video.webkitEnterFullscreen?.();
+  });
+
+  mediaRoot.append(player);
+  bindStreamProgress(video, stage, {
+    onUnsupported: () => showEmbeddedDriveVideo(mediaRoot, fileId, name),
+    isCurrent: () => loadId === pedMediaViewerState.loadId && video.isConnected
+  });
+  video.src = source;
+  video.load();
+  return video;
+}
+
+function renderPedMediaViewerNavigation(stage, gallery, galleryIndex) {
+  const counter = document.getElementById("pedMediaViewerCounter");
+  if (counter) counter.textContent = gallery.length > 1 ? `${galleryIndex + 1} / ${gallery.length}` : "";
+  if (gallery.length < 2) return;
+  const previous = document.createElement("button");
+  previous.type = "button";
+  previous.className = "ped-media-viewer-nav is-previous";
+  previous.dataset.pedViewerPrevious = "";
+  previous.setAttribute("aria-label", "Contenuto precedente");
+  previous.innerHTML = `<svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>`;
+  const next = document.createElement("button");
+  next.type = "button";
+  next.className = "ped-media-viewer-nav is-next";
+  next.dataset.pedViewerNext = "";
+  next.setAttribute("aria-label", "Contenuto successivo");
+  next.innerHTML = `<svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>`;
+  stage.append(previous, next);
 }
 
 function openPedMediaViewer(button, options = {}) {
@@ -4462,6 +4580,7 @@ function openPedMediaViewer(button, options = {}) {
   const title = document.getElementById("pedMediaViewerTitle");
   const meta = document.getElementById("pedMediaViewerMeta");
   const help = document.getElementById("pedMediaViewerHelp");
+  const kind = document.getElementById("pedMediaViewerKind");
   const entry = pedMediaViewerEntry(button);
   const source = entry.src;
   const poster = entry.poster;
@@ -4487,12 +4606,14 @@ function openPedMediaViewer(button, options = {}) {
   pedMediaViewerState.galleryIndex = galleryIndex;
   if (!wasOpen) pedMediaViewerState.opener = options.opener || document.activeElement;
   resetPedMediaViewerTransform({ render: false });
-  title.textContent = gallery.length > 1 ? `${name} · ${galleryIndex + 1}/${gallery.length}` : name;
+  title.textContent = name;
+  if (kind) kind.textContent = type === "image" ? "Foto" : "Video";
   meta.textContent = type === "image" ? "File originale da Google Drive · caricamento piena risoluzione" : "Video originale da Google Drive";
   help.classList.toggle("is-hidden", type !== "image");
   document.getElementById("pedMediaViewerZoomControls")?.classList.toggle("is-hidden", type !== "image");
-  stage.className = "ped-media-viewer-stage is-loading";
+  stage.className = `ped-media-viewer-stage is-loading is-${type}`;
   stage.innerHTML = `${mediaProgressMarkup(type === "image" ? "Caricamento foto originale" : "Preparazione video")}<div class="ped-media-viewer-media" data-ped-viewer-media></div>`;
+  renderPedMediaViewerNavigation(stage, gallery, galleryIndex);
   if (!wasOpen) modal.showModal();
   applyPedMediaViewerTransform();
 
@@ -4548,15 +4669,14 @@ function openPedMediaViewer(button, options = {}) {
       }
     });
   } else {
-    const video = document.createElement("video");
-    video.controls = true;
-    video.playsInline = true;
-    video.preload = "metadata";
-    video.poster = button.dataset.pedViewerPoster || "";
-    mediaRoot.append(video);
-    bindStreamProgress(video, stage, {
-      onUnsupported: () => showEmbeddedDriveVideo(mediaRoot, button.dataset.pedViewerFile, name),
-      isCurrent: () => loadId === pedMediaViewerState.loadId && video.isConnected
+    const video = createModernVideoPlayer({
+      source,
+      poster,
+      name,
+      fileId: entry.file,
+      stage,
+      mediaRoot,
+      loadId
     });
     video.addEventListener("loadedmetadata", () => {
       if (loadId !== pedMediaViewerState.loadId) return;
@@ -4564,8 +4684,6 @@ function openPedMediaViewer(button, options = {}) {
       const dimensions = video.videoWidth && video.videoHeight ? `${video.videoWidth} × ${video.videoHeight} px · ` : "";
       meta.textContent = `${dimensions}video originale Google Drive`;
     }, { once: true });
-    video.src = source;
-    video.load();
   }
 }
 
@@ -4613,7 +4731,7 @@ function markLastViewedMedia(entry, fallbackOpener = null) {
     return;
   }
 
-  showPedMoveNotice(`Ultima foto visualizzata: ${entry.name}`, "success");
+  showPedMoveNotice(`Ultimo contenuto visualizzato: ${entry.name}`, "success");
   const target = findLastViewedMediaTarget(entry);
   if (!target?.card) {
     if (fallbackOpener?.isConnected) fallbackOpener.focus?.();
@@ -4624,7 +4742,7 @@ function markLastViewedMedia(entry, fallbackOpener = null) {
   badge.className = "media-last-viewed-badge";
   badge.dataset.lastViewedBadge = "";
   badge.setAttribute("role", "status");
-  badge.textContent = "Ultima visualizzata";
+  badge.textContent = "Ultimo visualizzato";
   target.card.classList.add("is-last-viewed");
   target.card.appendChild(badge);
   target.focusTarget?.focus?.({ preventScroll: true });
@@ -5095,24 +5213,26 @@ async function removePedItem(id) {
   await loadPedCalendar();
 }
 
-function driveImageViewerGallery(fileId, fileName, sourceUrl) {
-  const imageFiles = sortPedPickerEntries(clientDriveState.files.filter((file) => (
-    !file.is_folder && String(file.mime_type || "").startsWith("image/") && file.content_url
+function driveMediaViewerGallery(fileId, fileName, mimeType, sourceUrl) {
+  const mediaFiles = sortPedPickerEntries(clientDriveState.files.filter((file) => (
+    !file.is_folder
+    && /^(image|video)\//.test(String(file.mime_type || ""))
+    && file.content_url
   )));
-  const currentInDrive = imageFiles.some((file) => String(file.id) === String(fileId));
+  const currentInDrive = mediaFiles.some((file) => String(file.id) === String(fileId));
   if (!currentInDrive) {
     return [{
       file: String(fileId || ""),
       name: String(fileName || "Anteprima file"),
-      type: "image",
+      type: String(mimeType || "").startsWith("video/") ? "video" : "image",
       src: String(sourceUrl || ""),
       poster: ""
     }];
   }
-  return imageFiles.map((file) => ({
+  return mediaFiles.map((file) => ({
     file: String(file.id || ""),
     name: String(file.name || "Anteprima file"),
-    type: "image",
+    type: String(file.mime_type || "").startsWith("video/") ? "video" : "image",
     src: String(file.content_url || ""),
     poster: String(file.thumbnail_url || "")
   }));
@@ -5135,8 +5255,8 @@ async function openDriveFile(fileId, fileName, mimeType, contentUrl = "") {
     if (!previewable) {
       return downloadDriveResource(sourceUrl, fileName || "file").catch((error) => alert(error.message));
     }
-    if (type.startsWith("image/")) {
-      const gallery = driveImageViewerGallery(fileId, fileName, sourceUrl);
+    if (type.startsWith("image/") || type.startsWith("video/")) {
+      const gallery = driveMediaViewerGallery(fileId, fileName, type, sourceUrl);
       const galleryIndex = Math.max(0, gallery.findIndex((item) => String(item.file) === String(fileId)));
       return openPedMediaViewer(pedMediaViewerButton(gallery[galleryIndex]), {
         gallery,
@@ -5152,16 +5272,7 @@ async function openDriveFile(fileId, fileName, mimeType, contentUrl = "") {
     drivePreviewKeyboardState = { isPhoto: false, navigate: null };
     document.getElementById("drivePreviewModal").showModal();
     const mediaRoot = body.querySelector("[data-drive-preview-media]");
-    if (type.startsWith("video/")) {
-      const video = document.createElement("video");
-      video.controls = true;
-      video.preload = "metadata";
-      video.playsInline = true;
-      bindStreamProgress(video, body);
-      mediaRoot.append(video);
-      video.src = sourceUrl;
-      video.load();
-    } else if (type.startsWith("audio/")) {
+    if (type.startsWith("audio/")) {
       const audio = document.createElement("audio");
       audio.controls = true;
       audio.preload = "metadata";
@@ -9916,6 +10027,8 @@ document.body.addEventListener("click", (event) => {
   const pedViewerZoomOut = event.target.closest("[data-ped-viewer-zoom-out]");
   const pedViewerZoomIn = event.target.closest("[data-ped-viewer-zoom-in]");
   const pedViewerReset = event.target.closest("[data-ped-viewer-reset]");
+  const pedViewerPrevious = event.target.closest("[data-ped-viewer-previous]");
+  const pedViewerNext = event.target.closest("[data-ped-viewer-next]");
   const pedPickerType = event.target.closest("[data-ped-picker-type]");
   const pedPickerBreadcrumb = event.target.closest("[data-ped-picker-breadcrumb]");
   const pedPickerClose = event.target.closest("[data-ped-picker-close]");
@@ -10089,6 +10202,8 @@ document.body.addEventListener("click", (event) => {
   if (pedViewerZoomOut) return setPedMediaViewerScale(pedMediaViewerState.scale / 1.35);
   if (pedViewerZoomIn) return setPedMediaViewerScale(pedMediaViewerState.scale * 1.35);
   if (pedViewerReset) return resetPedMediaViewerTransform();
+  if (pedViewerPrevious) return navigatePedMediaViewer(-1);
+  if (pedViewerNext) return navigatePedMediaViewer(1);
   if (pedPickerLibrary) {
     return loadPedPickerFolder(
       pedPickerLibrary.dataset.pedPickerLibrary,
@@ -10472,7 +10587,15 @@ document.body.addEventListener("keydown", (event) => {
     if (pedViewerModal?.open) {
       if (event.key === " " && !event.repeat) {
         event.preventDefault();
-        closePedMediaViewer();
+        if (pedMediaViewerState.type === "video") {
+          const video = pedViewerModal.querySelector("video");
+          if (video) {
+            if (video.paused) video.play().catch(() => {});
+            else video.pause();
+          }
+        } else {
+          closePedMediaViewer();
+        }
         return;
       }
       if (event.key === "ArrowLeft" || event.key === "ArrowRight") {

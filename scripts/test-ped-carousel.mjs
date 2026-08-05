@@ -55,6 +55,8 @@ assert.equal(singles.find((item) => item.content_type === "story").caption, null
 const appSource = await readFile(new URL("../public/app.js", import.meta.url), "utf8");
 const styleSource = await readFile(new URL("../public/styles.css", import.meta.url), "utf8");
 const htmlSource = await readFile(new URL("../public/index.html", import.meta.url), "utf8");
+const shareSource = await readFile(new URL("../public/ped-share.js", import.meta.url), "utf8");
+const shareStyleSource = await readFile(new URL("../public/ped-share.css", import.meta.url), "utf8");
 const pedSource = await readFile(new URL("../lib/ped.js", import.meta.url), "utf8");
 const clientDriveSource = await readFile(new URL("../lib/client-drive-api.js", import.meta.url), "utf8");
 const galleryMetadataSource = await readFile(new URL("../public/ped-gallery-metadata.js", import.meta.url), "utf8");
@@ -364,8 +366,8 @@ assert.match(appSource, /setPointerCapture\(event\.pointerId\)/, "la foto ingran
 assert.match(appSource, /function navigatePedMediaViewer\(direction\)/, "le frecce devono navigare tra le foto aperte del PED");
 assert.match(appSource, /const lastViewedEntry = pedMediaViewerState\.gallery\[pedMediaViewerState\.galleryIndex\] \|\| null/, "la chiusura deve ricordare la foto effettivamente raggiunta nella galleria");
 assert.match(appSource, /function markLastViewedMedia\(entry, fallbackOpener = null\)/, "la foto vista per ultima deve essere ritrovata dopo la chiusura");
-assert.match(appSource, /badge\.textContent = "Ultima visualizzata"/, "la scheda deve indicare chiaramente l'ultima foto visualizzata");
-assert.match(appSource, /Ultima foto visualizzata: \$\{entry\.name\}/, "alla chiusura deve comparire anche il nome dell'ultima foto");
+assert.match(appSource, /badge\.textContent = "Ultimo visualizzato"/, "la scheda deve indicare chiaramente l'ultimo contenuto visualizzato");
+assert.match(appSource, /Ultimo contenuto visualizzato: \$\{entry\.name\}/, "alla chiusura deve comparire anche il nome dell'ultimo contenuto");
 assert.match(styleSource, /\.media-last-viewed-badge \{/, "l'ultima foto visualizzata deve avere un badge dedicato");
 assert.match(appSource, /event\.key === "ArrowLeft" \|\| event\.key === "ArrowRight"/, "il visualizzatore deve intercettare le frecce della tastiera");
 assert.match(appSource, /event\.key === " " && !event\.repeat/, "la barra spaziatrice deve aprire o chiudere le foto");
@@ -373,5 +375,17 @@ assert.match(htmlSource, /Frecce ← → per navigare · Spazio per chiudere/, "
 assert.match(styleSource, /\.modal\.ped-media-viewer-modal[\s\S]*?width: calc\(100vw - 20px\)/, "il visualizzatore deve occupare quasi tutta la larghezza desktop");
 assert.match(styleSource, /\.ped-media-viewer-shell[\s\S]*?height: calc\(100dvh - 20px\)/, "il visualizzatore deve usare quasi tutta l'altezza disponibile per le foto verticali");
 assert.match(styleSource, /\.ped-media-viewer-media img[\s\S]*?object-fit: contain/, "la foto intera non deve essere ritagliata nel visualizzatore");
+assert.match(appSource, /function createModernVideoPlayer\(/, "foto e video devono usare un visualizzatore centrale condiviso");
+assert.match(appSource, /video\.controls = false/, "il player video moderno non deve mostrare i controlli nativi del browser");
+assert.match(appSource, /data-media-viewer-seek/, "il player video deve offrire una timeline accessibile");
+assert.match(appSource, /video\.webkitEnterFullscreen\?\.\(\)/, "il player deve gestire anche il fullscreen video di Safari e iPhone");
+assert.match(appSource, /type\.startsWith\("image\/"\) \|\| type\.startsWith\("video\/"\)/, "Drive, grafiche, PED e chat devono aprire foto e video nello stesso viewer");
+assert.match(appSource, /function driveMediaViewerGallery\(/, "la navigazione Drive deve mantenere insieme foto e video");
+assert.match(styleSource, /\.media-viewer-video-controls \{/, "il player video deve avere un dock moderno dedicato");
+assert.match(styleSource, /\.ped-media-viewer-nav \{/, "il visualizzatore deve mostrare controlli laterali moderni per la galleria");
+assert.match(shareSource, /function bindShareVideoPlayers\(root\)/, "anche il PED pubblico deve inizializzare il player video moderno");
+assert.match(shareSource, /video\.controls = false/, "il PED pubblico non deve ricadere nei controlli video nativi");
+assert.match(shareStyleSource, /\.preview-modal \{[\s\S]*?height: calc\(100dvh - 20px\)/, "il visualizzatore pubblico deve sfruttare quasi tutta l'altezza disponibile");
+assert.match(shareStyleSource, /\.share-video-controls \{/, "il PED pubblico deve usare lo stesso linguaggio visivo dei controlli interni");
 
 console.log("PED carousel tests passed");

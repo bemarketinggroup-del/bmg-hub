@@ -1,6 +1,6 @@
 # BMG Hub — contesto per una nuova chat
 
-Ultimo aggiornamento: 4 agosto 2026  
+Ultimo aggiornamento: 5 agosto 2026
 Repository locale: `/Users/davidedeluca/Desktop/bmg-hub`  
 Branch di produzione: `main`  
 Ultimo commit applicativo verificato al momento della scrittura: `9fb8746`
@@ -183,7 +183,13 @@ supabase/                     schema e migration
 - Cartelle, immagini, video e altri file usano schede della stessa dimensione;
   i titoli devono restare leggibili per intero nello spazio disponibile.
 - Immagini e video non devono essere ritagliati nelle anteprime importanti.
-- Visualizzatore grande con tastiera: spazio apre/chiude, frecce navigano.
+- Visualizzatore grande con tastiera: spazio apre/chiude le foto e controlla
+  play/pausa sui video; le frecce navigano.
+- Foto e video di Clienti, Drive, Grafiche, Revisioni, PED, Agenda e Chat
+  confluiscono nello stesso visualizzatore fullscreen scuro. La galleria
+  mantiene foto e video intercalati; le foto conservano zoom e trascinamento,
+  mentre i video usano controlli BMG dedicati per play/pausa, timeline, audio e
+  fullscreen, con fallback `webkitEnterFullscreen` per Safari/iPhone.
 - Alla chiusura del visualizzatore resta evidenziato l'ultimo elemento visto.
 - Collegamenti rapidi `GRAFICHE` e `VIDEO` del cliente sempre disponibili anche
   mentre si naviga nelle sottocartelle.
@@ -220,6 +226,10 @@ supabase/                     schema e migration
   contenuto nel PED.
 - Il visualizzatore usa la massima area utile, `object-fit: contain`, zoom e
   navigazione da tastiera.
+- Il player video non usa i controlli nativi del browser: il dock condiviso
+  mantiene proporzioni, avanzamento, mute e fullscreen coerenti su desktop e
+  smartphone; la barra spaziatrice riproduce/mette in pausa quando il contenuto
+  aperto è un video.
 - I caroselli supportano fino a 20 elementi, numero d'ordine visibile, riordino
   drag-and-drop, eliminazione e aggiunta di altri elementi in un secondo momento.
 - Il primo elemento del carosello è la copertina usata nel feed Instagram.
@@ -270,6 +280,10 @@ supabase/                     schema e migration
 - Il calendario deve essere interamente visibile e responsive, senza scorrimento
   orizzontale anche su Chrome e smartphone.
 - Header modernizzato con il logo ufficiale BMG presente in `public/logo.svg`.
+- Anche la vista condivisa usa il visualizzatore fullscreen moderno: le foto
+  restano intere e i video hanno controlli personalizzati; nei caroselli la
+  sequenza scorre orizzontalmente all'interno della finestra senza far scorrere
+  la pagina.
 - Ultime modifiche pubblicate:
   - `dde2ac1` — condivisione PED per sessioni staff;
   - `f840b96` — calendario condiviso responsive;

@@ -53,6 +53,86 @@ function itemFiles(item) {
   return Array.isArray(item.files) && item.files.length ? item.files : [item];
 }
 
+function mediaClock(value) {
+  const seconds = Math.max(0, Math.floor(Number(value) || 0));
+  const minutes = Math.floor(seconds / 60);
+  return `${minutes}:${String(seconds % 60).padStart(2, "0")}`;
+}
+
+function sharePlayIcon(paused = true) {
+  return paused
+    ? `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 5 11 7-11 7Z"/></svg>`
+    : `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5H5v14h4ZM19 5h-4v14h4Z"/></svg>`;
+}
+
+function bindShareVideoPlayers(root) {
+  root.querySelectorAll("[data-share-video-player]").forEach((player) => {
+    const video = player.querySelector("video");
+    const playButtons = [...player.querySelectorAll("[data-share-video-play]")];
+    const current = player.querySelector("[data-share-video-current]");
+    const duration = player.querySelector("[data-share-video-duration]");
+    const seek = player.querySelector("[data-share-video-seek]");
+    const mute = player.querySelector("[data-share-video-mute]");
+    video.controls = false;
+    video.playsInline = true;
+
+    const toggle = () => video.paused ? video.play().catch(() => {}) : video.pause();
+    const renderPlayback = () => {
+      player.classList.toggle("is-playing", !video.paused);
+      playButtons.forEach((button) => {
+        button.innerHTML = sharePlayIcon(video.paused);
+        button.setAttribute("aria-label", video.paused ? "Riproduci" : "Metti in pausa");
+      });
+    };
+    const renderTime = () => {
+      current.textContent = mediaClock(video.currentTime);
+      duration.textContent = mediaClock(video.duration);
+      seek.value = Number.isFinite(video.duration) && video.duration > 0
+        ? String(Math.round((video.currentTime / video.duration) * 1000))
+        : "0";
+    };
+    playButtons.forEach((button) => button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      toggle();
+    }));
+    video.addEventListener("click", toggle);
+    video.addEventListener("play", renderPlayback);
+    video.addEventListener("pause", renderPlayback);
+    video.addEventListener("ended", renderPlayback);
+    video.addEventListener("timeupdate", renderTime);
+    video.addEventListener("durationchange", renderTime);
+    seek.addEventListener("input", () => {
+      if (Number.isFinite(video.duration) && video.duration > 0) video.currentTime = (Number(seek.value) / 1000) * video.duration;
+    });
+    mute.addEventListener("click", () => {
+      video.muted = !video.muted;
+      mute.classList.toggle("is-muted", video.muted);
+      mute.setAttribute("aria-label", video.muted ? "Attiva audio" : "Disattiva audio");
+    });
+    player.querySelector("[data-share-video-fullscreen]").addEventListener("click", () => {
+      if (document.fullscreenElement) document.exitFullscreen?.();
+      else if (player.requestFullscreen) player.requestFullscreen();
+      else video.webkitEnterFullscreen?.();
+    });
+  });
+}
+
+function shareVideoMarkup(file) {
+  const name = escapeHtml(file.file_name || "Video");
+  return `<div class="share-video-player" data-share-video-player>
+    <video src="${escapeHtml(file.content_url)}" poster="${escapeHtml(file.thumbnail_url || "")}" playsinline preload="metadata" aria-label="${name}"></video>
+    <button class="share-video-big-play" data-share-video-play type="button" aria-label="Riproduci ${name}">${sharePlayIcon(true)}</button>
+    <div class="share-video-controls">
+      <button data-share-video-play type="button" aria-label="Riproduci">${sharePlayIcon(true)}</button>
+      <span data-share-video-current>0:00</span>
+      <input data-share-video-seek type="range" min="0" max="1000" value="0" step="1" aria-label="Posizione video">
+      <span data-share-video-duration>0:00</span>
+      <button data-share-video-mute type="button" aria-label="Disattiva audio"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6 9H2v6h4l5 4Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18 5a9 9 0 0 1 0 14"/></svg></button>
+      <button data-share-video-fullscreen type="button" aria-label="Apri a schermo intero"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M21 16v5h-5"/></svg></button>
+    </div>
+  </div>`;
+}
+
 function renderItem(item) {
   const type = contentType(item.content_type);
   const files = itemFiles(item);
@@ -146,8 +226,8 @@ function openPreview(id) {
   document.getElementById("sharePreviewCopy").classList.toggle("is-hidden", !caption);
   const files = itemFiles(item);
   const mediaMarkup = (file) => {
-    if (isImage(file)) return `<figure><img src="${escapeHtml(file.content_url)}" alt="${escapeHtml(file.file_name)}"><figcaption>${escapeHtml(file.file_name)}</figcaption></figure>`;
-    if (isVideo(file)) return `<figure><video src="${escapeHtml(file.content_url)}" controls playsinline preload="metadata"></video><figcaption>${escapeHtml(file.file_name)}</figcaption></figure>`;
+    if (isImage(file)) return `<figure class="share-media-card is-photo"><span class="share-media-kind">Foto</span><img src="${escapeHtml(file.content_url)}" alt="${escapeHtml(file.file_name)}"><figcaption>${escapeHtml(file.file_name)}</figcaption></figure>`;
+    if (isVideo(file)) return `<figure class="share-media-card is-video"><span class="share-media-kind">Video</span>${shareVideoMarkup(file)}<figcaption>${escapeHtml(file.file_name)}</figcaption></figure>`;
     if (file.mime_type === "application/pdf") return `<figure><iframe src="${escapeHtml(file.content_url)}" title="${escapeHtml(file.file_name)}"></iframe><figcaption>${escapeHtml(file.file_name)}</figcaption></figure>`;
     return `<figure><div class="unsupported">Anteprima non disponibile per ${escapeHtml(file.file_name)}.</div></figure>`;
   };
@@ -155,6 +235,7 @@ function openPreview(id) {
     ? `<div class="share-carousel-gallery">${files.map(mediaMarkup).join("")}</div>`
     : mediaMarkup(files[0]);
   document.getElementById("sharePreviewModal").showModal();
+  bindShareVideoPlayers(body);
 }
 
 document.getElementById("sharePreviousMonth").addEventListener("click", () => shiftMonth(-1));
@@ -165,8 +246,7 @@ document.getElementById("shareCalendarGrid").addEventListener("click", (event) =
 });
 document.getElementById("sharePreviewClose").addEventListener("click", () => document.getElementById("sharePreviewModal").close());
 document.getElementById("sharePreviewModal").addEventListener("close", () => {
-  const video = document.querySelector("#sharePreviewBody video");
-  if (video) video.pause();
+  document.querySelectorAll("#sharePreviewBody video").forEach((video) => video.pause());
   document.getElementById("sharePreviewBody").replaceChildren();
   document.getElementById("sharePreviewCopy").classList.add("is-hidden");
   document.getElementById("sharePreviewCaption").textContent = "";

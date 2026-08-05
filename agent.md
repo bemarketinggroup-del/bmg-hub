@@ -59,6 +59,30 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-08-05 — Visualizzatore moderno condiviso per foto e video
+
+- Richiesta: modernizzare i player foto e video in tutte le sezioni del
+  gestionale mantenendo le funzioni esistenti.
+- Modifiche: unificata l'apertura dei media di Clienti, Drive, Grafiche,
+  Revisioni, PED, Agenda e Chat nel visualizzatore fullscreen; aggiunti badge
+  tipo, contatore e navigazione mista foto/video. I video ora usano un dock BMG
+  personalizzato con play/pausa, timeline, durata, mute e fullscreen, incluso
+  il fallback Safari/iPhone; le foto mantengono piena risoluzione, zoom e
+  trascinamento. Anche il PED pubblico usa il nuovo viewer, con caroselli a
+  scorrimento orizzontale interno.
+- File: `public/index.html`, `public/app.js`, `public/styles.css`,
+  `public/ped-share.js`, `public/ped-share.css`,
+  `scripts/test-ped-carousel.mjs`, `scripts/test-client-drive-libraries.mjs`,
+  `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run check`, intera suite dei 18 test di progetto,
+  `git diff --check`; controllo browser locale del viewer desktop a 1280×720
+  (dialogo 1260×702, stage 1238×587 e dock interno senza overflow) e verifica
+  delle regole responsive/safe-area smartphone. Media mantenuti con
+  `object-fit: contain`; fallback fullscreen iOS dedicato.
+- Pubblicazione: da completare su GitHub `main` e Vercel produzione.
+- Note: Safari/iPhone può ignorare il controllo volume programmatico, ma mute e
+  fullscreen nativo restano disponibili.
+
 ### 2026-08-05 — Caricamento Google Drive più immediato
 
 - Richiesta: velocizzare il più possibile il caricamento di anteprime e
