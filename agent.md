@@ -59,6 +59,33 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-08-05 — Ultimo link PED attivo nuovamente copiabile
+
+- Richiesta: mostrare nel dialogo Condividi l'ultimo link ancora attivo invece
+  del comando `Rigenera link`, evitando di revocare l'accesso già inviato al
+  cliente soltanto per recuperare l'URL.
+- Modifiche: i nuovi bearer token PED vengono conservati cifrati AES-256-GCM e
+  vincolati al cliente, continuando a usare l'hash per la verifica pubblica. La
+  lettura autenticata restituisce l'ultimo URL attivo e il mese originale; il
+  dialogo mostra link, copia rapida e comando `Copia link attivo`, nascondendo
+  scadenza e creazione finché l'accesso è valido. I link precedenti restano
+  attivi e non vengono modificati; se creati prima della migration, il dialogo
+  spiega che il loro URL non è matematicamente ricostruibile dal solo hash.
+- File: `lib/ped-share.js`, `public/app.js`, `public/index.html`,
+  `supabase/migrations/20260805181000_ped_share_recoverable_token.sql`,
+  `scripts/test-ped-carousel.mjs`, `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run check`, `npm run test:ped-carousel`,
+  `npm run test:permissions`, `npm run test:primeng-components`,
+  `git diff --check`; round-trip crittografico e vincolo cliente; migration
+  verificata e applicata su Supabase; controllo browser desktop 1280×800 e
+  smartphone 390×844 senza overflow, con URL e azioni interamente visibili.
+- Pubblicazione: migration Supabase applicata; commit corrente pubblicato su
+  GitHub `main`; deploy Vercel produzione completato e verificato su
+  `https://bmg-hub.vercel.app`.
+- Note: i link creati prima di questa migration continuano a funzionare ma non
+  possono mostrare nuovamente il token se l'URL originale è stato perso; dopo
+  l'eventuale prima sostituzione, ogni nuovo link resterà recuperabile.
+
 ### 2026-08-05 — PED mobile più compatto con calendario più alto
 
 - Richiesta: ingrandire leggermente il calendario PED in altezza su mobile,

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { groupPedItems, isPedSpreadsheetFile, sanitizeCaptionHtml } from "../lib/ped.js";
+import { decryptPedShareToken, encryptPedShareToken } from "../lib/ped-share.js";
 
 await import("../public/ped-gallery-metadata.js");
 
@@ -65,6 +66,16 @@ const feedCalendarSyncMigration = await readFile(new URL("../supabase/20260717_p
 const publishingStatusMigration = await readFile(new URL("../supabase/20260718_ped_publishing_status.sql", import.meta.url), "utf8");
 const richCaptionMigration = await readFile(new URL("../supabase/20260718_ped_rich_caption.sql", import.meta.url), "utf8");
 const carouselEditorMigration = await readFile(new URL("../supabase/migrations/20260729170000_ped_carousel_editor.sql", import.meta.url), "utf8");
+const shareTokenMigration = await readFile(new URL("../supabase/migrations/20260805181000_ped_share_recoverable_token.sql", import.meta.url), "utf8");
+const previousServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+process.env.SUPABASE_SERVICE_ROLE_KEY = "ped-share-test-secret";
+const recoverableShareToken = "A".repeat(43);
+const encryptedShareToken = encryptPedShareToken(recoverableShareToken, "client-1");
+assert.notEqual(encryptedShareToken.includes(recoverableShareToken), true, "il token PED non deve essere salvato in chiaro");
+assert.equal(decryptPedShareToken(encryptedShareToken, "client-1"), recoverableShareToken, "il backend deve poter recuperare il link attivo");
+assert.equal(decryptPedShareToken(encryptedShareToken, "client-2"), "", "il token cifrato deve essere vincolato al cliente corretto");
+if (previousServiceRoleKey === undefined) delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+else process.env.SUPABASE_SERVICE_ROLE_KEY = previousServiceRoleKey;
 const numberedFilenameSource = appSource.match(/function numberedPedDownloadFilename\(value, index\) \{[\s\S]*?\n\}/)?.[0];
 assert.ok(numberedFilenameSource, "la funzione di numerazione download deve essere presente");
 const numberedPedDownloadFilename = Function(`${numberedFilenameSource}; return numberedPedDownloadFilename;`)();
@@ -274,6 +285,12 @@ assert.match(appSource, /card\.draggable = !saving/, "le foto del carosello devo
 assert.match(appSource, /carousel_member_ids: nextFiles\.map\(memberId\)/, "il nuovo ordine deve essere salvato tramite API");
 assert.match(appSource, /files\.filter\(\(entry\) => memberId\(entry\) !== memberId\(file\)\)/, "il visualizzatore deve permettere di eliminare una foto dal carosello");
 assert.match(appSource, /La foto resterà disponibile nel Drive/, "la rimozione deve chiarire che il file Drive non viene eliminato");
+assert.match(appSource, /shareUrl: String\(data\.share_url \|\| ""\)/, "la riapertura deve mostrare l'ultimo link attivo restituito dal backend");
+assert.match(appSource, /Copia link attivo/, "un link già attivo deve offrire la copia senza rigenerazione");
+assert.doesNotMatch(appSource, /Rigenera link/, "l'interfaccia non deve revocare implicitamente il link attivo");
+assert.match(htmlSource, /Questo è l'ultimo link attivo inviabile al cliente/, "il dialogo deve chiarire che la copia non modifica l'accesso");
+assert.match(shareTokenMigration, /add column if not exists token_ciphertext text/, "la migration deve rendere recuperabile il token in forma cifrata");
+assert.match(shareTokenMigration, /add column if not exists share_month text/, "la migration deve conservare il mese dell'ultimo link");
 assert.match(appSource, /files\.length <= 2/, "il carosello deve conservare almeno due contenuti");
 assert.match(appSource, /video\.preload = "auto"/, "i video nel carosello devono caricare il primo fotogramma");
 assert.match(appSource, /video\.currentTime = firstFrameTime/, "il player deve posizionarsi sul primo fotogramma decodificabile");

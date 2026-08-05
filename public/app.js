@@ -3162,23 +3162,40 @@ function renderPedShareState() {
   const status = document.getElementById("pedShareStatus");
   const disable = document.getElementById("pedShareDisableButton");
   const create = document.getElementById("pedShareCreateButton");
-  if (!status || !disable || !create) return;
+  const expiry = document.getElementById("pedShareExpiryWrap");
+  const linkWrap = document.getElementById("pedShareLinkWrap");
+  const linkInput = document.getElementById("pedShareLink");
+  if (!status || !disable || !create || !expiry || !linkWrap || !linkInput) return;
 
   if (pedShareState.loading) {
     status.innerHTML = `<span class="drive-spinner" aria-hidden="true"></span><span>Verifica link in corso...</span>`;
     disable.classList.add("is-hidden");
+    create.classList.add("is-hidden");
+    expiry.classList.add("is-hidden");
+    linkWrap.classList.add("is-hidden");
     create.disabled = true;
     return;
   }
 
   create.disabled = false;
   if (pedShareState.active) {
-    status.innerHTML = `<span class="ped-share-status-dot is-active" aria-hidden="true"></span><span><strong>Link attivo</strong><small>Scadenza: ${escapeHtml(formatPedShareDate(pedShareState.expires_at))}${pedShareState.last_accessed_at ? ` · Ultimo accesso: ${escapeHtml(formatPedShareDate(pedShareState.last_accessed_at))}` : ""}</small></span>`;
+    const availability = pedShareState.shareUrl
+      ? "L'ultimo link generato è pronto per essere copiato."
+      : "Questo link precedente continua a funzionare, ma non è recuperabile perché fu creato prima dell'aggiornamento.";
+    status.innerHTML = `<span class="ped-share-status-dot is-active" aria-hidden="true"></span><span><strong>Link attivo</strong><small>Scadenza: ${escapeHtml(formatPedShareDate(pedShareState.expires_at))}${pedShareState.last_accessed_at ? ` · Ultimo accesso: ${escapeHtml(formatPedShareDate(pedShareState.last_accessed_at))}` : ""}<br>${escapeHtml(availability)}</small></span>`;
     disable.classList.remove("is-hidden");
-    create.textContent = "Rigenera link";
+    expiry.classList.add("is-hidden");
+    linkInput.value = pedShareState.shareUrl || "";
+    linkWrap.classList.toggle("is-hidden", !pedShareState.shareUrl);
+    create.classList.toggle("is-hidden", !pedShareState.shareUrl);
+    create.textContent = "Copia link attivo";
   } else {
     status.innerHTML = `<span class="ped-share-status-dot" aria-hidden="true"></span><span><strong>Nessun link attivo</strong><small>Crea un accesso in sola lettura per questo cliente.</small></span>`;
     disable.classList.add("is-hidden");
+    expiry.classList.remove("is-hidden");
+    linkWrap.classList.add("is-hidden");
+    linkInput.value = "";
+    create.classList.remove("is-hidden");
     create.textContent = "Crea link cliente";
   }
 }
@@ -3192,7 +3209,7 @@ async function loadPedShareStatus() {
     const response = await apiFetch(`/api/ped-share?client_id=${encodeURIComponent(client.id)}`);
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || "Impossibile verificare il link");
-    pedShareState = { ...data, shareUrl: "", loading: false };
+    pedShareState = { ...data, shareUrl: String(data.share_url || ""), loading: false };
     renderPedShareState();
   } catch (error) {
     pedShareState = { active: false, shareUrl: "", loading: false };
@@ -3216,6 +3233,10 @@ function openPedShareModal() {
 async function createPedShareLink() {
   const client = selectedPedClient();
   if (!client) return;
+  if (pedShareState.active && pedShareState.shareUrl) {
+    await copyPedShareLink();
+    return;
+  }
   const button = document.getElementById("pedShareCreateButton");
   const message = document.getElementById("pedShareMessage");
   button.disabled = true;
@@ -3226,14 +3247,13 @@ async function createPedShareLink() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         client_id: client.id,
-        expires_in_days: Number(document.getElementById("pedShareExpiry").value)
+        expires_in_days: Number(document.getElementById("pedShareExpiry").value),
+        share_month: pedMonthKey()
       })
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || "Creazione link non riuscita");
-    const shareUrl = new URL(data.share_url);
-    shareUrl.searchParams.set("month", pedMonthKey());
-    pedShareState = { ...data, active: true, shareUrl: shareUrl.toString(), loading: false };
+    pedShareState = { ...data, active: true, shareUrl: String(data.share_url || ""), loading: false };
     document.getElementById("pedShareLink").value = pedShareState.shareUrl;
     document.getElementById("pedShareLinkWrap").classList.remove("is-hidden");
     message.textContent = "Link creato. Copialo e invialo al cliente.";

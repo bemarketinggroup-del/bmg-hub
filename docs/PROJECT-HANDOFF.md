@@ -295,6 +295,13 @@ supabase/                     schema e migration
 ### PED condiviso con il cliente
 
 - Link pubblico in sola lettura generato dal pulsante `Condividi`.
+- Quando esiste un link attivo, il dialogo mostra nuovamente l'ultimo URL
+  generato e permette di copiarlo senza rigenerare, revocare o cambiare
+  l'accesso del cliente. Il bearer token resta cifrato AES-256-GCM nel database
+  e viene restituito soltanto allo staff autenticato con permesso PED; hash e
+  validazione pubblica restano invariati. I link creati prima della migration
+  continuano a funzionare ma, non essendo ricostruibili dal solo hash, devono
+  essere sostituiti una sola volta soltanto se se ne è perso l'URL originale.
 - Il pulsante è disponibile agli utenti autorizzati, non solo all'admin.
 - La vista condivisa non mostra il comando `Copia copy`.
 - Il calendario deve essere interamente visibile e responsive, senza scorrimento
@@ -471,6 +478,7 @@ supabase/migrations/20260729160000_ped_notes_staging.sql
 supabase/migrations/20260729170000_ped_carousel_editor.sql
 supabase/migrations/20260729173000_ped_staging_rich_editor.sql
 supabase/migrations/20260805103000_staff_email_aliases.sql
+supabase/migrations/20260805181000_ped_share_recoverable_token.sql
 ```
 
 Non modificare retroattivamente migration già applicate in produzione. Creare

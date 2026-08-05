@@ -1451,7 +1451,7 @@
       </div>
       <p class="ped-share-intro" id="pedShareIntro">Il link mostra al cliente solo il proprio calendario editoriale.</p>
       <div class="ped-share-status" id="pedShareStatus" aria-live="polite"></div>
-      <label class="full">Scadenza del link
+      <label class="full" id="pedShareExpiryWrap">Scadenza del link
         <select id="pedShareExpiry">
           <option value="7">7 giorni</option>
           <option value="30">30 giorni</option>
@@ -1467,7 +1467,7 @@
           <input id="pedShareLink" type="text" readonly aria-label="Link PED cliente">
           <button class="icon-button" id="pedShareCopyButton" type="button" title="Copia link" aria-label="Copia link"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
         </div>
-        <small>Per sicurezza il link completo viene mostrato solo al momento della creazione.</small>
+        <small>Questo è l'ultimo link attivo inviabile al cliente. Copiarlo non modifica né revoca l'accesso.</small>
       </div>
       <p class="ped-share-security"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg><span>Il link è revocabile e non espone Drive, task o altre aree dell'Hub.</span></p>
       <p class="form-message" id="pedShareMessage" role="status"></p>
