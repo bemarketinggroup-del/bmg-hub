@@ -37,6 +37,10 @@ for (const componentClass of [
 assert.match(adapter, /aria-modal/);
 assert.match(adapter, /aria-selected/);
 assert.match(adapter, /aria-label/);
+assert.match(adapter, /\.ped-content-card, \.ped-staging-card, \.ped-agenda-item, \.ped-carousel-editor-card/);
+assert.match(adapter, /\.ped-carousel-editor-toolbar/);
+assert.match(adapter, /\.ped-carousel-editor-status/);
+assert.match(adapter, /\.ped-carousel-count, \.ped-carousel-editor-order/);
 assert.match(styles, /--p-primary-color:/);
 assert.match(styles, /PRIMENG COMPONENT ADAPTER/);
 assert.match(styles, /progress\.p-progressbar/);

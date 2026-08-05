@@ -59,6 +59,26 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-08-05 — Sistema visuale moderno per i caroselli PED
+
+- Richiesta: modernizzare tutte le visualizzazioni dei caroselli nel PED,
+  nell'agenda e nelle viste collegate, conservando integralmente le funzioni.
+- Modifiche: uniformate calendario, contenuti in attesa, agenda ed editor con
+  componenti e contratti PrimeNG-style `Card`, `Toolbar`, `Tag`, `Badge` e
+  `Button`; aggiunte miniature impilate, badge quantità più leggibili, gerarchia
+  tipografica e azioni moderne. L'editor è ora luminoso, usa card verticali 4:5
+  su un binario orizzontale con snap mobile e mantiene riordino drag-and-drop,
+  frecce, rimozione, autosalvataggio, anteprima foto/video e primo frame video.
+- File: `public/app.js`, `public/primeng-adapter.js`, `public/styles.css`,
+  `scripts/test-primeng-components.mjs`, `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run check`, `npm run test:ped-carousel`,
+  `npm run test:primeng-components`, `npm run test:mobile-navigation`,
+  `git diff --check`; controllo visivo desktop 1280×720 e smartphone 390×844,
+  senza overflow della pagina e con scroll confinato al binario del carosello.
+- Pubblicazione: GitHub `main` e Vercel produzione.
+- Note: su Safari/iOS il drag nativo continua ad affiancarsi ai pulsanti freccia,
+  che restano l'alternativa accessibile e affidabile per il riordino.
+
 ### 2026-08-05 — Cartelle Archivio grafiche allineate all'area Clienti
 
 - Richiesta: mostrare le cartelle dell'Archivio grafiche con la stessa

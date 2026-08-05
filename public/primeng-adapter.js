@@ -78,13 +78,13 @@
 
     selectAll(".panel, details.panel").forEach((panel) => addClasses(panel, "p-panel", "p-component"));
     selectAll(".panel-head").forEach((header) => addClasses(header, "p-panel-header"));
-    selectAll(".metric, .lead-card, .graphic-review-card, .client-card, .drive-card").forEach((card) => addClasses(card, "p-card", "p-component"));
-    selectAll(".toolbar, .task-workspace-head, .google-calendar-head, .graphics-workspace-head").forEach((toolbar) => addClasses(toolbar, "p-toolbar", "p-component"));
+    selectAll(".metric, .lead-card, .graphic-review-card, .client-card, .drive-card, .ped-content-card, .ped-staging-card, .ped-agenda-item, .ped-carousel-editor-card").forEach((card) => addClasses(card, "p-card", "p-component"));
+    selectAll(".toolbar, .task-workspace-head, .google-calendar-head, .graphics-workspace-head, .ped-carousel-editor-toolbar").forEach((toolbar) => addClasses(toolbar, "p-toolbar", "p-component"));
     selectAll(".search, .user-directory-search, .task-client-search, .team-chat-search").forEach((field) => addClasses(field, "p-iconfield"));
     selectAll(".notification-panel, .task-status-popover, .task-client-results, .team-chat-reference-picker").forEach((popover) => addClasses(popover, "p-popover", "p-component"));
 
-    selectAll(".client-tag, .task-status, .graphic-review-status, .user-role-tag, .user-status-tag, .ped-status, .service-status").forEach((tag) => addClasses(tag, "p-tag", "p-component"));
-    selectAll(".nav-unread-badge, .p-badge, [data-badge]").forEach((badge) => addClasses(badge, "p-badge", "p-component"));
+    selectAll(".client-tag, .task-status, .graphic-review-status, .user-role-tag, .user-status-tag, .ped-status, .service-status, .ped-carousel-editor-status").forEach((tag) => addClasses(tag, "p-tag", "p-component"));
+    selectAll(".nav-unread-badge, .p-badge, [data-badge], .ped-carousel-count, .ped-carousel-editor-order").forEach((badge) => addClasses(badge, "p-badge", "p-component"));
     selectAll(".user-avatar, .team-chat-avatar, .sidebar-user-avatar, [data-avatar]").forEach((avatar) => addClasses(avatar, "p-avatar", "p-component"));
     selectAll(".form-message, .smart-conflict-message, .ped-error, .graphics-empty.is-error").forEach((message) => addClasses(message, "p-message", "p-component"));
     selectAll("progress").forEach((progress) => {

@@ -232,9 +232,12 @@ supabase/                     schema e migration
   `IMG_…`: un sito web non può impostare `PHAssetResource.originalFilename`,
   disponibile soltanto alle app native. Ogni conferma nel pannello iOS è
   obbligatoria e la lista di download diretti resta come ripiego.
-- L'editor carosello è una griglia compatta senza scorrimento orizzontale, sei
-  elementi per riga su desktop; mostra anche il primo frame dei video senza
-  patina scura.
+- Tutte le rappresentazioni del carosello condividono un sistema visuale
+  PrimeNG-style: `Card` con miniatura impilata e badge quantità nel calendario,
+  nei contenuti in attesa e nell'agenda; `Toolbar`, `Tag`, `Badge` e `Button`
+  nell'editor. L'editor usa un binario orizzontale con card verticali 4:5,
+  snap su smartphone e primo frame dei video senza patina scura. Lo scroll
+  resta interno al binario e non allarga la pagina.
 - Sezione “Contenuti momentanei / In attesa di programmazione”: import dal Drive,
   anteprima del copy, editor completo uguale al PED e trascinamento nel giorno.
 - L'agenda carica tutti i contenuti fino in fondo nella pagina e non usa una
