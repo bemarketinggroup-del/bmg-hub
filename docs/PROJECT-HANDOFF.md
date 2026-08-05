@@ -213,6 +213,9 @@ supabase/                     schema e migration
   prime otto anteprime visibili partono subito ad alta priorità; le successive
   vengono richieste progressivamente prima di entrare nel viewport. Scritture e
   aggiornamento manuale continuano a invalidare le cache.
+- Nei dialoghi Drive il contenuto scorre soltanto nella griglia: l'overscroll
+  viene contenuto, la rotella si ferma ai limiti e la pagina sottostante resta
+  bloccata fino alla chiusura, inclusi Safari desktop e iOS.
 
 ### PED
 
@@ -231,6 +234,9 @@ supabase/                     schema e migration
 - Il selettore Drive ricorda l'ultima cartella visitata per cliente.
 - Foto/video si aprono cliccando l'anteprima; il comando principale inserisce il
   contenuto nel PED.
+- Quando si rendono visibili i file Drive già utilizzati, ogni anteprima conserva
+  stabilmente il badge `Gia nel PED` sopra foto o video anche dopo il caricamento
+  dell'immagine e gli aggiornamenti PrimeNG del DOM.
 - Il visualizzatore usa la massima area utile, `object-fit: contain`, zoom e
   navigazione da tastiera.
 - Il player video non usa i controlli nativi del browser: il dock condiviso
@@ -408,6 +414,11 @@ supabase/                     schema e migration
 Principio generale: ogni vista applicativa mostra un solo titolo nella topbar.
 Le intestazioni interne compaiono soltanto quando aggiungono un contesto diverso
 o dinamico; non ripetere il nome del modulo, il provider o descrizioni ovvie.
+
+I pulsanti secondari e ghost usano un unico linguaggio CMS/PrimeNG: superficie
+leggera, bordo morbido, raggio da 10 px, icona e testo centrati, hover discreto e
+stato disabilitato esplicito. Non lasciare controlli operativi con l'aspetto
+rettangolare nativo del browser.
 
 1. Desktop: sidebar fissa; il burger menu non deve comparire.
 2. Smartphone: burger menu che apre una navigazione laterale.

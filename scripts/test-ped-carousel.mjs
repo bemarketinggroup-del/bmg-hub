@@ -382,9 +382,14 @@ assert.match(htmlSource, /class="ped-picker-setup"/, "formato e copy devono cond
 assert.match(htmlSource, /class="ped-picker-browser-bar"/, "percorso e comandi Drive devono condividere una barra compatta");
 assert.match(styleSource, /\.ped-picker-caption-field textarea \{[\s\S]*?height: 38px;/, "il copy del selettore non deve sottrarre spazio ai contenuti");
 assert.match(styleSource, /\.ped-picker-grid \{[\s\S]*?max-height: min\(760px, calc\(94vh - 190px\)\)/, "la griglia deve usare più altezza disponibile del modal");
+assert.match(styleSource, /\.ped-picker-grid \{[\s\S]*?overscroll-behavior: contain;/, "lo scroll del selettore non deve propagarsi alla pagina sottostante");
+assert.match(styleSource, /body\.ped-picker-dialog-visible \{[\s\S]*?overflow: hidden;/, "la pagina deve restare bloccata mentre il selettore Drive e aperto");
+assert.match(appSource, /pedDrivePickerDialog\.addEventListener\("close"[\s\S]*?ped-picker-dialog-visible/, "la chiusura del selettore deve ripristinare lo scroll della pagina");
+assert.match(appSource, /pedDrivePickerGrid\.addEventListener\("wheel"[\s\S]*?event\.preventDefault\(\)/, "Safari e Chrome devono fermare lo scroll ai limiti della griglia");
 assert.match(styleSource, /\.ped-picker-entry:not\(\.is-folder\) \.ped-picker-media[\s\S]*?aspect-ratio: 4 \/ 5/, "le anteprime del selettore devono essere verticali");
 assert.match(styleSource, /\.ped-picker-entry:not\(\.is-folder\) \.ped-picker-media img[\s\S]*?object-fit: contain/, "le immagini del selettore devono essere mostrate per intero");
 assert.match(appSource, /Tutti i contenuti di questa cartella sono gia nel PED/, "il filtro deve spiegare quando tutti i file sono gia usati");
+assert.match(styleSource, /\.ped-picker-used-badge \{[\s\S]*?z-index: 7;[\s\S]*?opacity: 1 !important;[\s\S]*?visibility: visible !important;/, "il badge Gia nel PED deve restare stabilmente sopra l'anteprima");
 assert.match(htmlSource, /id="pedMediaViewerModal"/, "il selettore deve includere un visualizzatore grande dedicato");
 assert.match(htmlSource, /data-ped-viewer-zoom-in/, "il visualizzatore deve offrire controlli zoom espliciti");
 assert.match(appSource, /data-ped-media-viewer/, "ogni contenuto visualizzabile deve avere un comando separato dalla selezione");

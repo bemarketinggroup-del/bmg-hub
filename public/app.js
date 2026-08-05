@@ -4070,7 +4070,9 @@ async function openPedDrivePicker(date = "", { appendItem = null, stagingAppendI
       : `${client.name} · scegli una foto, un video o una grafica dal Drive`;
   document.getElementById("pedPickerMessage").textContent = "";
   document.getElementById("pedPickerCaption").value = pedPickerState.caption;
-  document.getElementById("pedDrivePickerModal").showModal();
+  const pickerModal = document.getElementById("pedDrivePickerModal");
+  document.body.classList.add("ped-picker-dialog-visible");
+  if (!pickerModal.open) pickerModal.showModal();
   renderPedPickerFormat();
   if (remembered?.folder?.id) {
     const librariesReady = ensurePedPickerLibraries(selectedPedClientId);
@@ -10820,6 +10822,20 @@ document.getElementById("contentStatusFilter").addEventListener("change", render
 document.getElementById("contentSearch").addEventListener("input", renderContent);
 document.getElementById("clientSearch").addEventListener("input", renderClients);
 document.getElementById("pedClientSearch").addEventListener("input", renderPedClientTabs);
+const pedDrivePickerDialog = document.getElementById("pedDrivePickerModal");
+const pedDrivePickerGrid = document.getElementById("pedPickerGrid");
+pedDrivePickerDialog.addEventListener("close", () => {
+  document.body.classList.remove("ped-picker-dialog-visible");
+});
+pedDrivePickerGrid.addEventListener("wheel", (event) => {
+  const scrollingUp = event.deltaY < 0;
+  const scrollingDown = event.deltaY > 0;
+  const atTop = pedDrivePickerGrid.scrollTop <= 0;
+  const atBottom = Math.ceil(pedDrivePickerGrid.scrollTop + pedDrivePickerGrid.clientHeight) >= pedDrivePickerGrid.scrollHeight;
+  if (pedDrivePickerGrid.scrollHeight <= pedDrivePickerGrid.clientHeight || (scrollingUp && atTop) || (scrollingDown && atBottom)) {
+    event.preventDefault();
+  }
+}, { passive: false });
 document.getElementById("pedDownloadCloseButton").addEventListener("click", closePedGalleryModal);
 document.getElementById("pedDownloadDoneButton").addEventListener("click", closePedGalleryModal);
 document.getElementById("pedGalleryShareButton").addEventListener("click", sharePreparedPedGallery);

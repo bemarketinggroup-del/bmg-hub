@@ -59,6 +59,30 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-08-05 — Selettore Drive stabile e pulsanti secondari moderni
+
+- Richiesta: mantenere fisso sulle anteprime l'avviso `Gia nel PED`, impedire
+  che lo scroll della finestra Drive prosegua sulla pagina sottostante e
+  modernizzare in tutto il gestionale i pulsanti secondari simili a `Nuova
+  cartella` e `Mostra gia utilizzati`.
+- Modifiche: il badge dei file già usati ha ora un livello grafico permanente
+  sopra foto e video; il selettore blocca lo scroll del documento finché è
+  aperto, contiene l'overscroll della griglia e intercetta la rotella ai limiti
+  per evitare lo scroll chaining anche su Safari. `secondary-button` e
+  `ghost-button` condividono il nuovo stile CMS/PrimeNG con raggio moderno,
+  superficie, ombra, hover, pressione e stato disabilitato coerenti.
+- File: `public/app.js`, `public/styles.css`,
+  `scripts/test-ped-carousel.mjs`, `scripts/test-primeng-components.mjs`,
+  `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run build`, `npm run test:ped-carousel`,
+  `npm run test:primeng-components`; controllo browser desktop del dialogo con
+  griglia realmente scrollabile, pagina bloccata, badge visibile e pulsanti
+  centrati; controllo del layout vincolato alla larghezza smartphone; verifica
+  CSS/JS specifica per Chrome e Safari e `git diff --check`.
+- Pubblicazione: commit corrente pubblicato su GitHub `main`; deploy Vercel
+  produzione completato e verificato su `https://bmg-hub.vercel.app`.
+- Note: nessuna.
+
 ### 2026-08-05 — Ultimo link PED attivo nuovamente copiabile
 
 - Richiesta: mostrare nel dialogo Condividi l'ultimo link ancora attivo invece
