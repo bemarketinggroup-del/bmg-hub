@@ -32,6 +32,8 @@ assert.match(styleSource, /\.mobile-nav-backdrop\.is-active,[\s\S]*?\.mobile-nav
 assert.match(styleSource, /\.sidebar-account \{[\s\S]*?grid-template-columns: minmax\(0, 1fr\) 38px;/, "il profilo deve restare ancorato in basso con il logout affiancato");
 assert.match(styleSource, /\.sidebar-nav-section \{[\s\S]*?padding-bottom:/, "i gruppi della navigazione devono avere una gerarchia visiva distinta");
 assert.match(styleSource, /\.topbar \{[\s\S]*?margin-bottom: 18px;[\s\S]*?padding-bottom: 12px;/, "la testata pagina deve restare compatta");
+assert.match(styleSource, /\.topbar \{ align-items: center; gap: 9px; margin-bottom: 10px; padding-bottom: 8px; \}/, "su smartphone la testata deve lasciare più spazio al contenuto");
+assert.match(styleSource, /\.topbar-heading h1 \{ overflow-wrap: anywhere; font-size: 22px; \}/, "il titolo mobile deve essere leggermente più piccolo");
 assert.match(styleSource, /\.google-calendar-head \{[\s\S]*?min-height: 60px;[\s\S]*?padding: 11px 18px;/, "il calendario deve usare una barra comandi compatta");
 assert.match(styleSource, /@media \(max-width: 980px\)[\s\S]*?\.drive-file-grid \{ grid-template-columns: repeat\(2, minmax\(0, 1fr\)\);/, "su smartphone il Drive deve mostrare due elementi per riga");
 assert.match(styleSource, /@media \(max-width: 980px\)[\s\S]*?\.drive-entry-preview img \{ object-fit: contain; object-position: center; \}/, "le foto del Drive mobile devono restare interamente visibili");

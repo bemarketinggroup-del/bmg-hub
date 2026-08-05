@@ -223,6 +223,10 @@ assert.match(appSource, /movePedItemToDate\(itemId, targetDate\)/, "il rilascio 
 assert.match(appSource, /body: JSON\.stringify\(\{ id, scheduled_date: scheduledDate \}\)/, "la nuova data deve essere salvata tramite API");
 assert.match(appSource, /window\.setTimeout\(beginPedPointerDrag, 340\)/, "il trascinamento touch deve partire con una pressione prolungata");
 assert.match(styleSource, /\.ped-day\.is-ped-drop-target/, "il giorno di destinazione deve avere un feedback visivo");
+assert.match(styleSource, /\.ped-client-search \{ width: calc\(100% - 20px\); min-height: 38px; margin: 8px 10px 0;/, "su mobile ricerca e selezione cliente devono occupare meno altezza");
+assert.match(styleSource, /\.ped-client-tab \{ min-height: 32px; gap: 6px;/, "le tab cliente mobile devono restare compatte e selezionabili");
+assert.match(styleSource, /\.ped-calendar-toolbar \{[\s\S]*?grid-template-columns: 34px minmax\(0, 1fr\) 34px;[\s\S]*?padding: 6px 10px 7px;/, "la navigazione del mese mobile deve usare una testata compatta");
+assert.match(styleSource, /\.ped-day \{\s*min-height: 84px;\s*overflow: hidden;/, "le celle del PED mobile devono essere rettangoli leggermente più alti");
 assert.match(styleSource, /\.ped-drag-ghost/, "il trascinamento touch deve mostrare una card mobile");
 assert.match(htmlSource, /id="pedFeedPreviewButton"/, "il PED deve offrire il pulsante di anteprima profilo sotto al calendario");
 assert.match(htmlSource, /id="pedInstagramModal"/, "il mockup iPhone deve essere disponibile in un modal dedicato");

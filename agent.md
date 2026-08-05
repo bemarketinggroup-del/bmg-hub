@@ -59,6 +59,26 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-08-05 — PED mobile più compatto con calendario più alto
+
+- Richiesta: ingrandire leggermente il calendario PED in altezza su mobile,
+  riducendo header, comandi Condividi/Oggi, ricerca e selezione clienti; rendere
+  le celle leggermente rettangolari.
+- Modifiche: la topbar mobile usa titolo da 22 px e spazi ridotti; azioni PED,
+  ricerca e tab cliente hanno altezze e padding più compatti. La navigazione del
+  mese è una griglia a tre colonne con riepilogo sottostante, mentre ogni giorno
+  passa da 72 a 84 px e conserva l'intero mese senza scroll orizzontale. Il
+  layout desktop e tutte le funzioni restano invariati.
+- File: `public/styles.css`, `scripts/test-ped-carousel.mjs`,
+  `scripts/test-mobile-navigation.mjs`, `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run check`, `npm run test:ped-carousel`,
+  `npm run test:mobile-navigation`, `npm run test:primeng-components`,
+  `git diff --check`; controllo browser desktop e smartphone della gerarchia,
+  delle celle e dell'assenza di overflow orizzontale.
+- Pubblicazione: commit corrente pubblicato su GitHub `main`; deploy Vercel
+  produzione completato e verificato su `https://bmg-hub.vercel.app`.
+- Note: Nessuna.
+
 ### 2026-08-05 — Buffering video minimo e senza spostamenti
 
 - Richiesta: rendere molto piccolo l'indicatore `Buffering video`, mostrarlo in

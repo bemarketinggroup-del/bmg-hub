@@ -194,10 +194,9 @@ supabase/                     schema e migration
   foto o video. Il video occupa il riquadro con `object-fit: contain`; dopo la
   lettura dei metadati conserva il rapporto nativo e il primo fotogramma reale
   sostituisce l'eventuale poster orizzontale/croppato generato da Drive.
-- Nei video l'immagine, i controlli e l'indicatore di caricamento occupano tre
-  righe separate: né il dock del player né il progresso possono sovrapporsi al
-  fotogramma. L'indicatore è compatto, scompare senza lasciare spazio quando il
-  caricamento termina e il fallback Drive non deve duplicarlo.
+- Nei video immagine e controlli occupano due righe separate; il buffering è un
+  overlay minimo in basso a destra sul fotogramma e non modifica la posizione
+  del dock quando appare o scompare. Il fallback Drive non deve duplicarlo.
 - Alla chiusura del visualizzatore resta evidenziato l'ultimo elemento visto.
 - Collegamenti rapidi `GRAFICHE` e `VIDEO` del cliente sempre disponibili anche
   mentre si naviga nelle sottocartelle.
@@ -279,6 +278,9 @@ supabase/                     schema e migration
   simbolo dedicato per Post, Storia, Reel o Carosello/multipost; il badge
   quantità del carosello resta separato nell'angolo opposto. Le stesse regole
   valgono negli editor compatti e nel calendario PED condiviso.
+- Su smartphone la testata del modulo PED, i comandi Condividi/Oggi, la ricerca
+  e le tab cliente restano compatti; la griglia mensile recupera lo spazio con
+  celle verticalmente rettangolari da almeno 84 px, senza scroll orizzontale.
 - Sezione “Contenuti momentanei / In attesa di programmazione”: import dal Drive,
   anteprima del copy, editor completo uguale al PED e trascinamento nel giorno.
 - L'agenda carica tutti i contenuti fino in fondo nella pagina e non usa una
