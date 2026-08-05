@@ -8889,6 +8889,17 @@ body.chat-view-active #chatView {
   z-index: 1;
 }
 
+/* Gli overlay media devono restare assoluti anche dopo che l'adapter PrimeNG
+   trasforma dinamicamente l'anteprima in un p-button. */
+.p-button > .ped-picker-used-badge,
+.p-button > .ped-picker-order-badge,
+.p-button > .ped-video-mini,
+.p-button > .ped-picker-zoom-hint {
+  position: absolute;
+}
+
+.p-button > .ped-picker-used-badge { z-index: 7; }
+
 @keyframes prime-ripple {
   50% { opacity: .1; }
   100% { opacity: 0; transform: scale(1); }

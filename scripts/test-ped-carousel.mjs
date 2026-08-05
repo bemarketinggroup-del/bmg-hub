@@ -399,6 +399,8 @@ assert.match(styleSource, /\.ped-picker-entry:not\(\.is-folder\) \.ped-picker-me
 assert.match(styleSource, /\.ped-picker-entry:not\(\.is-folder\) \.ped-picker-media img[\s\S]*?object-fit: contain/, "le immagini del selettore devono essere mostrate per intero");
 assert.match(appSource, /Tutti i contenuti di questa cartella sono gia nel PED/, "il filtro deve spiegare quando tutti i file sono gia usati");
 assert.match(styleSource, /\.ped-picker-used-badge \{[\s\S]*?z-index: 7;[\s\S]*?opacity: 1 !important;[\s\S]*?visibility: visible !important;/, "il badge Gia nel PED deve restare stabilmente sopra l'anteprima");
+assert.match(styleSource, /\.p-button > \.ped-picker-used-badge,[\s\S]*?\.p-button > \.ped-picker-zoom-hint \{[\s\S]*?position: absolute;/, "l'adapter PrimeNG non deve spostare gli overlay fuori dall'anteprima");
+assert.match(styleSource, /\.p-button > \.ped-picker-used-badge \{ z-index: 7; \}/, "il badge deve restare sopra l'immagine anche dopo l'enhancement PrimeNG");
 assert.match(htmlSource, /id="pedMediaViewerModal"/, "il selettore deve includere un visualizzatore grande dedicato");
 assert.match(htmlSource, /data-ped-viewer-zoom-in/, "il visualizzatore deve offrire controlli zoom espliciti");
 assert.match(appSource, /data-ped-media-viewer/, "ogni contenuto visualizzabile deve avere un comando separato dalla selezione");

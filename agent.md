@@ -59,6 +59,26 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-08-05 — Badge Gia nel PED resistente al refresh PrimeNG
+
+- Richiesta: impedire che la scritta `Gia nel PED` sulle foto scompaia pochi
+  istanti dopo l'apertura del selettore Drive.
+- Modifiche: risolto il conflitto con l'enhancement asincrono PrimeNG, che dopo
+  1,2 secondi applicava ai figli dei pulsanti `position: relative` e spostava il
+  badge fuori dall'area visibile. Badge, numero d'ordine, play video e comando
+  zoom delle anteprime conservano ora esplicitamente il posizionamento assoluto
+  anche dopo ogni refresh dell'adapter.
+- File: `public/styles.css`, `scripts/test-ped-carousel.mjs`,
+  `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run check`, `npm run test:ped-carousel`,
+  `npm run test:primeng-components`, `git diff --check`; test browser prima e
+  dopo 1,7 secondi con enhancement PrimeNG confermato: badge ancora
+  `position:absolute`, `z-index:7`, visibile, opacità 1 e interamente dentro la
+  foto.
+- Pubblicazione: commit corrente pubblicato su GitHub `main`; deploy Vercel
+  produzione completato e verificato su `https://bmg-hub.vercel.app`.
+- Note: nessuna.
+
 ### 2026-08-05 — Nuovo link PED visibile senza revocare quello storico
 
 - Richiesta: rendere nuovamente visibile il link nella finestra Condividi PED

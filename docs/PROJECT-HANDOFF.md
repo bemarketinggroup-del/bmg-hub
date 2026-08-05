@@ -236,7 +236,10 @@ supabase/                     schema e migration
   contenuto nel PED.
 - Quando si rendono visibili i file Drive già utilizzati, ogni anteprima conserva
   stabilmente il badge `Gia nel PED` sopra foto o video anche dopo il caricamento
-  dell'immagine e gli aggiornamenti PrimeNG del DOM.
+  dell'immagine e gli aggiornamenti PrimeNG del DOM. Le eccezioni esplicite al
+  layer generico `p-button` mantengono assoluti badge, numero carosello, play
+  video e zoom: non rimuoverle, perché l'adapter riesegue l'enhancement ogni 1,2
+  secondi.
 - Il visualizzatore usa la massima area utile, `object-fit: contain`, zoom e
   navigazione da tastiera.
 - Il player video non usa i controlli nativi del browser: il dock condiviso
