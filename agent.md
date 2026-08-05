@@ -76,8 +76,8 @@ più recente alla più vecchia:
   `git diff --check`; controllo browser locale con misurazione dei rettangoli:
   nessuna sovrapposizione tra video, dock e progresso, posizionamento `static`
   delle due fasce e barra alta 3 px.
-- Pubblicazione: commit corrente da pubblicare su GitHub `main`; deploy Vercel
-  produzione da completare e verificare su `https://bmg-hub.vercel.app`.
+- Pubblicazione: commit `28c33fb` pubblicato su GitHub `main`; deploy Vercel
+  produzione completato e verificato su `https://bmg-hub.vercel.app`.
 - Note: Nessuna.
 
 ### 2026-08-05 — Anteprime PED senza cornice bianca
