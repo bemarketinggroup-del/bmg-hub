@@ -11748,3 +11748,19 @@ document.addEventListener("click", () => scheduleWorkspaceContextSave());
 document.addEventListener("change", () => scheduleWorkspaceContextSave());
 
 bootApp();
+
+
+/* BMG Control Center — Dark mode toggle (Fase 8) */
+(function(){
+  function applyTheme(t){ document.documentElement.setAttribute("data-theme", t === "dark" ? "dark" : "light"); }
+  try { var s = localStorage.getItem("bmg-theme"); if (s === "dark" || s === "light") applyTheme(s); } catch (e) {}
+  document.addEventListener("click", function(ev){
+    var node = ev.target;
+    var btn = node && node.closest ? node.closest("[data-theme-toggle]") : null;
+    if (!btn) return;
+    var isDark = document.documentElement.getAttribute("data-theme") === "dark";
+    var next = isDark ? "light" : "dark";
+    applyTheme(next);
+    try { localStorage.setItem("bmg-theme", next); } catch (e) {}
+  });
+})();
