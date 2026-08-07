@@ -11764,3 +11764,42 @@ bootApp();
     try { localStorage.setItem("bmg-theme", next); } catch (e) {}
   });
 })();
+
+
+/* BMG Control Center — Ricerca globale topbar (Fase 11) */
+(function(){
+  function byId(id){ return document.getElementById(id); }
+  function esc(s){ return String(s == null ? "" : s).replace(/[&<>"]/g, function(c){ return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]; }); }
+  function collect(query){
+    var out = []; var ql = query.toLowerCase();
+    try { ((typeof state !== "undefined" && state.clients) || []).forEach(function(c){ var n = c && c.name; if (n && String(n).toLowerCase().indexOf(ql) !== -1) out.push({ label: n, sub: "Cliente", view: "clients" }); }); } catch (e) {}
+    try { var tks = (typeof operationalTasks === "function" ? operationalTasks() : []) || []; tks.forEach(function(t){ var n = t && t.name; if (n && String(n).toLowerCase().indexOf(ql) !== -1) out.push({ label: n, sub: t.client_tag ? ("Task · " + t.client_tag) : "Task", view: "team" }); }); } catch (e) {}
+    try { ((typeof googleCalendarState !== "undefined" && googleCalendarState.events) || []).forEach(function(ev){ var n = ev && ev.title; if (n && String(n).toLowerCase().indexOf(ql) !== -1) out.push({ label: n, sub: "Evento", view: "calendar" }); }); } catch (e) {}
+    return out.slice(0, 8);
+  }
+  function closeResults(){ var r = byId("globalSearchResults"); if (r) { r.classList.add("is-hidden"); r.innerHTML = ""; } }
+  function render(){
+    var inp = byId("globalSearchInput"), box = byId("globalSearchResults");
+    if (!inp || !box) return;
+    var v = (inp.value || "").trim();
+    if (v.length < 2) { closeResults(); return; }
+    var items = collect(v);
+    if (!items.length) { box.innerHTML = '<div class="global-search-empty">Nessun risultato</div>'; box.classList.remove("is-hidden"); return; }
+    box.innerHTML = items.map(function(it){ return '<button class="global-search-item" type="button" data-gs-view="' + esc(it.view) + '"><span class="gs-label">' + esc(it.label) + '</span><span class="gs-sub">' + esc(it.sub) + '</span></button>'; }).join("");
+    box.classList.remove("is-hidden");
+  }
+  function bind(){
+    var inp = byId("globalSearchInput"); if (!inp || inp.__bmgGsBound) return; inp.__bmgGsBound = true;
+    inp.addEventListener("input", render);
+    inp.addEventListener("focus", render);
+    inp.addEventListener("keydown", function(e){ if (e.key === "Escape") { inp.value = ""; closeResults(); inp.blur(); } });
+    document.addEventListener("click", function(e){
+      var t = e.target;
+      var item = t && t.closest ? t.closest(".global-search-item") : null;
+      if (item) { var view = item.getAttribute("data-gs-view"); try { if (typeof setView === "function" && view) setView(view); } catch (err) {} inp.value = ""; closeResults(); return; }
+      if (t && t.closest && t.closest(".topbar-search")) return;
+      closeResults();
+    });
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", bind); else bind();
+})();
