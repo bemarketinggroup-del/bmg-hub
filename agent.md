@@ -59,6 +59,21 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-08-08 — Redesign "BMG Control Center" — Fase 6 (login)
+
+- Richiesta: rifinire la schermata di login in chiave premium e coerente con
+  l'identita' del prodotto.
+- Modifiche: `public/index.html` etichetta login "Supabase Auth" sostituita con
+  "BMG Control Center". `public/styles.css` blocco override "Fase 6 (login
+  premium)": card piu' morbida e con ombra piu' profonda su fondo scuro, input
+  con raggio e focus terracotta piu' curati, CTA piu' alta, eyebrow accentata.
+  Nessuna modifica a logica di autenticazione, API o dati.
+- File: `public/index.html`, `public/styles.css`, `agent.md`.
+- Verifiche: bilanciamento parentesi CSS OK.
+- Pubblicazione: commit e push su GitHub `main` via integrazione (deploy Vercel
+  automatico).
+- Note: reversibile rimuovendo il blocco "Fase 6" e ripristinando l'etichetta.
+
 ### 2026-08-08 — Redesign "BMG Control Center" — Fase 5 (task in home)
 
 - Richiesta: home piu' operativa (Mission Control), con i task in evidenza.
