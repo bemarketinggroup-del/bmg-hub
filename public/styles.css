@@ -9201,3 +9201,17 @@ body.chat-view-active #chatView {
 .smart-settings input, .smart-assignment select{
   border-radius: var(--r-md); font-size: 14px;
 }
+
+
+/* ============================================================
+   BMG CONTROL CENTER — Fase 5 (Mission Control - task in home)
+   ============================================================ */
+.home-tasks-panel{ margin-bottom: 18px; }
+.home-tasks-list{ display: grid; gap: 2px; }
+.home-task-row{ display: grid; grid-template-columns: minmax(0,1fr) auto auto; align-items: center; gap: 12px; width: 100%; text-align: left; border: 0; background: transparent; cursor: pointer; padding: 12px 10px; border-radius: 12px; border-top: 1px solid var(--line); transition: background .13s; }
+.home-tasks-list .home-task-row:first-child{ border-top: 0; }
+.home-task-row:hover{ background: var(--surface-soft); }
+.home-task-main{ min-width: 0; display: grid; gap: 4px; }
+.home-task-name{ color: var(--ink); font-size: 14px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.home-task-meta{ display: flex; align-items: center; gap: 8px; min-width: 0; }
+.home-tasks-empty{ color: var(--muted); font-size: 13px; padding: 14px 10px; }
