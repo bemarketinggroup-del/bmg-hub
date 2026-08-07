@@ -1279,7 +1279,37 @@ function mondayOf(value = new Date()) {
   return date.toISOString().slice(0, 10);
 }
 
+function renderHomeTasks(){
+  const host = document.getElementById("homeTasksList");
+  if (!host) return;
+  let tasks = [];
+  try { tasks = dashboardTasks() || []; } catch (e) { tasks = []; }
+  const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const dueOf = (t) => { try { return dueDateValue(t) || 0; } catch (e) { return 0; } };
+  let today = 0; try { today = startOfToday(); } catch (e) {}
+  const withDue = tasks.filter((t) => dueOf(t)).sort((a, b) => dueOf(a) - dueOf(b));
+  const noDue = tasks.filter((t) => !dueOf(t));
+  const list = withDue.concat(noDue).slice(0, 6);
+  if (!list.length) { host.innerHTML = '<p class="home-tasks-empty">Nessun task attivo al momento.</p>'; return; }
+  host.innerHTML = list.map((t) => {
+    const due = dueOf(t);
+    const late = due && today && due < today;
+    let dueLabel = "-";
+    if (due) { try { dueLabel = formatContentDate(due); } catch (e) { dueLabel = ""; } }
+    const pr = (typeof priorityClass === "function") ? priorityClass(t.priority) : "";
+    const client = '<span class="client-tag ' + (t.client_tag ? "" : "is-missing") + '">' + esc(t.client_tag || "Cliente mancante") + '</span>';
+    const dueHtml = '<span class="clickup-task-due ' + (late ? "is-overdue" : "") + '">' + (due ? esc(dueLabel) : "-") + '</span>';
+    return '<button class="home-task-row" type="button" data-jump="team" data-module="tasks">' +
+      '<span class="home-task-main"><span class="home-task-name">' + esc(t.name || "Task senza titolo") + '</span>' +
+      '<span class="home-task-meta">' + client + '</span></span>' +
+      dueHtml +
+      '<span class="task-priority ' + pr + '">' + esc(t.priority || "Nessuna") + '</span>' +
+      '</button>';
+  }).join("");
+}
+
 function renderHome() {
+  try { renderHomeTasks(); } catch (e) { console.warn("renderHomeTasks", e); }
   const activeClients = state.clients.filter((client) => {
     return ["attivo", "active"].includes(normalizeIdentity(client.status));
   }).length;
