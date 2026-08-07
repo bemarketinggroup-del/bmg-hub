@@ -7,6 +7,8 @@
   <script>
     try {
       if (localStorage.getItem("bmg-hub-auth")) document.documentElement.classList.add("auth-restoring");
+      var __t = localStorage.getItem("bmg-theme");
+      if (__t === "dark" || __t === "light") document.documentElement.setAttribute("data-theme", __t);
     } catch {}
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -150,6 +152,9 @@
               <strong id="sidebarUserName">Account BMG</strong>
               <small id="sessionBadge">Sessione</small>
             </span>
+          </button>
+          <button class="p-button p-component p-button-text p-button-icon-only sidebar-account-theme" data-theme-toggle type="button" title="Tema chiaro / scuro" aria-label="Cambia tema chiaro o scuro">
+            <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"/></svg>
           </button>
           <button class="p-button p-component p-button-text p-button-icon-only sidebar-account-logout" id="logoutButton" type="button" title="Esci" aria-label="Esci dall’account">
             <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
