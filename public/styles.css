@@ -9306,3 +9306,18 @@ body.chat-view-active #chatView {
 :root[data-theme="dark"] .sidebar-subnav .nav-subitem.is-active{ background: var(--surface-tint); color: var(--ink); }
 :root[data-theme="dark"] .sidebar-nav-label{ color: var(--subtle); }
 :root[data-theme="dark"] .sidebar-subnav .nav-subitem{ color: var(--stone); }
+
+
+/* ============================================================
+   BMG CONTROL CENTER — Fase 10 (dark mode - viste di dettaglio)
+   ============================================================ */
+:root[data-theme="dark"] .graphics-review-list,
+:root[data-theme="dark"] .graphic-review-comparisons,
+:root[data-theme="dark"] .graphics-drive-access{ background: var(--surface-soft); }
+:root[data-theme="dark"] .drive-transfer-card.is-complete{ background: var(--green-tint); }
+:root[data-theme="dark"] .drive-entry-card.is-graphic-original{ background: var(--surface-tint); }
+:root[data-theme="dark"] .drive-entry-card.is-graphic-modified{ background: var(--green-tint); }
+:root[data-theme="dark"] .graphic-review-comparison-side.is-modified .graphic-review-comparison-preview{ background: var(--green-tint); }
+:root[data-theme="dark"] .graphic-review-version-empty{ background: var(--surface-soft); border-color: var(--line-strong); color: var(--muted); }
+:root[data-theme="dark"] .smart-month-day:hover{ background: var(--surface-soft); }
+:root[data-theme="dark"] .smart-day-row.is-off{ background: var(--amber-tint); }
