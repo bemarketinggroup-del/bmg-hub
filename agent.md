@@ -59,6 +59,25 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-08-08 — Redesign "BMG Control Center" — Fase 7 (agenda + attenzione)
+
+- Richiesta: arricchire la home Mission Control con Agenda e "Richiede
+  attenzione".
+- Modifiche: `public/index.html` due nuovi pannelli in riga (`.home-cols`):
+  Agenda (`#homeAgendaList`) e Richiede attenzione (`#homeAttentionList`).
+  `public/app.js`: funzioni `renderHomeAgenda()`, `renderHomeAttention()`,
+  `ensureHomeExtras()` (chiamata protetta in `renderHome`) che avviano in modo
+  quiet `loadGoogleCalendar()` e `loadGraphicReviews()` e popolano i pannelli
+  con dati reali (eventi di oggi/prossimi; revisioni in attesa + task in
+  ritardo). `public/styles.css`: stile "Fase 7". Nessuna modifica a API, dati,
+  permessi o logica esistente; tutto in try/catch e rispettoso di
+  `canAccessModule`.
+- File: `public/index.html`, `public/app.js`, `public/styles.css`, `agent.md`.
+- Verifiche: `npm run check` (OK in locale) e parentesi CSS bilanciate.
+- Pubblicazione: commit e push su GitHub `main` via integrazione (deploy Vercel
+  automatico).
+- Note: reversibile rimuovendo pannelli, funzioni e blocco CSS "Fase 7".
+
 ### 2026-08-08 — Redesign "BMG Control Center" — Fase 6 (login)
 
 - Richiesta: rifinire la schermata di login in chiave premium e coerente con
