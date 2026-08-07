@@ -59,6 +59,24 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-08-08 — Redesign "BMG Control Center" — Fase 8 (dark mode)
+
+- Richiesta: aggiungere la dark mode.
+- Modifiche: `public/styles.css` blocco "Fase 8" con ridefinizione dei token
+  sotto `:root[data-theme="dark"]` (sfondi, testo, bordi, ombre, tint) piu'
+  alcuni fix mirati (login, watermark, header tabelle). `public/index.html`:
+  anti-flash nel `<head>` (applica il tema salvato prima del CSS) e interruttore
+  tema nel footer della sidebar (`[data-theme-toggle]`). `public/app.js`:
+  piccola IIFE isolata che applica/salva il tema in `localStorage` (nessuna
+  modifica ad altra logica). Preferenza persistente per utente/browser.
+- File: `public/index.html`, `public/app.js`, `public/styles.css`, `agent.md`.
+- Verifiche: `npm run check` (OK in locale) e parentesi CSS bilanciate.
+- Pubblicazione: commit e push su GitHub `main` via integrazione (deploy Vercel
+  automatico).
+- Note: prima versione; alcuni componenti con colori fissi (es. pagine di
+  condivisione PED, alcuni tag) potrebbero richiedere ritocchi mirati.
+  Reversibile rimuovendo il blocco "Fase 8", l'interruttore e la IIFE.
+
 ### 2026-08-08 — Redesign "BMG Control Center" — Fase 7 (agenda + attenzione)
 
 - Richiesta: arricchire la home Mission Control con Agenda e "Richiede
