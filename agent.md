@@ -59,6 +59,21 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-08-08 — Redesign "BMG Control Center" — Fase 9 (dark mode - rifinitura)
+
+- Richiesta: rifinire la dark mode nei punti sempre visibili.
+- Modifiche: `public/styles.css` blocco "Fase 9" con override solo-dark per la
+  chrome della sidebar (badge non letti, avatar, hover profilo/logout, sottovoci
+  attive, etichette) che usavano grigi freddi fissi. Nessuna modifica alla light
+  mode ne' alla logica.
+- File: `public/styles.css`, `agent.md`.
+- Verifiche: parentesi CSS bilanciate.
+- Pubblicazione: commit e push su GitHub `main` via integrazione (deploy Vercel
+  automatico).
+- Note: restano alcuni colori fissi in viste specifiche (revisioni grafiche,
+  smart working, alcune card Drive) da rifinire in dark su richiesta; i mockup
+  iPhone/Instagram del PED restano volutamente chiari.
+
 ### 2026-08-08 — Redesign "BMG Control Center" — Fase 8 (dark mode)
 
 - Richiesta: aggiungere la dark mode.
