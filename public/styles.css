@@ -6,30 +6,30 @@
 
 :root {
   /* Brand */
-  --paper:        #F3EFE7;   /* Cream — sfondo principale */
-  --bone:         #F6F2E8;   /* Bone  — superfici tenui */
-  --ink:          #1A1612;   /* Cacao — testo / linee */
+  --paper:        #F4F3F0;   /* Cream — sfondo principale */
+  --bone:         #FAF9F6;   /* Bone  — superfici tenui */
+  --ink:          #17130E;   /* Cacao — testo / linee */
   --terracotta:   #B9542C;   /* Accent */
-  --stone:        #6B6259;   /* Ink muted — testo secondario */
+  --stone:        #6B665F;   /* Ink muted — testo secondario */
 
   /* Derivati superfici */
   --surface:      #FFFFFF;
-  --surface-soft: #FAF6EE;
-  --surface-tint: #EFE9DD;   /* corsie kanban / zone tenui */
+  --surface-soft: #FAF9F6;
+  --surface-tint: #EEEBE4;   /* corsie kanban / zone tenui */
 
   /* Testo */
-  --text:         #2A241E;
+  --text:         #1E1A15;
   --muted:        var(--stone);
-  --subtle:       #9A9084;
+  --subtle:       #9B958C;
 
   /* Linee (ink su carta) */
-  --line:         rgba(26, 22, 18, .10);
-  --line-strong:  rgba(26, 22, 18, .18);
+  --line:         rgba(23, 19, 14, .08);
+  --line-strong:  rgba(23, 19, 14, .14);
 
   /* Accento */
   --terra-deep:   #9A4423;
   --terra-tint:   rgba(185, 84, 44, .10);
-  --terra-line:   rgba(185, 84, 44, .28);
+  --terra-line:   rgba(185, 84, 44, .26);
 
   /* Semantici (terrosi, desaturati) */
   --green:        #5C7850;  --green-tint:  rgba(92, 120, 80, .13);  --green-line:  rgba(92, 120, 80, .30);
@@ -38,10 +38,10 @@
   --red:          #B23A26;  --red-tint:    rgba(178, 58, 38, .10);  --red-line:    rgba(178, 58, 38, .30);
 
   /* Elevazione (calda) */
-  --shadow-xs: 0 1px 2px rgba(26, 22, 18, .05);
-  --shadow-sm: 0 2px 8px rgba(26, 22, 18, .06);
-  --shadow:    0 12px 32px rgba(26, 22, 18, .10);
-  --shadow-lg: 0 28px 70px rgba(26, 22, 18, .22);
+  --shadow-xs: 0 1px 2px rgba(23, 19, 14, .04);
+  --shadow-sm: 0 1px 2px rgba(23, 19, 14, .05);
+  --shadow:    0 6px 24px rgba(23, 19, 14, .07);
+  --shadow-lg: 0 20px 50px rgba(23, 19, 14, .14);
 
   /* Forma (morbida, on-brand) */
   --r:      16px;
@@ -49,7 +49,7 @@
   --r-sm:   10px;
   --pill:   999px;
 
-  --font: "Bricolage Grotesque", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font: "Inter", -apple-system, system-ui, "Segoe UI", sans-serif;
   --font-serif: "Instrument Serif", Georgia, serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 

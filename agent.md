@@ -59,6 +59,27 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-08-07 — Redesign "BMG Control Center" — Fase 1 (token, font, naming)
+
+- Richiesta: redesign UI premium (riferimenti Apple/Tesla/Linear) e rinomina del
+  prodotto in "BMG Control Center". Fase 1: fondamenta del nuovo design system.
+- Modifiche: aggiornati i design token in `:root` (sfondo neutro caldo, testo
+  quasi nero, bordi hairline più sottili, ombre più leggere) mantenendo i nomi
+  delle variabili e gli alias PrimeNG; font principale impostato su Inter
+  (`--font`) e aggiunto a Google Fonts; titolo pagina e brand della sidebar
+  aggiornati in "BMG Control Center". Nessuna modifica a logica, API, routing,
+  autenticazione, permessi o dati.
+- File: `public/styles.css`, `public/index.html`, `agent.md`.
+- Verifiche: `npm run check` (OK). La verifica visiva desktop/mobile e
+  Chrome/Safari non è eseguibile nell'ambiente agent: da controllare in
+  produzione dopo il deploy. Backup locale in `.bmg-redesign-backup/`.
+- Pubblicazione: commit e push su GitHub `main` (deploy Vercel automatico) —
+  da confermare su https://bmg-hub.vercel.app.
+- Note: prima fase di un redesign multi-fase; la Fase 2 sarà la shell (sidebar a
+  icone con espansione su hover + topbar). Reversibile con
+  `git checkout public/styles.css public/index.html` o ripristino da
+  `.bmg-redesign-backup/`.
+
 ### 2026-08-07 — Post e reel singoli nella galleria iPhone
 
 - Richiesta: salvare nella galleria Foto di iPhone anche post singoli e reel,
