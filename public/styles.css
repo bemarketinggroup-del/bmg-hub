@@ -9173,3 +9173,31 @@ body.chat-view-active #chatView {
   .nav-branch-trailing{ opacity: 0; transition: opacity .16s; }
   .sidebar.p-sidebar:hover .nav-branch-trailing{ opacity: 1; }
 }
+
+
+/* ============================================================
+   BMG CONTROL CENTER — Fase 4 (componenti) — override additivi
+   Tabelle piu' ariose, card piu' morbide, input piu' raffinati.
+   ============================================================ */
+
+/* Tabelle: righe piu' alte, header puliti, griglia leggera */
+.p-datatable-thead th{
+  font-size: 11px; font-weight: 600; color: var(--muted);
+  border-bottom: 1px solid var(--line); padding: 14px 14px; letter-spacing: .05em;
+}
+.p-datatable-tbody td{ font-size: 13px; padding: 15px 14px; }
+.p-tag{ font-size: 11px; font-weight: 600; min-height: 22px; }
+.user-table-identity strong{ font-size: 13px; }
+.user-table-identity span:not(.user-avatar){ font-size: 11px; }
+.user-table-link{ font-size: 11px; font-weight: 600; }
+
+/* Card / pannelli: angoli piu' morbidi e lieve profondita' */
+.panel{ border-radius: 16px; box-shadow: var(--shadow-sm); padding: 20px 22px; }
+.panel h2{ font-weight: 600; }
+
+/* Input / select: piu' morbidi e leggibili */
+.form-grid input, .form-grid textarea, .form-grid select,
+.alias-form input, .alias-form select,
+.smart-settings input, .smart-assignment select{
+  border-radius: var(--r-md); font-size: 14px;
+}
