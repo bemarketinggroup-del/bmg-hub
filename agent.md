@@ -59,6 +59,23 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-08-08 — Redesign "BMG Control Center" — Fase 5 (task in home)
+
+- Richiesta: home piu' operativa (Mission Control), con i task in evidenza.
+- Modifiche: aggiunto pannello "I miei task" nella home. `public/index.html`:
+  nuovo `section.home-tasks-panel` con `#homeTasksList` prima dell'accesso
+  rapido. `public/app.js`: nuova funzione `renderHomeTasks()` (usa i dati gia'
+  esistenti via `dashboardTasks()` e le funzioni `priorityClass`,
+  `dueDateValue`, `formatContentDate`), chiamata in modo protetto (try/catch)
+  dentro `renderHome()`. `public/styles.css`: stile del pannello. Nessuna
+  modifica a API, dati, permessi o logica dei task.
+- File: `public/index.html`, `public/app.js`, `public/styles.css`, `agent.md`.
+- Verifiche: `npm run check` (OK in locale) e bilanciamento parentesi CSS OK.
+- Pubblicazione: commit e push su GitHub `main` via integrazione (deploy Vercel
+  automatico).
+- Note: le righe task rimandano alla sezione Team & Task; reversibile rimuovendo
+  il pannello, la funzione e il blocco CSS "Fase 5".
+
 ### 2026-08-08 — Redesign "BMG Control Center" — Fase 4 (componenti)
 
 - Richiesta: propagare il nuovo stile ai componenti con dati (tabelle, card,
