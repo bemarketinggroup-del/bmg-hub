@@ -59,6 +59,21 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-08-08 — Redesign "BMG Control Center" — Fase 11 (ricerca globale)
+
+- Richiesta: ricerca globale nella topbar.
+- Modifiche: `public/index.html` campo di ricerca nella topbar con pannello
+  risultati. `public/app.js` IIFE isolata (Fase 11) che cerca tra clienti
+  (`state.clients`), task (`operationalTasks()`) ed eventi
+  (`googleCalendarState.events`) e, al click, naviga alla sezione con `setView`.
+  `public/styles.css` stile del campo e del dropdown. Tutto in try/catch, nessuna
+  modifica ai dati o alla logica esistente.
+- File: `public/index.html`, `public/app.js`, `public/styles.css`, `agent.md`.
+- Verifiche: `npm run check` (OK in locale), parentesi CSS bilanciate.
+- Pubblicazione: commit e push su GitHub `main` via integrazione.
+- Note: v1 naviga alla sezione pertinente; selezione diretta dell'elemento
+  possibile in un secondo momento. Reversibile rimuovendo campo, IIFE e CSS.
+
 ### 2026-08-08 — Redesign "BMG Control Center" — Fase 10 (dark viste dettaglio)
 
 - Richiesta: dark mode anche nelle viste di dettaglio; verificare calendario/board.
