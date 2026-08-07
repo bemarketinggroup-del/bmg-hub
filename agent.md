@@ -59,6 +59,19 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-08-08 — Redesign "BMG Control Center" — Fase 10 (dark viste dettaglio)
+
+- Richiesta: dark mode anche nelle viste di dettaglio; verificare calendario/board.
+- Modifiche: `public/styles.css` blocco "Fase 10" con override solo-dark per gli
+  sfondi chiari fissi di revisioni grafiche, accesso Drive, card Drive e smart
+  working. Calendario: gia' basato sui token, coerente e funzionante in dark
+  (nessuna modifica necessaria); non esiste una board kanban separata (la vista
+  task e' una lista, gia' rifinita in Fase 4).
+- File: `public/styles.css`, `agent.md`.
+- Verifiche: parentesi CSS bilanciate.
+- Pubblicazione: commit e push su GitHub `main` via integrazione.
+- Note: eventuali altri colori fissi in dark si rifiniscono su segnalazione.
+
 ### 2026-08-08 — Redesign "BMG Control Center" — Fase 9 (dark mode - rifinitura)
 
 - Richiesta: rifinire la dark mode nei punti sempre visibili.
