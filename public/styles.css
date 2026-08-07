@@ -9215,3 +9215,23 @@ body.chat-view-active #chatView {
 .home-task-name{ color: var(--ink); font-size: 14px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .home-task-meta{ display: flex; align-items: center; gap: 8px; min-width: 0; }
 .home-tasks-empty{ color: var(--muted); font-size: 13px; padding: 14px 10px; }
+
+
+/* ============================================================
+   BMG CONTROL CENTER — Fase 6 (login premium)
+   ============================================================ */
+.login-screen{ background: var(--ink); }
+.login-card{
+  background: var(--surface);
+  border: 1px solid rgba(255,255,255,.06);
+  border-radius: 20px;
+  gap: 18px;
+  padding: 34px 32px;
+  box-shadow: 0 30px 80px rgba(0,0,0,.45);
+}
+.login-card .brand-logo{ width: 104px; height: auto; }
+.login-card .eyebrow{ color: var(--terracotta); }
+.login-card h1{ letter-spacing: -.02em; }
+.login-card input{ border-radius: var(--r-md); min-height: 46px; font-size: 14px; }
+.login-card input:focus{ outline: none; border-color: var(--terracotta); box-shadow: 0 0 0 3px var(--terra-tint); }
+.login-card .primary-button{ min-height: 48px; font-size: 14px; }
