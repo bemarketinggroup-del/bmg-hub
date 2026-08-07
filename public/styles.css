@@ -9292,3 +9292,17 @@ body.chat-view-active #chatView {
 :root[data-theme="dark"] .login-screen{ background:#0E0D0B; }
 :root[data-theme="dark"] .home-welcome::after{ color:rgba(255,255,255,.03); }
 :root[data-theme="dark"] .p-datatable-thead th{ background:var(--surface); }
+
+
+/* ============================================================
+   BMG CONTROL CENTER — Fase 9 (dark mode - rifinitura chrome)
+   ============================================================ */
+:root[data-theme="dark"] .nav-unread-badge{ border-color: var(--line-strong); background: var(--surface-tint); color: var(--stone); }
+:root[data-theme="dark"] .sidebar-account-profile.p-button{ color: var(--text); }
+:root[data-theme="dark"] .sidebar-account-profile.p-button:hover,
+:root[data-theme="dark"] .sidebar-account-logout.p-button:hover{ background: var(--surface-soft); }
+:root[data-theme="dark"] .sidebar-user-avatar{ background: var(--terra-tint); color: var(--terra-deep); }
+:root[data-theme="dark"] .sidebar-account-copy small{ color: var(--subtle); }
+:root[data-theme="dark"] .sidebar-subnav .nav-subitem.is-active{ background: var(--surface-tint); color: var(--ink); }
+:root[data-theme="dark"] .sidebar-nav-label{ color: var(--subtle); }
+:root[data-theme="dark"] .sidebar-subnav .nav-subitem{ color: var(--stone); }
