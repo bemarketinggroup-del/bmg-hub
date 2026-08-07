@@ -271,7 +271,10 @@ supabase/                     schema e migration
   invariati e soltanto il blocco `moov` viene caricato in memoria. Numero e nome
   originale vengono inseriti anche in `DocumentName` e `ImageDescription` per
   le JPEG. Gli
-  originali Drive non cambiano. iOS può comunque mostrare un nome interno
+  originali Drive non cambiano. Lo stesso pannello nativo viene usato anche per
+  post, reel e stories singole: il comando PED mostra `Foto` e prepara il
+  contenuto per `Salva in Foto`, evitando il normale download nell'app File.
+  iOS può comunque mostrare un nome interno
   `IMG_…`: un sito web non può impostare `PHAssetResource.originalFilename`,
   disponibile soltanto alle app native. Ogni conferma nel pannello iOS è
   obbligatoria e la lista di download diretti resta come ripiego.

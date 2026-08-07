@@ -188,6 +188,10 @@ assert.match(appSource, /saveDownloadedBlob\(blob, filename\)/, "ogni file del m
 assert.match(appSource, /isIosDownloadDevice\(\) \? "Foto" : "Download"/, "il multipost deve mostrare un comando Foto su iPhone e Download su desktop");
 assert.match(appSource, /function isIosDownloadDevice\(\)/, "iPhone e iPad devono usare un download compatibile con WebKit");
 assert.match(appSource, /if \(isIosDownloadDevice\(\)\) \{\s*openPedCarouselGallery\(item, files\);\s*return;/, "su iPhone la coda download deve essere sostituita dal salvataggio in Foto");
+assert.match(appSource, /data-ped-single-download/, "post, reel e stories singole devono usare un flusso PED dedicato");
+assert.match(appSource, /async function downloadPedSingleMedia\(itemId, button\)/, "il download PED singolo deve distinguere iPhone dal desktop");
+assert.match(appSource, /function downloadPedSingleMedia[\s\S]*?if \(isIosDownloadDevice\(\)\) \{\s*openPedCarouselGallery\(item, \[file\]\);\s*return;/, "su iPhone anche il contenuto singolo deve passare dal pannello Foto");
+assert.match(appSource, /files\.length === 1\s*\? "Salva in Foto"/, "il comando iPhone per un contenuto singolo deve indicare chiaramente Foto");
 assert.match(appSource, /preparedFiles\.some\(\(file\) => !navigator\.canShare\(\{ files: \[file\] \}\)\)/, "Safari deve verificare ogni contenuto singolarmente");
 assert.match(appSource, /navigator\.share\(\{ files: \[file\] \}\)/, "iPhone deve ricevere un solo contenuto alla volta per non separare foto e video");
 assert.doesNotMatch(appSource, /navigator\.share\(\{ files \}\)/, "il multipost misto non deve più essere inviato come un unico gruppo");

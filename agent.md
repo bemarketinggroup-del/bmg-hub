@@ -1,6 +1,6 @@
 # BMG Hub — memoria operativa degli interventi
 
-Ultimo aggiornamento: 5 agosto 2026
+Ultimo aggiornamento: 7 agosto 2026
 
 ## Scopo del file
 
@@ -58,6 +58,23 @@ più recente alla più vecchia:
 ```
 
 ## Registro modifiche
+
+### 2026-08-07 — Post e reel singoli nella galleria iPhone
+
+- Richiesta: salvare nella galleria Foto di iPhone anche post singoli e reel,
+  invece di inviarli all'app File.
+- Modifiche: il download dei contenuti PED singoli rileva ora iPhone/iPad e usa
+  lo stesso pannello Web Share già adottato dai multipost. Foto, reel e stories
+  vengono preparati come file compatibili e il comando diventa `Foto` con il
+  passaggio `Salva in Foto`; su desktop resta invariato il download diretto. Se
+  iOS non accetta il formato, rimane disponibile il download alternativo.
+- File: `public/app.js`, `scripts/test-ped-carousel.mjs`,
+  `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run check`, `npm run test:ped-carousel`, `git diff --check`;
+  controllo dei rami iPhone/iPad e desktop e del fallback Safari.
+- Pubblicazione: GitHub `main` e Vercel produzione.
+- Note: Safari richiede comunque la conferma dell'utente nel pannello iOS; il
+  sito non può scrivere silenziosamente nella libreria Foto.
 
 ### 2026-08-05 — Ripristino della pagina e del contesto dopo il refresh
 
