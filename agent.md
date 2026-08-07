@@ -59,6 +59,19 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-08-08 — Redesign "BMG Control Center" — Fase 12 (ricerca: apertura diretta)
+
+- Richiesta: dalla ricerca globale aprire direttamente l'elemento.
+- Modifiche: `public/app.js` aggiornato il blocco "Fase 11": i risultati ora
+  portano `data-gs-kind`/`data-gs-id`; al click, i clienti aprono la scheda con
+  `openClientDetails(id)` (dopo `setView("clients")`), i task aprono il modale con
+  `openTaskDetailModal(id)`, gli eventi vanno al calendario. Tutto in try/catch e
+  con guardie `typeof`.
+- File: `public/app.js`, `agent.md`.
+- Verifiche: `npm run check` (OK in locale).
+- Pubblicazione: commit e push su GitHub `main` via integrazione.
+- Note: reversibile ripristinando il blocco precedente.
+
 ### 2026-08-08 — Redesign "BMG Control Center" — Fase 11 (ricerca globale)
 
 - Richiesta: ricerca globale nella topbar.
