@@ -59,6 +59,21 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-08-08 — Redesign "BMG Control Center" — Fase 2 (Home)
+
+- Richiesta: rendere visibile il redesign sulla home dopo la Fase 1.
+- Modifiche: blocco di override CSS additivo in fondo a `public/styles.css`
+  (marcato "BMG CONTROL CENTER — Fase 2") che restyla la home usando le classi
+  esistenti: hero (`.home-welcome`) da superficie scura a chiara, KPI
+  (`.metric-grid`/`.metric`) in griglia unica con divisori hairline, card di
+  accesso rapido (`.home-quick-link`) piu' morbide. Nessuna modifica a markup,
+  logica, API o dati.
+- File: `public/styles.css`, `agent.md`.
+- Verifiche: `npm run check` (OK in locale).
+- Pubblicazione: commit e push su GitHub `main` via integrazione (deploy Vercel
+  automatico).
+- Note: override reversibili rimuovendo il blocco finale di `styles.css`.
+
 ### 2026-08-07 — Redesign "BMG Control Center" — Fase 1 (token, font, naming)
 
 - Richiesta: redesign UI premium (riferimenti Apple/Tesla/Linear) e rinomina del
