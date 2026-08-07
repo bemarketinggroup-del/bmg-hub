@@ -59,6 +59,21 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-08-08 — Redesign "BMG Control Center" — Fase 4 (componenti)
+
+- Richiesta: propagare il nuovo stile ai componenti con dati (tabelle, card,
+  form).
+- Modifiche: blocco override additivo in fondo a `public/styles.css` (marcato
+  "Fase 4 (componenti)"): tabelle PrimeNG con righe piu' alte e header piu'
+  puliti, tag/badge piu' leggibili, pannelli con angoli piu' morbidi e ombra
+  lieve, input/select con raggio e testo piu' curati. Nessuna modifica a markup,
+  logica, API o dati.
+- File: `public/styles.css`, `agent.md`.
+- Verifiche: bilanciamento parentesi CSS OK.
+- Pubblicazione: commit e push su GitHub `main` via integrazione (deploy Vercel
+  automatico).
+- Note: reversibile rimuovendo il blocco "Fase 4 (componenti)".
+
 ### 2026-08-08 — Redesign "BMG Control Center" — Fase 3 (shell)
 
 - Richiesta: rendere la sidebar coerente col nuovo stile e farla espandere al
