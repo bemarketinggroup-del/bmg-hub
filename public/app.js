@@ -1308,8 +1308,84 @@ function renderHomeTasks(){
   }).join("");
 }
 
+function renderHomeAgenda(){
+  const host = document.getElementById("homeAgendaList");
+  if (!host) return;
+  const panel = host.closest(".home-agenda-panel");
+  if (typeof canAccessModule === "function" && !canAccessModule("calendar")) { if (panel) panel.style.display = "none"; return; }
+  const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  let events = [];
+  try { events = (typeof googleCalendarState !== "undefined" && googleCalendarState.events) || []; } catch (e) { events = []; }
+  let todayKey = ""; try { todayKey = localDateKey(new Date()); } catch (e) {}
+  let list = [];
+  try { list = (typeof googleCalendarEventsForDate === "function" && todayKey) ? googleCalendarEventsForDate(todayKey) : []; } catch (e) { list = []; }
+  if (list.length) { list = list.slice(0, 5); }
+  else {
+    const now = Date.now();
+    list = events.filter((ev) => { const t = new Date(ev.start_at).valueOf(); return !Number.isNaN(t) && t >= now; })
+      .sort((a, b) => String(a.start_at).localeCompare(String(b.start_at))).slice(0, 4);
+  }
+  if (!list.length) { host.innerHTML = '<p class="home-empty">Nessun evento in programma.</p>'; return; }
+  host.innerHTML = list.map((ev) => {
+    const time = (typeof calendarEventTime === "function") ? calendarEventTime(ev) : "";
+    const cat = (typeof calendarEventCategoryLabel === "function") ? calendarEventCategoryLabel(ev) : "";
+    const color = (typeof calendarEventColor === "function") ? calendarEventColor(ev) : "var(--terracotta)";
+    return '<button class="home-agenda-row" type="button" data-jump="calendar" data-module="calendar">' +
+      '<span class="home-agenda-time">' + esc(time) + '</span>' +
+      '<span class="home-agenda-dot" style="background:' + esc(color) + '"></span>' +
+      '<span class="home-agenda-main"><span class="home-agenda-title">' + esc(ev.title || "Evento") + '</span>' +
+      '<span class="home-agenda-cat">' + esc(cat) + '</span></span>' +
+      '</button>';
+  }).join("");
+}
+
+function renderHomeAttention(){
+  const host = document.getElementById("homeAttentionList");
+  if (!host) return;
+  const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const items = [];
+  try {
+    if (!(typeof canAccessModule === "function") || canAccessModule("graphics")) {
+      const revs = ((typeof graphicReviewState !== "undefined" && graphicReviewState.reviews) || []).filter((r) => r && r.status !== "completed");
+      revs.slice(0, 4).forEach((r) => {
+        const label = (typeof graphicReviewStatusLabel === "function") ? graphicReviewStatusLabel(r.status) : (r.status || "");
+        items.push({ title: (r.client && r.client.name) || "Revisione grafica", sub: label, jump: "graphics-reviews", module: "graphics" });
+      });
+    }
+  } catch (e) {}
+  try {
+    let tasks = dashboardTasks() || []; let today = 0; try { today = startOfToday(); } catch (e) {}
+    const late = tasks.filter((t) => { let d = 0; try { d = dueDateValue(t) || 0; } catch (e) {} return d && today && d < today; });
+    if (late.length) items.push({ title: late.length + " task in ritardo", sub: "da recuperare", jump: "team", module: "tasks" });
+  } catch (e) {}
+  if (!items.length) { host.innerHTML = '<p class="home-empty">Tutto sotto controllo.</p>'; return; }
+  host.innerHTML = items.map((it) => {
+    return '<button class="home-att-row" type="button" data-jump="' + esc(it.jump) + '" data-module="' + esc(it.module) + '">' +
+      '<span class="home-att-main"><span class="home-att-title">' + esc(it.title) + '</span>' +
+      '<span class="home-att-sub">' + esc(it.sub) + '</span></span>' +
+      '<span class="home-att-go" aria-hidden="true">›</span>' +
+      '</button>';
+  }).join("");
+}
+
+function ensureHomeExtras(){
+  try { renderHomeAgenda(); } catch (e) {}
+  try { renderHomeAttention(); } catch (e) {}
+  try {
+    if ((!(typeof canAccessModule === "function") || canAccessModule("calendar")) && typeof loadGoogleCalendar === "function") {
+      Promise.resolve(loadGoogleCalendar()).catch(() => {}).finally(() => { try { renderHomeAgenda(); } catch (e) {} });
+    }
+  } catch (e) {}
+  try {
+    if ((!(typeof canAccessModule === "function") || canAccessModule("graphics")) && typeof loadGraphicReviews === "function") {
+      Promise.resolve(loadGraphicReviews({ quiet: true })).catch(() => {}).finally(() => { try { renderHomeAttention(); } catch (e) {} });
+    }
+  } catch (e) {}
+}
+
 function renderHome() {
   try { renderHomeTasks(); } catch (e) { console.warn("renderHomeTasks", e); }
+  try { ensureHomeExtras(); } catch (e) { console.warn("ensureHomeExtras", e); }
   const activeClients = state.clients.filter((client) => {
     return ["attivo", "active"].includes(normalizeIdentity(client.status));
   }).length;
