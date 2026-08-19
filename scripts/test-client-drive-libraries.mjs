@@ -117,5 +117,17 @@ assert.match(appSource, /libraries: remembered\?\.libraries \|\| \[\]/, "il PED 
 assert.match(appSource, /ensurePedPickerLibraries\(selectedPedClientId\)/, "una vecchia cartella ricordata deve recuperare gli accessi rapidi mancanti");
 assert.match(appSource, /const libraryCards = pedPickerState\.libraries\.map/, "GRAFICHE e VIDEO devono comparire anche nelle sottocartelle del PED");
 assert.doesNotMatch(appSource, /const libraryCards = !pedPickerState\.source && pedPickerState\.path\.length === 1/, "gli accessi rapidi non devono essere limitati alla radice del cliente");
+assert.match(appSource, /data-drive-download-mime=/, "Clienti e Drive devono conservare il MIME per scegliere Foto su iPhone");
+assert.match(appSource, /function galleryMediaMimeType\(filename = "", mimeType = ""\)/, "il download deve riconoscere foto e video anche dall'estensione");
+assert.match(appSource, /if \(isIosDownloadDevice\(\) && isGalleryMedia\(filename, mimeType\)\) \{\s*openIosPhotoDownload/, "foto e video Drive devono aprire il pannello Foto su iPhone");
+assert.match(appSource, /return isIosDownloadDevice\(\) && isGalleryMedia\(filename, mimeType\) \? "Salva in Foto" : "Scarica"/, "il comando Drive deve dichiarare la destinazione Foto su iPhone");
+const galleryMimeSource = appSource.slice(
+  appSource.indexOf("function galleryMediaMimeType"),
+  appSource.indexOf("function deviceMediaDownloadLabel")
+);
+const galleryMimeUtils = Function(`${galleryMimeSource}; return { galleryMediaMimeType, isGalleryMedia };`)();
+assert.equal(galleryMimeUtils.galleryMediaMimeType("SCATTO.JPG", "application/octet-stream"), "image/jpeg");
+assert.equal(galleryMimeUtils.galleryMediaMimeType("reel.MOV", ""), "video/quicktime");
+assert.equal(galleryMimeUtils.isGalleryMedia("brief.pdf", "application/pdf"), false, "PDF e documenti devono restare fuori dalla galleria Foto");
 
 console.log("Client Drive library tests passed");

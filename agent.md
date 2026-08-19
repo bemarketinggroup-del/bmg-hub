@@ -1,6 +1,6 @@
 # BMG Hub — memoria operativa degli interventi
 
-Ultimo aggiornamento: 7 agosto 2026
+Ultimo aggiornamento: 19 agosto 2026
 
 ## Scopo del file
 
@@ -58,6 +58,31 @@ più recente alla più vecchia:
 ```
 
 ## Registro modifiche
+
+### 2026-08-19 — Foto e video sempre nella galleria iPhone
+
+- Richiesta: fare in modo che anche dalla sezione Clienti, e in generale da
+  ogni area del gestionale, foto e video scaricati su iPhone vengano salvati
+  nella galleria Foto e mai nell'app File.
+- Modifiche: centralizzato il riconoscimento dei media tramite MIME ed
+  estensione; Clienti/Drive, Archivio grafiche, Revisioni e Chat riusano ora lo
+  stesso pannello `Salva in Foto` del PED. Gli allegati Chat autenticati vengono
+  preparati nello stesso flusso senza perdere l'autorizzazione. Su iPhone i
+  pulsanti media dichiarano `Salva in Foto` e, se Web Share non accetta il
+  formato, il gestionale mostra l'errore senza avviare un download alternativo
+  verso File. Desktop e download di PDF/documenti restano invariati.
+- File: `public/app.js`, `scripts/test-client-drive-libraries.mjs`,
+  `scripts/test-team-chat.mjs`, `scripts/test-graphic-reviews.mjs`,
+  `scripts/test-ped-carousel.mjs`, `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run check`, `npm run test:client-drive-libraries`,
+  `npm run test:team-chat`, `npm run test:graphic-reviews`,
+  `npm run test:ped-carousel`, `npm run test:mobile-navigation`,
+  `npm run test:primeng-components`, `git diff --check`; controllo dei rami
+  desktop e iPhone/iPad, dei MIME foto/video e degli allegati autenticati.
+- Pubblicazione: commit corrente pubblicato su GitHub `main`; deploy Vercel
+  produzione completato e verificato su `https://bmg-hub.vercel.app`.
+- Note: Safari/iOS richiede per sicurezza un ultimo tocco sul comando nativo
+  `Salva in Foto`; un sito web non può scrivere silenziosamente nella libreria.
 
 ### 2026-08-19 — Chiusura uniforme delle finestre dal backdrop
 

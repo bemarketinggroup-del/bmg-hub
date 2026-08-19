@@ -43,6 +43,8 @@ assert.match(appSource, /previewChatDriveFile/);
 assert.match(appSource, /openDriveFile\(file\.id, file\.name, file\.mime_type/);
 assert.match(appSource, /data-chat-drive-attach/);
 assert.match(appSource, /data-chat-open-reference/);
+assert.match(appSource, /deviceMediaDownloadLabel\(item\.name, item\.mime_type\)/, "gli allegati media della chat devono indicare Salva in Foto su iPhone");
+assert.match(appSource, /downloadDriveResource\(url, attachment\.name \|\| "allegato", button, Number\(attachment\.size \|\| 0\), \{[\s\S]*?authenticated: true,[\s\S]*?mimeType: attachment\.mime_type/, "anche gli allegati autenticati devono usare il flusso Foto condiviso");
 assert.match(htmlSource, /data-view="chat"/);
 assert.match(htmlSource, /id="chatComposer"/);
 assert.match(htmlSource, /id="chatConversationList"/);

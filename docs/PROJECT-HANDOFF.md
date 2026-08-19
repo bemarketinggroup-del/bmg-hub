@@ -1,6 +1,6 @@
 # BMG Hub — contesto per una nuova chat
 
-Ultimo aggiornamento: 5 agosto 2026
+Ultimo aggiornamento: 19 agosto 2026
 Repository locale: `/Users/davidedeluca/Desktop/bmg-hub`  
 Branch di produzione: `main`  
 Ultimo commit applicativo verificato al momento della scrittura: `9fb8746`
@@ -185,6 +185,14 @@ supabase/                     schema e migration
 - Quando si apre un cliente, il suo Drive è già visibile nel gestionale.
 - Navigazione cartelle, upload, download, nuova cartella, rinomina, cestino,
   spostamento singolo e multiselezione con spostamento in blocco.
+- Su iPhone/iPad tutte le azioni di download di foto e video usano un unico
+  flusso verso la libreria Foto: Clienti, Drive integrato, Archivio grafiche,
+  Revisioni, Chat e PED aprono il pannello BMG, preparano il file e richiedono
+  il gesto esplicito `Salva in Foto`. I media non vengono mai ripiegati
+  automaticamente sul download Blob nell'app File; se il formato non è
+  condivisibile, il pannello lo segnala e resta fermo. Su desktop continua il
+  download normale. PDF, documenti e altri file non multimediali conservano il
+  download in File perché non sono compatibili con la libreria Foto.
 - Cartelle, immagini, video e altri file usano schede della stessa dimensione;
   i titoli devono restare leggibili per intero nello spazio disponibile.
 - Immagini e video non devono essere ritagliati nelle anteprime importanti.
@@ -282,7 +290,9 @@ supabase/                     schema e migration
   iOS può comunque mostrare un nome interno
   `IMG_…`: un sito web non può impostare `PHAssetResource.originalFilename`,
   disponibile soltanto alle app native. Ogni conferma nel pannello iOS è
-  obbligatoria e la lista di download diretti resta come ripiego.
+  obbligatoria. Per foto e video su iPhone non viene più proposto il download
+  diretto come ripiego, così nessuna azione multimediale termina per errore
+  nell'app File.
 - Tutte le rappresentazioni del carosello condividono un sistema visuale
   PrimeNG-style: `Card` con miniatura impilata e badge quantità nel calendario,
   nei contenuti in attesa e nell'agenda; `Toolbar`, `Tag`, `Badge` e `Button`

@@ -187,6 +187,10 @@ assert.match(appSource, /for \(let index = 0; index < files\.length; index \+= 1
 assert.match(appSource, /saveDownloadedBlob\(blob, filename\)/, "ogni file del multipost deve essere scaricato separatamente");
 assert.match(appSource, /isIosDownloadDevice\(\) \? "Foto" : "Download"/, "il multipost deve mostrare un comando Foto su iPhone e Download su desktop");
 assert.match(appSource, /function isIosDownloadDevice\(\)/, "iPhone e iPad devono usare un download compatibile con WebKit");
+assert.match(appSource, /function openIosPhotoDownload\(url, filename/, "tutte le sezioni devono riusare il pannello Foto del PED");
+assert.match(appSource, /file\.authenticated\s*\? await apiFetch\(mediaUrl/, "il pannello Foto deve poter preparare anche contenuti protetti come gli allegati chat");
+assert.match(appSource, /const mediaBlob = blob\.type === mimeType \? blob : blob\.slice\(0, blob\.size, mimeType\)/, "Safari deve ricevere il MIME media corretto anche quando il server risponde come file generico");
+assert.match(appSource, /Nessun contenuto è stato inviato all'app File/, "un errore iPhone non deve ripiegare automaticamente sull'app File");
 assert.match(appSource, /if \(isIosDownloadDevice\(\)\) \{\s*openPedCarouselGallery\(item, files\);\s*return;/, "su iPhone la coda download deve essere sostituita dal salvataggio in Foto");
 assert.match(appSource, /data-ped-single-download/, "post, reel e stories singole devono usare un flusso PED dedicato");
 assert.match(appSource, /async function downloadPedSingleMedia\(itemId, button\)/, "il download PED singolo deve distinguere iPhone dal desktop");
@@ -198,7 +202,7 @@ assert.doesNotMatch(appSource, /navigator\.share\(\{ files \}\)/, "il multipost 
 assert.match(appSource, /pedGalleryShareState\.nextIndex \+= 1/, "il salvataggio deve avanzare di una sola posizione dopo il ritorno dal pannello iOS");
 assert.match(appSource, /new File\(\[orderedMedia\.blob\], filename/, "ogni contenuto condiviso deve conservare il nome numerato");
 assert.match(appSource, /batchNewest - \(index \* 1000\)/, "foto e video devono condividere date decrescenti per mantenere l'ordine nel rullino recente");
-assert.match(appSource, /orderGalleryMediaBlob\(blob, \{ filename, takenAt \}\)/, "le copie iPhone devono ricevere metadata interni ordinati");
+assert.match(appSource, /orderGalleryMediaBlob\(mediaBlob, \{ filename, takenAt \}\)/, "le copie iPhone devono ricevere metadata interni ordinati");
 assert.match(galleryMetadataSource, /0x9003/, "il metadata JPEG deve includere EXIF DateTimeOriginal");
 assert.match(galleryMetadataSource, /0x010d/, "il metadata JPEG deve includere il nome numerato come DocumentName");
 assert.match(galleryMetadataSource, /\["mvhd", "tkhd", "mdhd"\]/, "i metadata temporali dei video devono essere aggiornati a ogni livello QuickTime");

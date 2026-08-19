@@ -2248,6 +2248,7 @@ function driveEntryMarkup(file, writeEnabled, versionRole = "") {
   const hasVisualCard = true;
   const webUrl = safeExternalUrl(file.web_url);
   const downloadUrl = String(file.download_url || "");
+  const downloadLabel = deviceMediaDownloadLabel(file.name, file.mime_type);
   const meta = file.is_folder
     ? "Cartella"
     : [formatFileSize(file.size), formatDriveDate(file.modified_at)].filter(Boolean).join(" · ") || "File";
@@ -2284,9 +2285,9 @@ function driveEntryMarkup(file, writeEnabled, versionRole = "") {
             Manda ai grafici
           </button>` : ""}
         ${!file.is_folder ? `
-          <button class="drive-download-button" data-drive-download-url="${escapeHtml(downloadUrl)}" data-drive-download-name="${escapeHtml(file.name)}" data-drive-download-size="${escapeHtml(file.size || "")}" type="button" aria-label="Scarica ${escapeHtml(file.name)}">
+          <button class="drive-download-button" data-drive-download-url="${escapeHtml(downloadUrl)}" data-drive-download-name="${escapeHtml(file.name)}" data-drive-download-mime="${escapeHtml(file.mime_type || "")}" data-drive-download-size="${escapeHtml(file.size || "")}" type="button" aria-label="${escapeHtml(downloadLabel)} ${escapeHtml(file.name)}">
             <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5"/><path d="M5 20h14"/></svg>
-            Scarica
+            ${escapeHtml(downloadLabel)}
           </button>` : `<span class="drive-folder-actions-label">Gestisci cartella</span>`}
         <button class="drive-manage-button" data-drive-move="${escapeHtml(file.id)}" data-drive-name="${escapeHtml(file.name)}" data-drive-is-folder="${file.is_folder ? "1" : "0"}" type="button" title="Sposta" aria-label="Sposta ${escapeHtml(file.name)}" ${writeEnabled ? "" : "disabled"}>
           <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h6l2 2h10v10H3z"/><path d="m10 13 2-2 2 2M12 11v6"/></svg>
@@ -2873,8 +2874,60 @@ function saveDownloadedBlob(blob, filename) {
   window.setTimeout(() => URL.revokeObjectURL(url), 30000);
 }
 
-async function downloadDriveResource(url, filename, button = null, sizeHint = 0, { authenticated = false } = {}) {
+function galleryMediaMimeType(filename = "", mimeType = "") {
+  const normalizedMimeType = String(mimeType || "").split(";")[0].trim().toLowerCase();
+  if (/^(image|video)\//.test(normalizedMimeType)) return normalizedMimeType;
+  const extension = String(filename || "").trim().toLowerCase().match(/\.([a-z0-9]+)$/)?.[1] || "";
+  return {
+    jpg: "image/jpeg",
+    jpeg: "image/jpeg",
+    png: "image/png",
+    gif: "image/gif",
+    webp: "image/webp",
+    heic: "image/heic",
+    heif: "image/heif",
+    avif: "image/avif",
+    tif: "image/tiff",
+    tiff: "image/tiff",
+    mp4: "video/mp4",
+    m4v: "video/x-m4v",
+    mov: "video/quicktime",
+    webm: "video/webm"
+  }[extension] || normalizedMimeType;
+}
+
+function isGalleryMedia(filename = "", mimeType = "") {
+  return /^(image|video)\//.test(galleryMediaMimeType(filename, mimeType));
+}
+
+function deviceMediaDownloadLabel(filename = "", mimeType = "") {
+  return isIosDownloadDevice() && isGalleryMedia(filename, mimeType) ? "Salva in Foto" : "Scarica";
+}
+
+function openIosPhotoDownload(url, filename, { authenticated = false, mimeType = "", size = 0 } = {}) {
+  const resolvedMimeType = galleryMediaMimeType(filename, mimeType);
+  const item = {
+    id: `ios-photo-${Date.now()}`,
+    content_type: resolvedMimeType.startsWith("video/") ? "reel" : "post",
+    gallery_label: "contenuto"
+  };
+  openPedCarouselGallery(item, [{
+    drive_file_name: filename || "contenuto",
+    drive_mime_type: resolvedMimeType,
+    content_url: url,
+    download_url: url,
+    size: Number(size || 0),
+    authenticated: Boolean(authenticated),
+    photos_only: true
+  }]);
+}
+
+async function downloadDriveResource(url, filename, button = null, sizeHint = 0, { authenticated = false, mimeType = "" } = {}) {
   if (!url) return;
+  if (isIosDownloadDevice() && isGalleryMedia(filename, mimeType)) {
+    openIosPhotoDownload(url, filename, { authenticated, mimeType, size: sizeHint });
+    return;
+  }
   const transfer = createTransferProgress(`Download ${filename || "contenuto"}`, { total: Number(sizeHint || 0) });
   if (button) button.disabled = true;
   try {
@@ -4059,15 +4112,22 @@ async function preparePedCarouselForGallery(item, files, loadId) {
       button.textContent = `Preparo ${index + 1}/${files.length}`;
       message.textContent = `Preparazione del contenuto ${String(index + 1).padStart(2, "0")}…`;
 
-      const response = await fetch(file.content_url || file.download_url, { cache: "no-store" });
+      const mediaUrl = file.content_url || file.download_url;
+      const response = file.authenticated
+        ? await apiFetch(mediaUrl, { cache: "no-store" })
+        : await fetch(mediaUrl, { cache: "no-store" });
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
         throw new Error(data.error || `Preparazione di ${filename} non riuscita`);
       }
       const blob = await response.blob();
-      const mimeType = String(blob.type || file.drive_mime_type || "application/octet-stream").split(";")[0];
+      const mimeType = galleryMediaMimeType(
+        file.drive_file_name,
+        file.drive_mime_type || blob.type || "application/octet-stream"
+      ) || "application/octet-stream";
+      const mediaBlob = blob.type === mimeType ? blob : blob.slice(0, blob.size, mimeType);
       const takenAt = new Date(batchNewest - (index * 1000));
-      const orderedMedia = await window.BmgPedGalleryMetadata.orderGalleryMediaBlob(blob, { filename, takenAt });
+      const orderedMedia = await window.BmgPedGalleryMetadata.orderGalleryMediaBlob(mediaBlob, { filename, takenAt });
       if (orderedMedia.metadataApplied) orderedMediaCount += 1;
       preparedFiles.push(new File([orderedMedia.blob], filename, {
         type: orderedMedia.blob.type || mimeType,
@@ -4096,6 +4156,12 @@ async function preparePedCarouselForGallery(item, files, loadId) {
     if (pedGalleryShareState.loadId !== loadId) return;
     const pendingIndex = preparedFiles.length;
     pedGalleryItemStatus(pendingIndex, "error", "Errore");
+    if (files.some((file) => file.photos_only) || (isIosDownloadDevice() && files.every((file) => isGalleryMedia(file.drive_file_name, file.drive_mime_type)))) {
+      button.disabled = true;
+      button.textContent = "Salvataggio non disponibile";
+      message.textContent = `${error.message}. Nessun contenuto è stato inviato all'app File: chiudi la finestra e riprova.`;
+      return;
+    }
     message.textContent = `${error.message}. Uso il download singolo come alternativa.`;
     openPedCarouselDownloadList(item, files);
   }
@@ -4110,12 +4176,13 @@ function openPedCarouselGallery(item, files) {
 
   document.getElementById("pedDownloadEyebrow").textContent = "Galleria iPhone";
   const isSingle = files.length === 1;
+  const galleryLabel = String(item?.gallery_label || pedTypeMeta(item?.content_type).label).toLowerCase();
   document.getElementById("pedDownloadTitle").textContent = isSingle ? "Salva il contenuto in Foto" : "Salva il multipost in Foto";
   document.getElementById("pedDownloadSubtitle").textContent = isSingle
     ? String(files[0]?.drive_file_name || pedItemTitle(item))
     : `${files.length} contenuti · ordine da 01 a ${String(files.length).padStart(2, "0")}`;
   document.getElementById("pedDownloadIntro").textContent = isSingle
-    ? `BMG Hub invia ${pedTypeMeta(item?.content_type).label.toLowerCase()} al pannello iPhone: scegli il comando “Salva in Foto” per aggiungerlo alla galleria, non all'app File.`
+    ? `BMG Hub invia ${galleryLabel} al pannello iPhone: scegli il comando “Salva in Foto” per aggiungerlo alla galleria, non all'app File.`
     : `iPhone raggruppa foto e video quando vengono condivisi insieme. BMG Hub li invia uno alla volta da 01 a ${String(files.length).padStart(2, "0")}: scegli ogni volta “Salva in Foto”. Nella vista recenti potranno apparire al contrario, ma resteranno intercalati come nel PED.`;
   document.getElementById("pedDownloadMessage").textContent = "Preparazione per l'app Foto…";
   shareButton.classList.remove("is-hidden");
@@ -9621,9 +9688,9 @@ function graphicReviewCardMarkup(review) {
                   : `<span class="graphic-review-file-placeholder" aria-hidden="true">${driveFileIcon(original)}</span>`}
                 <strong>${escapeHtml(original.name)}</strong>
               </button>
-              <button class="graphic-review-download-button" data-drive-download-url="${escapeHtml(original.download_url || "")}" data-drive-download-name="${escapeHtml(original.name)}" type="button">
+              <button class="graphic-review-download-button" data-drive-download-url="${escapeHtml(original.download_url || "")}" data-drive-download-name="${escapeHtml(original.name)}" data-drive-download-mime="${escapeHtml(original.mime_type || "")}" type="button">
                 <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5"/><path d="M5 20h14"/></svg>
-                Scarica originale
+                ${isIosDownloadDevice() && isGalleryMedia(original.name, original.mime_type) ? "Salva originale in Foto" : "Scarica originale"}
               </button>` : `<div class="graphic-review-version-empty">Originale non disponibile</div>`}
             </div>
             <span class="graphic-review-pair-link" aria-label="Le due immagini sono collegate">
@@ -9638,9 +9705,9 @@ function graphicReviewCardMarkup(review) {
                   : `<span class="graphic-review-file-placeholder" aria-hidden="true">${driveFileIcon(modified)}</span>`}
                 <strong>${escapeHtml(modified.name)}</strong>
               </button>
-              <button class="graphic-review-download-button" data-drive-download-url="${escapeHtml(modified.download_url || "")}" data-drive-download-name="${escapeHtml(modified.name)}" type="button">
+              <button class="graphic-review-download-button" data-drive-download-url="${escapeHtml(modified.download_url || "")}" data-drive-download-name="${escapeHtml(modified.name)}" data-drive-download-mime="${escapeHtml(modified.mime_type || "")}" type="button">
                 <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5"/><path d="M5 20h14"/></svg>
-                Scarica versione
+                ${isIosDownloadDevice() && isGalleryMedia(modified.name, modified.mime_type) ? "Salva versione in Foto" : "Scarica versione"}
               </button>` : `<div class="graphic-review-version-empty">Versione non ancora caricata</div>`}
             </div>
           </article>`;
@@ -9670,9 +9737,9 @@ function graphicReviewCardMarkup(review) {
                 : `<span aria-hidden="true">${driveFileIcon(file)}</span>`}
               <small>${escapeHtml(file.name)}</small>
             </button>
-            <button class="graphic-review-download-button" data-drive-download-url="${escapeHtml(file.download_url || "")}" data-drive-download-name="${escapeHtml(file.name)}" type="button">
+            <button class="graphic-review-download-button" data-drive-download-url="${escapeHtml(file.download_url || "")}" data-drive-download-name="${escapeHtml(file.name)}" data-drive-download-mime="${escapeHtml(file.mime_type || "")}" type="button">
               <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5"/><path d="M5 20h14"/></svg>
-              Scarica originale
+              ${isIosDownloadDevice() && isGalleryMedia(file.name, file.mime_type) ? "Salva originale in Foto" : "Scarica originale"}
             </button>
           </article>`).join("")}
       </div>`}
@@ -10055,7 +10122,7 @@ function chatMessageExtrasMarkup(message) {
     <button class="team-chat-attachment" type="button" data-chat-download="${escapeHtml(message.id)}" data-chat-attachment-index="${index}">
       <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M21.4 11.6 12 21a6 6 0 0 1-8.5-8.5l9-9a4 4 0 0 1 5.7 5.7l-9 9a2 2 0 0 1-2.8-2.8l8.3-8.3"/></svg>
       <span><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(item.mime_type || "File")} · ${formatFileSize(item.size)}</small></span>
-      <span>Scarica</span>
+      <span>${escapeHtml(deviceMediaDownloadLabel(item.name, item.mime_type))}</span>
     </button>`).join("");
   const references = (message.references || []).map((item) => `
     <button class="team-chat-reference" type="button" data-chat-open-reference="${escapeHtml(item.type)}" data-chat-reference-id="${escapeHtml(item.id)}">
@@ -10085,12 +10152,10 @@ async function downloadTeamChatAttachment(messageId, index, button) {
       if (attachment.library) params.set("source", attachment.library);
       url = `/api/client-drive?${params}`;
     }
-    const response = await apiFetch(url);
-    if (!response.ok) {
-      const data = await response.json().catch(() => ({}));
-      throw new Error(data.error || "Download non riuscito");
-    }
-    saveDownloadedBlob(await response.blob(), attachment.name || "allegato");
+    await downloadDriveResource(url, attachment.name || "allegato", button, Number(attachment.size || 0), {
+      authenticated: true,
+      mimeType: attachment.mime_type || ""
+    });
   } catch (error) {
     alert(error.message || "Download non riuscito");
   } finally {
@@ -10501,7 +10566,8 @@ document.body.addEventListener("click", (event) => {
       driveDownload.dataset.driveDownloadUrl,
       driveDownload.dataset.driveDownloadName || "contenuto",
       driveDownload,
-      Number(driveDownload.dataset.driveDownloadSize || 0)
+      Number(driveDownload.dataset.driveDownloadSize || 0),
+      { mimeType: driveDownload.dataset.driveDownloadMime || "" }
     ).catch((error) => alert(error.message || "Download non riuscito"));
   }
   if (driveFile) return openDriveFile(driveFile.dataset.driveFile, driveFile.dataset.driveName, driveFile.dataset.driveMime, driveFile.dataset.driveContentUrl);
