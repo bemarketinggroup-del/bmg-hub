@@ -71,9 +71,14 @@ più recente alla più vecchia:
   `docs/PROJECT-HANDOFF.md`, `agent.md`.
 - Verifiche: `npm run check`, `npm run test:primeng-components`,
   `npm run test:mobile-navigation`, `npm run test:session-persistence`,
-  `git diff --check`; verifica browser desktop e smartphone prevista dopo il
-  deploy.
-- Pubblicazione: in preparazione.
+  `git diff --check`; in produzione su Chrome desktop il click interno mantiene
+  aperto il dialogo e il click sul backdrop lo chiude. Il controllo automatico
+  con viewport `390x844` non ha riaperto la finestra dalla sidebar mobile; la
+  regressione smartphone resta coperta da `test:mobile-navigation` e dal gestore
+  unico, senza rami specifici per dispositivo.
+- Pubblicazione: commit integrato `e1658c1`, push su GitHub `main` e deploy
+  automatico Vercel verificato su `https://bmg-hub.vercel.app` tramite bundle
+  pubblico aggiornato.
 - Note: preservate le modifiche locali preesistenti del redesign BMG Control
   Center, non incluse in questo intervento.
 
