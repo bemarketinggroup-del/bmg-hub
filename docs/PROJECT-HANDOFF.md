@@ -157,6 +157,11 @@ supabase/                     schema e migration
   ProgressBar e ProgressSpinner. Il progetto resta vanilla: non usare PrimeUI
   e non introdurre Angular soltanto per la resa grafica. Gli ID, i `name`, i
   `data-*`, gli handler e le API applicative devono restare invariati.
+- Tutti i dialoghi modali si chiudono anche cliccando o toccando il backdrop
+  esterno. Il click dentro il pannello non chiude la finestra e la chiusura dal
+  backdrop riusa lo stesso comando della X, così restano attive le pulizie
+  specifiche di form, Drive, player e download. Il drawer utenti mantiene lo
+  stesso comportamento tramite la propria mask laterale.
 - Collegamento univoco dell'utente al membro ClickUp.
 - Gestione permessi, eliminazione/disattivazione utenti e audit accessi.
 - Nel calendario CRM gli eventi senza categoria o con il precedente colore

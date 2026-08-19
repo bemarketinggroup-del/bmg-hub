@@ -47,6 +47,10 @@ assert.match(styles, /progress\.p-progressbar/);
 assert.match(styles, /\.p-ink/);
 assert.match(styles, /\.primary-button,\s*\.ghost-button,\s*\.secondary-button,\s*\.danger-button/, "i pulsanti secondari devono usare il sistema visivo condiviso");
 assert.match(styles, /\.ghost-button,\s*\.secondary-button \{[\s\S]*?border-radius: 10px;[\s\S]*?box-shadow:/, "i pulsanti secondari devono avere uno stile CMS moderno");
+assert.match(app, /function isDialogBackdropClick\(dialog, event\)/, "il click sul backdrop deve essere distinto dal click dentro la finestra");
+assert.match(app, /document\.querySelectorAll\("dialog\.modal"\)/, "la chiusura dal backdrop deve coprire tutte le finestre del gestionale");
+assert.match(app, /closeControl\.click\(\)/, "la chiusura dal backdrop deve riusare il comando di chiusura della finestra");
+assert.match(html, /id="userEditorOverlay" data-close-user-editor/, "anche il pannello laterale deve chiudersi dal proprio overlay");
 
 // I render dinamici restano nell'applicazione: l'adapter li intercetta senza
 // sostituire funzioni o endpoint esistenti.

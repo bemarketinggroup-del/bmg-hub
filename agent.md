@@ -59,6 +59,24 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-08-19 — Chiusura uniforme delle finestre dal backdrop
+
+- Richiesta: chiudere tutte le finestre del gestionale cliccando o toccando
+  fuori dal pannello, senza dover usare la X.
+- Modifiche: introdotto un gestore condiviso per tutti i `dialog.modal` che
+  distingue il backdrop dall'area interna e richiama il controllo di chiusura
+  già presente nella singola finestra; mantenuto il comportamento già esistente
+  della mask del drawer utenti. Aggiunti test di copertura del contratto.
+- File: `public/app.js`, `scripts/test-primeng-components.mjs`,
+  `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run check`, `npm run test:primeng-components`,
+  `npm run test:mobile-navigation`, `npm run test:session-persistence`,
+  `git diff --check`; verifica browser desktop e smartphone prevista dopo il
+  deploy.
+- Pubblicazione: in preparazione.
+- Note: preservate le modifiche locali preesistenti del redesign BMG Control
+  Center, non incluse in questo intervento.
+
 ### 2026-08-08 — Redesign "BMG Control Center" — Fase 12 (ricerca: apertura diretta)
 
 - Richiesta: dalla ricerca globale aprire direttamente l'elemento.
@@ -230,7 +248,6 @@ più recente alla più vecchia:
 - Pubblicazione: commit e push su GitHub `main` via integrazione (deploy Vercel
   automatico).
 - Note: override reversibili rimuovendo il blocco finale di `styles.css`.
-
 ### 2026-08-07 — Redesign "BMG Control Center" — Fase 1 (token, font, naming)
 
 - Richiesta: redesign UI premium (riferimenti Apple/Tesla/Linear) e rinomina del

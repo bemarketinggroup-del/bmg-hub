@@ -7035,6 +7035,41 @@ function closeUserActivityDialog() {
   });
 }
 
+function isDialogBackdropClick(dialog, event) {
+  if (!dialog?.open || event.target !== dialog) return false;
+  const bounds = dialog.getBoundingClientRect();
+  return event.clientX < bounds.left
+    || event.clientX > bounds.right
+    || event.clientY < bounds.top
+    || event.clientY > bounds.bottom;
+}
+
+function closeDialogFromBackdrop(dialog) {
+  const closeControl = dialog.querySelector([
+    "[data-ped-picker-close]",
+    "[data-ped-viewer-close]",
+    "[value='cancel']",
+    "[aria-label^='Chiudi']",
+    "[title='Chiudi']"
+  ].join(", "));
+  if (closeControl) {
+    closeControl.click();
+    return;
+  }
+  dialog.close("cancel");
+}
+
+function enableDialogBackdropDismiss() {
+  document.querySelectorAll("dialog.modal").forEach((dialog) => {
+    dialog.addEventListener("click", (event) => {
+      if (!isDialogBackdropClick(dialog, event)) return;
+      event.preventDefault();
+      event.stopPropagation();
+      closeDialogFromBackdrop(dialog);
+    });
+  });
+}
+
 async function loadUserActivity(profileId, forceRefresh = false) {
   const panel = document.querySelector(`[data-user-activity-panel="${profileId}"]`);
   if (!panel) return;
@@ -11626,14 +11661,12 @@ document.getElementById("taskForm").addEventListener("submit", async (event) => 
   if (saved) document.getElementById("taskModal").close();
 });
 
+enableDialogBackdropDismiss();
 document.getElementById("userEditorCloseButton").addEventListener("click", closeUserEditorPanel);
 document.getElementById("userActivityDialogCloseButton").addEventListener("click", closeUserActivityDialog);
 document.getElementById("userActivityDialog").addEventListener("cancel", (event) => {
   event.preventDefault();
   closeUserActivityDialog();
-});
-document.getElementById("userActivityDialog").addEventListener("click", (event) => {
-  if (event.target === event.currentTarget) closeUserActivityDialog();
 });
 document.getElementById("userDirectorySearch").addEventListener("input", renderUsers);
 document.getElementById("userRoleFilter").addEventListener("change", renderUsers);
