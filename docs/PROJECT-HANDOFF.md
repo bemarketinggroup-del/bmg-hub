@@ -419,7 +419,9 @@ supabase/                     schema e migration
 - Creare, importare da ClickUp o aggiornare un account staff sincronizza anche
   `smart_work_employees`; l'apertura della pagina Turni riconcilia inoltre i
   profili attivi già esistenti, evitando che nuovi utenti come Marcello restino
-  esclusi dall'anagrafica dei turni.
+  esclusi dall'anagrafica dei turni. Le righe storiche con il solo nome breve
+  vengono unite al profilo completo, trasferendo prima turni, assenze e
+  partecipazioni Calendar per non perdere lo storico.
 - Le settimane future sono visibili e le proposte smart sono trascinabili.
 - Più persone possono essere inserite manualmente nello stesso giorno; in caso di
   impegno già presente deve apparire un avviso.

@@ -59,6 +59,27 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-08-28 — Unione duplicati nell'anagrafica turni
+
+- Richiesta: eliminare i duplicati comparsi in `Persone nei turni` dopo aver
+  collegato gli utenti Supabase, come `Marta` / `Marta Service` e `Daniele` /
+  `Daniele Chianese`.
+- Modifiche: la riconciliazione riconosce le vecchie righe abbreviate tramite il
+  primo nome, conserva come anagrafica canonica il profilo Supabase completo,
+  trasferisce turni, indisponibilità e partecipazioni Calendar e soltanto dopo
+  elimina il duplicato; le nuove creazioni riutilizzano subito l'eventuale riga
+  abbreviata e non generano una seconda persona.
+- File: `lib/smart-working-employees.js`,
+  `scripts/test-user-management.mjs`, `docs/SMART-WORKING.md`,
+  `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run check`, `npm run test:users`,
+  `npm run test:smart-working`, `npm run test:permissions`,
+  `npm run test:google-calendar`, `git diff --check`.
+- Pubblicazione: commit corrente su `main`, push GitHub e deploy Vercel di
+  produzione su `https://bmg-hub.vercel.app`.
+- Note: preservata e non inclusa la cartella locale preesistente
+  `.bmg-redesign-backup/`.
+
 ### 2026-08-28 — Nuovi utenti sincronizzati nei turni
 
 - Richiesta: aggiungere automaticamente anche all'anagrafica Supabase dei turni

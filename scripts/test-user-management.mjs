@@ -74,6 +74,9 @@ assert.match(apiSource, /reservedEmails[\s\S]*già collegata a un altro utente/,
 assert.match(smartEmployeeSource, /preferredStaffProfileEmail\(profile, "calendar"\)/, "i turni devono usare l'email Calendar preferita del profilo");
 assert.match(smartEmployeeSource, /staff_profile_id:[\s\S]*full_name:[\s\S]*email:/, "la persona nei turni deve essere collegata al profilo Supabase");
 assert.match(smartEmployeeSource, /if \(!existing\) payload\.is_active = profile\.active !== false && profile\.role !== "admin"/, "i nuovi utenti staff devono essere attivati nei turni senza riattivare quelli esclusi manualmente");
+assert.match(smartEmployeeSource, /function legacyFirstNameEmployee\([\s\S]*?staff_profile_id[\s\S]*?parts\[0\]/, "la riconciliazione deve riconoscere le vecchie anagrafiche abbreviate");
+assert.match(smartEmployeeSource, /moveEmployeeReferences\("smart_work_assignments"[\s\S]*?moveEmployeeReferences\("employee_unavailability"[\s\S]*?calendar_event_attendees/, "l'unione dei duplicati deve conservare turni, assenze e partecipazioni Calendar");
+assert.match(smartEmployeeSource, /smart_work_employees\?id=eq\.[\s\S]*?method: "DELETE"/, "la vecchia anagrafica deve essere eliminata solo dopo il trasferimento dei riferimenti");
 assert.match(schemaSource, /email_aliases jsonb not null default '\[\]'::jsonb/, "lo schema deve conservare le email integrazione sul profilo staff");
 assert.match(migrationSource, /add column if not exists email_aliases jsonb/, "la migration deve aggiungere la colonna in modo idempotente");
 

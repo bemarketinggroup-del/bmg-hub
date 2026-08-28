@@ -79,6 +79,9 @@ automaticamente anche la relativa riga in `smart_work_employees`, usando il prof
 il nome e l'email Calendar preferita. All'apertura di Turni / Smart Working viene
 eseguita anche una riconciliazione degli account attivi, così vengono recuperati i
 profili già esistenti che non erano ancora presenti nell'anagrafica turni.
+Le precedenti anagrafiche abbreviate, per esempio `Marta` e `Marta Service`,
+vengono consolidate automaticamente: turni, assenze e partecipazioni vengono
+spostati sul profilo completo prima di eliminare la riga duplicata.
 
 La pagina amministrativa espone anche le righe non attive: disattivare una
 persona la esclude da calendario, ferie, contatori e nuove proposte; elimina
