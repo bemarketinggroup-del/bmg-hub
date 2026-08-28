@@ -63,6 +63,9 @@ assert.match(apiSource, /ensureClickUpWorkspaceMember\(email\)/, "la creazione d
 assert.match(apiSource, /rollbackCreatedUser\(authUser\.id, profile\?\.id\)/, "un errore ClickUp deve annullare l'account interno");
 assert.match(apiSource, /profileId === session\.profile\.id/, "un amministratore non deve potersi eliminare da solo");
 assert.match(apiSource, /clickup_membership_preserved/, "la rimozione interna deve dichiarare che ClickUp viene conservato");
+assert.match(apiSource, /deactivateSmartWorkingEmployee\(profile\)/, "eliminare un account deve disattivare la persona nei turni");
+assert.match(apiSource, /smart_work_employees\?\$\{filter\}[\s\S]*?is_active: false/, "la disattivazione turni deve usare profilo o email quando disponibili");
+assert.match(apiSource, /!matchedEmployees && profile\.full_name[\s\S]*?smart_work_employees\?full_name=eq\./, "la disattivazione deve ripiegare sul nome per i record storici non collegati");
 assert.match(apiSource, /validateStaffEmailAliases[\s\S]*massimo 12 email/, "l'API deve validare e limitare le email collegate");
 assert.match(apiSource, /reservedEmails[\s\S]*già collegata a un altro utente/, "l'API deve impedire che la stessa email venga collegata a profili diversi");
 assert.match(schemaSource, /email_aliases jsonb not null default '\[\]'::jsonb/, "lo schema deve conservare le email integrazione sul profilo staff");

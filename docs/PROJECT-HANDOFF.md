@@ -1,6 +1,6 @@
 # BMG Hub — contesto per una nuova chat
 
-Ultimo aggiornamento: 19 agosto 2026
+Ultimo aggiornamento: 28 agosto 2026
 Repository locale: `/Users/davidedeluca/Desktop/bmg-hub`  
 Branch di produzione: `main`  
 Ultimo commit applicativo verificato al momento della scrittura: `9fb8746`
@@ -408,6 +408,14 @@ supabase/                     schema e migration
 ### Turni, Smart Working e contatore
 
 - Calendario settimanale dalla settimana corrente in avanti.
+- La pagina aggiorna Google Calendar automaticamente ogni 5 minuti mentre è
+  visibile e immediatamente quando l'utente torna sulla scheda. Il backend usa
+  una cache breve per evitare richieste duplicate tra più utenti.
+- L'amministratore dispone del pannello `Persone nei turni`: una persona
+  disattivata scompare da turni, ferie, contatori e proposte future, mantenendo
+  lo storico. Eliminare un account da `Utenti` disattiva automaticamente la
+  corrispondente riga `smart_work_employees`, tramite profilo, email o — per i
+  record storici non ancora collegati — nome completo.
 - Le settimane future sono visibili e le proposte smart sono trascinabili.
 - Più persone possono essere inserite manualmente nello stesso giorno; in caso di
   impegno già presente deve apparire un avviso.

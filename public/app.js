@@ -6,6 +6,7 @@ const WORKSPACE_CONTEXT_KEY = "bmg-hub-workspace-context-v1";
 const ALL_TEAM_TASKS_ID = "__all";
 const UNASSIGNED_TASKS_ID = "__unassigned";
 const TEAM_TASK_LIST_NAME = "task del team";
+const SMART_WORKING_SYNC_INTERVAL_MS = 5 * 60 * 1000;
 // Mapping centralizzato: aggiorna questi sinonimi se ClickUp introduce nuovi stati operativi.
 const TASK_STATUS_GROUPS = [
   {
@@ -317,6 +318,8 @@ const smartSuggestionsEnsuredMonths = new Set();
 const smartCalendarRefreshedMonths = new Set();
 const smartWorkingBackgroundMonths = new Set();
 let smartWorkingLoading = false;
+let smartWorkingUpdatesTimer = null;
+let smartWorkingLastSyncedAt = "";
 let selectedContentSection = "all";
 let workspaceContext = {};
 let workspaceContextSaveTimer = null;
@@ -1062,6 +1065,7 @@ async function logout() {
   stopPersonalAreaUpdates();
   stopTeamChatUpdates();
   stopServiceHealthUpdates();
+  stopSmartWorkingUpdates();
   currentProfile = null;
   personalAreaState = { team: [], tasks: [], events: [], notifications: [], loading: false, loaded: false, error: "" };
   teamChatState = {
@@ -1228,6 +1232,9 @@ function setView(view) {
     loadPedCalendar();
   } else auditModuleView(isGraphicsView ? "graphics" : view);
   if (view === "calendar") loadGoogleCalendar();
+  if (["smart", "counter"].includes(view) && state.smartWorking?.month) {
+    void refreshSmartWorkingInBackground(smartMonthKey(), { refresh: true });
+  }
   if (isGraphicsView) loadGraphicReviews();
   if (view === "personal") loadPersonalArea();
   if (view === "chat") {
@@ -1587,7 +1594,7 @@ async function loadSmartWorking() {
     smartWorkingLoading = false;
     renderHome();
     renderSmartWorking();
-    if (data.can_manage) refreshSmartWorkingInBackground(data.month);
+    refreshSmartWorkingInBackground(data.month);
   } catch (error) {
     smartWorkingLoading = false;
     renderBackendStatus(error.message);
@@ -1595,8 +1602,8 @@ async function loadSmartWorking() {
   }
 }
 
-async function refreshSmartWorkingInBackground(month) {
-  if (!month || smartCalendarRefreshedMonths.has(month)) return;
+async function refreshSmartWorkingInBackground(month, { refresh = false } = {}) {
+  if (!month || smartWorkingBackgroundMonths.has(month) || (!refresh && smartCalendarRefreshedMonths.has(month))) return;
   smartCalendarRefreshedMonths.add(month);
   smartWorkingBackgroundMonths.add(month);
   renderSmartWorking();
@@ -1619,6 +1626,7 @@ async function refreshSmartWorkingInBackground(month) {
     fresh = await smartWorkingAction("sync_off_year", { month }, { apply: false });
     if (smartMonthKey() === month) {
       state.smartWorking = fresh;
+      smartWorkingLastSyncedAt = new Date().toISOString();
       renderHome();
     }
   } catch (error) {
@@ -1628,6 +1636,23 @@ async function refreshSmartWorkingInBackground(month) {
     smartWorkingBackgroundMonths.delete(month);
     if (smartMonthKey() === month) renderSmartWorking();
   }
+}
+
+function smartWorkingViewIsActive() {
+  return Boolean(document.querySelector("[data-view-panel='smart'].is-active, [data-view-panel='counter'].is-active"));
+}
+
+function startSmartWorkingUpdates() {
+  stopSmartWorkingUpdates();
+  smartWorkingUpdatesTimer = window.setInterval(() => {
+    if (document.visibilityState !== "visible" || !currentProfile || !canAccessModule("smart_working") || !smartWorkingViewIsActive()) return;
+    void refreshSmartWorkingInBackground(smartMonthKey(), { refresh: true });
+  }, SMART_WORKING_SYNC_INTERVAL_MS);
+}
+
+function stopSmartWorkingUpdates() {
+  window.clearInterval(smartWorkingUpdatesTimer);
+  smartWorkingUpdatesTimer = null;
 }
 
 async function smartWorkingAction(action, payload = {}, options = {}) {
@@ -6117,11 +6142,54 @@ function renderSmartWorking() {
         ? "Calendario disponibile · aggiornamento Google in corso…"
         : approved ? `${approved} settimane approvate${drafts ? ` · ${drafts} in bozza` : ""}` : drafts ? `${drafts} settimane in bozza` : "Mese non ancora pianificato";
   }
+  const autoSyncStatus = document.getElementById("smartAutoSyncStatus");
+  if (autoSyncStatus) {
+    const syncTime = smartWorkingLastSyncedAt
+      ? new Intl.DateTimeFormat("it-IT", { hour: "2-digit", minute: "2-digit" }).format(new Date(smartWorkingLastSyncedAt))
+      : "";
+    autoSyncStatus.innerHTML = `<i aria-hidden="true"></i>${smartWorkingBackgroundMonths.has(data.month) ? "Sincronizzazione Calendar in corso…" : syncTime ? `Calendar aggiornato alle ${escapeHtml(syncTime)} · ogni 5 min` : "Calendar automatico · ogni 5 min"}`;
+    autoSyncStatus.classList.toggle("is-syncing", smartWorkingBackgroundMonths.has(data.month));
+  }
   renderSmartSettings(data);
+  renderSmartStaffManager(data);
   renderSmartMonth(data);
   renderSmartDay(data);
   renderSmartOffCounters(data);
   renderSmartEvents(data);
+}
+
+function renderSmartStaffManager(data) {
+  const target = document.getElementById("smartStaffManager");
+  const count = document.getElementById("smartStaffCount");
+  if (!target) return;
+  const employees = [...(data.all_staff || data.staff || [])]
+    .sort((left, right) => staffName(left).localeCompare(staffName(right), "it", { sensitivity: "base" }));
+  const activeCount = employees.filter((employee) => employee.is_active !== false).length;
+  if (count) count.textContent = `${activeCount} ${activeCount === 1 ? "attiva" : "attive"}`;
+  target.innerHTML = employees.length ? employees.map((employee) => {
+    const active = employee.is_active !== false;
+    return `<label class="smart-staff-row${active ? " is-active" : ""}">
+      <span class="smart-staff-avatar" aria-hidden="true">${escapeHtml(staffName(employee).slice(0, 1).toUpperCase())}</span>
+      <span class="smart-staff-copy"><strong>${escapeHtml(staffName(employee))}</strong><small>${escapeHtml(employee.email || (active ? "Inclusa nei turni" : "Esclusa dai turni"))}</small></span>
+      <span class="p-toggleswitch"><input class="p-toggleswitch-input" data-smart-employee-active="${escapeHtml(employee.id)}" type="checkbox" role="switch" aria-label="${active ? "Disattiva" : "Attiva"} ${escapeHtml(staffName(employee))}" ${active ? "checked" : ""}><span class="p-toggleswitch-slider" aria-hidden="true"></span></span>
+    </label>`;
+  }).join("") : `<div class="smart-empty">Nessuna persona configurata nei turni.</div>`;
+}
+
+async function setSmartEmployeeActive(input) {
+  const employeeId = input.dataset.smartEmployeeActive;
+  const nextActive = input.checked;
+  input.disabled = true;
+  try {
+    await smartWorkingAction("set_employee_active", { employee_id: employeeId, is_active: nextActive });
+    renderSmartWorking();
+  } catch (error) {
+    input.checked = !nextActive;
+    renderBackendStatus(error.message);
+    alert(error.message || "Non riesco ad aggiornare la persona nei turni.");
+  } finally {
+    input.disabled = false;
+  }
 }
 
 function renderSmartSettings(data) {
@@ -6609,8 +6677,9 @@ async function syncSmartCalendar() {
   button.disabled = true;
   button.textContent = "Sincronizzo mese e OFF...";
   try {
-    const monthData = await smartWorkingAction("sync_calendar");
+    const monthData = await smartWorkingAction("sync_calendar", { force: true });
     const data = await smartWorkingAction("sync_off_year", { force: true });
+    smartWorkingLastSyncedAt = new Date().toISOString();
     renderSmartWorking();
     const invited = Number(monthData.result?.invited) || 0;
     const invitationErrors = Number(monthData.result?.invitation_errors) || 0;
@@ -11430,6 +11499,10 @@ document.getElementById("smartView").addEventListener("click", (event) => {
   renderSmartMonth(state.smartWorking || {});
   renderSmartDay(state.smartWorking || {});
 });
+document.getElementById("smartStaffManager").addEventListener("change", (event) => {
+  const input = event.target.closest("[data-smart-employee-active]");
+  if (input) void setSmartEmployeeActive(input);
+});
 document.getElementById("smartEntryForm").addEventListener("submit", (event) => {
   event.preventDefault();
   submitSmartEntry(event.currentTarget);
@@ -11817,6 +11890,7 @@ async function bootApp() {
     if (failed) renderBackendStatus(failed.reason?.message || "Alcuni dati non sono ancora disponibili");
     startPersonalAreaUpdates();
     startServiceHealthUpdates();
+    startSmartWorkingUpdates();
     renderHome();
   } catch (error) {
     renderBackendStatus(error.message);
@@ -11835,6 +11909,9 @@ document.addEventListener("visibilitychange", () => {
     void loadPersonalArea({ quiet: true });
     void loadServiceHealth({ quiet: true });
     if (document.querySelector("[data-view-panel='chat'].is-active")) void loadTeamChat({ quiet: true });
+    if (canAccessModule("smart_working") && smartWorkingViewIsActive()) {
+      void refreshSmartWorkingInBackground(smartMonthKey(), { refresh: true });
+    }
   }
 });
 

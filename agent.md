@@ -1,6 +1,6 @@
 # BMG Hub — memoria operativa degli interventi
 
-Ultimo aggiornamento: 19 agosto 2026
+Ultimo aggiornamento: 28 agosto 2026
 
 ## Scopo del file
 
@@ -58,6 +58,33 @@ più recente alla più vecchia:
 ```
 
 ## Registro modifiche
+
+### 2026-08-28 — Sincronizzazione Calendar e persone nei turni
+
+- Richiesta: aggiornare automaticamente Turni / Smart Working da Google
+  Calendar e rimuovere dalle pianificazioni gli utenti eliminati, offrendo
+  anche un controllo esplicito per includere o escludere le persone.
+- Modifiche: aggiunta sincronizzazione automatica ogni 5 minuti mentre la vista
+  è attiva e al ritorno sulla scheda; aggiunto il pannello amministrativo
+  `Persone nei turni` con toggle attivo/disattivo; le persone disattivate sono
+  escluse da turni, ferie, contatori e nuove proposte, conservando storico e
+  assegnazioni confermate. L'eliminazione di un account disattiva
+  automaticamente la corrispondente riga Smart Working tramite profilo, email
+  o nome completo per i record storici non collegati.
+- File: `api/users.js`, `lib/smart-working.js`, `public/index.html`,
+  `public/app.js`, `public/styles.css`, `scripts/test-smart-working-monthly.mjs`,
+  `scripts/test-user-management.mjs`, `docs/SMART-WORKING.md`,
+  `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run check`, `npm run test:smart-working`,
+  `npm run test:users`, `npm run test:permissions`,
+  `npm run test:google-calendar`, `npm run test:primeng-components`,
+  `npm run test:mobile-navigation`, `npm run test:session-persistence`,
+  `npm run test:connected-services`, `git diff --check`; verifica visiva locale
+  desktop `1440x900` e smartphone `390x844`, senza overflow orizzontale.
+- Pubblicazione: commit corrente su `main`, push GitHub e deploy Vercel di
+  produzione su `https://bmg-hub.vercel.app`.
+- Note: preservate e non incluse le modifiche locali preesistenti del redesign
+  BMG Control Center e la cartella `.bmg-redesign-backup/`.
 
 ### 2026-08-19 — Foto e video sempre nella galleria iPhone
 

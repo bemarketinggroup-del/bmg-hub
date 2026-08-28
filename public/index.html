@@ -688,7 +688,10 @@
         <nav class="smart-month-strip" id="smartMonthStrip" aria-label="Navigazione rapida mesi turni"></nav>
 
         <div class="smart-plan-strip">
-          <span id="smartPlanStatus">Nessuna bozza</span>
+          <div class="smart-plan-status-group">
+            <span id="smartPlanStatus">Nessuna bozza</span>
+            <span class="smart-auto-sync" id="smartAutoSyncStatus"><i aria-hidden="true"></i>Calendar automatico · ogni 5 min</span>
+          </div>
           <button class="ghost-button is-hidden" id="smartPastWeeksButton" type="button" aria-expanded="false">Mostra settimane precedenti</button>
           <div class="smart-legend" aria-label="Legenda turni">
             <span><i class="is-smart"></i>Smart working</span>
@@ -707,6 +710,17 @@
           </section>
           <aside class="panel smart-day-panel" id="smartDayPanel"></aside>
         </div>
+
+        <section class="panel smart-staff-panel admin-only" aria-labelledby="smartStaffTitle">
+          <header class="smart-staff-head">
+            <div>
+              <h2 id="smartStaffTitle">Persone nei turni</h2>
+              <p>Attiva chi deve comparire nel calendario. Disattivando una persona lo storico viene conservato.</p>
+            </div>
+            <span id="smartStaffCount">0 attive</span>
+          </header>
+          <div class="smart-staff-list" id="smartStaffManager" aria-live="polite"></div>
+        </section>
       </section>
 
       <section class="view admin-only" id="counterView" data-view-panel="counter">

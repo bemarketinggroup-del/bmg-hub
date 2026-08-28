@@ -5,7 +5,9 @@ Modulo MVP per generare bozze settimanali di smart working usando gli impegni da
 ## Funzioni incluse
 
 - Connessione a un calendario condiviso tramite `calendar_id`.
-- Sincronizzazione eventi della settimana con Google Calendar API.
+- Sincronizzazione eventi della settimana con Google Calendar API, automatica
+  ogni 5 minuti mentre la pagina Turni / Smart Working e' aperta e al ritorno
+  sulla scheda del browser.
 - Cache eventi su Supabase.
 - Mapping invitati evento -> dipendenti smart tramite email.
 - Creazione indisponibilita' giornaliere per eventi bloccanti.
@@ -14,6 +16,8 @@ Modulo MVP per generare bozze settimanali di smart working usando gli impegni da
 - Blocco quando si supera `max_remote_per_day`.
 - Approvazione settimana.
 - Vista staff in sola lettura.
+- Pannello amministrativo per attivare o disattivare le persone mostrate nei
+  turni, conservando lo storico.
 
 ## Variabili ambiente
 
@@ -69,6 +73,14 @@ Gli eventi brevi senza keyword vengono salvati in cache ma non generano indispon
 
 I turni usano `smart_work_employees`, separata dagli account di login `staff_profiles`.
 Questo permette di pianificare dipendenti che non hanno ancora accesso al gestionale.
+
+La pagina amministrativa espone anche le righe non attive: disattivare una
+persona la esclude da calendario, ferie, contatori e nuove proposte; elimina
+solo le proposte automatiche future ancora in stato `suggested`, senza toccare
+turni confermati o dati passati. Quando un account viene eliminato dalla pagina
+Utenti, la riga corrispondente in `smart_work_employees` viene disattivata
+automaticamente tramite `staff_profile_id`, email o, per i record storici non
+ancora collegati, nome completo.
 
 Dipendenti MVP configurati:
 

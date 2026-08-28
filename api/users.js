@@ -400,6 +400,13 @@ async function deleteStaffUser(response, session, profileId) {
     return;
   }
 
+  const smartEmployeeDeactivated = await deactivateSmartWorkingEmployee(profile);
+  if (!smartEmployeeDeactivated) {
+    response.writeHead(502, headers);
+    response.end(JSON.stringify({ error: "Non riesco a rimuovere l'utente dai Turni / Smart Working" }));
+    return;
+  }
+
   if (profile.user_id) {
     const authDelete = await adminAuthFetch(`/users/${encodeURIComponent(profile.user_id)}`, { method: "DELETE" });
     if (!authDelete.ok && authDelete.status !== 404) {
@@ -422,6 +429,31 @@ async function deleteStaffUser(response, session, profileId) {
     deleted: { id: profile.id, email: profile.email, full_name: profile.full_name },
     clickup_membership_preserved: Boolean(profile.clickup_user_id)
   }));
+}
+
+async function deactivateSmartWorkingEmployee(profile = {}) {
+  const filters = [];
+  if (profile.id) filters.push(`staff_profile_id=eq.${encodeURIComponent(profile.id)}`);
+  if (profile.email) filters.push(`email=ilike.${encodeURIComponent(normalizedEmail(profile.email))}`);
+  let matchedEmployees = 0;
+  for (const filter of filters) {
+    const result = await supabaseFetch(`/smart_work_employees?${filter}`, {
+      method: "PATCH",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({ is_active: false, updated_at: new Date().toISOString() })
+    });
+    if (!result.ok) return false;
+    matchedEmployees += (await result.json().catch(() => [])).length;
+  }
+  if (!matchedEmployees && profile.full_name) {
+    const result = await supabaseFetch(`/smart_work_employees?full_name=eq.${encodeURIComponent(String(profile.full_name).trim())}`, {
+      method: "PATCH",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({ is_active: false, updated_at: new Date().toISOString() })
+    });
+    if (!result.ok) return false;
+  }
+  return true;
 }
 
 async function validateClickUpIdentity(payload, requestedEmail, currentProfileId = "") {

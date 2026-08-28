@@ -266,6 +266,8 @@ const smartAppSource = await readFile(new URL("../public/app.js", import.meta.ur
 const smartStyleSource = await readFile(new URL("../public/styles.css", import.meta.url), "utf8");
 const smartApiSource = await readFile(new URL("../lib/smart-working.js", import.meta.url), "utf8");
 assert.match(smartHtmlSource, /id="smartMonthStrip"/, "il calendario turni mobile deve avere la navigazione rapida per mesi");
+assert.match(smartHtmlSource, /id="smartAutoSyncStatus"[\s\S]*?Calendar automatico · ogni 5 min/, "la pagina turni deve comunicare la sincronizzazione automatica Calendar");
+assert.match(smartHtmlSource, /id="smartStaffManager"/, "l'admin deve poter attivare o disattivare le persone nei turni");
 assert.match(smartHtmlSource, /id="smartOffChart"[\s\S]*?aria-live="polite"/, "il contatore deve includere il grafico accessibile delle assenze");
 assert.match(smartHtmlSource, /class="smart-month-weekdays"[\s\S]*?data-mobile-label="L"[\s\S]*?data-mobile-label="D"/, "i giorni dei turni devono avere etichette mobile compatte");
 assert.match(smartAppSource, /function renderSmartMonthStrip\(\)/, "i mesi rapidi dei turni devono seguire il mese selezionato");
@@ -277,10 +279,18 @@ assert.match(smartStyleSource, /@media \(max-width: 640px\)[\s\S]*?\.smart-month
 assert.match(smartStyleSource, /\.smart-month-day \{[\s\S]*?min-height: 88px;[\s\S]*?padding: 3px 2px 4px;/, "i giorni del calendario turni mobile devono essere compatti");
 assert.match(smartStyleSource, /\.smart-multiday-event \{[\s\S]*?height: 18px;[\s\S]*?border-radius: 2px;/, "gli eventi turni di piu giorni devono restare continui e compatti");
 assert.match(smartAppSource, /proposal && data\.can_move_smart/, "lo staff abilitato deve poter trascinare le proposte smart");
-assert.match(smartApiSource, /staffCanMoveSuggestion = action === "move_smart_assignment"/, "il server deve consentire allo staff solo lo spostamento delle proposte smart");
+assert.match(smartAppSource, /SMART_WORKING_SYNC_INTERVAL_MS = 5 \* 60 \* 1000/, "la sincronizzazione automatica deve essere eseguita ogni cinque minuti");
+assert.match(smartAppSource, /function startSmartWorkingUpdates\(\)[\s\S]*?refreshSmartWorkingInBackground\(smartMonthKey\(\), \{ refresh: true \}\)/, "il timer deve aggiornare Calendar senza ricaricare la pagina");
+assert.match(smartAppSource, /data-smart-employee-active="\$\{escapeHtml\(employee\.id\)\}"/, "ogni persona deve avere un controllo di inclusione nei turni");
+assert.match(smartApiSource, /staffCanMoveSuggestion = action === "move_smart_assignment"/, "il server deve consentire allo staff lo spostamento delle proposte smart");
+assert.match(smartApiSource, /staffCanRefreshCalendar = \["sync_calendar", "sync_off_year"\]\.includes\(action\)/, "lo staff deve poter mantenere aggiornata la propria vista Calendar");
+assert.match(smartApiSource, /action === "set_employee_active"[\s\S]*?setEmployeeActive\(body\)/, "l'admin deve poter aggiornare lo stato delle persone nei turni");
+assert.match(smartApiSource, /all_staff: canManage \? allEmployees : visibleEmployees/, "l'admin deve ricevere anche le persone disattivate");
+assert.match(smartApiSource, /source=eq\.auto&status=eq\.suggested/, "la disattivazione deve eliminare soltanto le proposte automatiche future");
 assert.match(smartApiSource, /can_move_smart: canMoveSmart/, "il calendario deve comunicare il permesso di spostamento allo staff");
 assert.match(smartApiSource, /SMART_ROLLING_WEEKS = 6/, "la vista corrente deve includere sei settimane dalla settimana di oggi");
 assert.match(smartApiSource, /monthlyContext\(actionViewBounds, session\)/, "anche dopo sincronizzazioni e modifiche la vista deve conservare le settimane future");
 assert.match(smartAppSource, /data\.rolling_future && date >= `\$\{month\}-01`/, "le settimane dei mesi successivi non devono apparire disattivate");
+assert.match(smartStyleSource, /\.smart-staff-list\s*\{[\s\S]*?grid-template-columns: repeat\(auto-fit, minmax\(230px, 1fr\)\)/, "la gestione persone deve adattarsi allo spazio disponibile");
 
 console.log("Smart working monthly allocation tests passed.");
