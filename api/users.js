@@ -8,6 +8,7 @@ import {
   staffProfileEmails,
   validStaffEmail
 } from "../lib/staff-email-identities.js";
+import { syncSmartWorkingEmployee } from "../lib/smart-working-employees.js";
 
 const headers = jsonHeaders("GET,POST,PATCH,DELETE,OPTIONS");
 const noStoreHeaders = { ...headers, "Cache-Control": "no-store, max-age=0" };
@@ -194,6 +195,13 @@ export default async function handler(request, response) {
     }
 
     const profiles = await profileResult.json();
+    const smartEmployee = await syncSmartWorkingEmployee(profiles[0]);
+    if (!smartEmployee.ok) {
+      await rollbackCreatedUser(authUser.id, profiles[0]?.id);
+      response.writeHead(502, headers);
+      response.end(JSON.stringify({ error: "Utente non aggiunto ai Turni / Smart Working; account annullato" }));
+      return;
+    }
     response.writeHead(201, headers);
     response.end(JSON.stringify(profileWithPermissions(profiles[0])));
     return;
@@ -246,8 +254,17 @@ export default async function handler(request, response) {
       headers: { Prefer: "return=representation" },
       body: JSON.stringify(payload)
     });
+    const profiles = result.ok ? await result.json().catch(() => []) : [];
+    if (result.ok && profiles[0]) {
+      const smartEmployee = await syncSmartWorkingEmployee(profiles[0]);
+      if (!smartEmployee.ok) {
+        response.writeHead(502, headers);
+        response.end(JSON.stringify({ error: "Profilo aggiornato, ma sincronizzazione Turni / Smart Working non riuscita" }));
+        return;
+      }
+    }
     response.writeHead(result.status, headers);
-    response.end(await result.text());
+    response.end(result.ok ? JSON.stringify(profiles) : JSON.stringify({ error: "Aggiornamento utente non riuscito" }));
     return;
   }
 
@@ -363,6 +380,14 @@ async function createWorkspaceUser(response, body) {
       return;
     }
     Object.assign(profile, (await linkResult.json())[0]);
+  }
+
+  const smartEmployee = await syncSmartWorkingEmployee(profile);
+  if (!smartEmployee.ok) {
+    await rollbackCreatedUser(authUser.id, profile?.id);
+    response.writeHead(502, headers);
+    response.end(JSON.stringify({ error: "Utente non aggiunto ai Turni / Smart Working; account annullato" }));
+    return;
   }
 
   response.writeHead(201, noStoreHeaders);
@@ -536,6 +561,11 @@ async function provisionClickUpMembers(response) {
     }
     const byId = profiles.find((profile) => profileMatchesClickUpMember(profile, member));
     if (byId) {
+      const smartEmployee = await syncSmartWorkingEmployee(byId);
+      if (!smartEmployee.ok) {
+        skipped.push({ clickup_user_id: member.id, full_name: member.full_name, reason: "sincronizzazione Turni / Smart Working non riuscita" });
+        continue;
+      }
       linked.push({ clickup_user_id: member.id, email: member.email, full_name: member.full_name, status: "gia collegato" });
       continue;
     }
@@ -554,7 +584,12 @@ async function provisionClickUpMembers(response) {
         skipped.push({ clickup_user_id: member.id, full_name: member.full_name, reason: "collegamento profilo non riuscito" });
         continue;
       }
-      byEmail.clickup_user_id = member.id;
+      Object.assign(byEmail, (await patchResult.json().catch(() => []))[0] || { clickup_user_id: member.id });
+      const smartEmployee = await syncSmartWorkingEmployee(byEmail);
+      if (!smartEmployee.ok) {
+        skipped.push({ clickup_user_id: member.id, full_name: member.full_name, reason: "sincronizzazione Turni / Smart Working non riuscita" });
+        continue;
+      }
       linked.push({ clickup_user_id: member.id, email: member.email, full_name: member.full_name, status: "collegato ora" });
       continue;
     }
@@ -590,7 +625,14 @@ async function provisionClickUpMembers(response) {
       continue;
     }
     const profileRows = await profileResult.json();
-    profiles.push(profileRows[0]);
+    const profile = profileRows[0];
+    const smartEmployee = await syncSmartWorkingEmployee(profile);
+    if (!smartEmployee.ok) {
+      await rollbackCreatedUser(authUser.id, profile?.id);
+      skipped.push({ clickup_user_id: member.id, full_name: member.full_name, reason: "sincronizzazione Turni / Smart Working non riuscita" });
+      continue;
+    }
+    profiles.push(profile);
     if (createdAuthUser) {
       created.push({ clickup_user_id: member.id, email: member.email, full_name: member.full_name, temporary_password: password });
     } else {

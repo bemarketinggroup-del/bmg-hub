@@ -286,6 +286,7 @@ assert.match(smartApiSource, /staffCanMoveSuggestion = action === "move_smart_as
 assert.match(smartApiSource, /staffCanRefreshCalendar = \["sync_calendar", "sync_off_year"\]\.includes\(action\)/, "lo staff deve poter mantenere aggiornata la propria vista Calendar");
 assert.match(smartApiSource, /action === "set_employee_active"[\s\S]*?setEmployeeActive\(body\)/, "l'admin deve poter aggiornare lo stato delle persone nei turni");
 assert.match(smartApiSource, /all_staff: canManage \? allEmployees : visibleEmployees/, "l'admin deve ricevere anche le persone disattivate");
+assert.match(smartApiSource, /await syncStaffProfilesToSmartWorking\(\);[\s\S]*?smart_work_employees\?select=\*&order=full_name\.asc/, "la pagina turni deve recuperare anche i profili staff gia esistenti");
 assert.match(smartApiSource, /source=eq\.auto&status=eq\.suggested/, "la disattivazione deve eliminare soltanto le proposte automatiche future");
 assert.match(smartApiSource, /can_move_smart: canMoveSmart/, "il calendario deve comunicare il permesso di spostamento allo staff");
 assert.match(smartApiSource, /SMART_ROLLING_WEEKS = 6/, "la vista corrente deve includere sei settimane dalla settimana di oggi");

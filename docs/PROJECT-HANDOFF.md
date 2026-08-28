@@ -416,6 +416,10 @@ supabase/                     schema e migration
   lo storico. Eliminare un account da `Utenti` disattiva automaticamente la
   corrispondente riga `smart_work_employees`, tramite profilo, email o — per i
   record storici non ancora collegati — nome completo.
+- Creare, importare da ClickUp o aggiornare un account staff sincronizza anche
+  `smart_work_employees`; l'apertura della pagina Turni riconcilia inoltre i
+  profili attivi già esistenti, evitando che nuovi utenti come Marcello restino
+  esclusi dall'anagrafica dei turni.
 - Le settimane future sono visibili e le proposte smart sono trascinabili.
 - Più persone possono essere inserite manualmente nello stesso giorno; in caso di
   impegno già presente deve apparire un avviso.

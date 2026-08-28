@@ -59,6 +59,31 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-08-28 — Nuovi utenti sincronizzati nei turni
+
+- Richiesta: aggiungere automaticamente anche all'anagrafica Supabase dei turni
+  ogni nuovo utente del gestionale, incluso Marcello.
+- Modifiche: la creazione diretta, la creazione coordinata con ClickUp, il
+  provisioning ClickUp e la modifica di un profilo sincronizzano ora la riga
+  `smart_work_employees` tramite profilo, nome ed email Calendar preferita;
+  l'apertura di Turni / Smart Working riconcilia anche gli account attivi già
+  presenti, senza riattivare persone disabilitate manualmente.
+- File: `lib/smart-working-employees.js`, `api/users.js`,
+  `lib/smart-working.js`, `package.json`, `scripts/test-user-management.mjs`,
+  `scripts/test-smart-working-monthly.mjs`, `docs/SMART-WORKING.md`,
+  `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run check`, `npm run test:users`,
+  `npm run test:smart-working`, `npm run test:permissions`,
+  `npm run test:google-calendar`, `git diff --check`; il test aggiuntivo
+  `npm run test:personal-area` continua a segnalare la regola CSS preesistente
+  per `prefers-reduced-motion` del pallino notifiche, non modificata da questo
+  intervento.
+- Pubblicazione: commit corrente su `main`, push GitHub e deploy Vercel di
+  produzione su `https://bmg-hub.vercel.app`.
+- Note: preservata e non inclusa la cartella locale preesistente
+  `.bmg-redesign-backup/`; nessuna modifica UI, quindi non è richiesta una
+  nuova verifica visuale desktop/mobile.
+
 ### 2026-08-28 — Sincronizzazione Calendar e persone nei turni
 
 - Richiesta: aggiornare automaticamente Turni / Smart Working da Google

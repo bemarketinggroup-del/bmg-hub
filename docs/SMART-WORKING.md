@@ -74,6 +74,12 @@ Gli eventi brevi senza keyword vengono salvati in cache ma non generano indispon
 I turni usano `smart_work_employees`, separata dagli account di login `staff_profiles`.
 Questo permette di pianificare dipendenti che non hanno ancora accesso al gestionale.
 
+La creazione o sincronizzazione di un account in `staff_profiles` crea o collega
+automaticamente anche la relativa riga in `smart_work_employees`, usando il profilo,
+il nome e l'email Calendar preferita. All'apertura di Turni / Smart Working viene
+eseguita anche una riconciliazione degli account attivi, così vengono recuperati i
+profili già esistenti che non erano ancora presenti nell'anagrafica turni.
+
 La pagina amministrativa espone anche le righe non attive: disattivare una
 persona la esclude da calendario, ferie, contatori e nuove proposte; elimina
 solo le proposte automatiche future ancora in stato `suggested`, senza toccare

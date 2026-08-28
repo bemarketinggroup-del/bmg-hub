@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
-const [apiSource, clickUpSource, appSource, htmlSource, styleSource, schemaSource, migrationSource] = await Promise.all([
+const [apiSource, clickUpSource, smartEmployeeSource, appSource, htmlSource, styleSource, schemaSource, migrationSource] = await Promise.all([
   readFile(new URL("../api/users.js", import.meta.url), "utf8"),
   readFile(new URL("../lib/clickup-members.js", import.meta.url), "utf8"),
+  readFile(new URL("../lib/smart-working-employees.js", import.meta.url), "utf8"),
   readFile(new URL("../public/app.js", import.meta.url), "utf8"),
   readFile(new URL("../public/index.html", import.meta.url), "utf8"),
   readFile(new URL("../public/styles.css", import.meta.url), "utf8"),
@@ -64,10 +65,15 @@ assert.match(apiSource, /rollbackCreatedUser\(authUser\.id, profile\?\.id\)/, "u
 assert.match(apiSource, /profileId === session\.profile\.id/, "un amministratore non deve potersi eliminare da solo");
 assert.match(apiSource, /clickup_membership_preserved/, "la rimozione interna deve dichiarare che ClickUp viene conservato");
 assert.match(apiSource, /deactivateSmartWorkingEmployee\(profile\)/, "eliminare un account deve disattivare la persona nei turni");
+assert.match(apiSource, /syncSmartWorkingEmployee\(profiles\[0\]\)/, "creare un account deve aggiungere la persona nei turni");
+assert.match(apiSource, /const smartEmployee = await syncSmartWorkingEmployee\(profile\)/, "la creazione coordinata deve sincronizzare la persona nei turni");
 assert.match(apiSource, /smart_work_employees\?\$\{filter\}[\s\S]*?is_active: false/, "la disattivazione turni deve usare profilo o email quando disponibili");
 assert.match(apiSource, /!matchedEmployees && profile\.full_name[\s\S]*?smart_work_employees\?full_name=eq\./, "la disattivazione deve ripiegare sul nome per i record storici non collegati");
 assert.match(apiSource, /validateStaffEmailAliases[\s\S]*massimo 12 email/, "l'API deve validare e limitare le email collegate");
 assert.match(apiSource, /reservedEmails[\s\S]*già collegata a un altro utente/, "l'API deve impedire che la stessa email venga collegata a profili diversi");
+assert.match(smartEmployeeSource, /preferredStaffProfileEmail\(profile, "calendar"\)/, "i turni devono usare l'email Calendar preferita del profilo");
+assert.match(smartEmployeeSource, /staff_profile_id:[\s\S]*full_name:[\s\S]*email:/, "la persona nei turni deve essere collegata al profilo Supabase");
+assert.match(smartEmployeeSource, /if \(!existing\) payload\.is_active = profile\.active !== false && profile\.role !== "admin"/, "i nuovi utenti staff devono essere attivati nei turni senza riattivare quelli esclusi manualmente");
 assert.match(schemaSource, /email_aliases jsonb not null default '\[\]'::jsonb/, "lo schema deve conservare le email integrazione sul profilo staff");
 assert.match(migrationSource, /add column if not exists email_aliases jsonb/, "la migration deve aggiungere la colonna in modo idempotente");
 
