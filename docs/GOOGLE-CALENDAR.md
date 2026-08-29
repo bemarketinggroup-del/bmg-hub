@@ -19,15 +19,13 @@ GOOGLE_CALENDAR_NAME=BeViral Agency
 GOOGLE_CALENDAR_OAUTH_CLIENT_ID=
 GOOGLE_CALENDAR_OAUTH_CLIENT_SECRET=
 GOOGLE_CALENDAR_OAUTH_REFRESH_TOKEN=
-GOOGLE_CALENDAR_SERVICE_ACCOUNT_JSON=
-GOOGLE_CALENDAR_SUBJECT=
 ```
 
-Le tre variabili OAuth dedicate hanno la precedenza. In loro assenza il modulo prova
-temporaneamente a riusare le corrispondenti variabili `GOOGLE_DRIVE_OAUTH_*`.
-Se OAuth risulta scaduto o revocato, il modulo passa automaticamente all'account
-di servizio Calendar o, in sua assenza, a quello già configurato per Google Drive.
-In questo modo il calendario non dipende dalla durata dei refresh token OAuth.
+Le tre variabili OAuth dedicate sono obbligatorie e devono appartenere allo stesso
+client Google. Il modulo non riusa le credenziali `GOOGLE_DRIVE_OAUTH_*` e non passa
+a un account di servizio: in questo modo una configurazione Calendar scaduta,
+incompleta o revocata viene segnalata immediatamente, senza lasciare letture
+apparentemente funzionanti ma impedire poi l'aggiunta dei partecipanti.
 
 I valori OAuth devono essere configurati come variabili sensibili per Production e Preview.
 Non devono essere salvati nel repository o inviati al browser.
@@ -40,12 +38,9 @@ Il refresh token deve appartenere a `beviralagency@gmail.com` e includere lo sco
 https://www.googleapis.com/auth/calendar.events
 ```
 
-Il redirect URI usato per generare il refresh token deve essere presente tra gli URI
-autorizzati del client OAuth Google. Se il client viene eliminato o ricreato, aggiornare
-insieme ID client, secret e refresh token: i token del vecchio client non sono riutilizzabili.
-
-Per usare l'account di servizio, condividere il calendario con l'indirizzo
-`client_email` presente nel JSON e assegnargli il permesso di modifica degli eventi.
+Il client OAuth deve essere in stato `In produzione`, non `Test`, e il consenso deve
+richiedere accesso offline. Se il client viene eliminato o ricreato, aggiornare insieme
+ID client, secret e refresh token: i token del vecchio client non sono riutilizzabili.
 
 ## Sicurezza
 
@@ -58,12 +53,14 @@ Per usare l'account di servizio, condividere il calendario con l'indirizzo
 
 ## Continuita operativa
 
-- Le richieste Google hanno un timeout controllato, due tentativi automatici e fallback
-  dall'OAuth all'account di servizio.
+- Le richieste Google hanno un timeout controllato e due tentativi automatici per gli
+  errori temporanei; gli errori OAuth permanenti non vengono mascherati da fallback.
 - Un aggiornamento fallito non svuota gli eventi gia caricati nell'interfaccia.
 - Il gestionale controlla realmente Calendar all'accesso, al ritorno sulla scheda e ogni
   cinque minuti; lo stato e visibile tra i servizi nella barra laterale.
 - Il risultato del controllo e conservato per un minuto lato server per evitare consumo
   inutile delle quote Google.
+- Il controllo operativo dichiara `dedicated_oauth` come sorgente attiva senza esporre
+  token, client secret o altri valori sensibili.
 - Un errore temporaneo viene distinto da configurazione API, autorizzazione o condivisione
   del calendario, così l'intervento richiesto resta identificabile.

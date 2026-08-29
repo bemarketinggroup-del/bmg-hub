@@ -398,10 +398,10 @@ supabase/                     schema e migration
 - Vista settimana centrata sulla settimana corrente quando viene aperta.
 - Import/sincronizzazione degli eventi e gestione partecipanti.
 - Riconoscimento di nomi e abbreviazioni per collegare gli utenti agli eventi.
-- La service account usata per Calendar è:
-  `bmg-hub-drive@bmg-hub-drive-20260716.iam.gserviceaccount.com`.
-- Il calendario BeViral Agency deve essere condiviso con questa service account
-  consentendole di modificare gli eventi.
+- Calendar usa esclusivamente il client OAuth dedicato in produzione e il refresh
+  token offline di `beviralagency@gmail.com`; non deve riusare le credenziali Drive
+  o una service account, perché questi fallback possono leggere eventi ma non
+  garantiscono la gestione degli invitati.
 - È presente un controllo di salute dell'integrazione Calendar; non sostituirlo
   con messaggi generici che nascondono la causa reale.
 
@@ -498,17 +498,16 @@ GOOGLE_CALENDAR_NAME
 GOOGLE_CALENDAR_OAUTH_CLIENT_ID
 GOOGLE_CALENDAR_OAUTH_CLIENT_SECRET
 GOOGLE_CALENDAR_OAUTH_REFRESH_TOKEN
-GOOGLE_CALENDAR_SERVICE_ACCOUNT_JSON
-GOOGLE_CALENDAR_SUBJECT
 
 OPENAI_API_KEY
 OPENAI_MODEL
 ALLOWED_ORIGIN
 ```
 
-Non tutte sono obbligatorie contemporaneamente: Drive e Calendar possono usare
-OAuth o service account in base alla configurazione. Prima di cambiare strategia
-di autenticazione, leggere `lib/google-drive.js`, `lib/google-calendar.js` e le
+Drive puo usare OAuth o service account in base alla configurazione. Calendar
+richiede invece tutte e tre le variabili `GOOGLE_CALENDAR_OAUTH_*` dedicate,
+provenienti dallo stesso client in produzione. Prima di cambiare strategia di
+autenticazione, leggere `lib/google-drive.js`, `lib/google-calendar.js` e le
 variabili già configurate su Vercel.
 
 ## Database e migration

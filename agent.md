@@ -59,6 +59,29 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-08-29 — OAuth Calendar permanente e dedicato
+
+- Richiesta: ricollegare Google Calendar e impedire che l'errore di
+  autorizzazione sugli invitati si ripresenti.
+- Modifiche: pubblicata la schermata consenso Google fuori dalla modalita Test;
+  creato un client OAuth Calendar dedicato con consenso offline; ruotate su
+  Vercel Production e Preview le tre variabili `GOOGLE_CALENDAR_OAUTH_*`; il
+  backend non riusa piu credenziali Drive o account di servizio, segnala in modo
+  esplicito configurazioni mancanti/revocate e dichiara `dedicated_oauth` nel
+  controllo operativo.
+- File: `lib/google-calendar.js`, `scripts/test-google-calendar.mjs`,
+  `docs/GOOGLE-CALENDAR.md`, `docs/SMART-WORKING.md`,
+  `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: rinnovo token e lettura reale di Google Calendar HTTP 200;
+  `npm run test:google-calendar`, `npm run test:smart-working`,
+  `npm run test:users`, `npm run test:connected-services`, `npm run check`,
+  `git diff --check`; verifica HTTP 200 della produzione.
+- Pubblicazione: Google Auth Platform in produzione; credenziali aggiornate su
+  Vercel Production e Preview; GitHub `main` e Vercel produzione.
+- Note: nessun token, client secret o altra credenziale e stato salvato nel
+  repository o riportato nei log; preservata e non inclusa la cartella locale
+  `.bmg-redesign-backup/`.
+
 ### 2026-08-29 — Pagine pubbliche per OAuth Calendar
 
 - Richiesta: ricollegare Google Calendar in modo permanente, evitando nuove

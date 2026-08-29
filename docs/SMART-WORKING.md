@@ -21,27 +21,23 @@ Modulo MVP per generare bozze settimanali di smart working usando gli impegni da
 
 ## Variabili ambiente
 
-Preferito per calendari privati/condivisi:
+Il modulo usa la stessa autorizzazione OAuth dedicata della pagina Calendario:
 
 ```env
-GOOGLE_CALENDAR_SERVICE_ACCOUNT_JSON=
-GOOGLE_CALENDAR_SUBJECT=
+GOOGLE_CALENDAR_OAUTH_CLIENT_ID=
+GOOGLE_CALENDAR_OAUTH_CLIENT_SECRET=
+GOOGLE_CALENDAR_OAUTH_REFRESH_TOKEN=
 ```
 
-`GOOGLE_CALENDAR_SERVICE_ACCOUNT_JSON` puo' essere JSON raw o base64 del JSON del service account.
-
-`GOOGLE_CALENDAR_SUBJECT` serve solo se il dominio Google Workspace usa domain-wide delegation. In alternativa condividere il calendario con l'email del service account.
-
-Fallback solo per calendari pubblici:
-
-```env
-GOOGLE_CALENDAR_API_KEY=
-```
+Le tre variabili devono provenire dallo stesso client Google in produzione e da un
+consenso offline di `beviralagency@gmail.com`. Non vengono usate le credenziali Drive
+o un account di servizio come ripiego, perché l'aggiunta automatica dei partecipanti
+richiede l'autorizzazione dell'utente proprietario del calendario.
 
 ## Setup Google Calendar
 
 1. Crea o scegli il calendario condiviso, es. `BMG - Shooting e Appuntamenti`.
-2. Condividilo con l'email del service account Google.
+2. Collega `beviralagency@gmail.com` tramite l'OAuth dedicato Calendar.
 3. In BMG Hub apri `Turni / Smart Working`.
 4. Inserisci:
    - `Calendar ID`
