@@ -1,6 +1,6 @@
 # BMG Hub — memoria operativa degli interventi
 
-Ultimo aggiornamento: 28 agosto 2026
+Ultimo aggiornamento: 29 agosto 2026
 
 ## Scopo del file
 
@@ -58,6 +58,20 @@ più recente alla più vecchia:
 ```
 
 ## Registro modifiche
+
+### 2026-08-29 — Pagine pubbliche per OAuth Calendar
+
+- Richiesta: ricollegare Google Calendar in modo permanente, evitando nuove
+  scadenze dell'autorizzazione.
+- Modifiche: aggiunte le pagine pubbliche responsive di informativa privacy e
+  condizioni d'uso richieste da Google Auth Platform per pubblicare il client
+  OAuth di BMG Hub fuori dalla modalita di test.
+- File: `public/privacy.html`, `public/terms.html`, `agent.md`.
+- Verifiche: `npm run check`, `git diff --check`, apertura desktop e smartphone
+  delle due pagine pubbliche.
+- Pubblicazione: GitHub `main` e Vercel produzione; verifica HTTP delle pagine
+  pubbliche.
+- Note: nessuna credenziale Google e stata salvata nel repository.
 
 ### 2026-08-28 — Unione duplicati nell'anagrafica turni
 
