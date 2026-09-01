@@ -452,6 +452,12 @@ supabase/                     schema e migration
   vengono unite al profilo completo, trasferendo prima turni, assenze e
   partecipazioni Calendar per non perdere lo storico.
 - Le settimane future sono visibili e le proposte smart sono trascinabili.
+- Ogni fascia settimanale e selezionabile. `Genera bozza settimana` sostituisce
+  soltanto le proposte automatiche comprese tra quel lunedi e quella domenica;
+  `Pubblica settimana` approva e invia a Google Calendar esclusivamente il
+  piano selezionato. Il cambio di settimana non modifica bozze o pubblicazioni
+  delle altre settimane e la sincronizzazione automatica Calendar non genera
+  piu bozze per l'intero mese.
 - Più persone possono essere inserite manualmente nello stesso giorno; in caso di
   impegno già presente deve apparire un avviso.
 - Davide e Simone sono esclusi dall'assegnazione smart automatica, ma non dal

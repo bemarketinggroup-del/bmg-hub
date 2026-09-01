@@ -11,10 +11,13 @@ Modulo MVP per generare bozze settimanali di smart working usando gli impegni da
 - Cache eventi su Supabase.
 - Mapping invitati evento -> dipendenti smart tramite email.
 - Creazione indisponibilita' giornaliere per eventi bloccanti.
-- Generazione bozza modificabile.
+- Selezione esplicita della settimana dalla relativa fascia del calendario.
+- Generazione di una bozza modificabile limitata alla settimana selezionata,
+  senza sostituire le proposte delle altre settimane.
 - Spostamento manuale di un dipendente su un altro giorno.
 - Blocco quando si supera `max_remote_per_day`.
-- Approvazione settimana.
+- Approvazione e pubblicazione su Google Calendar della sola settimana
+  selezionata.
 - Vista staff in sola lettura.
 - Pannello amministrativo per attivare o disattivare le persone mostrate nei
   turni, conservando lo storico.
@@ -64,6 +67,12 @@ Gli eventi brevi senza keyword vengono salvati in cache ma non generano indispon
 5. Non supera `max_remote_per_day`.
 6. Evita, se possibile, il giorno della settimana precedente.
 7. Se non trova una soluzione perfetta, crea assegnazione `conflict` con motivazione.
+
+La sincronizzazione ogni cinque minuti mantiene aggiornati impegni e OFF, ma non crea
+automaticamente bozze per tutte le settimane. L'amministratore seleziona la
+fascia desiderata e usa `Genera bozza settimana`; la pubblicazione filtra il
+piano per l'esatto `week_start_date`, quindi una settimana gia approvata o una
+bozza successiva non viene toccata.
 
 ## Dipendenti smart
 

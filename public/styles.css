@@ -6630,6 +6630,24 @@ body.user-activity-dialog-visible { overflow: hidden; }
   text-transform: capitalize;
 }
 .smart-month-actions button { white-space: nowrap; }
+.smart-selected-week {
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: center;
+  gap: 1px 8px;
+  min-height: 38px;
+  padding: 5px 10px;
+  border: 1px solid color-mix(in srgb, var(--terracotta) 22%, var(--line));
+  border-radius: var(--r-sm);
+  color: var(--ink);
+  background: var(--terra-tint);
+  white-space: nowrap;
+}
+.smart-selected-week small { grid-column: 1 / -1; color: var(--muted); font-size: 8px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.smart-selected-week strong { font-size: 10.5px; }
+.smart-selected-week i { padding: 2px 6px; border-radius: 999px; color: var(--muted); background: var(--surface); font-size: 8px; font-style: normal; font-weight: 700; }
+.smart-selected-week i.is-draft { color: #9b5b00; background: #fff5d6; }
+.smart-selected-week i.is-approved { color: #237a57; background: #e6f4ea; }
 .smart-month-strip { display: none; }
 
 .smart-plan-strip {
@@ -6786,12 +6804,17 @@ body.user-activity-dialog-visible { overflow: hidden; }
   text-transform: uppercase;
 }
 .smart-month-week + .smart-month-week { border-top: 1px solid var(--line-strong); }
+.smart-month-week.is-selected { box-shadow: inset 3px 0 0 var(--terracotta); }
 .smart-week-status {
   display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
-  min-height: 34px; padding: 7px 10px; color: var(--muted); background: var(--surface-tint); font-size: 9.5px;
+  width: 100%; min-height: 34px; padding: 7px 10px; border: 0; border-radius: 0; appearance: none; -webkit-appearance: none; color: var(--muted); background: var(--surface-tint); font: inherit; font-size: 9.5px; text-align: left; cursor: pointer;
 }
+.smart-week-status:hover { filter: brightness(.985); }
+.smart-week-status:focus-visible { position: relative; z-index: 3; outline: 2px solid var(--terracotta); outline-offset: -2px; }
+.smart-week-heading { display: inline-flex; align-items: center; gap: 7px; min-width: 0; }
 .smart-week-status strong { font-size: 9.5px; letter-spacing: .05em; text-transform: uppercase; }
-.smart-week-status span { max-width: 72%; line-height: 1.4; text-align: right; }
+.smart-week-heading i { padding: 2px 6px; border-radius: 999px; color: white; background: var(--terracotta); font-size: 7.5px; font-style: normal; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+.smart-week-status > span:last-child { max-width: 72%; line-height: 1.4; text-align: right; }
 .smart-week-status.is-complete { color: #237a57; background: #e6f4ea; }
 .smart-month-week.is-future .smart-week-status.is-incomplete { color: #2f6f4e; background: #eef8f1; }
 .smart-month-day {
@@ -7402,6 +7425,7 @@ body.user-activity-dialog-visible { overflow: hidden; }
   .smart-month-navigation { display: grid; grid-template-columns: auto auto auto minmax(0, 1fr); }
   .smart-month-navigation h2 { min-width: 0; margin-left: 4px; font-size: 18px; text-align: right; }
   .smart-month-actions { display: grid; grid-template-columns: 1fr 1fr; }
+  .smart-month-actions .smart-selected-week { grid-column: 1 / -1; }
   .smart-month-actions .primary-button { grid-column: 1 / -1; }
   .smart-month-strip {
     display: flex;
@@ -7462,7 +7486,8 @@ body.user-activity-dialog-visible { overflow: hidden; }
     font-size: 8px;
   }
   .smart-week-status strong { font-size: 8px; }
-  .smart-week-status span { max-width: 100%; overflow: hidden; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
+  .smart-week-heading { justify-content: space-between; width: 100%; }
+  .smart-week-status > span:last-child { max-width: 100%; overflow: hidden; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
   .smart-month-day {
     min-height: 88px;
     padding: 3px 2px 4px;
@@ -7821,8 +7846,8 @@ body.user-activity-dialog-visible { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) {
   .notification-button.has-notifications .icon > .lc,
   .notification-button.has-notifications .notification-badge,
-  .notification-attention-dot,
   .smart-auto-sync.is-syncing i { animation: none; }
+  .notification-attention-dot { animation: none; }
 }
 
 .notification-panel {

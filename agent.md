@@ -59,6 +59,33 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-09-01 — Generazione e pubblicazione per singola settimana
+
+- Richiesta: selezionare una settimana alla volta in Turni / Smart Working e
+  generare o pubblicare quella settimana, senza agire sull'intero mese.
+- Modifiche: resa selezionabile ogni fascia settimanale con stato visivo e
+  riepilogo persistente nella toolbar; i comandi generano, rigenerano e
+  pubblicano soltanto il lunedi-domenica scelto, compresi gli intervalli a
+  cavallo di due mesi. Il backend valida il confine settimanale, sostituisce
+  esclusivamente le proposte automatiche di quei sette giorni e filtra
+  l'approvazione sull'esatto `week_start_date`. La sincronizzazione automatica
+  Calendar resta ogni cinque minuti ma non genera piu bozze per tutte le
+  settimane future.
+- File: `lib/smart-working.js`, `public/index.html`, `public/app.js`,
+  `public/styles.css`, `scripts/test-smart-working-monthly.mjs`,
+  `docs/SMART-WORKING.md`, `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run check`, `npm run test:smart-working`,
+  `npm run test:mobile-navigation`, `npm run test:session-persistence`,
+  `npm run test:primeng-components`, `npm run test:personal-area`,
+  `git diff --check`; controllo responsive
+  desktop e smartphone della selezione e dei comandi settimanali senza
+  pubblicare dati reali.
+- Pubblicazione: commit corrente pubblicato su GitHub `main`; deploy Vercel
+  produzione completato e verificato su `https://bmg-hub.vercel.app`.
+- Note: le bozze mensili gia esistenti restano disponibili e possono essere
+  pubblicate una settimana alla volta; nessuna settimana viene rigenerata in
+  automatico.
+
 ### 2026-09-01 — Collegamenti manuali PED, Drive, Grafiche e Video per cliente
 
 - Richiesta: permettere di collegare separatamente, per ogni cliente, il PED,

@@ -14,7 +14,8 @@ import {
   matchedEmployees,
   mergeSmartAssignments,
   monthBounds,
-  smartViewBounds
+  smartViewBounds,
+  weekBounds
 } from "../lib/smart-working.js";
 
 const bounds = monthBounds("2026-07");
@@ -27,6 +28,15 @@ assert.deepEqual(bounds, {
 });
 assert.equal(monthBounds("2026-06").month, "2026-06");
 assert.equal(monthBounds("2026-08").month, "2026-08");
+assert.deepEqual(weekBounds("2026-09-01"), {
+  weekStart: "2026-08-31",
+  weekEnd: "2026-09-07",
+  first: "2026-08-31",
+  next: "2026-09-07",
+  gridStart: "2026-08-31",
+  gridEnd: "2026-09-07"
+}, "la settimana selezionata deve conservare correttamente i confini tra due mesi");
+assert.equal(weekBounds("non-valida"), null);
 assert.deepEqual(smartViewBounds("2026-07", new Date("2026-07-29T12:00:00"), 6), {
   month: "2026-07",
   first: "2026-07-01",
@@ -268,10 +278,17 @@ const smartApiSource = await readFile(new URL("../lib/smart-working.js", import.
 assert.match(smartHtmlSource, /id="smartMonthStrip"/, "il calendario turni mobile deve avere la navigazione rapida per mesi");
 assert.match(smartHtmlSource, /id="smartAutoSyncStatus"[\s\S]*?Calendar automatico · ogni 5 min/, "la pagina turni deve comunicare la sincronizzazione automatica Calendar");
 assert.match(smartHtmlSource, /id="smartStaffManager"/, "l'admin deve poter attivare o disattivare le persone nei turni");
+assert.match(smartHtmlSource, /id="smartSelectedWeekLabel"/, "la toolbar deve mostrare chiaramente la settimana selezionata");
+assert.match(smartHtmlSource, /id="generateSmartWeekButton"[\s\S]*?Genera bozza settimana/, "la generazione deve essere settimanale");
+assert.match(smartHtmlSource, /id="approveSmartWeekButton"[\s\S]*?Pubblica settimana/, "la pubblicazione deve essere settimanale");
 assert.match(smartHtmlSource, /id="smartOffChart"[\s\S]*?aria-live="polite"/, "il contatore deve includere il grafico accessibile delle assenze");
 assert.match(smartHtmlSource, /class="smart-month-weekdays"[\s\S]*?data-mobile-label="L"[\s\S]*?data-mobile-label="D"/, "i giorni dei turni devono avere etichette mobile compatte");
 assert.match(smartAppSource, /function renderSmartMonthStrip\(\)/, "i mesi rapidi dei turni devono seguire il mese selezionato");
 assert.match(smartAppSource, /data-smart-month="\$\{key\}"/, "ogni mese rapido dei turni deve essere selezionabile");
+assert.match(smartAppSource, /data-smart-week-select="\$\{escapeHtml\(weekDates\[0\]\)\}"/, "ogni fascia settimanale deve essere selezionabile");
+assert.match(smartAppSource, /smartWorkingAction\("generate_week", \{ week_start: weekStart \}\)/, "la bozza deve inviare al server soltanto la settimana selezionata");
+assert.match(smartAppSource, /smartWorkingAction\("approve_week", \{ week_start: weekStart \}\)/, "la pubblicazione deve inviare al server soltanto la settimana selezionata");
+assert.doesNotMatch(smartAppSource, /smartWorkingAction\("ensure_future_suggestions"/, "la sincronizzazione automatica non deve generare bozze per tutte le settimane");
 assert.match(smartAppSource, /getElementById\("smartOffCounters"\)\.addEventListener\("click"[\s\S]*?openSmartOffDetail\(offRow\.dataset\.smartOffEmployee\)/, "il contatore OFF deve aprire il dettaglio dalla pagina Contatore");
 assert.match(smartAppSource, /function renderSmartOffChart\(data, rows\)[\s\S]*?month_days[\s\S]*?year_days/, "il grafico deve confrontare assenze mensili e annuali per persona");
 assert.match(smartStyleSource, /\.smart-off-chart-bars \{[\s\S]*?grid-template-columns: repeat\(2,[\s\S]*?align-items: end;/, "il grafico assenze deve usare colonne mensili e annuali affiancate");
@@ -285,6 +302,11 @@ assert.match(smartAppSource, /data-smart-employee-active="\$\{escapeHtml\(employ
 assert.match(smartApiSource, /staffCanMoveSuggestion = action === "move_smart_assignment"/, "il server deve consentire allo staff lo spostamento delle proposte smart");
 assert.match(smartApiSource, /staffCanRefreshCalendar = \["sync_calendar", "sync_off_year"\]\.includes\(action\)/, "lo staff deve poter mantenere aggiornata la propria vista Calendar");
 assert.match(smartApiSource, /action === "set_employee_active"[\s\S]*?setEmployeeActive\(body\)/, "l'admin deve poter aggiornare lo stato delle persone nei turni");
+assert.match(smartApiSource, /action === "generate_week"[\s\S]*?generateWeek\(actionWeekBounds, session\)/, "il server deve generare una sola settimana");
+assert.match(smartApiSource, /action === "approve_week"[\s\S]*?approveWeek\(actionWeekBounds\)/, "il server deve pubblicare una sola settimana");
+assert.match(smartApiSource, /week_start_date=eq\.\$\{bounds\.weekStart\}&status=eq\.draft/, "l'approvazione deve filtrare il piano per la settimana esatta");
+assert.match(smartApiSource, /weekAssignments\.filter\(\(row\) => row\.source === "auto"\)/, "la rigenerazione deve sostituire soltanto le proposte della settimana selezionata");
+assert.match(smartApiSource, /replacedGoogleEventIds[\s\S]*?!replacedGoogleEventIds\.has\(clean\(row\.google_event_id\)\)/, "la rigenerazione di una settimana pubblicata non deve riusare gli eventi appena sostituiti");
 assert.match(smartApiSource, /all_staff: canManage \? allEmployees : visibleEmployees/, "l'admin deve ricevere anche le persone disattivate");
 assert.match(smartApiSource, /await syncStaffProfilesToSmartWorking\(\);[\s\S]*?smart_work_employees\?select=\*&order=full_name\.asc/, "la pagina turni deve recuperare anche i profili staff gia esistenti");
 assert.match(smartApiSource, /source=eq\.auto&status=eq\.suggested/, "la disattivazione deve eliminare soltanto le proposte automatiche future");
