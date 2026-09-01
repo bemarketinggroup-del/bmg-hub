@@ -1,6 +1,6 @@
 # BMG Hub — memoria operativa degli interventi
 
-Ultimo aggiornamento: 29 agosto 2026
+Ultimo aggiornamento: 1 settembre 2026
 
 ## Scopo del file
 
@@ -58,6 +58,25 @@ più recente alla più vecchia:
 ```
 
 ## Registro modifiche
+
+### 2026-09-01 — Ripristino credenziali Calendar in produzione
+
+- Richiesta: correggere il nuovo avviso di autorizzazione Google Calendar
+  scaduta o revocata mostrato dal calendario del gestionale.
+- Modifiche: verificato che il refresh token OAuth dedicato fosse ancora valido;
+  riallineate su Vercel Production e Preview le tre variabili
+  `GOOGLE_CALENDAR_OAUTH_*` appartenenti allo stesso client e refresh token;
+  eseguito un nuovo deploy di produzione senza modificare eventi o dati.
+- File: `agent.md`.
+- Verifiche: lettura diretta Google Calendar HTTP 200; deploy Vercel `READY` e
+  alias `https://bmg-hub.vercel.app`; apertura della pagina Calendar nella
+  sessione staff di produzione, avviso assente e 24 eventi di settembre 2026
+  caricati correttamente.
+- Pubblicazione: configurazione Vercel Production e Preview aggiornata; deploy
+  di produzione `dpl_H4mD52FqdAhT76YSN1ito8n7JYm2`; commit e push GitHub nello
+  stesso intervento.
+- Note: nessuna credenziale e stata salvata nel repository o riportata nei log;
+  preservata e non inclusa la cartella locale `.bmg-redesign-backup/`.
 
 ### 2026-08-29 — OAuth Calendar permanente e dedicato
 
