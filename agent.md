@@ -67,7 +67,8 @@ più recente alla più vecchia:
   `/api/health` per controllare separatamente Calendar, lettura Drive tramite
   account di servizio e OAuth Drive di scrittura; il controllo viene eseguito
   per tutti gli utenti autenticati ogni cinque minuti senza creare o modificare
-  file. Gli errori OAuth Drive conservano ora codice e sorgente utili a
+  file. Il risultato sintetico viene registrato nei log Vercel senza dati
+  sensibili. Gli errori OAuth Drive conservano ora codice e sorgente utili a
   distinguere token revocati, configurazione mancante e guasti temporanei.
 - File: `lib/google-drive.js`, `lib/system-health.js`, `public/app.js`,
   `scripts/test-connected-services.mjs`, `docs/GOOGLE-DRIVE.md`,
