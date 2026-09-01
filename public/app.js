@@ -203,6 +203,8 @@ let clientDriveState = { surface: "client", clientId: "", path: [], files: [], l
 let clientDriveSelection = new Map();
 let graphicsDriveClientId = "";
 let selectedPedClientId = "";
+let driveClientImportFolders = [];
+let driveClientImportSelected = new Set();
 let pedUsedFileIds = new Set();
 let selectedPedMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
 let pedPickerState = {
@@ -8598,6 +8600,94 @@ function openClientModal(clientId = "") {
   document.getElementById("clientModal").showModal();
 }
 
+function driveClientImportAvailableFolders() {
+  const search = normalizeIdentity(document.getElementById("driveClientImportSearch")?.value || "");
+  return driveClientImportFolders.filter((folder) => !search || normalizeIdentity(folder.name).includes(search));
+}
+
+function renderDriveClientImport() {
+  const list = document.getElementById("driveClientImportList");
+  const summary = document.getElementById("driveClientImportSummary");
+  const submit = document.getElementById("driveClientImportSubmit");
+  const folders = driveClientImportAvailableFolders();
+  const unlinked = driveClientImportFolders.filter((folder) => !folder.linked_client_id);
+  const selectedCount = [...driveClientImportSelected].filter((id) => unlinked.some((folder) => folder.id === id)).length;
+  summary.innerHTML = `<strong>${unlinked.length}</strong> cartelle da collegare <span>${driveClientImportFolders.length - unlinked.length} gia collegate</span>`;
+  submit.disabled = selectedCount === 0;
+  submit.textContent = selectedCount ? `Collega ${selectedCount} ${selectedCount === 1 ? "cliente" : "clienti"}` : "Collega al gestionale e al PED";
+  list.innerHTML = folders.map((folder) => {
+    const linked = Boolean(folder.linked_client_id);
+    const selected = driveClientImportSelected.has(folder.id);
+    return `
+      <label class="drive-client-import-item${linked ? " is-linked" : ""}${selected ? " is-selected" : ""}">
+        <input type="checkbox" data-drive-client-folder="${escapeHtml(folder.id)}" ${selected ? "checked" : ""} ${linked ? "disabled" : ""}>
+        <span class="drive-client-import-icon" aria-hidden="true"><svg class="lc" viewBox="0 0 24 24"><path d="M3 7h6l2 2h10v10H3z"/><path d="M3 7V5h6l2 2"/></svg></span>
+        <span class="drive-client-import-copy"><strong>${escapeHtml(folder.name)}</strong><small>${linked ? `Collegata a ${escapeHtml(folder.linked_client_name || folder.name)}` : "Pronta per Clienti e PED"}</small></span>
+        <span class="client-status ${linked ? "is-attivo" : "is-onboarding"}">${linked ? "Gia collegato" : "Da collegare"}</span>
+      </label>`;
+  }).join("") || emptyState("Nessuna cartella Drive corrisponde alla ricerca.");
+}
+
+async function openDriveClientImportModal() {
+  const modal = document.getElementById("driveClientImportModal");
+  const message = document.getElementById("driveClientImportMessage");
+  driveClientImportFolders = [];
+  driveClientImportSelected = new Set();
+  document.getElementById("driveClientImportSearch").value = "";
+  message.textContent = "";
+  document.getElementById("driveClientImportList").innerHTML = `<div class="drive-move-loading"><span class="drive-folder-spinner" aria-hidden="true"></span>Cerco le cartelle cliente su Google Drive...</div>`;
+  document.getElementById("driveClientImportSummary").textContent = "Caricamento cartelle Drive...";
+  document.getElementById("driveClientImportSubmit").disabled = true;
+  modal.showModal();
+  try {
+    const response = await apiFetch("/api/clients?source=drive");
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || "Lettura cartelle Drive non riuscita");
+    driveClientImportFolders = Array.isArray(result.folders) ? result.folders : [];
+    renderDriveClientImport();
+  } catch (error) {
+    document.getElementById("driveClientImportSummary").textContent = "Google Drive non disponibile";
+    document.getElementById("driveClientImportList").innerHTML = emptyState("Non riesco a leggere le cartelle Drive.");
+    message.textContent = error.message || "Controlla il collegamento Google Drive.";
+  }
+}
+
+async function submitDriveClientImport() {
+  const submit = document.getElementById("driveClientImportSubmit");
+  const message = document.getElementById("driveClientImportMessage");
+  const selected = driveClientImportFolders.filter((folder) => driveClientImportSelected.has(folder.id) && !folder.linked_client_id);
+  if (!selected.length) return;
+  submit.disabled = true;
+  let imported = 0;
+  const failures = [];
+  for (const folder of selected) {
+    submit.textContent = `Collego ${imported + failures.length + 1} di ${selected.length}...`;
+    try {
+      const response = await apiFetch("/api/clients", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: folder.name, status: "onboarding", drive_folder_id: folder.id })
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || "Collegamento non riuscito");
+      imported += 1;
+      driveClientImportSelected.delete(folder.id);
+    } catch (error) {
+      failures.push(`${folder.name}: ${error.message || "errore"}`);
+    }
+  }
+  await loadClientsFromBackend();
+  try {
+    const response = await apiFetch("/api/clients?source=drive");
+    const result = await response.json().catch(() => ({}));
+    if (response.ok) driveClientImportFolders = Array.isArray(result.folders) ? result.folders : [];
+  } catch {}
+  renderDriveClientImport();
+  message.textContent = failures.length
+    ? `${imported} clienti collegati. Non completati: ${failures.join(" · ")}`
+    : `${imported} ${imported === 1 ? "cliente collegato" : "clienti collegati"}: ora sono disponibili anche nel PED.`;
+}
+
 async function submitClient(form) {
   const data = Object.fromEntries(new FormData(form).entries());
   const isUpdate = Boolean(data.id);
@@ -11643,6 +11733,25 @@ document.getElementById("contentImageFile").addEventListener("change", (event) =
   event.target.value = "";
 });
 document.getElementById("newClientButton").addEventListener("click", () => openClientModal());
+document.getElementById("linkDriveClientsButton").addEventListener("click", openDriveClientImportModal);
+document.getElementById("driveClientImportSearch").addEventListener("input", renderDriveClientImport);
+document.getElementById("driveClientImportList").addEventListener("change", (event) => {
+  const input = event.target.closest("[data-drive-client-folder]");
+  if (!input) return;
+  if (input.checked) driveClientImportSelected.add(input.dataset.driveClientFolder);
+  else driveClientImportSelected.delete(input.dataset.driveClientFolder);
+  renderDriveClientImport();
+});
+document.getElementById("driveClientImportSelectAll").addEventListener("click", () => {
+  const available = driveClientImportAvailableFolders().filter((folder) => !folder.linked_client_id);
+  const allSelected = available.length && available.every((folder) => driveClientImportSelected.has(folder.id));
+  available.forEach((folder) => allSelected ? driveClientImportSelected.delete(folder.id) : driveClientImportSelected.add(folder.id));
+  renderDriveClientImport();
+});
+document.getElementById("driveClientImportSubmit").addEventListener("click", submitDriveClientImport);
+document.querySelectorAll("[data-drive-client-import-close]").forEach((button) => {
+  button.addEventListener("click", () => document.getElementById("driveClientImportModal").close());
+});
 document.getElementById("drivePreviewModal").addEventListener("close", () => {
   const body = document.getElementById("drivePreviewBody");
   document.getElementById("drivePreviewModal").classList.remove("is-ped-carousel-editor");

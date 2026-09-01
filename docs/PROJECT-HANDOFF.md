@@ -1,6 +1,6 @@
 # BMG Hub — contesto per una nuova chat
 
-Ultimo aggiornamento: 28 agosto 2026
+Ultimo aggiornamento: 1 settembre 2026
 Repository locale: `/Users/davidedeluca/Desktop/bmg-hub`  
 Branch di produzione: `main`  
 Ultimo commit applicativo verificato al momento della scrittura: `9fb8746`
@@ -179,6 +179,13 @@ supabase/                     schema e migration
 
 - Elenco clienti, ricerca, creazione, modifica, archiviazione ed eliminazione
   logica.
+- La pagina Clienti dispone del pannello `Collega da Drive`: legge le cartelle
+  cliente gia presenti nella radice autorizzata, indica quelle gia collegate e
+  permette di selezionarne una o piu senza crearne copie. Per ogni cartella
+  scelta il backend verifica nome e ID Drive contro i clienti attivi e
+  archiviati, abilita l'accesso del gestionale, collega o crea le raccolte
+  GRAFICHE/VIDEO e la cartella ClickUp e inserisce l'anagrafica Supabase. Il
+  cliente diventa cosi disponibile immediatamente anche nel selettore PED.
 - L'aggiunta di un cliente crea/collega le risorse Drive e ClickUp previste.
 - Archiviare un cliente lo rimuove dalle viste operative, dal PED e dai selettori
   Drive senza eliminare la sua cartella reale su Google Drive.

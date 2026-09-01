@@ -59,6 +59,32 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-09-01 — Pannello clienti da Google Drive collegato al PED
+
+- Richiesta: aggiungere un pannello per importare nel gestionale i clienti gia
+  creati su Google Drive e renderli disponibili anche nel PED.
+- Modifiche: aggiunto nella pagina Clienti il comando `Collega da Drive` con
+  dialogo responsive, ricerca, selezione multipla, stato delle cartelle gia
+  collegate e conferma del numero di clienti da importare. L'API elenca tramite
+  OAuth di scrittura le cartelle nella radice Drive, esclude le radici tecniche
+  GRAFICHE/VIDEO e impedisce duplicati sia per nome normalizzato sia per ID
+  cartella. L'import riusa la cartella esistente senza copiarla, abilita il
+  service account, collega o crea le raccolte GRAFICHE/VIDEO e ClickUp e crea o
+  ripristina l'anagrafica Supabase; il normale caricamento clienti la rende
+  subito disponibile nel PED.
+- File: `lib/google-drive.js`, `api/clients.js`, `public/index.html`,
+  `public/app.js`, `public/styles.css`, `scripts/test-client-management.mjs`,
+  `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run check`, `npm run test:client-management`,
+  `npm run test:ped-carousel`, `npm run test:client-drive-libraries`,
+  `npm run test:permissions`, `npm run test:mobile-navigation`,
+  `npm run test:primeng-components`, `npm run test:session-persistence`,
+  `git diff --check`; controllo responsive desktop e smartphone del nuovo
+  dialogo.
+- Pubblicazione: GitHub `main` e Vercel produzione nello stesso intervento.
+- Note: preservata e non inclusa la cartella locale preesistente
+  `.bmg-redesign-backup/`.
+
 ### 2026-09-01 — Controllo permanente autorizzazioni Calendar e Drive
 
 - Richiesta: verificare a fondo le autorizzazioni Google Calendar e Drive e

@@ -8,7 +8,11 @@ const appSource = await readFile(new URL("../public/app.js", import.meta.url), "
 const htmlSource = await readFile(new URL("../public/index.html", import.meta.url), "utf8");
 const styleSource = await readFile(new URL("../public/styles.css", import.meta.url), "utf8");
 
-assert.match(apiSource, /async function ensureClientDriveFolders\(name\)/, "la creazione cliente deve configurare Google Drive");
+assert.match(apiSource, /async function ensureClientDriveFolders\(name, existingMain = null\)/, "la creazione cliente deve configurare Google Drive");
+assert.match(apiSource, /driveImportCandidates/, "deve esistere la scoperta delle cartelle cliente gia presenti su Drive");
+assert.match(apiSource, /drive_folder_id/, "una cartella Drive esistente deve poter essere collegata senza duplicarla");
+assert.match(apiSource, /ensureClientDriveFolders\(payload\.name, selectedDriveFolder\)/, "l'import deve riusare la cartella Drive selezionata");
+assert.match(apiSource, /driveFolderId\(client\.drive_url\) === requestedDriveFolderId/, "l'import deve impedire duplicati anche tramite ID cartella");
 assert.match(apiSource, /ensureDriveFolderWithWriteAccess\(\{ parentId: "root", name \}\)/, "deve esistere la cartella principale del cliente");
 assert.match(apiSource, /Object\.values\(CLIENT_DRIVE_LIBRARIES\)/, "devono essere create anche le cartelle GRAFICHE e VIDEO");
 assert.match(apiSource, /ensureClickUpFolder\(payload\.name\)/, "deve essere creata o riusata la cartella ClickUp");
@@ -35,6 +39,10 @@ assert.doesNotMatch(appSource, /Apri Google Drive/, "la scheda cliente non deve 
 assert.doesNotMatch(appSource, /aria-label="Apri ClickUp"/, "la scheda cliente non deve rimandare al sito ClickUp");
 assert.match(htmlSource, /id="clientCreateAutomation"/, "il modal deve spiegare la configurazione automatica");
 assert.match(htmlSource, /id="saveClientButton"/, "il salvataggio deve mostrare lo stato della creazione");
+assert.match(htmlSource, /id="linkDriveClientsButton"/, "la pagina Clienti deve esporre il pannello di collegamento Drive");
+assert.match(htmlSource, /id="driveClientImportModal"/, "deve esistere un pannello dedicato alle cartelle Drive");
+assert.match(appSource, /ora sono disponibili anche nel PED/, "il pannello deve confermare il collegamento automatico al PED");
+assert.match(styleSource, /\.drive-client-import-list \{[\s\S]*?grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/, "il pannello Drive deve usare una griglia desktop leggibile");
 assert.match(styleSource, /@media \(max-width: 980px\)[\s\S]*?\.client-grid \{[\s\S]*?grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/, "su smartphone i clienti devono essere disposti due per riga");
 assert.match(styleSource, /\.client-folder \{[\s\S]*?min-height: 72px;[\s\S]*?grid-template-columns: 34px minmax\(0, 1fr\) 13px;/, "le schede cliente mobile devono essere rettangolari e compatte");
 assert.match(styleSource, /\.client-folder-copy strong \{[\s\S]*?font-size: 13px;/, "i nomi cliente nella griglia mobile devono restare leggibili");

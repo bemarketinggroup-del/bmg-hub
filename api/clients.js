@@ -4,7 +4,9 @@ import { canAccessModule } from "../lib/staff-permissions.js";
 import {
   ensureDriveFolderWithWriteAccess,
   ensureDriveServiceAccountPermission,
-  googleDriveWriteConfigured
+  googleDriveWriteConfigured,
+  listDriveFoldersWithWriteAccess,
+  driveFolderId
 } from "../lib/google-drive.js";
 import { CLIENT_DRIVE_LIBRARIES } from "../lib/client-drive-libraries.js";
 
@@ -70,12 +72,22 @@ async function ensureClickUpFolder(name) {
   };
 }
 
-async function ensureClientDriveFolders(name) {
+function normalizeClientName(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+async function ensureClientDriveFolders(name, existingMain = null) {
   if (!googleDriveWriteConfigured()) {
     throw new Error("Google Drive non configurato per creare la cartella cliente");
   }
 
-  const main = await ensureDriveFolderWithWriteAccess({ parentId: "root", name });
+  const main = existingMain || await ensureDriveFolderWithWriteAccess({ parentId: "root", name });
   await ensureDriveServiceAccountPermission(main.id);
   const libraries = await Promise.all(Object.values(CLIENT_DRIVE_LIBRARIES).map((library) => (
     ensureDriveFolderWithWriteAccess({ parentId: library.id, name })
@@ -87,11 +99,35 @@ async function ensureClientDriveFolders(name) {
   };
 }
 
-async function existingClientByName(name) {
-  const result = await supabaseFetch(`/clients?select=id,name,status&name=ilike.${encodeURIComponent(name)}&limit=1`);
-  if (!result.ok) return null;
-  const rows = await result.json();
-  return rows[0] || null;
+async function activeAndArchivedClients() {
+  const result = await supabaseFetch("/clients?select=id,name,status,drive_url&order=name.asc");
+  if (!result.ok) throw new Error("Impossibile leggere i clienti gia collegati");
+  return result.json();
+}
+
+async function driveClientFolders() {
+  const reservedIds = new Set(Object.values(CLIENT_DRIVE_LIBRARIES).map((library) => String(library.id)));
+  const folders = await listDriveFoldersWithWriteAccess({ parentId: "root" });
+  return folders.filter((folder) => !reservedIds.has(String(folder.id)));
+}
+
+async function driveImportCandidates() {
+  const [folders, clients] = await Promise.all([driveClientFolders(), activeAndArchivedClients()]);
+  return folders.map((folder) => {
+    const linked = clients.find((client) => (
+      driveFolderId(client.drive_url) === String(folder.id)
+      || normalizeClientName(client.name) === normalizeClientName(folder.name)
+    ));
+    return {
+      id: String(folder.id),
+      name: String(folder.name || "Cartella senza nome"),
+      modified_at: folder.modifiedTime || null,
+      drive_url: folder.webViewLink || `https://drive.google.com/drive/folders/${encodeURIComponent(folder.id)}`,
+      linked_client_id: linked?.status === "archiviato" ? null : linked?.id || null,
+      linked_client_name: linked?.status === "archiviato" ? null : linked?.name || null,
+      archived_client_id: linked?.status === "archiviato" ? linked.id : null
+    };
+  });
 }
 
 export default async function handler(request, response) {
@@ -121,6 +157,22 @@ export default async function handler(request, response) {
   }
 
   if (request.method === "GET") {
+    if (requestUrl.searchParams.get("source") === "drive") {
+      if (!canAccessModule(session.profile, "clients")) {
+        response.writeHead(403, headers());
+        response.end(JSON.stringify({ error: "Modulo Clienti non abilitato" }));
+        return;
+      }
+      try {
+        const folders = await driveImportCandidates();
+        response.writeHead(200, headers());
+        response.end(JSON.stringify({ folders }));
+      } catch (error) {
+        response.writeHead(502, headers());
+        response.end(JSON.stringify({ error: error.message || "Lettura cartelle Drive non riuscita" }));
+      }
+      return;
+    }
     const result = await supabaseFetch("/clients?select=*&status=neq.archiviato&order=name.asc");
     response.writeHead(result.status, headers());
     response.end(await result.text());
@@ -141,7 +193,36 @@ export default async function handler(request, response) {
       return;
     }
 
-    const existingClient = await existingClientByName(payload.name);
+    const requestedDriveFolderId = String(body.drive_folder_id || "").trim();
+    let selectedDriveFolder = null;
+    if (requestedDriveFolderId) {
+      try {
+        selectedDriveFolder = (await driveClientFolders()).find((folder) => String(folder.id) === requestedDriveFolderId) || null;
+      } catch (error) {
+        response.writeHead(502, headers());
+        response.end(JSON.stringify({ error: error.message || "Verifica cartella Drive non riuscita" }));
+        return;
+      }
+      if (!selectedDriveFolder) {
+        response.writeHead(404, headers());
+        response.end(JSON.stringify({ error: "Cartella Drive non trovata nella radice autorizzata" }));
+        return;
+      }
+      payload.name = String(selectedDriveFolder.name || payload.name).trim();
+    }
+
+    let existingClient = null;
+    try {
+      const clients = await activeAndArchivedClients();
+      existingClient = clients.find((client) => (
+        normalizeClientName(client.name) === normalizeClientName(payload.name)
+        || (requestedDriveFolderId && driveFolderId(client.drive_url) === requestedDriveFolderId)
+      )) || null;
+    } catch (error) {
+      response.writeHead(502, headers());
+      response.end(JSON.stringify({ error: error.message || "Verifica clienti collegati non riuscita" }));
+      return;
+    }
     if (existingClient && existingClient.status !== "archiviato") {
       response.writeHead(409, headers());
       response.end(JSON.stringify({ error: "Esiste gia un cliente con questo nome" }));
@@ -151,7 +232,7 @@ export default async function handler(request, response) {
     let drive;
     let clickup;
     try {
-      drive = await ensureClientDriveFolders(payload.name);
+      drive = await ensureClientDriveFolders(payload.name, selectedDriveFolder);
       clickup = await ensureClickUpFolder(payload.name);
     } catch (error) {
       response.writeHead(502, headers());
