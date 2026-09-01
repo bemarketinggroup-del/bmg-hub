@@ -196,7 +196,7 @@ let clientsOnline = null;
 let clickupOnline = null;
 let calendarOnline = null;
 let serviceHealthTimer = null;
-const backendServiceErrors = { clients: "", clickup: "", site: "", calendar: "" };
+const backendServiceErrors = { clients: "", clickup: "", site: "", calendar: "", drive: "" };
 let selectedTeamMemberId = ALL_TEAM_TASKS_ID;
 let selectedClientId = "";
 let clientDriveState = { surface: "client", clientId: "", path: [], files: [], libraries: [], source: "", rootId: "", objectUrl: "", thumbnailUrls: new Set(), uploadEnabled: false, bulkMessage: "" };
@@ -1682,12 +1682,13 @@ function renderBackendStatus(message = "", serviceKey = "") {
 }
 
 async function loadServiceHealth({ quiet = false } = {}) {
-  if (!currentProfile || (!canAccessModule("calendar") && !canAccessModule("smart_working"))) return;
+  if (!currentProfile) return;
   try {
     const response = await apiFetch("/api/health");
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || `Controllo servizi non disponibile (${response.status})`);
     const calendar = data.services?.calendar || {};
+    const drive = data.services?.drive || {};
     calendarOnline = calendar.status === "online";
     const detail = calendarOnline
       ? ""
@@ -1695,9 +1696,16 @@ async function loadServiceHealth({ quiet = false } = {}) {
         ? "Servizio temporaneamente non disponibile; nuovo tentativo automatico"
         : "Collegamento da verificare in amministrazione";
     renderBackendStatus(detail, "calendar");
+    const driveDetail = drive.status === "online"
+      ? ""
+      : drive.code?.includes("oauth") || drive.code?.includes("not_authorized")
+        ? "Autorizzazione Google Drive da verificare in amministrazione"
+        : "Google Drive temporaneamente non disponibile; nuovo tentativo automatico";
+    renderBackendStatus(driveDetail, "drive");
   } catch (error) {
     calendarOnline = false;
     renderBackendStatus(quiet ? "Controllo non riuscito; nuovo tentativo automatico" : error.message, "calendar");
+    renderBackendStatus(quiet ? "Controllo non riuscito; nuovo tentativo automatico" : error.message, "drive");
   }
 }
 

@@ -59,6 +59,31 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-09-01 — Controllo permanente autorizzazioni Calendar e Drive
+
+- Richiesta: verificare a fondo le autorizzazioni Google Calendar e Drive e
+  impedire che il collegamento smetta di funzionare ogni settimana.
+- Modifiche: confermato in Google Auth Platform lo stato `In produzione`; esteso
+  `/api/health` per controllare separatamente Calendar, lettura Drive tramite
+  account di servizio e OAuth Drive di scrittura; il controllo viene eseguito
+  per tutti gli utenti autenticati ogni cinque minuti senza creare o modificare
+  file. Gli errori OAuth Drive conservano ora codice e sorgente utili a
+  distinguere token revocati, configurazione mancante e guasti temporanei.
+- File: `lib/google-drive.js`, `lib/system-health.js`, `public/app.js`,
+  `scripts/test-connected-services.mjs`, `docs/GOOGLE-DRIVE.md`,
+  `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: controllo Google Auth Platform (`In produzione`, tipo `Esterno`,
+  flussi OAuth sicuri, client attivi); verifica variabili Vercel Production e
+  Preview senza lettura dei valori; `npm run test:connected-services`,
+  `npm run test:google-calendar`, `npm run test:client-drive-libraries`,
+  `npm run check`, `git diff --check`; controllo autenticato di produzione di
+  Calendar e Drive.
+- Pubblicazione: GitHub `main` e Vercel produzione nello stesso intervento.
+- Note: la scadenza automatica di sette giorni e esclusa dallo stato
+  `In produzione`; restano possibili solo revoche esterne esplicite (rimozione
+  accesso dall'account Google, eliminazione client/chiave o blocco sicurezza
+  Google), ora rilevate dal controllo operativo.
+
 ### 2026-09-01 — Ripristino credenziali Calendar in produzione
 
 - Richiesta: correggere il nuovo avviso di autorizzazione Google Calendar

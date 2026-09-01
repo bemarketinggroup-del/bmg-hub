@@ -62,3 +62,15 @@ Client secret e refresh token vanno configurati esclusivamente come variabili se
 - I token di accesso sono mantenuti solo in memoria e scadono automaticamente.
 - Un utente non puo' usare l'endpoint per navigare fuori dalla cartella radice del cliente.
 - Le risposte media usano solo cache privata del browser e `X-Content-Type-Options: nosniff`.
+
+## Continuita operativa
+
+- L'app Google OAuth deve restare in stato `In produzione`: in modalita `Test` Google
+  fa scadere automaticamente i refresh token dopo sette giorni.
+- Il controllo autenticato `/api/health` verifica separatamente l'account di servizio
+  usato per leggere Drive e l'OAuth offline usato per upload, cartelle e modifiche.
+- Il controllo e ripetuto dal gestionale ogni cinque minuti e rinnova davvero il token
+  di scrittura senza creare, modificare o eliminare file.
+- Production e Preview devono contenere insieme le tre variabili
+  `GOOGLE_DRIVE_OAUTH_*` dello stesso client; ID, secret e refresh token non vanno
+  sostituiti singolarmente.

@@ -392,6 +392,18 @@ supabase/                     schema e migration
 - Le task completate non devono restare nelle notifiche.
 - Nessun pulsante operativo deve portare l'utente fuori dal gestionale.
 
+### Google Drive
+
+- Le letture usano l'account di servizio; upload, creazione cartelle e modifiche
+  usano l'OAuth offline dedicato di `beviralagency@gmail.com`.
+- La schermata consenso OAuth deve restare `In produzione`: in modalita `Test`
+  i refresh token scadono automaticamente dopo sette giorni.
+- `/api/health` controlla senza modificare file sia la lettura tramite account di
+  servizio sia il rinnovo dell'OAuth di scrittura. Il gestionale ripete il
+  controllo ogni cinque minuti per tutti gli utenti autenticati.
+- Le tre variabili `GOOGLE_DRIVE_OAUTH_*` devono appartenere allo stesso client e
+  vanno aggiornate insieme per Production e Preview.
+
 ### Google Calendar
 
 - Vista mese e settimana, eventi multi-giorno continui e griglia invariata.
@@ -504,11 +516,13 @@ OPENAI_MODEL
 ALLOWED_ORIGIN
 ```
 
-Drive puo usare OAuth o service account in base alla configurazione. Calendar
-richiede invece tutte e tre le variabili `GOOGLE_CALENDAR_OAUTH_*` dedicate,
-provenienti dallo stesso client in produzione. Prima di cambiare strategia di
-autenticazione, leggere `lib/google-drive.js`, `lib/google-calendar.js` e le
-variabili già configurate su Vercel.
+Drive usa l'account di servizio per la lettura e l'OAuth dedicato per le
+operazioni di scrittura. Calendar richiede invece tutte e tre le variabili
+`GOOGLE_CALENDAR_OAUTH_*` dedicate, provenienti dallo stesso client in
+produzione. Prima di cambiare strategia di autenticazione, leggere
+`lib/google-drive.js`, `lib/google-calendar.js` e le variabili gia configurate
+su Vercel. Il controllo `/api/health` deve continuare a verificare entrambe le
+integrazioni e le due modalita di accesso Drive senza esporre credenziali.
 
 ## Database e migration
 
