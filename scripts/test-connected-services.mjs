@@ -21,7 +21,7 @@ assert.match(healthSource, /HEALTH_CACHE_TTL_MS = 60 \* 1000/, "il controllo dev
 assert.match(healthSource, /googleCalendarHealth/, "il controllo deve verificare realmente Google Calendar");
 assert.match(healthSource, /googleDriveHealth/, "il controllo deve verificare realmente Google Drive");
 assert.match(healthSource, /services: \{ calendar, drive \}/, "il controllo deve riportare Calendar e Drive separatamente");
-assert.match(healthSource, /BMG integration health[\s\S]*driveRead[\s\S]*driveWrite/, "i log devono rendere verificabile lo stato senza esporre credenziali");
+assert.match(healthSource, /BMG integration health[\s\S]*calendarCode[\s\S]*driveRead[\s\S]*driveWrite/, "i log devono rendere verificabile lo stato senza esporre credenziali");
 assert.match(calendarSource, /export async function googleCalendarHealth/, "Calendar deve esporre un controllo operativo");
 assert.match(driveSource, /export async function googleDriveHealth/, "Drive deve esporre un controllo operativo");
 assert.match(driveSource, /googleDriveReadHealth[\s\S]*service_account/, "Drive deve verificare l'account di servizio di lettura");
