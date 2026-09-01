@@ -1,5 +1,10 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import {
+  clientConnectionSettings,
+  notesWithClientConnections,
+  visibleClientNotes
+} from "../lib/client-connections.js";
 
 const apiSource = await readFile(new URL("../api/clients.js", import.meta.url), "utf8");
 const driveSource = await readFile(new URL("../lib/google-drive.js", import.meta.url), "utf8");
@@ -14,7 +19,9 @@ assert.match(apiSource, /drive_folder_id/, "una cartella Drive esistente deve po
 assert.match(apiSource, /ensureClientDriveFolders\(payload\.name, selectedDriveFolder\)/, "l'import deve riusare la cartella Drive selezionata");
 assert.match(apiSource, /driveFolderId\(client\.drive_url\) === requestedDriveFolderId/, "l'import deve impedire duplicati anche tramite ID cartella");
 assert.match(apiSource, /ensureDriveFolderWithWriteAccess\(\{ parentId: "root", name \}\)/, "deve esistere la cartella principale del cliente");
-assert.match(apiSource, /Object\.values\(CLIENT_DRIVE_LIBRARIES\)/, "devono essere create anche le cartelle GRAFICHE e VIDEO");
+assert.match(apiSource, /Object\.entries\(CLIENT_DRIVE_LIBRARIES\)/, "devono essere create anche le cartelle GRAFICHE e VIDEO");
+assert.match(apiSource, /body\.action === "connections"/, "ogni cliente deve poter salvare collegamenti manuali");
+assert.match(apiSource, /clientConnectionFolders/, "il pannello deve elencare separatamente Drive, Grafiche e Video");
 assert.match(apiSource, /ensureClickUpFolder\(payload\.name\)/, "deve essere creata o riusata la cartella ClickUp");
 assert.match(apiSource, /request\.method === "DELETE"/, "l'API deve consentire la rimozione del cliente");
 assert.match(apiSource, /session\.profile\?\.role !== "admin"/, "solo un amministratore deve poter eliminare clienti");
@@ -41,11 +48,25 @@ assert.match(htmlSource, /id="clientCreateAutomation"/, "il modal deve spiegare 
 assert.match(htmlSource, /id="saveClientButton"/, "il salvataggio deve mostrare lo stato della creazione");
 assert.match(htmlSource, /id="linkDriveClientsButton"/, "la pagina Clienti deve esporre il pannello di collegamento Drive");
 assert.match(htmlSource, /id="driveClientImportModal"/, "deve esistere un pannello dedicato alle cartelle Drive");
+assert.match(htmlSource, /id="clientConnectionsModal"/, "la scheda cliente deve avere un pannello di configurazione dei collegamenti");
+assert.match(appSource, /Configura collegamenti/, "la scheda cliente deve mostrare lo stato di PED, Drive, Grafiche e Video");
+assert.match(appSource, /graphics_folder_id/, "il frontend deve salvare la cartella Grafiche selezionata");
+assert.match(appSource, /video_folder_id/, "il frontend deve salvare la cartella Video selezionata");
 assert.match(appSource, /ora sono disponibili anche nel PED/, "il pannello deve confermare il collegamento automatico al PED");
 assert.match(styleSource, /\.drive-client-import-list \{[\s\S]*?grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/, "il pannello Drive deve usare una griglia desktop leggibile");
 assert.match(styleSource, /@media \(max-width: 980px\)[\s\S]*?\.client-grid \{[\s\S]*?grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/, "su smartphone i clienti devono essere disposti due per riga");
 assert.match(styleSource, /\.client-folder \{[\s\S]*?min-height: 72px;[\s\S]*?grid-template-columns: 34px minmax\(0, 1fr\) 13px;/, "le schede cliente mobile devono essere rettangolari e compatte");
 assert.match(styleSource, /\.client-folder-copy strong \{[\s\S]*?font-size: 13px;/, "i nomi cliente nella griglia mobile devono restare leggibili");
 assert.match(styleSource, /\.drive-library-grid \{[\s\S]*?grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/, "GRAFICHE e VIDEO devono apparire affiancate e in evidenza");
+
+const notes = notesWithClientConnections("Nota cliente", {
+  graphics_folder_id: "graphics_123",
+  video_folder_id: "video_456"
+});
+assert.equal(visibleClientNotes(notes), "Nota cliente", "i riferimenti tecnici non devono apparire nelle note cliente");
+assert.deepEqual(clientConnectionSettings(notes), {
+  graphics_folder_id: "graphics_123",
+  video_folder_id: "video_456"
+}, "i collegamenti manuali devono essere riletti senza perdita di dati");
 
 console.log("Client management tests passed");

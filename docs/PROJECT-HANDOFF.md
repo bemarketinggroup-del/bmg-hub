@@ -186,6 +186,16 @@ supabase/                     schema e migration
   archiviati, abilita l'accesso del gestionale, collega o crea le raccolte
   GRAFICHE/VIDEO e la cartella ClickUp e inserisce l'anagrafica Supabase. Il
   cliente diventa cosi disponibile immediatamente anche nel selettore PED.
+- Aprendo un cliente, il riquadro `Collegamenti operativi` mostra separatamente
+  PED, cartella Drive principale, cartella Grafiche e cartella Video. Il comando
+  `Configura collegamenti` permette di scegliere manualmente le tre cartelle
+  Drive; il PED resta associato all'anagrafica cliente aperta. Le associazioni
+  esplicite Grafiche/Video hanno priorita sul riconoscimento automatico per nome,
+  cosi clienti come ZEST possono usare cartelle con nomi diversi senza duplicati.
+- Gli ID tecnici delle raccolte Grafiche/Video sono conservati in un blocco
+  strutturato non mostrato all'utente nelle note del cliente. Le normali modifiche
+  all'anagrafica preservano tale blocco e le API restituiscono solo le note
+  leggibili insieme allo stato dei collegamenti.
 - L'aggiunta di un cliente crea/collega le risorse Drive e ClickUp previste.
 - Archiviare un cliente lo rimuove dalle viste operative, dal PED e dai selettori
   Drive senza eliminare la sua cartella reale su Google Drive.

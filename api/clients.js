@@ -1,5 +1,5 @@
 import { jsonHeaders, readJson, requireUser, supabaseFetch } from "./_auth.js";
-import handleClientDrive from "../lib/client-drive-api.js";
+import handleClientDrive, { clearClientDriveClientCache } from "../lib/client-drive-api.js";
 import { canAccessModule } from "../lib/staff-permissions.js";
 import {
   ensureDriveFolderWithWriteAccess,
@@ -8,7 +8,12 @@ import {
   listDriveFoldersWithWriteAccess,
   driveFolderId
 } from "../lib/google-drive.js";
-import { CLIENT_DRIVE_LIBRARIES } from "../lib/client-drive-libraries.js";
+import { CLIENT_DRIVE_LIBRARIES, findClientLibraryFolder } from "../lib/client-drive-libraries.js";
+import {
+  clientConnectionSettings,
+  notesWithClientConnections,
+  visibleClientNotes
+} from "../lib/client-connections.js";
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -29,6 +34,14 @@ function clientPayload(body) {
     clickup_url: String(body.clickup_url || "").trim() || null,
     drive_url: String(body.drive_url || "").trim() || null,
     notes: String(body.notes || "").trim() || null
+  };
+}
+
+function publicClientRecord(client) {
+  return {
+    ...client,
+    notes: visibleClientNotes(client?.notes),
+    connections: clientConnectionSettings(client?.notes)
   };
 }
 
@@ -89,13 +102,65 @@ async function ensureClientDriveFolders(name, existingMain = null) {
 
   const main = existingMain || await ensureDriveFolderWithWriteAccess({ parentId: "root", name });
   await ensureDriveServiceAccountPermission(main.id);
-  const libraries = await Promise.all(Object.values(CLIENT_DRIVE_LIBRARIES).map((library) => (
-    ensureDriveFolderWithWriteAccess({ parentId: library.id, name })
-  )));
+  const libraryEntries = await Promise.all(Object.entries(CLIENT_DRIVE_LIBRARIES).map(async ([source, library]) => ([
+    source,
+    await ensureDriveFolderWithWriteAccess({ parentId: library.id, name })
+  ])));
+  const libraries = Object.fromEntries(libraryEntries);
   return {
     main,
     libraries,
     url: main.webViewLink || `https://drive.google.com/drive/folders/${encodeURIComponent(main.id)}`
+  };
+}
+
+async function clientConnectionFolders() {
+  const [drive, graphics, video] = await Promise.all([
+    driveClientFolders(),
+    listDriveFoldersWithWriteAccess({ parentId: CLIENT_DRIVE_LIBRARIES.graphics.id }),
+    listDriveFoldersWithWriteAccess({ parentId: CLIENT_DRIVE_LIBRARIES.video.id })
+  ]);
+  return { drive, graphics, video };
+}
+
+function folderOption(folder) {
+  return {
+    id: String(folder?.id || ""),
+    name: String(folder?.name || "Cartella senza nome"),
+    drive_url: folder?.webViewLink || `https://drive.google.com/drive/folders/${encodeURIComponent(folder?.id || "")}`
+  };
+}
+
+function selectedLibraryFolder(files, configuredId, clientName) {
+  return files.find((folder) => String(folder.id) === String(configuredId || ""))
+    || findClientLibraryFolder(files, clientName)
+    || null;
+}
+
+async function clientConnectionState(clientId) {
+  const result = await supabaseFetch(`/clients?select=id,name,status,drive_url,notes&id=eq.${encodeURIComponent(clientId)}&limit=1`);
+  if (!result.ok) throw new Error("Impossibile leggere il cliente");
+  const client = (await result.json())[0];
+  if (!client) return null;
+  const folders = await clientConnectionFolders();
+  const settings = clientConnectionSettings(client.notes);
+  const driveId = driveFolderId(client.drive_url);
+  const currentDrive = folders.drive.find((folder) => String(folder.id) === driveId) || null;
+  const currentGraphics = selectedLibraryFolder(folders.graphics, settings.graphics_folder_id, client.name);
+  const currentVideo = selectedLibraryFolder(folders.video, settings.video_folder_id, client.name);
+  return {
+    client: { id: client.id, name: client.name },
+    current: {
+      ped: { id: client.id, name: client.name },
+      drive: currentDrive ? folderOption(currentDrive) : null,
+      graphics: currentGraphics ? folderOption(currentGraphics) : null,
+      video: currentVideo ? folderOption(currentVideo) : null
+    },
+    folders: {
+      drive: folders.drive.map(folderOption),
+      graphics: folders.graphics.map(folderOption),
+      video: folders.video.map(folderOption)
+    }
   };
 }
 
@@ -157,6 +222,28 @@ export default async function handler(request, response) {
   }
 
   if (request.method === "GET") {
+    const connectionClientId = String(requestUrl.searchParams.get("connections") || "").trim();
+    if (connectionClientId) {
+      if (!canAccessModule(session.profile, "clients")) {
+        response.writeHead(403, headers());
+        response.end(JSON.stringify({ error: "Modulo Clienti non abilitato" }));
+        return;
+      }
+      try {
+        const connectionState = await clientConnectionState(connectionClientId);
+        if (!connectionState) {
+          response.writeHead(404, headers());
+          response.end(JSON.stringify({ error: "Cliente non trovato" }));
+          return;
+        }
+        response.writeHead(200, headers());
+        response.end(JSON.stringify(connectionState));
+      } catch (error) {
+        response.writeHead(502, headers());
+        response.end(JSON.stringify({ error: error.message || "Collegamenti Drive non disponibili" }));
+      }
+      return;
+    }
     if (requestUrl.searchParams.get("source") === "drive") {
       if (!canAccessModule(session.profile, "clients")) {
         response.writeHead(403, headers());
@@ -174,8 +261,14 @@ export default async function handler(request, response) {
       return;
     }
     const result = await supabaseFetch("/clients?select=*&status=neq.archiviato&order=name.asc");
-    response.writeHead(result.status, headers());
-    response.end(await result.text());
+    if (!result.ok) {
+      response.writeHead(result.status, headers());
+      response.end(await result.text());
+      return;
+    }
+    const clients = await result.json();
+    response.writeHead(200, headers());
+    response.end(JSON.stringify(clients.map(publicClientRecord)));
     return;
   }
 
@@ -241,11 +334,14 @@ export default async function handler(request, response) {
     }
     payload.drive_url = drive.url;
     payload.clickup_url = clickup.url;
-    payload.notes = [
+    payload.notes = notesWithClientConnections([
       payload.notes,
       `Google Drive folder ID: ${drive.main.id}`,
       `ClickUp folder ID: ${clickup.id}`
-    ].filter(Boolean).join("\n");
+    ].filter(Boolean).join("\n"), {
+      graphics_folder_id: drive.libraries.graphics?.id,
+      video_folder_id: drive.libraries.video?.id
+    });
 
     const target = existingClient?.status === "archiviato"
       ? `/clients?id=eq.${encodeURIComponent(existingClient.id)}`
@@ -256,7 +352,12 @@ export default async function handler(request, response) {
       body: JSON.stringify(payload)
     });
     response.writeHead(result.status, headers());
-    response.end(await result.text());
+    if (!result.ok) {
+      response.end(await result.text());
+      return;
+    }
+    const created = await result.json();
+    response.end(JSON.stringify(created.map(publicClientRecord)));
     return;
   }
 
@@ -313,13 +414,85 @@ export default async function handler(request, response) {
       return;
     }
 
+    const currentResult = await supabaseFetch(`/clients?select=id,name,status,services,clickup_url,drive_url,notes&id=eq.${encodeURIComponent(id)}&limit=1`);
+    const currentRows = currentResult.ok ? await currentResult.json() : [];
+    const current = currentRows[0];
+    if (!current) {
+      response.writeHead(404, headers());
+      response.end(JSON.stringify({ error: "Cliente non trovato" }));
+      return;
+    }
+
+    if (body.action === "connections") {
+      let folders;
+      try {
+        folders = await clientConnectionFolders();
+      } catch (error) {
+        response.writeHead(502, headers());
+        response.end(JSON.stringify({ error: error.message || "Cartelle Drive non disponibili" }));
+        return;
+      }
+      const requested = {
+        drive: String(body.drive_folder_id || "").trim(),
+        graphics: String(body.graphics_folder_id || "").trim(),
+        video: String(body.video_folder_id || "").trim()
+      };
+      const selected = {
+        drive: requested.drive ? folders.drive.find((folder) => String(folder.id) === requested.drive) : null,
+        graphics: requested.graphics ? folders.graphics.find((folder) => String(folder.id) === requested.graphics) : null,
+        video: requested.video ? folders.video.find((folder) => String(folder.id) === requested.video) : null
+      };
+      const invalid = Object.keys(requested).find((key) => requested[key] && !selected[key]);
+      if (invalid) {
+        response.writeHead(400, headers());
+        response.end(JSON.stringify({ error: `La cartella ${invalid} selezionata non e valida` }));
+        return;
+      }
+      try {
+        await Promise.all(Object.values(selected).filter(Boolean).map((folder) => ensureDriveServiceAccountPermission(folder.id)));
+      } catch (error) {
+        response.writeHead(502, headers());
+        response.end(JSON.stringify({ error: error.message || "Permessi Drive non configurabili" }));
+        return;
+      }
+      const connectionNotes = notesWithClientConnections(current.notes, {
+        graphics_folder_id: selected.graphics?.id || "",
+        video_folder_id: selected.video?.id || ""
+      });
+      const connectionResult = await supabaseFetch(`/clients?id=eq.${encodeURIComponent(id)}`, {
+        method: "PATCH",
+        headers: { Prefer: "return=representation" },
+        body: JSON.stringify({
+          drive_url: selected.drive?.webViewLink || (selected.drive ? `https://drive.google.com/drive/folders/${selected.drive.id}` : null),
+          notes: connectionNotes
+        })
+      });
+      clearClientDriveClientCache(id);
+      response.writeHead(connectionResult.status, headers());
+      if (!connectionResult.ok) {
+        response.end(await connectionResult.text());
+        return;
+      }
+      const updated = await connectionResult.json();
+      response.end(JSON.stringify(updated.map(publicClientRecord)));
+      return;
+    }
+
+    const payload = clientPayload(body);
+    payload.notes = notesWithClientConnections(payload.notes, clientConnectionSettings(current.notes));
     const result = await supabaseFetch(`/clients?id=eq.${encodeURIComponent(id)}`, {
       method: "PATCH",
       headers: { Prefer: "return=representation" },
-      body: JSON.stringify(clientPayload(body))
+      body: JSON.stringify(payload)
     });
+    clearClientDriveClientCache(id);
     response.writeHead(result.status, headers());
-    response.end(await result.text());
+    if (!result.ok) {
+      response.end(await result.text());
+      return;
+    }
+    const updated = await result.json();
+    response.end(JSON.stringify(updated.map(publicClientRecord)));
     return;
   }
 

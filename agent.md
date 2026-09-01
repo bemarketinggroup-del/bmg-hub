@@ -59,6 +59,30 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-09-01 — Collegamenti manuali PED, Drive, Grafiche e Video per cliente
+
+- Richiesta: permettere di collegare separatamente, per ogni cliente, il PED,
+  la cartella Drive principale, la cartella Grafiche e la cartella Video.
+- Modifiche: aggiunto nella scheda cliente il riepilogo dei quattro collegamenti
+  e il dialogo `Configura collegamenti`; il PED resta legato al cliente aperto,
+  mentre le tre cartelle Google Drive sono selezionabili singolarmente. Il
+  backend valida le cartelle nelle rispettive radici, abilita l'accesso del
+  gestionale, salva le associazioni esplicite Grafiche/Video senza esporle nelle
+  note e le usa con priorita nel PED, nell'Archivio e nelle Revisioni grafiche.
+- File: `lib/client-connections.js`, `lib/client-drive-libraries.js`,
+  `lib/client-drive-api.js`, `lib/ped.js`, `lib/graphic-reviews.js`,
+  `api/clients.js`, `public/index.html`, `public/app.js`, `public/styles.css`,
+  `package.json`, `scripts/test-client-management.mjs`,
+  `scripts/test-client-drive-libraries.mjs`, `scripts/test-ped-carousel.mjs`,
+  `docs/PROJECT-HANDOFF.md`, `docs/GOOGLE-DRIVE.md`, `agent.md`.
+- Verifiche: `npm run check`, test Clienti/Drive/PED/Revisioni/permessi/sessione,
+  `git diff --check`; controllo visivo del riepilogo e del dialogo a 1280×720 e
+  390×844, senza overflow orizzontale.
+- Pubblicazione: GitHub `main` e Vercel produzione nello stesso intervento.
+- Note: preservata e non inclusa la cartella locale preesistente
+  `.bmg-redesign-backup/`; i collegamenti esistenti continuano a funzionare con
+  il riconoscimento automatico finche non viene salvata una scelta manuale.
+
 ### 2026-09-01 — Pannello clienti da Google Drive collegato al PED
 
 - Richiesta: aggiungere un pannello per importare nel gestionale i clienti gia

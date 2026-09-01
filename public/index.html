@@ -1056,6 +1056,43 @@
     </form>
   </dialog>
 
+  <dialog class="modal client-connections-modal" id="clientConnectionsModal">
+    <div class="client-connections-modal-shell">
+      <div class="modal-head">
+        <div>
+          <p class="eyebrow">PED + Google Drive</p>
+          <h2 id="clientConnectionsTitle">Configura collegamenti</h2>
+          <span>Associa manualmente ogni area alla cartella corretta.</span>
+        </div>
+        <button class="icon-button" data-client-connections-close type="button" title="Chiudi" aria-label="Chiudi"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+      </div>
+      <div class="client-connections-form">
+        <div class="client-connections-ped-row">
+          <span class="client-connections-ped-icon" aria-hidden="true"><svg class="lc" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 11h8M8 15h5"/></svg></span>
+          <span><small>PED ASSOCIATO</small><strong id="clientConnectionsPedName">Cliente</strong><em>Questo PED ricevera i contenuti delle cartelle selezionate.</em></span>
+          <b>Collegato</b>
+        </div>
+        <label>Cartella Drive principale
+          <select id="clientConnectionsDrive"></select>
+          <span>Archivio generale del cliente.</span>
+        </label>
+        <label>Cartella Grafiche
+          <select id="clientConnectionsGraphics"></select>
+          <span>Foto e materiali grafici disponibili nel PED.</span>
+        </label>
+        <label>Cartella Video
+          <select id="clientConnectionsVideo"></select>
+          <span>Reel e video disponibili nel PED.</span>
+        </label>
+      </div>
+      <p class="form-message" id="clientConnectionsMessage" role="status"></p>
+      <div class="modal-actions">
+        <button class="ghost-button" data-client-connections-close type="button">Annulla</button>
+        <button class="primary-button" id="saveClientConnectionsButton" type="button">Salva collegamenti</button>
+      </div>
+    </div>
+  </dialog>
+
   <dialog class="modal wide-modal drive-client-import-modal" id="driveClientImportModal">
     <div class="drive-client-import-shell">
       <div class="modal-head">

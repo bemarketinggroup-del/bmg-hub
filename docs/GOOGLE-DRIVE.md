@@ -4,6 +4,13 @@
 
 La scheda cliente usa `drive_url` come cartella radice autorizzata. Il frontend non riceve credenziali Google e non incorpora `drive.google.com`.
 
+Ogni scheda cliente espone inoltre un pannello di collegamento manuale per PED,
+Drive principale, Grafiche e Video. Il PED coincide con l'anagrafica cliente;
+Drive principale continua a usare `drive_url`, mentre gli ID delle cartelle
+Grafiche e Video sono memorizzati in metadati tecnici interni alle note e non
+vengono mostrati nel campo note. Se esiste una scelta manuale, questa prevale
+sulla corrispondenza automatica del nome cliente.
+
 L'endpoint privato `/api/client-drive`:
 
 - richiede una sessione Supabase `admin` o `staff`;
@@ -42,6 +49,8 @@ Se `DRIVE_MEDIA_SIGNING_SECRET` non esiste, la firma usa la `SUPABASE_SERVICE_RO
 2. Condividere con l'email del service account la cartella cliente, oppure una cartella principale che contiene tutti i clienti.
 3. Assegnare almeno il ruolo `Visualizzatore` al service account.
 4. Salvare nella scheda cliente l'URL esatto della cartella.
+5. Per cartelle con nomi diversi dall'anagrafica, aprire il cliente in BMG Hub,
+   scegliere `Configura collegamenti` e selezionare Drive, Grafiche e Video.
 
 ## Caricamento file
 

@@ -25,6 +25,15 @@ const libraries = await resolveClientDriveLibraries("ARTEMA", async () => files)
 assert.deepEqual(libraries.map((item) => item.source), ["graphics", "video"]);
 assert.ok(libraries.every((item) => item.id === "1"));
 
+const explicitLibraries = await resolveClientDriveLibraries("CLIENTE ASSENTE", async () => files, {
+  graphics_folder_id: "2",
+  video_folder_id: "3"
+});
+assert.deepEqual(explicitLibraries.map((item) => [item.source, item.id]), [
+  ["graphics", "2"],
+  ["video", "3"]
+], "i collegamenti manuali devono avere precedenza sulla corrispondenza per nome");
+
 let refreshCalls = 0;
 const refreshedLibraries = await resolveClientDriveLibraries("ARTEMA", async (_rootId, options = {}) => {
   refreshCalls += 1;

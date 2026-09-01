@@ -205,6 +205,8 @@ let graphicsDriveClientId = "";
 let selectedPedClientId = "";
 let driveClientImportFolders = [];
 let driveClientImportSelected = new Set();
+let clientConnectionsCache = new Map();
+let activeClientConnectionsId = "";
 let pedUsedFileIds = new Set();
 let selectedPedMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
 let pedPickerState = {
@@ -1508,7 +1510,8 @@ function normalizeClient(client) {
     services: Array.isArray(client.services) ? client.services.join(", ") : (client.services || ""),
     clickup: client.clickup_url || client.clickup || "#",
     drive: client.drive_url || client.drive || "#",
-    notes: client.notes || ""
+    notes: client.notes || "",
+    connections: client.connections || {}
   };
 }
 
@@ -2058,8 +2061,121 @@ function clientDetailMarkup(client) {
         ${drive ? "" : `<button class="primary-button" data-client-edit="${client.id}" type="button">Aggiungi Drive</button>`}
       </div>
     </div>
+    <section class="client-connections-panel" data-client-connections-panel="${escapeHtml(client.id)}" aria-live="polite">
+      <div class="client-connections-loading"><span class="drive-folder-spinner" aria-hidden="true"></span>Verifico i collegamenti del cliente...</div>
+    </section>
     ${drive ? `<section class="client-drive-panel" data-client-drive-panel aria-live="polite"></section>` : ""}
   `;
+}
+
+function clientConnectionCard(icon, label, connection, hint) {
+  const connected = Boolean(connection?.id);
+  return `<article class="client-connection-card${connected ? " is-connected" : ""}">
+    <span class="client-connection-icon" aria-hidden="true"><svg class="lc" viewBox="0 0 24 24">${icon}</svg></span>
+    <span class="client-connection-copy"><small>${escapeHtml(label)}</small><strong>${escapeHtml(connection?.name || "Non collegata")}</strong><span>${escapeHtml(connected ? hint : "Seleziona una cartella")}</span></span>
+    <span class="client-connection-state">${connected ? "Collegato" : "Da collegare"}</span>
+  </article>`;
+}
+
+function renderClientConnectionsPanel(clientId, data = null, error = "") {
+  const panel = document.querySelector(`[data-client-connections-panel="${CSS.escape(String(clientId))}"]`);
+  if (!panel) return;
+  if (error) {
+    panel.innerHTML = `<div class="client-connections-head"><div><p class="eyebrow">PED + Google Drive</p><h3>Collegamenti operativi</h3></div><button class="secondary-button" data-client-connections="${escapeHtml(clientId)}" type="button">Riprova</button></div>${emptyState(error)}`;
+    return;
+  }
+  if (!data) {
+    panel.innerHTML = `<div class="client-connections-loading"><span class="drive-folder-spinner" aria-hidden="true"></span>Verifico i collegamenti del cliente...</div>`;
+    return;
+  }
+  const folderIcon = '<path d="M3 7h6l2 2h10v10H3z"/><path d="M3 7V5h6l2 2"/>';
+  const pedIcon = '<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 11h8M8 15h5"/>';
+  panel.innerHTML = `
+    <div class="client-connections-head">
+      <div><p class="eyebrow">PED + Google Drive</p><h3>Collegamenti operativi</h3><span>Ogni area puo essere associata alla cartella corretta del cliente.</span></div>
+      <button class="secondary-button" data-client-connections="${escapeHtml(clientId)}" type="button"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>Configura collegamenti</button>
+    </div>
+    <div class="client-connections-grid">
+      ${clientConnectionCard(pedIcon, "PED", data.current?.ped, "PED associato al cliente")}
+      ${clientConnectionCard(folderIcon, "DRIVE PRINCIPALE", data.current?.drive, "Cartella principale")}
+      ${clientConnectionCard(folderIcon, "GRAFICHE", data.current?.graphics, "Raccolta grafiche")}
+      ${clientConnectionCard(folderIcon, "VIDEO", data.current?.video, "Raccolta video")}
+    </div>`;
+}
+
+async function loadClientConnections(clientId, { force = false } = {}) {
+  const id = String(clientId || "");
+  if (!id) return null;
+  if (!force && clientConnectionsCache.has(id)) {
+    const cached = clientConnectionsCache.get(id);
+    renderClientConnectionsPanel(id, cached);
+    return cached;
+  }
+  renderClientConnectionsPanel(id);
+  try {
+    const response = await apiFetch(`/api/clients?connections=${encodeURIComponent(id)}`);
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "Collegamenti non disponibili");
+    clientConnectionsCache.set(id, data);
+    renderClientConnectionsPanel(id, data);
+    return data;
+  } catch (error) {
+    renderClientConnectionsPanel(id, null, error.message || "Collegamenti non disponibili");
+    return null;
+  }
+}
+
+function clientConnectionOptions(folders, currentId) {
+  return [`<option value="">Non collegata</option>`, ...(folders || []).map((folder) => (
+    `<option value="${escapeHtml(folder.id)}" ${String(folder.id) === String(currentId || "") ? "selected" : ""}>${escapeHtml(folder.name)}</option>`
+  ))].join("");
+}
+
+async function openClientConnectionsModal(clientId) {
+  const data = await loadClientConnections(clientId);
+  if (!data) return;
+  activeClientConnectionsId = String(clientId);
+  document.getElementById("clientConnectionsTitle").textContent = `Collegamenti · ${data.client.name}`;
+  document.getElementById("clientConnectionsPedName").textContent = data.client.name;
+  document.getElementById("clientConnectionsDrive").innerHTML = clientConnectionOptions(data.folders.drive, data.current?.drive?.id);
+  document.getElementById("clientConnectionsGraphics").innerHTML = clientConnectionOptions(data.folders.graphics, data.current?.graphics?.id);
+  document.getElementById("clientConnectionsVideo").innerHTML = clientConnectionOptions(data.folders.video, data.current?.video?.id);
+  document.getElementById("clientConnectionsMessage").textContent = "";
+  document.getElementById("clientConnectionsModal").showModal();
+}
+
+async function saveClientConnections() {
+  const id = activeClientConnectionsId;
+  if (!id) return;
+  const button = document.getElementById("saveClientConnectionsButton");
+  const message = document.getElementById("clientConnectionsMessage");
+  button.disabled = true;
+  button.textContent = "Collegamento in corso...";
+  message.textContent = "Verifico cartelle e permessi...";
+  try {
+    const response = await apiFetch("/api/clients", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id,
+        action: "connections",
+        drive_folder_id: document.getElementById("clientConnectionsDrive").value,
+        graphics_folder_id: document.getElementById("clientConnectionsGraphics").value,
+        video_folder_id: document.getElementById("clientConnectionsVideo").value
+      })
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || "Salvataggio non riuscito");
+    clientConnectionsCache.delete(id);
+    document.getElementById("clientConnectionsModal").close();
+    await loadClientsFromBackend();
+    await loadClientConnections(id, { force: true });
+  } catch (error) {
+    message.textContent = error.message || "Salvataggio non riuscito";
+  } finally {
+    button.disabled = false;
+    button.textContent = "Salva collegamenti";
+  }
 }
 
 function escapeHtml(value) {
@@ -2082,6 +2198,7 @@ async function openClientDetails(clientId) {
   selectedClientId = String(clientId || "");
   renderClients();
   const client = state.clients.find((item) => String(item.id) === selectedClientId);
+  void loadClientConnections(selectedClientId);
   if (clientHasDrive(client)) await openClientDrive(selectedClientId);
 }
 
@@ -10589,6 +10706,7 @@ document.body.addEventListener("click", (event) => {
   const editTask = event.target.closest("[data-edit-task]");
   const openClient = event.target.closest("[data-client-open]");
   const editClient = event.target.closest("[data-client-edit]");
+  const clientConnections = event.target.closest("[data-client-connections]");
   const deleteClientButton = event.target.closest("[data-client-delete]");
   const backClient = event.target.closest("[data-client-back]");
   const openClientDriveButton = event.target.closest("[data-client-drive]");
@@ -10714,6 +10832,7 @@ document.body.addEventListener("click", (event) => {
   if (editTask) return openTaskModal(selectedTeamMemberId, editTask.dataset.editTask);
   if (openClient) return openClientDetails(openClient.dataset.clientOpen);
   if (editClient) return openClientModal(editClient.dataset.clientEdit);
+  if (clientConnections) return openClientConnectionsModal(clientConnections.dataset.clientConnections);
   if (deleteClientButton) return deleteClient(deleteClientButton.dataset.clientDelete);
   if (backClient) return closeClientDetails();
   if (openClientDriveButton) return openClientDrive(openClientDriveButton.dataset.clientDrive);
@@ -11733,6 +11852,10 @@ document.getElementById("contentImageFile").addEventListener("change", (event) =
   event.target.value = "";
 });
 document.getElementById("newClientButton").addEventListener("click", () => openClientModal());
+document.getElementById("saveClientConnectionsButton").addEventListener("click", saveClientConnections);
+document.querySelectorAll("[data-client-connections-close]").forEach((button) => {
+  button.addEventListener("click", () => document.getElementById("clientConnectionsModal").close());
+});
 document.getElementById("linkDriveClientsButton").addEventListener("click", openDriveClientImportModal);
 document.getElementById("driveClientImportSearch").addEventListener("input", renderDriveClientImport);
 document.getElementById("driveClientImportList").addEventListener("change", (event) => {

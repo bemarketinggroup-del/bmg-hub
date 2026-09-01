@@ -386,7 +386,7 @@ assert.equal(sanitizeCaptionHtml('<font color="#C95B32">BMG</font><span style="c
 assert.equal(sanitizeCaptionHtml('<span style="color:rgb(999, 0, 0)">No</span>'), '<span>No</span>');
 assert.equal(sanitizeCaptionHtml('<img src=x onerror=alert(1)><em>Test</em>'), '<em>Test</em>');
 assert.match(pedSource, /used_file_ids:/, "l'API PED deve restituire tutti i file gia usati dal cliente");
-assert.match(pedSource, /resolveClientDriveLibraries\(client\.name, listDriveFolder\)/, "il PED deve accettare file dalle raccolte grafiche e video del cliente");
+assert.match(pedSource, /resolveClientDriveLibraries\(client\.name, listDriveFolder, clientConnectionSettings\(client\.notes\)\)/, "il PED deve accettare file dalle raccolte grafiche e video collegate manualmente al cliente");
 assert.match(pedSource, /allowedRootIds = \[rootId, \.\.\.libraryRoots/, "la validazione deve restare limitata alle cartelle autorizzate del cliente");
 assert.match(appSource, /let pedUsedFileIds = new Set\(\)/, "il PED deve mantenere l'indice dei file gia usati");
 assert.match(appSource, /pedUsedFileIds\.has\(String\(file\.id\)\)/, "il selettore deve riconoscere i file Drive gia usati");
