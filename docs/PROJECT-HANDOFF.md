@@ -414,7 +414,10 @@ supabase/                     schema e migration
 
 ### Task e ClickUp
 
-- Task del team e viste per singolo utente.
+- Task del team e viste per singolo utente disponibili a tutti gli account con
+  il modulo `Task` abilitato; ogni collega può creare, modificare e riassegnare
+  task a uno o più membri del workspace. `La mia area` e il riepilogo Home
+  restano personali.
 - Creazione task interna con stato iniziale sempre `to do`.
 - Assegnatari selezionabili con checkbox ben visibili.
 - Cliente ricercabile e rilevato automaticamente se citato in titolo o

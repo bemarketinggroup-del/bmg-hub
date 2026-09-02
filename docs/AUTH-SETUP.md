@@ -71,12 +71,16 @@ insert into public.staff_profiles (
 );
 ```
 
-Il campo `clickup_user_id` serve per filtrare le task personali. Se manca, il sistema prova il match via email.
+Il campo `clickup_user_id` serve per filtrare i riepiloghi personali in Home e
+`La mia area`. La pagina Task usa invece la vista condivisa del team. Se manca,
+il sistema prova il match via email per i soli riepiloghi personali.
 
 ## Ruoli
 
 - `admin`: accesso completo e gestione utenti/ruoli.
-- `staff`: accesso alle aree operative, clienti e task personali; non vede la pagina utenti.
+- `staff`: accesso ai moduli abilitati; nel modulo Task vede le attività del
+  team e può assegnarle ai colleghi. Non vede la pagina utenti se il relativo
+  modulo non è abilitato.
 
 ## Endpoint Protetti
 

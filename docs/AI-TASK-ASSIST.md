@@ -17,7 +17,8 @@ Azioni `POST`:
 
 - `analyze_missing_clients`: admin only. Analizza task senza cliente e restituisce anteprima.
 - `apply_client_tag`: admin only. Applica un tag cliente confermato su Hub e ClickUp.
-- `improve_description`: admin o staff assegnato alla task. Restituisce solo una proposta.
+- `improve_description`: admin o staff con modulo `Task` abilitato. Restituisce
+  solo una proposta.
 
 Gestione alias:
 
@@ -65,7 +66,8 @@ La descrizione viene modificata solo dopo click su `Applica proposta`.
 
 - Auth Supabase obbligatoria.
 - `admin`: analisi massiva, alias e applicazione tag.
-- `staff`: miglioramento descrizione solo su task assegnate.
+- `staff` con modulo `Task`: miglioramento descrizione sulle task operative del
+  team, coerentemente con la visibilità e la modifica condivise.
 - Rate limit server-side su tabella `ai_rate_limits`.
 - Audit trail su `ai_task_audit_logs`.
 - I log salvano metadati minimi, non il contenuto completo delle task.

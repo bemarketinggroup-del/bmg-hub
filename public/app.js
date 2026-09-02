@@ -7813,18 +7813,16 @@ function renderAgencyUsers() {
   const target = document.getElementById("agencyTeamList");
   if (!target) return;
   ensureTeamSelection();
-  const isAdmin = currentProfile?.role === "admin";
   const tasks = activeOperationalTasks();
   const unassigned = unassignedTasks();
   const users = teamMembers().sort((a, b) => String(a.name).localeCompare(String(b.name), "it", { sensitivity: "base" }));
-  const visibleUsers = isAdmin ? users : users.filter((user) => teamMemberKey(user) === selectedTeamMemberId);
-  const teamTab = isAdmin ? `
+  const teamTab = `
     <button class="team-tab team-tab-main ${selectedTeamMemberId === ALL_TEAM_TASKS_ID ? "is-active" : ""}" data-team-member="${ALL_TEAM_TASKS_ID}" type="button">
       <span class="team-tab-icon"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M8 7v7M12 7v4M16 7v9"/></svg></span>
       <span><strong>Task del team</strong><small>${tasks.length}</small></span>
     </button>
-  ` : "";
-  const userTabs = visibleUsers.map((user) => `
+  `;
+  const userTabs = users.map((user) => `
     <button class="team-tab ${teamMemberKey(user) === selectedTeamMemberId ? "is-active" : ""}" data-team-member="${teamMemberKey(user)}" type="button">
       <div class="mini-avatar">${user.avatar ? `<img src="${user.avatar}" alt="${user.name}">` : initials(user.name)}</div>
       <span>
@@ -7833,12 +7831,12 @@ function renderAgencyUsers() {
       </span>
     </button>
   `).join("");
-  const unassignedTab = isAdmin ? `
+  const unassignedTab = `
     <button class="team-tab team-tab-unassigned ${selectedTeamMemberId === UNASSIGNED_TASKS_ID ? "is-active" : ""}" data-team-member="${UNASSIGNED_TASKS_ID}" type="button">
       <span class="team-tab-icon">!</span>
       <span><strong>Senza assegnatario</strong><small>${unassigned.length}</small></span>
     </button>
-  ` : "";
+  `;
   target.innerHTML = teamTab + userTabs + unassignedTab || `<span class="team-tabs-empty">Nessun utente caricato da ClickUp.</span>`;
 }
 
@@ -8011,10 +8009,6 @@ function activeTaskStatusGroups() {
 }
 
 function selectedTeamTasks() {
-  if (currentProfile?.role !== "admin") {
-    const user = selectedTeamMember();
-    return user ? personalTeamMemberTasks(user) : [];
-  }
   if (selectedTeamMemberId === ALL_TEAM_TASKS_ID) return activeOperationalTasks();
   if (selectedTeamMemberId === UNASSIGNED_TASKS_ID) return unassignedTasks();
   const user = selectedTeamMember();
@@ -8025,15 +8019,10 @@ function ensureTeamSelection() {
   const users = teamMembers();
   const userKeys = new Set(users.map(teamMemberKey));
   if (workspaceContextHydrating && !users.length && workspaceContext.team_member_id) return;
-  if (currentProfile?.role === "admin") {
-    const validSelection = selectedTeamMemberId === ALL_TEAM_TASKS_ID || selectedTeamMemberId === UNASSIGNED_TASKS_ID || userKeys.has(selectedTeamMemberId);
-    if (!validSelection) selectedTeamMemberId = ALL_TEAM_TASKS_ID;
-    return;
-  }
-  const ownUser = users.find((user) => {
-    return clickupUserId(user) === String(currentProfile?.clickup_user_id || "");
-  });
-  selectedTeamMemberId = ownUser ? teamMemberKey(ownUser) : "";
+  const validSelection = selectedTeamMemberId === ALL_TEAM_TASKS_ID
+    || selectedTeamMemberId === UNASSIGNED_TASKS_ID
+    || userKeys.has(selectedTeamMemberId);
+  if (!validSelection) selectedTeamMemberId = ALL_TEAM_TASKS_ID;
 }
 
 function filteredTeamTasks() {

@@ -1,6 +1,7 @@
 import { jsonHeaders, requireUser } from "./_auth.js";
 import { fetchClickUpMembers } from "../lib/clickup-members.js";
 import { profileMatchesClickUpMember } from "../lib/clickup-identity.js";
+import { canAccessModule } from "../lib/staff-permissions.js";
 
 function headers() {
   return jsonHeaders("GET,OPTIONS");
@@ -27,7 +28,7 @@ export default async function handler(request, response) {
     response.end(JSON.stringify({ error: source.error }));
     return;
   }
-  if (session.profile.role === "staff") {
+  if (session.profile.role === "staff" && !canAccessModule(session.profile, "tasks")) {
     if (!session.profile.clickup_user_id) {
       response.writeHead(403, headers());
       response.end(JSON.stringify({ error: "Account non collegato a un utente ClickUp" }));

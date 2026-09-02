@@ -16,6 +16,11 @@ Ogni persona usa un account Supabase Auth email/password distinto. L'admin crea 
 
 I permessi sono salvati in `staff_profiles.module_permissions`. Gli admin hanno sempre accesso completo. Per compatibilita, i profili staff esistenti ricevono inizialmente Task, PED, Clienti e Turni; l'admin puo poi modificare ogni accesso.
 
+Il permesso `tasks` abilita uno spazio operativo condiviso: lo staff vede le
+task del team, quelle dei singoli colleghi e quelle senza assegnatario, e può
+crearle o riassegnarle tra i membri ClickUp. Home e `La mia area` mantengono
+invece il filtro personale.
+
 ## Protezione
 
 La navigazione nasconde i moduli disabilitati, ma il controllo principale avviene lato server tramite `requireUser`. Una richiesta autenticata verso un modulo non autorizzato riceve `403`. Un account disattivato riceve `403` su tutte le API private.

@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import { jsonHeaders, readJson, requireUser, supabaseFetch } from "./_auth.js";
 import { handleAiTaskAssist } from "../lib/ai-task-assist.js";
-import { taskAssignedToClickUpId } from "../lib/clickup-identity.js";
+import { isOperationalTeamTask } from "../lib/clickup-task-access.js";
 
 const CLICKUP_API_TOKEN = process.env.CLICKUP_API_TOKEN;
 const CLICKUP_WORKSPACE_ID = process.env.CLICKUP_WORKSPACE_ID || "90152036988";
@@ -66,10 +66,6 @@ function normalizeTags(task) {
 
 function clickupTaskUrl(taskId) {
   return `https://app.clickup.com/t/${taskId}`;
-}
-
-function taskBelongsToProfile(task, profile) {
-  return taskAssignedToClickUpId(task, profile?.clickup_user_id);
 }
 
 function taskFromRow(row) {
@@ -264,11 +260,11 @@ async function syncFromClickUp() {
   return { status: 200, body: taskRows };
 }
 
-async function savedTasksForSession(session) {
+async function savedTasks(session) {
   const result = await supabaseFetch("/clickup_tasks?select=*&order=updated_at.desc");
   if (!result.ok) return { status: result.status, body: await result.json().catch(() => ({ error: "Task query failed" })) };
   let rows = await result.json();
-  if (session.profile.role === "staff") rows = rows.filter((task) => taskBelongsToProfile(task, session.profile));
+  if (session.profile.role === "staff") rows = rows.filter(isOperationalTeamTask);
   return { status: 200, body: rows.map(taskFromRow) };
 }
 
@@ -278,15 +274,15 @@ async function logs() {
 }
 
 async function createTask(body, session, clientRows) {
-  const listId = clean(body.list_id || CLICKUP_DEFAULT_TASK_LIST_ID);
+  const listId = session.profile.role === "staff"
+    ? CLICKUP_DEFAULT_TASK_LIST_ID
+    : clean(body.list_id || CLICKUP_DEFAULT_TASK_LIST_ID);
   if (!body.name) return { status: 400, body: { error: "name is required" } };
 
   const clientMatch = validateClientTag(body.client_tag, clientRows) || clientFromTaskText(body, clientRows);
   if (!clientMatch) return { status: 400, body: { error: "Cliente non riconosciuto: scegli un tag cliente valido" } };
 
-  const assignees = session.profile.role === "staff"
-    ? assigneeIds(session.profile.clickup_user_id)
-    : assigneeIds(body.assignees);
+  const assignees = assigneeIds(body.assignees);
 
   const payload = {
     name: clean(body.name),
@@ -318,8 +314,9 @@ async function updateTask(body, session, clientRows) {
   const saved = await supabaseFetch(`/clickup_tasks?select=*&clickup_task_id=eq.${encodeURIComponent(taskId)}&limit=1`);
   const rows = saved.ok ? await saved.json() : [];
   const current = rows[0];
-  if (session.profile.role === "staff" && (!current || !taskBelongsToProfile(current, session.profile))) {
-    return { status: 403, body: { error: "Puoi modificare solo task assegnate a te" } };
+  if (!current) return { status: 404, body: { error: "Task non trovata nel gestionale" } };
+  if (session.profile.role === "staff" && !isOperationalTeamTask(current)) {
+    return { status: 403, body: { error: "Puoi modificare solo le task operative del team" } };
   }
 
   if (body.quick_status === true) {
@@ -347,9 +344,7 @@ async function updateTask(body, session, clientRows) {
   const clientMatch = validateClientTag(body.client_tag, clientRows);
   if (!clientMatch) return { status: 400, body: { error: "Cliente non riconosciuto: scegli un tag cliente valido" } };
 
-  const desiredAssignees = session.profile.role === "staff"
-    ? assigneeIds(session.profile.clickup_user_id)
-    : assigneeIds(body.assignees);
+  const desiredAssignees = assigneeIds(body.assignees);
   const currentAssignees = (current?.assignees || []).map((item) => Number(item.id)).filter(Number.isFinite);
   const add = desiredAssignees.filter((id) => !currentAssignees.includes(id));
   const rem = currentAssignees.filter((id) => !desiredAssignees.includes(id));
@@ -495,7 +490,7 @@ export default async function handler(request, response) {
     if (request.method === "GET") {
       const pulled = url.searchParams.get("sync") === "1" ? await syncFromClickUp() : null;
       if (pulled && pulled.status !== 200) return json(response, pulled.status, pulled.body);
-      const result = await savedTasksForSession(session);
+      const result = await savedTasks(session);
       return json(response, result.status, result.body);
     }
 

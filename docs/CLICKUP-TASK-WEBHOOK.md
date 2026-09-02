@@ -45,7 +45,11 @@ Stati segnalati:
 ## Permessi
 
 - `admin`: vede e modifica tutte le task.
-- `staff`: vede e modifica solo task assegnate al proprio `clickup_user_id` o alla propria email.
+- `staff` con modulo `Task` abilitato: vede le task operative dell'intero team,
+  può aprire le viste dei singoli colleghi e può creare, modificare o
+  riassegnare task tra tutti i membri ClickUp del workspace.
+- La sezione personale e la home continuano a filtrare le task sul proprio
+  `clickup_user_id` o sulla propria email.
 
 ## Webhook ClickUp
 

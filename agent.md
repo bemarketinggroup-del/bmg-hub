@@ -59,6 +59,32 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-09-02 — Task condivise e assegnabili tra tutti i colleghi
+
+- Richiesta: permettere agli account del team di assegnarsi task a vicenda e
+  vedere sia le task di ogni collega sia quelle generali del team.
+- Modifiche: il modulo Task restituisce ora a ogni account autorizzato tutte le
+  attività operative e l'intero elenco ClickUp del workspace; sono disponibili
+  per lo staff le viste `Task del team`, per singolo collega e `Senza
+  assegnatario`. Creazione, modifica, cambio stato, strumenti descrizione e
+  riassegnazione rispettano uno o più colleghi selezionati senza forzare
+  l'utente corrente. Home e `La mia area` restano personali.
+- File: `api/clickup-tasks.js`, `api/clickup-team.js`,
+  `lib/ai-task-assist.js`, `lib/clickup-task-access.js`, `public/app.js`,
+  `package.json`,
+  `scripts/test-clickup-task-sync.mjs`, `scripts/test-ai-task-assist.mjs`,
+  `docs/CLICKUP-TASK-WEBHOOK.md`, `docs/AI-TASK-ASSIST.md`,
+  `docs/AUTH-SETUP.md`, `docs/ACCESS-CONTROL.md`,
+  `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run check`, test ClickUp, permessi, AI, area personale,
+  persistenza, componenti e navigazione mobile, `git diff --check`; controllo
+  browser locale a 1440×900 e 390×844 con tutte le viste team visibili,
+  schede responsive a scorrimento interno e nessun overflow orizzontale.
+- Pubblicazione: commit corrente su GitHub `main` e deploy Vercel di produzione
+  su `https://bmg-hub.vercel.app` nello stesso intervento.
+- Note: preservata e non inclusa la cartella locale preesistente
+  `.bmg-redesign-backup/`.
+
 ### 2026-09-02 — Copertina Reel scelta dal fotogramma video
 
 - Richiesta: scegliere nell'anteprima profilo Instagram il frame di copertina
