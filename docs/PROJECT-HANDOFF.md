@@ -329,10 +329,17 @@ supabase/                     schema e migration
   celle verticalmente rettangolari da almeno 84 px, senza scroll orizzontale.
 - Sezione “Contenuti momentanei / In attesa di programmazione”: import dal Drive,
   anteprima del copy, editor completo uguale al PED e trascinamento nel giorno.
-- L'agenda carica tutti i contenuti fino in fondo nella pagina e non usa una
-  finestra con scroll interno.
-- Anteprima feed e agenda includono anche i mesi successivi, non solo il mese
-  attualmente aperto nel calendario.
+- L'agenda apre di default sulle uscite da oggi in poi e carica tutti i
+  contenuti futuri fino in fondo nella pagina, senza una finestra con scroll
+  interno. Se il PED contiene uscite passate, il comando `Carica precedenti`
+  sopra l'elenco le rende visibili; lo stesso comando permette poi di
+  nasconderle senza ricaricare la pagina.
+- L'anteprima feed include tutti i post, reel e caroselli presenti nel PED,
+  passati e futuri, senza dipendere dal mese attualmente aperto. Un piccolo
+  pallino rosso nell'angolo inferiore della miniatura identifica le uscite
+  passate; il riordino resta disponibile soltanto per quelle future, così non
+  modifica le date storiche. Anche l'agenda continua a includere i mesi
+  successivi.
 - Nel mockup del profilo Instagram Reel e caroselli conservano sempre le icone
   sovrapposte alle miniature anche dopo l'adattamento PrimeNG. Il telaio del
   telefono usa il rapporto fisso `370:700`: sugli schermi bassi o stretti viene

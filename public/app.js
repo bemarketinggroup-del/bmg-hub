@@ -264,6 +264,7 @@ let pedDragSuppressClickUntil = 0;
 let pedInstagramOrderEditing = false;
 let pedInstagramDraftOrder = [];
 let pedInstagramDraggedId = "";
+let pedAgendaShowsPrevious = false;
 let pedPointerDrag = { pointerId: null, card: null, itemId: "", timer: 0, active: false, startX: 0, startY: 0, ghost: null };
 const pedMoveRequests = new Set();
 let googleCalendarState = {
@@ -3352,19 +3353,24 @@ function renderPedShareButton() {
   button.disabled = !selectedPedClient();
 }
 
-function pedFutureItems() {
-  const todayKey = localDateKey(new Date());
-  const futureById = new Map(
-    (state.pedAgendaItems || [])
-      .filter((item) => String(item.scheduled_date || "") >= todayKey)
-      .map((item) => [String(item.id), item])
+function pedAllItems() {
+  const itemsById = new Map(
+    (state.pedAgendaItems || []).map((item) => [String(item.id), item])
   );
   for (const item of state.pedItems) {
     const id = String(item.id);
-    if (String(item.scheduled_date || "") >= todayKey) futureById.set(id, item);
-    else futureById.delete(id);
+    itemsById.set(id, item);
   }
-  return [...futureById.values()];
+  return [...itemsById.values()];
+}
+
+function pedFutureItems() {
+  const todayKey = localDateKey(new Date());
+  return pedAllItems().filter((item) => String(item.scheduled_date || "") >= todayKey);
+}
+
+function pedInstagramItemIsPast(item) {
+  return String(item?.scheduled_date || "") < localDateKey(new Date());
 }
 
 function renderPedInstagramPreviewAction() {
@@ -3372,13 +3378,15 @@ function renderPedInstagramPreviewAction() {
   const hint = document.getElementById("pedFeedPreviewHint");
   if (!button || !hint) return;
   const client = selectedPedClient();
-  const futureItems = pedFutureItems();
-  const feedCount = futureItems.filter((item) => pedContentType(item.content_type) !== "story").length;
-  const storyCount = futureItems.filter((item) => pedContentType(item.content_type) === "story").length;
+  const allItems = pedAllItems();
+  const feedItems = allItems.filter((item) => pedContentType(item.content_type) !== "story");
+  const feedCount = feedItems.length;
+  const storyCount = pedFutureItems().filter((item) => pedContentType(item.content_type) === "story").length;
+  const pastCount = feedItems.filter(pedInstagramItemIsPast).length;
   button.disabled = !client;
   hint.textContent = !client
     ? "Seleziona un cliente per vedere l'anteprima."
-    : `${feedCount} ${feedCount === 1 ? "pubblicazione futura" : "pubblicazioni future"}${storyCount ? ` · ${storyCount} ${storyCount === 1 ? "storia" : "storie"}` : ""}`;
+    : `${feedCount} ${feedCount === 1 ? "pubblicazione nel PED" : "pubblicazioni nel PED"}${pastCount ? ` · ${pastCount} ${pastCount === 1 ? "passata" : "passate"}` : ""}${storyCount ? ` · ${storyCount} ${storyCount === 1 ? "storia futura" : "storie future"}` : ""}`;
 }
 
 function formatPedInstagramDate(value) {
@@ -3399,7 +3407,7 @@ function pedInstagramHandle(name) {
 }
 
 function pedInstagramDefaultFeedItems() {
-  return pedFutureItems()
+  return pedAllItems()
     .filter((item) => pedContentType(item.content_type) !== "story")
     .sort((left, right) => {
       const dateOrder = String(right.scheduled_date || "").localeCompare(String(left.scheduled_date || ""));
@@ -3411,18 +3419,22 @@ function pedInstagramDefaultFeedItems() {
 function pedInstagramOrderedFeedItems() {
   const scheduled = pedInstagramDefaultFeedItems();
   if (!pedInstagramOrderEditing || !pedInstagramDraftOrder.length) return scheduled;
-  const byId = new Map(scheduled.map((item) => [String(item.id), item]));
+  const futureItems = scheduled.filter((item) => !pedInstagramItemIsPast(item));
+  const pastItems = scheduled.filter(pedInstagramItemIsPast);
+  const byId = new Map(futureItems.map((item) => [String(item.id), item]));
   const ordered = pedInstagramDraftOrder.map((id) => byId.get(String(id))).filter(Boolean);
-  scheduled.forEach((item) => {
+  futureItems.forEach((item) => {
     if (!pedInstagramDraftOrder.includes(String(item.id))) ordered.push(item);
   });
-  return ordered;
+  return [...ordered, ...pastItems];
 }
 
 function pedInstagramGridItemMarkup(item, index) {
   const file = pedItemFiles(item)[0];
   const title = pedItemTitle(item);
   const type = pedContentType(item.content_type);
+  const isPast = pedInstagramItemIsPast(item);
+  const canOrder = pedInstagramOrderEditing && !isPast;
   const mime = String(file.drive_mime_type || "");
   const isImage = mime.startsWith("image/");
   const previewUrl = file.thumbnail_url || (isImage ? file.content_url : "");
@@ -3437,11 +3449,15 @@ function pedInstagramGridItemMarkup(item, index) {
   const carouselCoverOrder = type === "carousel"
     ? `<span class="ped-instagram-carousel-cover-order" title="Foto 1 · copertina del carosello">1</span>`
     : "";
-  return `<button class="ped-instagram-grid-item ped-type-${escapeHtml(type)}${pedInstagramOrderEditing ? " is-ordering" : ""}" data-ped-instagram-item="${escapeHtml(item.id)}" data-ped-open="${escapeHtml(file.drive_file_id)}" data-ped-name="${escapeHtml(file.drive_file_name)}" data-ped-mime="${escapeHtml(mime)}" data-ped-content-url="${escapeHtml(file.content_url || "")}" type="button" draggable="${pedInstagramOrderEditing ? "true" : "false"}" title="${pedInstagramOrderEditing ? `Posizione ${index + 1}: trascina per riordinare` : `${escapeHtml(formatPedInstagramDate(item.scheduled_date))} · ${escapeHtml(title)}`}">
+  const pastDot = isPast
+    ? `<span class="ped-instagram-past-dot" title="Contenuto passato" aria-hidden="true"></span>`
+    : "";
+  return `<button class="ped-instagram-grid-item ped-type-${escapeHtml(type)}${canOrder ? " is-ordering" : ""}${isPast ? " is-past" : ""}" data-ped-instagram-item="${escapeHtml(item.id)}" data-ped-instagram-orderable="${canOrder ? "true" : "false"}" data-ped-open="${escapeHtml(file.drive_file_id)}" data-ped-name="${escapeHtml(file.drive_file_name)}" data-ped-mime="${escapeHtml(mime)}" data-ped-content-url="${escapeHtml(file.content_url || "")}" type="button" draggable="${canOrder ? "true" : "false"}" title="${canOrder ? `Posizione ${index + 1}: trascina per riordinare` : `${escapeHtml(formatPedInstagramDate(item.scheduled_date))} · ${escapeHtml(title)}${isPast ? " · contenuto passato" : ""}`}">
     ${media}
     ${badge}
     ${carouselCoverOrder}
-    ${pedInstagramOrderEditing ? `<span class="ped-instagram-order-number">${index + 1}</span>` : ""}
+    ${pastDot}
+    ${canOrder ? `<span class="ped-instagram-order-number">${index + 1}</span>` : ""}
   </button>`;
 }
 
@@ -3461,23 +3477,25 @@ function renderPedInstagramPreview() {
   const postCount = document.getElementById("pedInstagramPostCount");
   if (!client || !title || !subtitle || !stories || !feed || !summary || !stage || !tabAvatar || !profileAvatar || !profileName || !profileBio || !profileHandle || !postCount) return;
 
-  const futureItems = pedFutureItems();
-  const storyItems = futureItems
+  const allItems = pedAllItems();
+  const storyItems = pedFutureItems()
     .filter((item) => pedContentType(item.content_type) === "story")
     .sort((left, right) => String(left.scheduled_date).localeCompare(String(right.scheduled_date)));
   const feedItems = pedInstagramOrderedFeedItems();
-  const futureMonthCount = new Set(futureItems.map((item) => String(item.scheduled_date || "").slice(0, 7)).filter(Boolean)).size;
-  const futureRangeLabel = futureMonthCount
-    ? `${futureMonthCount} ${futureMonthCount === 1 ? "mese" : "mesi"}`
+  const monthCount = new Set(allItems.map((item) => String(item.scheduled_date || "").slice(0, 7)).filter(Boolean)).size;
+  const rangeLabel = monthCount
+    ? `${monthCount} ${monthCount === 1 ? "mese" : "mesi"}`
     : "nessun mese pianificato";
+  const pastFeedCount = feedItems.filter(pedInstagramItemIsPast).length;
+  const futureFeedCount = feedItems.length - pastFeedCount;
   title.textContent = `Profilo di ${client.name}`;
-  subtitle.textContent = `Anteprima da oggi in poi · ${futureRangeLabel}`;
+  subtitle.textContent = `Anteprima completa del PED · ${rangeLabel}`;
   stage.style.cssText = clientColorStyle(client);
   tabAvatar.textContent = initials(client.name);
   profileAvatar.textContent = initials(client.name);
   profileName.textContent = client.name;
   profileHandle.textContent = pedInstagramHandle(client.name);
-  profileBio.textContent = `Piano editoriale futuro · ${feedItems.length} ${feedItems.length === 1 ? "contenuto programmato" : "contenuti programmati"}`;
+  profileBio.textContent = `Piano editoriale completo · ${feedItems.length} ${feedItems.length === 1 ? "contenuto" : "contenuti"}`;
   postCount.textContent = String(feedItems.length);
 
   stories.innerHTML = storyItems.length
@@ -3494,23 +3512,23 @@ function renderPedInstagramPreview() {
   feed.innerHTML = feedItems.length
     ? feedItems.map((item, index) => pedInstagramGridItemMarkup(item, index)).join("")
     : `<div class="ped-instagram-empty"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1"/></svg><strong>Profilo ancora vuoto</strong><span>Aggiungi post, reel o caroselli al calendario per comporre la griglia.</span></div>`;
-  summary.textContent = `${feedItems.length} ${feedItems.length === 1 ? "pubblicazione" : "pubblicazioni"} · ${storyItems.length} ${storyItems.length === 1 ? "storia" : "storie"}`;
+  summary.textContent = `${feedItems.length} ${feedItems.length === 1 ? "pubblicazione" : "pubblicazioni"} · ${pastFeedCount} ${pastFeedCount === 1 ? "passata" : "passate"} · ${storyItems.length} ${storyItems.length === 1 ? "storia futura" : "storie future"}`;
   const edit = document.getElementById("pedInstagramOrderEdit");
   const cancel = document.getElementById("pedInstagramOrderCancel");
   const save = document.getElementById("pedInstagramOrderSave");
   const hint = document.getElementById("pedInstagramOrderHint");
-  edit?.classList.toggle("is-hidden", pedInstagramOrderEditing || !feedItems.length);
+  edit?.classList.toggle("is-hidden", pedInstagramOrderEditing || futureFeedCount < 2);
   cancel?.classList.toggle("is-hidden", !pedInstagramOrderEditing);
   save?.classList.toggle("is-hidden", !pedInstagramOrderEditing);
   if (hint) hint.textContent = pedInstagramOrderEditing
-    ? "Trascina i contenuti: salvando, il calendario usera lo stesso ordine di pubblicazione."
-    : "La griglia include tutte le uscite da oggi in poi, anche dei mesi successivi. Riordina per aggiornare insieme feed e programmazione.";
+    ? "Trascina le uscite future: i contenuti passati restano fissi e non cambiano data."
+    : "La griglia include tutte le uscite del PED. Il pallino rosso indica i contenuti passati; Riordina agisce soltanto su quelli futuri.";
 }
 
 function openPedInstagramPreview() {
   if (!selectedPedClient()) return;
   pedInstagramOrderEditing = false;
-  pedInstagramDraftOrder = pedInstagramOrderedFeedItems().map((item) => String(item.id));
+  pedInstagramDraftOrder = pedInstagramOrderedFeedItems().filter((item) => !pedInstagramItemIsPast(item)).map((item) => String(item.id));
   renderPedInstagramPreview();
   const modal = document.getElementById("pedInstagramModal");
   modal.showModal();
@@ -3519,7 +3537,7 @@ function openPedInstagramPreview() {
 
 function beginPedInstagramOrdering() {
   pedInstagramOrderEditing = true;
-  pedInstagramDraftOrder = pedInstagramOrderedFeedItems().map((item) => String(item.id));
+  pedInstagramDraftOrder = pedInstagramOrderedFeedItems().filter((item) => !pedInstagramItemIsPast(item)).map((item) => String(item.id));
   renderPedInstagramPreview();
 }
 
@@ -4042,17 +4060,25 @@ function pedItemMarkup(item) {
 function renderPedAgenda() {
   const list = document.getElementById("pedAgendaList");
   const summary = document.getElementById("pedAgendaSummary");
-  if (!list || !summary) return;
+  const title = document.getElementById("pedAgendaTitle");
+  const previousButton = document.getElementById("pedAgendaPrevious");
+  const previousLabel = document.getElementById("pedAgendaPreviousLabel");
+  if (!list || !summary || !title || !previousButton || !previousLabel) return;
 
   const todayKey = localDateKey(new Date());
-  const grouped = pedFutureItems().reduce((map, item) => {
+  const allItems = pedAllItems();
+  const previousItemsCount = allItems.filter((item) => String(item.scheduled_date || "") < todayKey).length;
+  const visibleItems = pedAgendaShowsPrevious
+    ? allItems
+    : allItems.filter((item) => String(item.scheduled_date || "") >= todayKey);
+  const grouped = visibleItems.reduce((map, item) => {
     const key = String(item.scheduled_date || "");
     if (!map.has(key)) map.set(key, []);
     map.get(key).push(item);
     return map;
   }, new Map());
   const scheduledDays = [...grouped.entries()]
-    .filter(([dateKey, items]) => dateKey >= todayKey && items.length)
+    .filter(([, items]) => items.length)
     .sort(([left], [right]) => left.localeCompare(right));
 
   list.innerHTML = scheduledDays.map(([dateKey, items], index) => {
@@ -4072,15 +4098,19 @@ function renderPedAgenda() {
     </section>`;
   }).join("") || `<div class="ped-agenda-month-empty">
     <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg>
-    <strong>Nessuna uscita da oggi in poi</strong>
-    <span>I prossimi contenuti del PED compariranno qui, anche se appartengono ai mesi successivi.</span>
+    <strong>${pedAgendaShowsPrevious ? "Nessuna uscita nel PED" : "Nessuna uscita da oggi in poi"}</strong>
+    <span>${pedAgendaShowsPrevious ? "I contenuti programmati compariranno qui." : "I prossimi contenuti del PED compariranno qui, anche se appartengono ai mesi successivi."}</span>
   </div>`;
 
+  title.textContent = pedAgendaShowsPrevious ? "Agenda completa" : "Agenda da oggi in poi";
+  previousButton.classList.toggle("is-hidden", previousItemsCount === 0);
+  previousButton.setAttribute("aria-expanded", String(pedAgendaShowsPrevious));
+  previousLabel.textContent = pedAgendaShowsPrevious ? "Nascondi precedenti" : `Carica precedenti (${previousItemsCount})`;
   const visibleItemsCount = scheduledDays.reduce((total, [, items]) => total + items.length, 0);
   const monthCount = new Set(scheduledDays.map(([dateKey]) => dateKey.slice(0, 7))).size;
   summary.textContent = visibleItemsCount
-    ? `${visibleItemsCount} ${visibleItemsCount === 1 ? "uscita" : "uscite"} · ${monthCount} ${monthCount === 1 ? "mese" : "mesi"}`
-    : "Nessuna uscita futura";
+    ? `${visibleItemsCount} ${visibleItemsCount === 1 ? "uscita" : "uscite"} · ${monthCount} ${monthCount === 1 ? "mese" : "mesi"}${pedAgendaShowsPrevious && previousItemsCount ? ` · ${previousItemsCount} precedenti` : ""}`
+    : pedAgendaShowsPrevious ? "Nessuna uscita" : "Nessuna uscita futura";
 }
 
 function pedAgendaItemMarkup(item) {
@@ -4486,7 +4516,8 @@ async function loadPedCalendar() {
     const params = new URLSearchParams({
       client_id: selectedPedClientId,
       month: pedMonthKey(),
-      agenda_from: localDateKey(new Date())
+      agenda_from: localDateKey(new Date()),
+      include_history: "1"
     });
     const response = await apiFetch(`/api/ped?${params}`);
     const data = await response.json().catch(() => ({}));
@@ -10898,6 +10929,7 @@ document.body.addEventListener("click", (event) => {
   if (copyDriveLinkButton) return copyDriveLink(copyDriveLinkButton);
   if (pedClient) {
     selectedPedClientId = pedClient.dataset.pedClient;
+    pedAgendaShowsPrevious = false;
     state.pedItems = [];
     state.pedAgendaItems = [];
     state.pedDayNotes = [];
@@ -11071,6 +11103,7 @@ document.body.addEventListener("dragstart", (event) => {
   }
   const instagramItem = event.target.closest?.("[data-ped-instagram-item]");
   if (instagramItem && pedInstagramOrderEditing) {
+    if (instagramItem.dataset.pedInstagramOrderable !== "true") return;
     pedInstagramDraggedId = String(instagramItem.dataset.pedInstagramItem || "");
     if (!pedInstagramDraggedId) return;
     instagramItem.classList.add("is-dragging");
@@ -11118,7 +11151,7 @@ document.body.addEventListener("dragover", (event) => {
     return;
   }
   if (pedInstagramDraggedId) {
-    const target = event.target.closest?.("[data-ped-instagram-item]");
+    const target = event.target.closest?.('[data-ped-instagram-item][data-ped-instagram-orderable="true"]');
     if (!target || String(target.dataset.pedInstagramItem || "") === pedInstagramDraggedId) return;
     event.preventDefault();
     event.dataTransfer.dropEffect = "move";
@@ -11160,7 +11193,7 @@ document.body.addEventListener("drop", (event) => {
     return;
   }
   if (pedInstagramDraggedId) {
-    const target = event.target.closest?.("[data-ped-instagram-item]");
+    const target = event.target.closest?.('[data-ped-instagram-item][data-ped-instagram-orderable="true"]');
     if (!target) return;
     event.preventDefault();
     const sourceId = pedInstagramDraggedId;
@@ -11638,6 +11671,10 @@ document.getElementById("pedTodayButton").addEventListener("click", () => {
   loadPedCalendar();
 });
 document.getElementById("pedFeedPreviewButton").addEventListener("click", openPedInstagramPreview);
+document.getElementById("pedAgendaPrevious").addEventListener("click", () => {
+  pedAgendaShowsPrevious = !pedAgendaShowsPrevious;
+  renderPedAgenda();
+});
 document.getElementById("pedInstagramOrderEdit").addEventListener("click", beginPedInstagramOrdering);
 document.getElementById("pedInstagramOrderCancel").addEventListener("click", cancelPedInstagramOrdering);
 document.getElementById("pedInstagramOrderSave").addEventListener("click", savePedInstagramOrder);

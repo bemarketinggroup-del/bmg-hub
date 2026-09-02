@@ -3189,6 +3189,20 @@ code { font-family: var(--font-mono); font-size: 12px; }
   pointer-events: none;
 }
 .ped-instagram-grid-type .lc { width: 17px; height: 17px; stroke-width: 2.2; }
+.ped-instagram-past-dot,
+.ped-instagram-grid-item.p-button > .ped-instagram-past-dot {
+  position: absolute;
+  z-index: 5;
+  left: 7px;
+  bottom: 7px;
+  width: 10px;
+  height: 10px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: #d64138;
+  box-shadow: 0 2px 7px rgba(42, 18, 16, .42);
+  pointer-events: none;
+}
 .ped-instagram-appbar {
   min-height: 45px;
   display: flex;
@@ -3338,6 +3352,7 @@ code { font-family: var(--font-mono); font-size: 12px; }
 .ped-instagram-notes > span { max-width: 260px; color: var(--muted); font-size: 12px; line-height: 1.55; }
 .ped-instagram-legend { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; color: var(--muted); font-size: 10px; }
 .ped-instagram-legend i { width: 8px; height: 8px; border-radius: 50%; background: var(--ped-type-color); }
+.ped-instagram-legend i.ped-instagram-legend-past { background: #d64138; }
 
 .ped-drag-ghost {
   position: fixed;
@@ -3395,6 +3410,8 @@ code { font-family: var(--font-mono); font-size: 12px; }
 .ped-agenda-head h3 { margin: 0; color: var(--ink); font-size: 19px; }
 .ped-agenda-head-meta { display: flex; align-items: center; justify-content: flex-end; gap: 12px; }
 .ped-agenda-head-meta > span { color: var(--muted); font-size: 12px; white-space: nowrap; }
+.ped-agenda-previous { min-height: 38px; display: inline-flex; align-items: center; gap: 7px; padding: 0 13px; }
+.ped-agenda-previous .lc { width: 15px; height: 15px; }
 .ped-agenda-list { max-height: none; overflow: visible; }
 .ped-agenda-month-divider {
   display: flex;

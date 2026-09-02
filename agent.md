@@ -59,6 +59,29 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-09-02 — Storico nell'agenda e anteprima completa del PED
+
+- Richiesta: aggiungere sopra l'agenda il comando `Carica precedenti` e mostrare
+  nell'anteprima feed tutti i contenuti del PED, distinguendo quelli passati con
+  un pallino rosso.
+- Modifiche: il caricamento PED include ora anche lo storico completo; l'agenda
+  continua ad aprirsi da oggi in poi e mostra i giorni passati soltanto su
+  richiesta, con comando reversibile. Il mockup Instagram usa tutti i post,
+  reel e caroselli del PED e marca le miniature passate con un indicatore rosso
+  fisso in basso. Il riordino esclude gli elementi passati per non alterare le
+  date storiche.
+- File: `public/index.html`, `public/app.js`, `public/styles.css`, `lib/ped.js`,
+  `scripts/test-ped-carousel.mjs`, `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run check`, `npm run test:ped-carousel`,
+  `npm run test:primeng-components`, `npm run test:mobile-navigation`,
+  `git diff --check`; controllo browser locale a 1440×900 e 390×844 con
+  pulsante leggibile, pallino rosso di 10 px ancorato in basso, icone
+  Reel/Carosello non sovrapposte e assenza di overflow orizzontale.
+- Pubblicazione: commit corrente pubblicato su GitHub `main`; deploy Vercel
+  produzione completato e verificato su `https://bmg-hub.vercel.app`.
+- Note: preservata e non inclusa la cartella locale preesistente
+  `.bmg-redesign-backup/`.
+
 ### 2026-09-02 — Selettore Drive con scroll unico e footer carosello fisso
 
 - Richiesta: eliminare il doppio scorrimento dalla finestra Drive del PED e
