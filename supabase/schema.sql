@@ -655,6 +655,16 @@ create index if not exists ped_staging_items_group_idx
   on public.ped_staging_items(content_group_id, group_position)
   where content_group_id is not null;
 
+alter table public.ped_items
+  add column if not exists cover_frame_seconds numeric(10, 3);
+
+alter table public.ped_items
+  drop constraint if exists ped_items_cover_frame_seconds_check;
+
+alter table public.ped_items
+  add constraint ped_items_cover_frame_seconds_check
+  check (cover_frame_seconds is null or (cover_frame_seconds >= 0 and cover_frame_seconds <= 86400));
+
 alter table public.ped_day_notes enable row level security;
 alter table public.ped_staging_items enable row level security;
 revoke all on public.ped_day_notes from anon, authenticated;

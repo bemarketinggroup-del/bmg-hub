@@ -21,6 +21,7 @@ function row(overrides = {}) {
     content_group_id: null,
     group_position: 0,
     instagram_position: null,
+    cover_frame_seconds: null,
     ...overrides
   };
 }
@@ -44,13 +45,14 @@ assert.equal(isPedSpreadsheetFile({ name: "foto.jpg", mimeType: "image/jpeg" }),
 
 const singles = groupPedItems([
   row({ content_type: "post", caption: "Copy post" }),
-  row({ content_type: "reel", caption: "Copy reel" }),
+  row({ content_type: "reel", caption: "Copy reel", cover_frame_seconds: 3.275 }),
   row({ content_type: "story", caption: "Questo copy non deve uscire" })
 ], "");
 
 assert.equal(singles.length, 3, "gli altri formati devono restare contenuti singoli");
 assert.equal(singles.find((item) => item.content_type === "post").caption, "Copy post");
 assert.equal(singles.find((item) => item.content_type === "reel").caption, "Copy reel");
+assert.equal(singles.find((item) => item.content_type === "reel").cover_frame_seconds, 3.275, "il Reel deve conservare il fotogramma scelto");
 assert.equal(singles.find((item) => item.content_type === "story").caption, null, "le stories non devono avere copy");
 
 const appSource = await readFile(new URL("../public/app.js", import.meta.url), "utf8");
@@ -69,6 +71,7 @@ const richCaptionMigration = await readFile(new URL("../supabase/20260718_ped_ri
 const carouselEditorMigration = await readFile(new URL("../supabase/migrations/20260729170000_ped_carousel_editor.sql", import.meta.url), "utf8");
 const shareTokenMigration = await readFile(new URL("../supabase/migrations/20260805181000_ped_share_recoverable_token.sql", import.meta.url), "utf8");
 const parallelLegacyShareMigration = await readFile(new URL("../supabase/migrations/20260805183000_ped_share_parallel_legacy.sql", import.meta.url), "utf8");
+const reelCoverMigration = await readFile(new URL("../supabase/migrations/20260902135000_ped_reel_cover_frame.sql", import.meta.url), "utf8");
 const previousServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 process.env.SUPABASE_SERVICE_ROLE_KEY = "ped-share-test-secret";
 const recoverableShareToken = "A".repeat(43);
@@ -339,6 +342,16 @@ assert.match(styleSource, /\.ped-instagram-scroll[^}]*overflow-y: auto/s, "il fe
 assert.match(styleSource, /\.ped-instagram-grid[^}]*grid-template-columns: repeat\(3,/s, "la griglia profilo deve usare tre colonne");
 assert.match(styleSource, /\.ped-instagram-grid-item[^}]*aspect-ratio: 4 \/ 5/s, "i contenuti del profilo devono usare il formato verticale 4:5");
 assert.match(styleSource, /\.ped-instagram-grid-item img[^}]*object-fit: cover/s, "le immagini devono riempire correttamente le celle verticali 4:5");
+assert.match(appSource, /function openPedInstagramReelCover\(item, opener\)/, "aprendo un Reel dal profilo deve partire la scelta copertina");
+assert.match(htmlSource, /id="pedMediaViewerCoverButton"/, "il player deve offrire il salvataggio del fotogramma corrente");
+assert.match(appSource, /body: JSON\.stringify\(\{ id: itemId, cover_frame_seconds: coverTime \}\)/, "il fotogramma scelto deve essere salvato tramite API");
+assert.match(appSource, /video class="ped-instagram-cover-frame"[\s\S]*?data-ped-cover-time=/, "la griglia deve ricostruire la copertina dal video");
+assert.match(appSource, /video\.currentTime = safeTime/, "la miniatura deve raggiungere il secondo memorizzato");
+assert.match(styleSource, /\.ped-instagram-grid-item \.ped-instagram-cover-frame[^}]*object-fit: cover;/s, "la copertina Reel deve riempire la cella del feed");
+assert.match(pedSource, /body\.cover_frame_seconds !== undefined/, "l'API PED deve accettare il fotogramma scelto");
+assert.match(pedSource, /effectiveType !== "reel"/, "l'API deve limitare la copertina ai Reel");
+assert.match(reelCoverMigration, /add column if not exists cover_frame_seconds numeric\(10, 3\)/, "il database deve conservare il secondo della copertina");
+assert.match(reelCoverMigration, /cover_frame_seconds >= 0 and cover_frame_seconds <= 86400/, "il database deve rifiutare timestamp non validi");
 assert.match(appSource, /Solo PED/, "l'agenda deve offrire lo stato Solo PED");
 assert.match(appSource, /Programmato Meta/, "l'agenda deve offrire lo stato Programmato Meta");
 assert.match(appSource, /Programmato telefono/, "l'agenda deve offrire lo stato Programmato telefono");

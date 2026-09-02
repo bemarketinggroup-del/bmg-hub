@@ -344,6 +344,12 @@ supabase/                     schema e migration
   sovrapposte alle miniature anche dopo l'adattamento PrimeNG. Il telaio del
   telefono usa il rapporto fisso `370:700`: sugli schermi bassi o stretti viene
   ridotto uniformemente, senza modificare separatamente larghezza e altezza.
+- Aprendo un Reel dalla griglia Instagram si entra nel player video in modalità
+  `Copertina`: la timeline permette di raggiungere il fotogramma desiderato e
+  `Salva come copertina` memorizza il secondo scelto in `ped_items`. La griglia
+  ricarica quel preciso frame dal video anche dopo refresh, senza creare copie
+  o immagini aggiuntive su Google Drive. Il comando resta interamente visibile
+  anche nella testata smartphone.
 
 ### PED condiviso con il cliente
 

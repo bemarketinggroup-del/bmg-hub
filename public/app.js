@@ -249,7 +249,9 @@ let pedMediaViewerState = {
   loadId: 0,
   gallery: [],
   galleryIndex: -1,
-  opener: null
+  opener: null,
+  coverItemId: "",
+  coverTime: null
 };
 let drivePreviewKeyboardState = { isPhoto: false, navigate: null };
 let pedShareState = { active: false, shareUrl: "" };
@@ -3438,9 +3440,16 @@ function pedInstagramGridItemMarkup(item, index) {
   const mime = String(file.drive_mime_type || "");
   const isImage = mime.startsWith("image/");
   const previewUrl = file.thumbnail_url || (isImage ? file.content_url : "");
-  const media = previewUrl
-    ? `<img src="${escapeHtml(previewUrl)}" alt="${escapeHtml(title)}" loading="lazy" decoding="async">`
-    : `<span class="ped-instagram-file-fallback">${driveFileIcon({ is_folder: false, mime_type: mime })}<b>${escapeHtml(file.drive_file_name || title)}</b></span>`;
+  const hasSelectedCover = type === "reel"
+    && item.cover_frame_seconds !== null
+    && item.cover_frame_seconds !== undefined
+    && Number.isFinite(Number(item.cover_frame_seconds))
+    && Boolean(file.content_url);
+  const media = hasSelectedCover
+    ? `<video class="ped-instagram-cover-frame" src="${escapeHtml(file.content_url)}" poster="${escapeHtml(previewUrl || "")}" data-ped-cover-time="${escapeHtml(String(item.cover_frame_seconds))}" muted playsinline preload="metadata" aria-label="Copertina scelta per ${escapeHtml(title)}"></video>`
+    : previewUrl
+      ? `<img src="${escapeHtml(previewUrl)}" alt="${escapeHtml(title)}" loading="lazy" decoding="async">`
+      : `<span class="ped-instagram-file-fallback">${driveFileIcon({ is_folder: false, mime_type: mime })}<b>${escapeHtml(file.drive_file_name || title)}</b></span>`;
   const badge = type === "carousel"
     ? `<span class="ped-instagram-grid-type"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg></span>`
     : type === "reel"
@@ -3459,6 +3468,23 @@ function pedInstagramGridItemMarkup(item, index) {
     ${pastDot}
     ${canOrder ? `<span class="ped-instagram-order-number">${index + 1}</span>` : ""}
   </button>`;
+}
+
+function preparePedInstagramCoverFrames(root) {
+  root?.querySelectorAll?.("video[data-ped-cover-time]").forEach((video) => {
+    const requestedTime = Math.max(0, Number(video.dataset.pedCoverTime) || 0);
+    const seekToCover = () => {
+      const duration = Number(video.duration || 0);
+      const safeTime = duration > 0 ? Math.min(requestedTime, Math.max(0, duration - 0.04)) : requestedTime;
+      try {
+        video.currentTime = safeTime;
+        video.pause();
+      } catch {}
+    };
+    if (video.readyState >= 1) seekToCover();
+    else video.addEventListener("loadedmetadata", seekToCover, { once: true });
+    video.addEventListener("seeked", () => video.classList.add("is-cover-ready"), { once: true });
+  });
 }
 
 function renderPedInstagramPreview() {
@@ -3512,6 +3538,7 @@ function renderPedInstagramPreview() {
   feed.innerHTML = feedItems.length
     ? feedItems.map((item, index) => pedInstagramGridItemMarkup(item, index)).join("")
     : `<div class="ped-instagram-empty"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1"/></svg><strong>Profilo ancora vuoto</strong><span>Aggiungi post, reel o caroselli al calendario per comporre la griglia.</span></div>`;
+  preparePedInstagramCoverFrames(feed);
   summary.textContent = `${feedItems.length} ${feedItems.length === 1 ? "pubblicazione" : "pubblicazioni"} · ${pastFeedCount} ${pastFeedCount === 1 ? "passata" : "passate"} · ${storyItems.length} ${storyItems.length === 1 ? "storia futura" : "storie future"}`;
   const edit = document.getElementById("pedInstagramOrderEdit");
   const cancel = document.getElementById("pedInstagramOrderCancel");
@@ -3533,6 +3560,28 @@ function openPedInstagramPreview() {
   const modal = document.getElementById("pedInstagramModal");
   modal.showModal();
   modal.querySelector(".ped-instagram-scroll")?.scrollTo({ top: 0 });
+}
+
+function openPedInstagramReelCover(item, opener) {
+  const file = pedItemFiles(item)[0];
+  if (!file?.content_url) {
+    showPedMoveNotice("Video temporaneamente non disponibile", "error");
+    return;
+  }
+  const entry = {
+    file: String(file.drive_file_id || ""),
+    name: String(file.drive_file_name || pedItemTitle(item)),
+    type: "video",
+    src: String(file.content_url || ""),
+    poster: String(file.thumbnail_url || "")
+  };
+  openPedMediaViewer(pedMediaViewerButton(entry), {
+    gallery: [entry],
+    galleryIndex: 0,
+    opener,
+    coverItemId: String(item.id),
+    coverTime: item.cover_frame_seconds
+  });
 }
 
 function beginPedInstagramOrdering() {
@@ -5158,6 +5207,7 @@ function openPedMediaViewer(button, options = {}) {
   const meta = document.getElementById("pedMediaViewerMeta");
   const help = document.getElementById("pedMediaViewerHelp");
   const kind = document.getElementById("pedMediaViewerKind");
+  const coverButton = document.getElementById("pedMediaViewerCoverButton");
   const entry = pedMediaViewerEntry(button);
   const source = entry.src;
   const poster = entry.poster;
@@ -5181,12 +5231,26 @@ function openPedMediaViewer(button, options = {}) {
   pedMediaViewerState.type = type;
   pedMediaViewerState.gallery = gallery;
   pedMediaViewerState.galleryIndex = galleryIndex;
+  pedMediaViewerState.coverItemId = type === "video" ? String(options.coverItemId || "") : "";
+  pedMediaViewerState.coverTime = options.coverTime === null || options.coverTime === undefined
+    ? null
+    : Math.max(0, Number(options.coverTime) || 0);
   if (!wasOpen) pedMediaViewerState.opener = options.opener || document.activeElement;
   resetPedMediaViewerTransform({ render: false });
   title.textContent = name;
   if (kind) kind.textContent = type === "image" ? "Foto" : "Video";
   meta.textContent = type === "image" ? "File originale da Google Drive · caricamento piena risoluzione" : "Video originale da Google Drive";
-  help.classList.toggle("is-hidden", type !== "image");
+  const choosingCover = Boolean(pedMediaViewerState.coverItemId);
+  document.querySelector("#pedMediaViewerModal .ped-media-viewer-head")?.classList.toggle("is-cover-selector", choosingCover);
+  coverButton?.classList.toggle("is-hidden", !choosingCover);
+  if (coverButton) {
+    coverButton.disabled = false;
+    coverButton.querySelector("span").textContent = "Salva come copertina";
+  }
+  help.classList.toggle("is-hidden", type !== "image" && !choosingCover);
+  help.textContent = choosingCover
+    ? "Sposta la timeline sul fotogramma desiderato, metti in pausa e salvalo come copertina del feed."
+    : "Frecce ← → per navigare · Spazio per chiudere · Rotella o pulsanti per lo zoom · Trascina quando la foto è ingrandita.";
   document.getElementById("pedMediaViewerZoomControls")?.classList.toggle("is-hidden", type !== "image");
   stage.className = `ped-media-viewer-stage is-loading is-${type}`;
   stage.innerHTML = `<div class="ped-media-viewer-media" data-ped-viewer-media></div>${mediaProgressMarkup(type === "image" ? "Caricamento foto originale" : "Preparazione video")}`;
@@ -5257,10 +5321,55 @@ function openPedMediaViewer(button, options = {}) {
     });
     video.addEventListener("loadedmetadata", () => {
       if (loadId !== pedMediaViewerState.loadId) return;
+      if (choosingCover && pedMediaViewerState.coverTime !== null) {
+        const duration = Number(video.duration || 0);
+        video.currentTime = duration > 0
+          ? Math.min(pedMediaViewerState.coverTime, Math.max(0, duration - 0.04))
+          : pedMediaViewerState.coverTime;
+        video.pause();
+      }
       stage.classList.remove("is-loading");
       const dimensions = video.videoWidth && video.videoHeight ? `${video.videoWidth} × ${video.videoHeight} px · ` : "";
       meta.textContent = `${dimensions}video originale Google Drive`;
     }, { once: true });
+  }
+}
+
+async function savePedReelCoverFrame(button) {
+  const itemId = String(pedMediaViewerState.coverItemId || "");
+  const video = document.querySelector("#pedMediaViewerStage video");
+  const currentTime = Number(video?.currentTime);
+  if (!itemId || !video || !Number.isFinite(currentTime)) return;
+  video.pause();
+  button.disabled = true;
+  button.querySelector("span").textContent = "Salvataggio…";
+  try {
+    const coverTime = Number(currentTime.toFixed(3));
+    const response = await apiFetch("/api/ped", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: itemId, cover_frame_seconds: coverTime })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "Impossibile salvare la copertina");
+    for (const key of ["pedItems", "pedAgendaItems"]) {
+      state[key] = (state[key] || []).map((item) => String(item.id) === itemId
+        ? { ...item, cover_frame_seconds: coverTime }
+        : item);
+    }
+    pedMediaViewerState.coverTime = coverTime;
+    renderPedInstagramPreview();
+    button.querySelector("span").textContent = "Copertina salvata";
+    showPedMoveNotice("Copertina del Reel aggiornata", "success");
+    window.setTimeout(() => {
+      if (!button.isConnected) return;
+      button.disabled = false;
+      button.querySelector("span").textContent = "Salva come copertina";
+    }, 1600);
+  } catch (error) {
+    button.disabled = false;
+    button.querySelector("span").textContent = "Salva come copertina";
+    showPedMoveNotice(error.message || "Copertina non salvata", "error");
   }
 }
 
@@ -10963,6 +11072,10 @@ document.body.addEventListener("click", (event) => {
     return openPedDrivePicker(item.scheduled_date, { appendItem: item });
   }
   if (pedInstagramOrderItem && pedInstagramOrderEditing) return;
+  if (pedInstagramOrderItem) {
+    const item = pedStateItem(pedInstagramOrderItem.dataset.pedInstagramItem);
+    if (item && pedContentType(item.content_type) === "reel") return openPedInstagramReelCover(item, pedInstagramOrderItem);
+  }
   if (pedOpen) return openDriveFile(pedOpen.dataset.pedOpen, pedOpen.dataset.pedName, pedOpen.dataset.pedMime, pedOpen.dataset.pedContentUrl);
   if (pedCarouselDownload) return downloadPedCarousel(pedCarouselDownload.dataset.pedCarouselDownload, pedCarouselDownload);
   if (pedSingleDownload) return downloadPedSingleMedia(pedSingleDownload.dataset.pedSingleDownload, pedSingleDownload);
@@ -11678,6 +11791,7 @@ document.getElementById("pedAgendaPrevious").addEventListener("click", () => {
 document.getElementById("pedInstagramOrderEdit").addEventListener("click", beginPedInstagramOrdering);
 document.getElementById("pedInstagramOrderCancel").addEventListener("click", cancelPedInstagramOrdering);
 document.getElementById("pedInstagramOrderSave").addEventListener("click", savePedInstagramOrder);
+document.getElementById("pedMediaViewerCoverButton").addEventListener("click", (event) => savePedReelCoverFrame(event.currentTarget));
 document.getElementById("pedInstagramClose").addEventListener("click", () => {
   pedInstagramOrderEditing = false;
   pedInstagramDraftOrder = [];
@@ -12004,6 +12118,10 @@ pedMediaViewerModal.addEventListener("close", () => {
   pedMediaViewerState.gallery = [];
   pedMediaViewerState.galleryIndex = -1;
   pedMediaViewerState.opener = null;
+  pedMediaViewerState.coverItemId = "";
+  pedMediaViewerState.coverTime = null;
+  document.getElementById("pedMediaViewerCoverButton")?.classList.add("is-hidden");
+  document.querySelector("#pedMediaViewerModal .ped-media-viewer-head")?.classList.remove("is-cover-selector");
   resetPedMediaViewerTransform({ render: false });
   window.setTimeout(() => markLastViewedMedia(lastViewedEntry, opener), 0);
 });

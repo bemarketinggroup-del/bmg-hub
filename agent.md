@@ -59,6 +59,31 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-09-02 — Copertina Reel scelta dal fotogramma video
+
+- Richiesta: scegliere nell'anteprima profilo Instagram il frame di copertina
+  dei Reel direttamente dal video.
+- Modifiche: il clic su un Reel della griglia apre il player in modalità
+  copertina; dalla timeline si sceglie il fotogramma e il comando dedicato ne
+  salva il timestamp. Il secondo scelto viene conservato su `ped_items` e la
+  miniatura del feed ricostruisce sempre quel frame dopo refresh, senza creare
+  copie su Drive. La testata del player impila correttamente il comando su
+  smartphone e mantiene sempre accessibile la chiusura.
+- File: `public/index.html`, `public/app.js`, `public/styles.css`, `lib/ped.js`,
+  `supabase/schema.sql`,
+  `supabase/migrations/20260902135000_ped_reel_cover_frame.sql`,
+  `scripts/test-ped-carousel.mjs`, `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run check`, `npm run test:ped-carousel`,
+  `npm run test:primeng-components`, `npm run test:mobile-navigation`,
+  `git diff --check`; controllo browser locale desktop e smartphone 390×844
+  del player, con timeline separata, comando leggibile, chiusura visibile e
+  nessun overflow orizzontale.
+- Pubblicazione: migration Supabase applicata; commit corrente da pubblicare su
+  GitHub `main`, deploy Vercel produzione e verifica di
+  `https://bmg-hub.vercel.app` da completare.
+- Note: preservata e non inclusa la cartella locale preesistente
+  `.bmg-redesign-backup/`.
+
 ### 2026-09-02 — Storico nell'agenda e anteprima completa del PED
 
 - Richiesta: aggiungere sopra l'agenda il comando `Carica precedenti` e mostrare
