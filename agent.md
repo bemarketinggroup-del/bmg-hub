@@ -78,9 +78,9 @@ più recente alla più vecchia:
   `git diff --check`; controllo browser locale desktop e smartphone 390×844
   del player, con timeline separata, comando leggibile, chiusura visibile e
   nessun overflow orizzontale.
-- Pubblicazione: migration Supabase applicata; commit corrente da pubblicare su
-  GitHub `main`, deploy Vercel produzione e verifica di
-  `https://bmg-hub.vercel.app` da completare.
+- Pubblicazione: migration Supabase applicata; commit applicativo `7dab843`
+  pubblicato su GitHub `main`; deploy Vercel produzione completato e verificato
+  su `https://bmg-hub.vercel.app`.
 - Note: preservata e non inclusa la cartella locale preesistente
   `.bmg-redesign-backup/`.
 
