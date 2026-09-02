@@ -1,6 +1,6 @@
 # BMG Hub — contesto per una nuova chat
 
-Ultimo aggiornamento: 1 settembre 2026
+Ultimo aggiornamento: 2 settembre 2026
 Repository locale: `/Users/davidedeluca/Desktop/bmg-hub`  
 Branch di produzione: `main`  
 Ultimo commit applicativo verificato al momento della scrittura: `9fb8746`
@@ -243,9 +243,11 @@ supabase/                     schema e migration
   prime otto anteprime visibili partono subito ad alta priorità; le successive
   vengono richieste progressivamente prima di entrare nel viewport. Scritture e
   aggiornamento manuale continuano a invalidare le cache.
-- Nei dialoghi Drive il contenuto scorre soltanto nella griglia: l'overscroll
-  viene contenuto, la rotella si ferma ai limiti e la pagina sottostante resta
-  bloccata fino alla chiusura, inclusi Safari desktop e iOS.
+- Nei dialoghi Drive il contenuto scorre soltanto nella griglia: il dialogo non
+  genera una seconda barra, l'overscroll viene contenuto, la rotella si ferma
+  ai limiti e la pagina sottostante resta bloccata fino alla chiusura, inclusi
+  Safari desktop e iOS. Nel selettore PED il riepilogo con `Aggiungi al
+  carosello` resta in un footer fisso sotto la griglia e sempre visibile.
 
 ### PED
 

@@ -3608,10 +3608,19 @@ code { font-family: var(--font-mono); font-size: 12px; }
 
 .ped-picker-modal {
   width: min(1180px, calc(100vw - 32px));
-  max-height: min(94vh, 980px);
-  max-height: min(94dvh, 980px);
+  height: min(94vh, 980px);
+  height: min(94dvh, 980px);
+  max-height: none;
+  overflow: hidden;
 }
-.ped-picker-shell { padding: 14px 16px 16px; }
+.ped-picker-shell {
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+  overflow: hidden;
+  padding: 14px 16px 16px;
+}
 .ped-picker-modal .modal-head {
   margin-bottom: 10px;
   padding-bottom: 10px;
@@ -3698,7 +3707,7 @@ code { font-family: var(--font-mono); font-size: 12px; }
 .ped-create-folder-button { min-height: 30px; display: inline-flex; align-items: center; gap: 6px; color: var(--ink); }
 .ped-create-folder-button .lc { width: 15px; height: 15px; }
 .ped-create-folder-button:disabled { cursor: not-allowed; opacity: .5; }
-.ped-picker-grid { position: relative; min-height: 360px; max-height: min(760px, calc(94vh - 190px)); max-height: min(760px, calc(94dvh - 190px)); display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); align-content: start; gap: 10px; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; touch-action: pan-y; padding: 2px; }
+.ped-picker-grid { position: relative; min-height: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); align-content: start; gap: 10px; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; touch-action: pan-y; padding: 2px; }
 body.ped-picker-dialog-visible { overflow: hidden; overscroll-behavior: none; }
 .drive-folder-loading {
   position: absolute;
@@ -3913,12 +3922,20 @@ body.ped-picker-dialog-visible { overflow: hidden; overscroll-behavior: none; }
   font-weight: 700;
 }
 .ped-picker-preview-kind .lc { width: 13px; height: 13px; }
+.ped-picker-footer {
+  position: relative;
+  z-index: 4;
+  min-width: 0;
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+  padding-top: 8px;
+}
 .ped-carousel-selection {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 18px;
-  margin-top: 16px;
+  margin: 0;
   border: 1px solid rgba(77, 121, 95, .3);
   border-radius: 8px;
   background: rgba(77, 121, 95, .08);
@@ -3929,6 +3946,8 @@ body.ped-picker-dialog-visible { overflow: hidden; overscroll-behavior: none; }
 .ped-carousel-selection small { color: var(--muted); font-size: 10px; }
 .ped-carousel-selection .primary-button { flex: 0 0 auto; background: #4d795f; }
 .ped-carousel-selection .primary-button:hover { background: #3d654d; }
+.ped-picker-footer .form-message { min-height: 0; margin: 7px 2px 0; font-size: 11px; }
+.ped-picker-footer .form-message:empty { display: none; }
 .ped-picker-loading, .ped-picker-error, .ped-picker-empty { grid-column: 1 / -1; min-height: 220px; display: flex; align-items: center; justify-content: center; gap: 10px; color: var(--muted); }
 .ped-picker-error { flex-direction: column; color: var(--red); }
 
@@ -7636,7 +7655,7 @@ body.user-activity-dialog-visible { overflow: hidden; }
   .ped-instagram-shell { padding: 16px; }
   .ped-instagram-stage { min-height: 0; border: 0; background: transparent; padding: 0; }
   .ped-iphone { width: min(370px, 100%, calc(52.857dvh - 74px)); height: auto; }
-  .ped-picker-modal { max-height: calc(100dvh - 16px); }
+  .ped-picker-modal { height: calc(100dvh - 16px); max-height: none; }
   .ped-picker-shell { padding: 12px; }
   .ped-picker-setup { grid-template-columns: 1fr; gap: 7px; }
   .ped-picker-caption-field { grid-template-columns: 100px minmax(0, 1fr); gap: 7px; }
@@ -7647,6 +7666,7 @@ body.user-activity-dialog-visible { overflow: hidden; }
   .ped-picker-tool-actions { width: auto; justify-content: flex-end; flex-wrap: wrap; }
   .ped-picker-grid { grid-template-columns: 1fr; }
   .ped-picker-library { grid-column: span 1; }
+  .ped-picker-footer { padding-bottom: max(0px, env(safe-area-inset-bottom)); }
   .modal.ped-media-viewer-modal { width: 100vw; max-width: 100vw; border: 0; border-radius: 0; }
   .ped-media-viewer-shell { height: 100vh; height: 100dvh; gap: 6px; padding: max(8px, env(safe-area-inset-top)) 8px max(8px, env(safe-area-inset-bottom)); }
   .ped-media-viewer-head { align-items: flex-start; gap: 10px; }

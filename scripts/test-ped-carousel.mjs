@@ -398,7 +398,11 @@ assert.match(htmlSource, /data-ped-used-toggle/, "il selettore deve offrire il c
 assert.match(htmlSource, /class="ped-picker-setup"/, "formato e copy devono condividere una testata compatta");
 assert.match(htmlSource, /class="ped-picker-browser-bar"/, "percorso e comandi Drive devono condividere una barra compatta");
 assert.match(styleSource, /\.ped-picker-caption-field textarea \{[\s\S]*?height: 38px;/, "il copy del selettore non deve sottrarre spazio ai contenuti");
-assert.match(styleSource, /\.ped-picker-grid \{[\s\S]*?max-height: min\(760px, calc\(94vh - 190px\)\)/, "la griglia deve usare più altezza disponibile del modal");
+assert.match(htmlSource, /<footer class="ped-picker-footer">[\s\S]*?id="pedCarouselSelection"[\s\S]*?id="pedPickerMessage"/, "selezione e conferma del carosello devono restare nel footer fuori dalla griglia");
+assert.match(styleSource, /\.ped-picker-modal \{[\s\S]*?overflow: hidden;/, "il dialogo non deve creare una seconda barra di scorrimento");
+assert.match(styleSource, /\.ped-picker-shell \{[\s\S]*?grid-template-rows: auto auto auto minmax\(0, 1fr\) auto;[\s\S]*?overflow: hidden;/, "testata, griglia e footer devono occupare righe stabili nella finestra");
+assert.match(styleSource, /\.ped-picker-grid \{[\s\S]*?min-height: 0;[\s\S]*?overflow-y: auto;/, "la griglia deve essere l'unica area a scorrimento verticale");
+assert.match(styleSource, /\.ped-picker-footer \{[\s\S]*?z-index: 4;[\s\S]*?background: var\(--surface\);/, "il comando del carosello deve restare fisso e leggibile sotto i contenuti");
 assert.match(styleSource, /\.ped-picker-grid \{[\s\S]*?overscroll-behavior: contain;/, "lo scroll del selettore non deve propagarsi alla pagina sottostante");
 assert.match(styleSource, /body\.ped-picker-dialog-visible \{[\s\S]*?overflow: hidden;/, "la pagina deve restare bloccata mentre il selettore Drive e aperto");
 assert.match(appSource, /pedDrivePickerDialog\.addEventListener\("close"[\s\S]*?ped-picker-dialog-visible/, "la chiusura del selettore deve ripristinare lo scroll della pagina");

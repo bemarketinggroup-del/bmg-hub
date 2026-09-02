@@ -1,6 +1,6 @@
 # BMG Hub — memoria operativa degli interventi
 
-Ultimo aggiornamento: 1 settembre 2026
+Ultimo aggiornamento: 2 settembre 2026
 
 ## Scopo del file
 
@@ -58,6 +58,27 @@ più recente alla più vecchia:
 ```
 
 ## Registro modifiche
+
+### 2026-09-02 — Selettore Drive con scroll unico e footer carosello fisso
+
+- Richiesta: eliminare il doppio scorrimento dalla finestra Drive del PED e
+  mantenere sempre visibile in basso il comando `Aggiungi al carosello`.
+- Modifiche: il dialogo e il contenitore principale hanno ora altezza vincolata
+  e overflow bloccato; soltanto la griglia di cartelle e contenuti scorre. Il
+  riepilogo della selezione, il messaggio e il pulsante di conferma sono stati
+  spostati in un footer separato dalla griglia, fisso sul bordo inferiore della
+  finestra e compatibile con la safe area di iPhone.
+- File: `public/index.html`, `public/styles.css`,
+  `scripts/test-ped-carousel.mjs`, `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run check`, `npm run test:ped-carousel`,
+  `npm run test:primeng-components`, `npm run test:mobile-navigation`,
+  `git diff --check`; controllo browser locale a 1440×900 e 390×844 con
+  griglia realmente scorrevole, dialogo e pagina fermi, footer e pulsante
+  visibili prima e dopo lo scroll e assenza di overflow orizzontale mobile.
+- Pubblicazione: commit corrente pubblicato su GitHub `main`; deploy Vercel
+  produzione completato e verificato su `https://bmg-hub.vercel.app`.
+- Note: preservata e non inclusa la cartella locale preesistente
+  `.bmg-redesign-backup/`.
 
 ### 2026-09-01 — Generazione e pubblicazione per singola settimana
 
