@@ -71,9 +71,14 @@ più recente alla più vecchia:
 - File: `public/app.js`, `public/styles.css`,
   `scripts/test-mobile-navigation.mjs`, `docs/PROJECT-HANDOFF.md`, `agent.md`.
 - Verifiche: `npm run check`, `npm run test:mobile-navigation`, `npm run
-  test:personal-area`, `git diff --check`; verifica visiva desktop e smartphone
-  da completare sulla build pubblicata.
-- Pubblicazione: da completare su GitHub `main` e Vercel produzione.
+  test:personal-area`, `npm run test:session-persistence`, `npm run
+  test:permissions`, `npm run build`, `git diff --check`; verifica autenticata
+  in Safari desktop con spostamento del puntatore dal menu al popover e chiusura
+  coordinata; verifica responsive a 390×844 con pannello entro il viewport e
+  nessun overflow orizzontale.
+- Pubblicazione: commit `dab45f0` pubblicato su GitHub `main`; deploy Vercel
+  produzione `dpl_6bfy8kYU3bRrrkivihs5kMKySnDz`, pronto e aliasato su
+  `https://bmg-hub.vercel.app`.
 - Note: `.bmg-redesign-backup/` resta esclusa e non modificata.
 
 ### 2026-09-03 — Ripristino endpoint Clienti dopo la separazione API
