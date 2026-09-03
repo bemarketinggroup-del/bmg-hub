@@ -71,11 +71,18 @@ più recente alla più vecchia:
 - Verifiche: log Vercel di produzione con `ReferenceError: requestUrl is not
   defined`; `npm run check`, `npm run test:client-management`, `npm run
   test:ped-carousel`, `npm run build` e `git diff --check`.
-- Pubblicazione: commit corrente destinato a GitHub `main` e Vercel produzione;
-  verifica autenticata dei dati prevista subito dopo il deploy.
-- Note: dopo il ripristino dell'endpoint resta da eseguire l'audit autenticato
-  di tutti i record cliente e delle rispettive cartelle Drive; la cartella
-  locale `.bmg-redesign-backup/` resta esclusa.
+- Pubblicazione: commit `c8eeed3` pubblicato su GitHub `main`; deploy Vercel
+  produzione `dpl_6ZK3bQMfWUg2hn78yikUU8SZGyKA`, pronto e aliasato su
+  `https://bmg-hub.vercel.app`.
+- Note: verifica autenticata in Safari completata dopo refresh: 27 clienti
+  operativi con Drive raggiungibile, nessun avviso `Drive non collegato` nel
+  PED e contenuti PED preesistenti ancora presenti. Il pannello Drive rileva
+  25 cartelle collegate perche AMINTA/DAFNE e PIEMME/COSTIERA GIN risultano
+  configurati su due cartelle condivise; VETERA ha Drive principale, Grafiche
+  e Video collegati e la sua radice contiene 17 elementi. I log successivi mostrano
+  richieste `/api/clients` riuscite e nessun nuovo errore. Nessun dato, file o
+  collegamento e stato cancellato o spostato; `.bmg-redesign-backup/` resta
+  esclusa.
 
 ### 2026-09-03 — Frontend CDN e percorso Google Drive accelerato
 
