@@ -13,6 +13,7 @@ const appSource = await readFile(new URL("../public/app.js", import.meta.url), "
 const htmlSource = await readFile(new URL("../public/index.html", import.meta.url), "utf8");
 const styleSource = await readFile(new URL("../public/styles.css", import.meta.url), "utf8");
 
+assert.match(apiSource, /const requestUrl = new URL\(request\.url \|\| "\/api\/clients", "http:\/\/localhost"\)/, "l'endpoint Clienti deve inizializzare l'URL prima di leggere i parametri");
 assert.match(apiSource, /async function ensureClientDriveFolders\(name, existingMain = null\)/, "la creazione cliente deve configurare Google Drive");
 assert.match(apiSource, /driveImportCandidates/, "deve esistere la scoperta delle cartelle cliente gia presenti su Drive");
 assert.match(apiSource, /drive_folder_id/, "una cartella Drive esistente deve poter essere collegata senza duplicarla");

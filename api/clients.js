@@ -195,6 +195,8 @@ async function driveImportCandidates() {
 }
 
 export default async function handler(request, response) {
+  const requestUrl = new URL(request.url || "/api/clients", "http://localhost");
+
   if (request.method === "OPTIONS") {
     response.writeHead(204, headers());
     response.end();

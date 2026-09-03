@@ -59,6 +59,24 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-09-03 — Ripristino endpoint Clienti dopo la separazione API
+
+- Richiesta: verificare perche VETERA risultasse senza cartella Drive e
+  controllare che ogni cliente fosse collegato alla propria cartella.
+- Modifiche: corretta l'inizializzazione dell'URL nell'entrypoint serverless
+  Clienti, mancante dopo la separazione delle API e responsabile del blocco di
+  elenco e verifica collegamenti per le sessioni autenticate; aggiunta una
+  regressione automatica specifica.
+- File: `api/clients.js`, `scripts/test-client-management.mjs`, `agent.md`.
+- Verifiche: log Vercel di produzione con `ReferenceError: requestUrl is not
+  defined`; `npm run check`, `npm run test:client-management`, `npm run
+  test:ped-carousel`, `npm run build` e `git diff --check`.
+- Pubblicazione: commit corrente destinato a GitHub `main` e Vercel produzione;
+  verifica autenticata dei dati prevista subito dopo il deploy.
+- Note: dopo il ripristino dell'endpoint resta da eseguire l'audit autenticato
+  di tutti i record cliente e delle rispettive cartelle Drive; la cartella
+  locale `.bmg-redesign-backup/` resta esclusa.
+
 ### 2026-09-03 — Frontend CDN e percorso Google Drive accelerato
 
 - Richiesta: ottimizzare le prestazioni complessive dell'Hub, con priorità al
