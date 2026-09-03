@@ -1,28 +1,26 @@
 # BMG Hub - Technical Audit
 
-Data audit: 2026-06-04
+Data audit: 2026-09-03
 
 ## Architettura Attuale
 
-BMG Hub e' una SPA statica servita da funzioni serverless Vercel.
+BMG Hub e' una SPA statica pubblicata sulla CDN Vercel con API serverless separate.
 
-- Frontend interno: `public/index.html`, `public/app.js`, `public/styles.css`.
-- Server app: `api/app.js` serve i file statici; Supabase Auth protegge l'accesso ai dati e alle aree interne.
-- API interne: funzioni in `api/*.js`.
+- Sorgenti frontend: `public/index.html`, `public/app.js`, `public/styles.css`.
+- Build frontend: `scripts/build-static-assets.mjs` minifica gli asset, aggiunge un hash al nome e genera `dist/`.
+- Distribuzione frontend: HTML e asset sono file statici Vercel; nessuna funzione Node viene invocata per `/`, CSS o JavaScript.
+- API interne: ogni dominio ha un entrypoint dedicato in `api/*.js`; Supabase Auth protegge dati e aree interne.
 - Database: Supabase via REST API.
 - Integrazione esterna: ClickUp via REST API.
 - Deploy: Vercel con routing definito in `vercel.json`.
 
-`vercel.json` instrada:
+`vercel.json` configura:
 
-- `/api/leads`
-- `/api/site-content`
-- `/api/public-site-content`
-- `/api/clients`
-- `/api/clients/sync-clickup`
-- `/api/clickup/team`
-- `/api/clickup/tasks`
-- `/` e ogni altra rotta verso `api/app.js`
+- output statico `dist/` con cache immutabile annuale per `/assets/*`;
+- rivalidazione dell'HTML a ogni accesso;
+- alias per gli endpoint annidati ClickUp, lasciando gli altri endpoint alla
+  risoluzione file-system di Vercel;
+- Fluid Compute attivo e runtime Node.js 24.
 
 ## Database
 
@@ -106,11 +104,15 @@ Aggiornamento 2026-07-15: la Basic Auth e' stata rimossa. Supabase Auth resta l'
 - Differenza tra dati seed e dati reali: rischio confusione operativa.
 - Duplicati clienti: il sync ClickUp usa il nome normalizzato, ma la creazione manuale non impone unicita forte.
 - Task importate: non sono persistite in Supabase, vengono lette da ClickUp e organizzate client-side.
-- Build script incompleto: `npm run check` non verifica tutte le API esistenti.
+- La build statica resta monolitica a livello di JavaScript sorgente: la
+  minificazione riduce il trasferimento, ma il code splitting per singola vista
+  richiede una successiva separazione dei molti global condivisi.
 
 ## Debito Tecnico
 
-- Mancanza test automatici.
+- L'indice persistente Google Drive in Supabase non è ancora attivo: la prima
+  lettura fredda usa Drive, mentre letture calde e pagine successive sfruttano
+  cache applicativa e CDN per le miniature.
 - API duplicate come stile: autenticazione, CORS e parsing body ripetuti in piu file.
 - Nessun layer comune per errori/logging.
 - Nessun modello dati persistente per utenti ClickUp e task.
@@ -121,17 +123,8 @@ Aggiornamento 2026-07-15: la Basic Auth e' stata rimossa. Supabase Auth resta l'
 
 ### JavaScript
 
-Controllo sintattico superato:
-
-- `public/app.js`
-- `api/app.js`
-- `api/leads.js`
-- `api/site-content.js`
-- `api/public-site-content.js`
-- `api/clients.js`
-- `api/clients-sync-clickup.js`
-- `api/clickup-team.js`
-- `api/clickup-tasks.js`
+`npm run check` scopre e controlla automaticamente tutti i file JavaScript e
+MJS presenti in `api/`, `lib/`, `public/` e `scripts/`.
 
 ### Endpoint Live
 

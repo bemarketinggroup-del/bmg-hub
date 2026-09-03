@@ -1,9 +1,9 @@
 # BMG Hub — contesto per una nuova chat
 
-Ultimo aggiornamento: 2 settembre 2026
+Ultimo aggiornamento: 3 settembre 2026
 Repository locale: `/Users/davidedeluca/Desktop/bmg-hub`  
 Branch di produzione: `main`  
-Ultimo commit applicativo verificato al momento della scrittura: `9fb8746`
+Ultimo commit applicativo precedente all'ottimizzazione: `435d236`
 
 ## Istruzione iniziale per Codex
 
@@ -76,6 +76,12 @@ gestiti con messaggi comprensibili e senza perdere lo stato della pagina.
   `public/styles.css`; `public/primeng-adapter.js` applica in modo condiviso i
   contratti visuali e accessibili dei componenti PrimeNG anche ai contenuti
   generati dinamicamente.
+- `npm run build` genera `dist/` con JavaScript e CSS minificati, nomi content-hash
+  e HTML aggiornato. Vercel distribuisce questi file direttamente dalla CDN;
+  `index.html` viene rivalidato, mentre `/assets/*` è immutabile per un anno.
+- Le API non passano più da `api/app.js`: Drive, calendario, health, area
+  personale, chat, revisioni, PED, smart working e media sito hanno entrypoint
+  serverless separati in `api/`.
 - Pagina PED condivisa in `public/ped-share.html`, `public/ped-share.js` e
   `public/ped-share.css`.
 - API serverless Vercel in `api/`.

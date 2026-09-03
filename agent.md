@@ -59,6 +59,39 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-09-03 — Frontend CDN e percorso Google Drive accelerato
+
+- Richiesta: ottimizzare le prestazioni complessive dell'Hub, con priorità al
+  caricamento dei contenuti Google Drive, misure verificabili e nessuna
+  regressione di sicurezza o compatibilità media.
+- Modifiche: sostituito il serving statico tramite `api/app.js` con una build
+  Vercel in `dist/`, asset minificati content-hash e cache immutabile; separati
+  Drive, calendario, health, area personale, chat, revisioni, PED, smart
+  working e media sito in entrypoint serverless indipendenti; abilitati Fluid
+  Compute e Node.js 24. Il Drive ora consegna 60 elementi per pagina, carica le
+  raccolte dopo i file, usa direttamente gli ID configurati, limita le query
+  revisioni alla sola area Grafiche, annulla richieste superate, privilegia le
+  prime 4/8 miniature e usa cache CDN breve solo per miniature firmate.
+  Aggiunti `Server-Timing`, log strutturati e metriche browser; boot e controlli
+  non essenziali sono differiti con `requestIdleCallback` e i polling rispettano
+  la visibilità della pagina.
+- File: `.gitignore`, `package.json`, `package-lock.json`, `vercel.json`,
+  `api/app.js` (rimosso), nuovi entrypoint in `api/`, `api/clients.js`,
+  `api/site-content.js`, `lib/client-drive-api.js`,
+  `lib/client-drive-libraries.js`, `lib/google-drive.js`, `public/app.js`,
+  `scripts/build-static-assets.mjs`, `scripts/check-syntax.mjs`, test aggiornati,
+  `docs/TECHNICAL-AUDIT.md`, `docs/PROJECT-HANDOFF.md`,
+  `docs/PERFORMANCE-OPTIMIZATION-2026-09-03.md`, `agent.md`.
+- Verifiche: `npm run build`; tutti i 19 script `scripts/test-*.mjs`;
+  `npx vercel build` con esito positivo; controllo browser della build hash a
+  1440×900 e 390×844, senza errori console né overflow orizzontale; verifica
+  specifica di output statico e funzioni API separate; `git diff --check`.
+- Pubblicazione: commit corrente da pubblicare su GitHub `main` e distribuire
+  su Vercel produzione nello stesso intervento, con misure HTTP fredde/calde.
+- Note: l'indice Drive persistente Supabase, i WebP persistenti e una regione
+  Vercel forzata restano subordinati alle misure autenticate e alla verifica
+  della regione Supabase; preservata e non inclusa `.bmg-redesign-backup/`.
+
 ### 2026-09-03 — Task completate visibili per dieci giorni
 
 - Richiesta: mantenere visibili le task completate per circa dieci giorni

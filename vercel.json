@@ -1,129 +1,63 @@
 {
-  "version": 2,
-  "builds": [
-    {
-      "src": "api/*.js",
-      "use": "@vercel/node"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/api/leads",
-      "dest": "/api/leads.js"
-    },
-    {
-      "src": "/api/auth-config",
-      "dest": "/api/auth-config.js"
-    },
-    {
-      "src": "/api/me",
-      "dest": "/api/me.js"
-    },
-    {
-      "src": "/api/users",
-      "dest": "/api/users.js"
-    },
-    {
-      "src": "/api/maintenance-notice",
-      "dest": "/api/maintenance-notice.js"
-    },
-    {
-      "src": "/api/access-logs",
-      "dest": "/api/me.js"
-    },
-    {
-      "src": "/api/site-content",
-      "dest": "/api/site-content.js"
-    },
-    {
-      "src": "/api/site-media",
-      "dest": "/api/site-content.js"
-    },
-    {
-      "src": "/api/public-site-content",
-      "dest": "/api/public-site-content.js"
-    },
-    {
-      "src": "/api/clients",
-      "dest": "/api/clients.js"
-    },
-    {
-      "src": "/api/client-drive",
-      "dest": "/api/clients.js"
-    },
-    {
-      "src": "/api/google-calendar",
-      "dest": "/api/app.js"
-    },
-    {
-      "src": "/api/health",
-      "dest": "/api/app.js"
-    },
-    {
-      "src": "/api/personal-area",
-      "dest": "/api/app.js"
-    },
-    {
-      "src": "/api/team-chat",
-      "dest": "/api/app.js"
-    },
-    {
-      "src": "/api/graphic-reviews",
-      "dest": "/api/app.js"
-    },
-    {
-      "src": "/api/ped",
-      "dest": "/api/app.js"
-    },
-    {
-      "src": "/api/ped-share",
-      "dest": "/api/app.js"
-    },
-    {
-      "src": "/api/public-ped",
-      "dest": "/api/app.js"
-    },
-    {
-      "src": "/api/clients/sync-clickup",
-      "dest": "/api/clients-sync-clickup.js"
-    },
-    {
-      "src": "/api/clickup/team",
-      "dest": "/api/clickup-team.js"
-    },
-    {
-      "src": "/api/clickup/tasks",
-      "dest": "/api/clickup-tasks.js"
-    },
-    {
-      "src": "/api/smart-working",
-      "dest": "/api/app.js"
-    },
-    {
-      "src": "/api/clickup/webhook",
-      "dest": "/api/clickup-tasks.js"
-    },
-    {
-      "src": "/api/ai/task-assist",
-      "dest": "/api/clickup-tasks.js"
-    },
-    {
-      "src": "/",
-      "dest": "/api/app.js"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/api/app.js"
-    }
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "fluid": true,
+  "rewrites": [
+    { "source": "/api/access-logs", "destination": "/api/me" },
+    { "source": "/api/clients/sync-clickup", "destination": "/api/clients-sync-clickup" },
+    { "source": "/api/clickup/team", "destination": "/api/clickup-team" },
+    { "source": "/api/clickup/tasks", "destination": "/api/clickup-tasks" },
+    { "source": "/api/clickup/webhook", "destination": "/api/clickup-tasks" },
+    { "source": "/api/ai/task-assist", "destination": "/api/clickup-tasks" },
+    { "source": "/ped-share", "destination": "/ped-share.html" }
   ],
   "headers": [
     {
+      "source": "/assets/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+      ]
+    },
+    {
+      "source": "/",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
+      ]
+    },
+    {
+      "source": "/index.html",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
+      ]
+    },
+    {
+      "source": "/ped-share",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" },
+        { "key": "Content-Security-Policy", "value": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; media-src 'self' blob:; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'" },
+        { "key": "Referrer-Policy", "value": "no-referrer" },
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "X-Frame-Options", "value": "DENY" },
+        { "key": "X-Robots-Tag", "value": "noindex, nofollow, noarchive" }
+      ]
+    },
+    {
+      "source": "/ped-share.html",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" },
+        { "key": "Content-Security-Policy", "value": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; media-src 'self' blob:; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'" },
+        { "key": "Referrer-Policy", "value": "no-referrer" },
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "X-Frame-Options", "value": "DENY" },
+        { "key": "X-Robots-Tag", "value": "noindex, nofollow, noarchive" }
+      ]
+    },
+    {
       "source": "/api/(.*)",
       "headers": [
-        {
-          "key": "Access-Control-Allow-Origin",
-          "value": "https://bemarketinggroup-del.github.io"
-        }
+        { "key": "Access-Control-Allow-Origin", "value": "https://bemarketinggroup-del.github.io" }
       ]
     }
   ]

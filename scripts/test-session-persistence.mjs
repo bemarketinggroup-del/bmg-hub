@@ -9,7 +9,7 @@ assert.match(appSource, /const LAST_VIEW_KEY = "bmg-hub-last-view-v1"/, "la sezi
 assert.match(appSource, /const WORKSPACE_CONTEXT_KEY = "bmg-hub-workspace-context-v1"/, "il contesto interno delle pagine deve avere una chiave persistente");
 assert.match(appSource, /storedView === "settings" \? "dashboard" : storedView/, "una vecchia sessione Setup deve tornare alla Home");
 assert.match(appSource, /function setView\(view\) \{[\s\S]*?rememberLastView\(view\)/, "ogni cambio sezione deve essere memorizzato");
-assert.match(appSource, /showApp\(\);\s*restoreWorkspaceContext\(\);\s*restoreLastView\(\);/, "il contesto interno deve essere ripristinato prima della pagina attiva");
+assert.match(appSource, /showApp\(\);[\s\S]{0,120}?restoreWorkspaceContext\(\);\s*restoreLastView\(\);/, "il contesto interno deve essere ripristinato prima della pagina attiva");
 assert.match(appSource, /ped_client_id: String\(selectedPedClientId/, "il cliente PED selezionato deve essere memorizzato");
 assert.match(appSource, /ped_month: pedMonthKey\(\)/, "il mese PED selezionato deve essere memorizzato");
 assert.match(appSource, /workspaceContext\.ped_client_id[\s\S]{0,500}?selectedPedClientId = String\(workspaceContext\.ped_client_id\)/, "il cliente PED deve essere ripristinato dopo il caricamento backend");

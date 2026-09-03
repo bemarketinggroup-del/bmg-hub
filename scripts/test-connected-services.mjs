@@ -8,7 +8,7 @@ const [appSource, htmlSource, styleSource, healthSource, calendarSource, driveSo
   readFile(new URL("../lib/system-health.js", import.meta.url), "utf8"),
   readFile(new URL("../lib/google-calendar.js", import.meta.url), "utf8"),
   readFile(new URL("../lib/google-drive.js", import.meta.url), "utf8"),
-  readFile(new URL("../api/app.js", import.meta.url), "utf8"),
+  readFile(new URL("../api/health.js", import.meta.url), "utf8"),
   readFile(new URL("../vercel.json", import.meta.url), "utf8")
 ]);
 
@@ -27,7 +27,7 @@ assert.match(driveSource, /export async function googleDriveHealth/, "Drive deve
 assert.match(driveSource, /googleDriveReadHealth[\s\S]*service_account/, "Drive deve verificare l'account di servizio di lettura");
 assert.match(driveSource, /googleDriveWriteHealth[\s\S]*dedicated_oauth/, "Drive deve verificare l'OAuth dedicato di scrittura");
 assert.match(appSource, /data\.services\?\.drive/, "il gestionale deve acquisire lo stato Google Drive");
-assert.match(apiSource, /requestUrl\.pathname === "\/api\/health"/, "l'API deve esporre il controllo autenticato");
-assert.match(vercelSource, /"src": "\/api\/health"/, "Vercel deve instradare il controllo servizi");
+assert.match(apiSource, /export default handleSystemHealth/, "l'API deve avere un entrypoint isolato");
+assert.doesNotMatch(vercelSource, /api\/app/, "il controllo servizi non deve dipendere dal contenitore API monolitico");
 
 console.log("Connected services tests passed");

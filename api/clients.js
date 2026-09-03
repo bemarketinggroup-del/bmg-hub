@@ -1,5 +1,4 @@
 import { jsonHeaders, readJson, requireUser, supabaseFetch } from "./_auth.js";
-import handleClientDrive, { clearClientDriveClientCache } from "../lib/client-drive-api.js";
 import { canAccessModule } from "../lib/staff-permissions.js";
 import {
   ensureDriveFolderWithWriteAccess,
@@ -196,12 +195,6 @@ async function driveImportCandidates() {
 }
 
 export default async function handler(request, response) {
-  const requestUrl = new URL(request.url, `https://${request.headers.host}`);
-  if (requestUrl.pathname === "/api/client-drive") {
-    await handleClientDrive(request, response);
-    return;
-  }
-
   if (request.method === "OPTIONS") {
     response.writeHead(204, headers());
     response.end();
@@ -467,7 +460,6 @@ export default async function handler(request, response) {
           notes: connectionNotes
         })
       });
-      clearClientDriveClientCache(id);
       response.writeHead(connectionResult.status, headers());
       if (!connectionResult.ok) {
         response.end(await connectionResult.text());
@@ -485,7 +477,6 @@ export default async function handler(request, response) {
       headers: { Prefer: "return=representation" },
       body: JSON.stringify(payload)
     });
-    clearClientDriveClientCache(id);
     response.writeHead(result.status, headers());
     if (!result.ok) {
       response.end(await result.text());

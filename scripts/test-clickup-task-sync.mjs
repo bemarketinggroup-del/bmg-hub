@@ -36,7 +36,7 @@ assert.match(api, /completed_at: taskCompletionTimestamp\(row\)/, "l'API deve es
 assert.match(teamApi, /canAccessModule\(session\.profile, "tasks"\)/, "chi ha accesso ai Task deve ricevere l'elenco completo del team");
 
 assert.match(vercel, /\/api\/clickup\/webhook/);
-assert.match(vercel, /clickup-tasks\.js/);
+assert.match(vercel, /"destination": "\/api\/clickup-tasks"/);
 
 assert.match(migration, /create table if not exists public\.clickup_tasks/);
 assert.match(migration, /clickup_task_id text not null unique/);

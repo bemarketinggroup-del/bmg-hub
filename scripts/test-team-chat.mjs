@@ -73,6 +73,6 @@ assert.match(migrationSource, /create table if not exists public\.team_chat_read
 assert.match(migrationSource, /source_type in \('task', 'event', 'chat'\)/);
 assert.match(migrationSource, /enable row level security/);
 assert.match(permissionsSource, /key: "chat"/);
-assert.match(vercelSource, /"src": "\/api\/team-chat"/);
+assert.doesNotMatch(vercelSource, /api\/app/, "la chat deve usare il proprio entrypoint serverless");
 
 console.log("Team chat tests passed.");

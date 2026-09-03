@@ -37,7 +37,7 @@ assert.match(css, /\.maintenance-admin-controls[^}]*grid-template-columns:/, "il
 assert.match(css, /@media \(max-width: 760px\)[\s\S]*\.maintenance-admin-controls \{ grid-template-columns: 1fr;/, "il pannello deve adattarsi allo smartphone");
 assert.match(css, /\.maintenance-notice-dialog\.modal[^}]*width: min\(560px/, "il popup deve restare leggibile senza occupare tutto lo schermo");
 
-assert.match(vercel, /"src": "\/api\/maintenance-notice"[\s\S]*"dest": "\/api\/maintenance-notice\.js"/, "Vercel deve instradare la nuova API");
+assert.match(vercel, /"outputDirectory": "dist"/, "Vercel deve pubblicare l'interfaccia statica senza passare da Node");
 assert.match(localServer, /url\.pathname === "\/api\/maintenance-notice"/, "il server locale deve esporre la nuova API");
 assert.match(audit, /activate_maintenance_notice: "Ha attivato l'avviso di manutenzione"/, "l'attivazione deve entrare nel registro attività");
 assert.match(audit, /disable_maintenance_notice: "Ha disattivato l'avviso di manutenzione"/, "la disattivazione deve entrare nel registro attività");

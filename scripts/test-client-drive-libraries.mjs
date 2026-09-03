@@ -74,7 +74,8 @@ const htmlSource = await readFile(new URL("../public/index.html", import.meta.ur
 const styleSource = await readFile(new URL("../public/styles.css", import.meta.url), "utf8");
 assert.match(driveApiSource, /authorizedRootId = clientLibrary\.id/, "le raccolte speciali devono usare la cartella cliente come radice autorizzata");
 assert.match(driveApiSource, /includeReviews \? graphicReviewRelations/, "PED e chat non devono attendere le relazioni delle revisioni che non visualizzano");
-assert.match(driveApiSource, /Promise\.all\(\[[\s\S]*?listDriveFolder\(folderId/, "metadati, contenuti e raccolte Drive devono essere caricati in parallelo");
+assert.match(driveApiSource, /Promise\.all\(\[[\s\S]*?listDriveFolderPage\(folderId/, "metadati e prima pagina Drive devono essere caricati in parallelo");
+assert.match(driveApiSource, /action === "libraries"/, "le raccolte secondarie devono essere richieste dopo i file");
 assert.match(driveApiSource, /isAuthorizedRoot[\s\S]*?Promise\.resolve\(\{ id: folderId, name: client\.name, mimeType: FOLDER_MIME \}\)/, "la radice autorizzata non deve richiedere una lettura metadati aggiuntiva");
 assert.match(driveApiSource, /mediaUrl\(client\.id, authorizedRootId, file\.id, "thumbnail", file\)/, "le miniature devono firmare i metadati gia ottenuti dall'elenco Drive");
 assert.match(driveApiSource, /trustedMediaMetadata\(fileId, tokenData\)/, "il proxy media deve riusare i metadati firmati senza una seconda chiamata Google");
@@ -90,9 +91,11 @@ assert.match(driveApiSource, /isInsideDriveRoot\(targetParentId, rootId, target\
 assert.match(driveApiSource, /isInsideDriveRoot\(targetParentId, fileId, target\)/, "una cartella non deve potersi spostare dentro una propria sottocartella");
 assert.match(googleDriveSource, /export async function moveDriveFile/, "Google Drive deve aggiornare i genitori di file e cartelle");
 assert.match(appSource, /data-drive-move=/, "ogni elemento del Drive interno deve avere il comando Sposta");
-assert.match(appSource, /const eagerImages = images\.slice\(0, 8\)/, "le prime anteprime Drive devono partire immediatamente");
+assert.match(appSource, /const eagerCount = window\.matchMedia/, "le prime anteprime Drive devono adattarsi a smartphone e desktop");
 assert.match(appSource, /rootMargin: "720px"/, "le anteprime vicine al viewport devono essere precaricate prima dello scroll");
-assert.match(appSource, /includeReviews: true/, "la cache frontend deve distinguere il Drive completo dalle viste leggere PED e chat");
+assert.match(appSource, /clientDriveState\.surface === "graphics" && normalizedSource === "graphics"/, "solo l'archivio grafiche deve caricare le relazioni di revisione");
+assert.match(appSource, /function loadMoreClientDriveFiles/, "il Drive deve caricare progressivamente le pagine successive");
+assert.match(appSource, /new AbortController\(\)/, "una nuova navigazione deve annullare la richiesta precedente");
 assert.match(appSource, /data-drive-select=/, "ogni elemento del Drive interno deve poter essere selezionato");
 assert.match(appSource, /has-selection-control/, "le schede Drive modificabili devono riservare uno spazio al selettore");
 assert.match(appSource, /file\.is_folder \? " is-folder-card"/, "le cartelle Drive devono usare una scheda visuale della stessa famiglia di foto e video");

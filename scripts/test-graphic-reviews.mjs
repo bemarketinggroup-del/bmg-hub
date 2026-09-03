@@ -30,7 +30,7 @@ const [
   schemaSource,
   vercelSource
 ] = await Promise.all([
-  readFile(new URL("../api/app.js", import.meta.url), "utf8"),
+  readFile(new URL("../api/graphic-reviews.js", import.meta.url), "utf8"),
   readFile(new URL("../lib/client-drive-api.js", import.meta.url), "utf8"),
   readFile(new URL("../lib/staff-permissions.js", import.meta.url), "utf8"),
   readFile(new URL("../public/app.js", import.meta.url), "utf8"),
@@ -42,8 +42,8 @@ const [
 ]);
 
 assert.match(apiSource, /handleGraphicReviews/);
-assert.ok(apiSource.includes('pathname === "/api/graphic-reviews"'));
-assert.ok(vercelSource.includes("api/graphic-reviews"));
+assert.match(apiSource, /export default handleGraphicReviews/);
+assert.doesNotMatch(vercelSource, /api\/app/);
 assert.match(permissionsSource, /\{ key: "graphics", label: "Grafiche" \}/);
 assert.match(permissionsSource, /graphics: false/);
 assert.match(driveApiSource, /modules: \["clients", "ped", "graphics", "chat"\]/);

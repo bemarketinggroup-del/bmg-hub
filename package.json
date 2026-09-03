@@ -3,10 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": "24.x"
+  },
   "scripts": {
     "dev": "node scripts/local-server.mjs",
-    "build": "node --check public/app.js && node --check public/primeng-adapter.js && node --check public/ped-share.js && node --check public/ped-gallery-metadata.js && node --check api/_auth.js && node --check api/app.js && node --check api/auth-config.js && node --check api/me.js && node --check api/users.js && node --check api/maintenance-notice.js && node --check api/leads.js && node --check api/site-content.js && node --check api/public-site-content.js && node --check api/clients.js && node --check api/clients-sync-clickup.js && node --check api/clickup-team.js && node --check api/clickup-tasks.js && node --check lib/staff-permissions.js && node --check lib/staff-email-identities.js && node --check lib/clickup-identity.js && node --check lib/clickup-task-access.js && node --check lib/clickup-members.js && node --check lib/task-completion-retention.js && node --check lib/client-connections.js && node --check lib/client-drive-api.js && node --check lib/client-drive-libraries.js && node --check lib/drive-media-token.js && node --check lib/google-drive.js && node --check lib/google-calendar.js && node --check lib/system-health.js && node --check lib/personal-area.js && node --check lib/team-chat.js && node --check lib/graphic-reviews.js && node --check lib/ped.js && node --check lib/ped-share.js && node --check lib/site-media.js && node --check lib/ai-task-assist.js && node --check lib/smart-working-employees.js && node --check lib/smart-working.js",
-    "check": "node --check public/app.js && node --check public/primeng-adapter.js && node --check public/ped-share.js && node --check public/ped-gallery-metadata.js && node --check api/_auth.js && node --check api/app.js && node --check api/auth-config.js && node --check api/me.js && node --check api/users.js && node --check api/maintenance-notice.js && node --check api/leads.js && node --check api/site-content.js && node --check api/public-site-content.js && node --check api/clients.js && node --check api/clients-sync-clickup.js && node --check api/clickup-team.js && node --check api/clickup-tasks.js && node --check lib/staff-permissions.js && node --check lib/staff-email-identities.js && node --check lib/clickup-identity.js && node --check lib/clickup-task-access.js && node --check lib/clickup-members.js && node --check lib/task-completion-retention.js && node --check lib/client-connections.js && node --check lib/client-drive-api.js && node --check lib/client-drive-libraries.js && node --check lib/drive-media-token.js && node --check lib/google-drive.js && node --check lib/google-calendar.js && node --check lib/system-health.js && node --check lib/personal-area.js && node --check lib/team-chat.js && node --check lib/graphic-reviews.js && node --check lib/ped.js && node --check lib/ped-share.js && node --check lib/site-media.js && node --check lib/ai-task-assist.js && node --check lib/smart-working-employees.js && node --check lib/smart-working.js",
+    "build": "npm run check && node scripts/build-static-assets.mjs",
+    "check": "node scripts/check-syntax.mjs",
     "test:clickup-sync": "node scripts/test-clickup-task-sync.mjs",
     "test:ai-task-assist": "node scripts/test-ai-task-assist.mjs",
     "test:ped-carousel": "node scripts/test-ped-carousel.mjs",
@@ -26,5 +29,8 @@
     "test:session-persistence": "node scripts/test-session-persistence.mjs",
     "test:primeng-components": "node scripts/test-primeng-components.mjs",
     "test:maintenance-notice": "node scripts/test-maintenance-notice.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.12"
   }
 }

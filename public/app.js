@@ -12,6 +12,25 @@ const TEAM_TASK_LIST_NAME = "task del team";
 const COMPLETED_TASK_RETENTION_DAYS = 10;
 const COMPLETED_TASK_RETENTION_MS = COMPLETED_TASK_RETENTION_DAYS * 24 * 60 * 60 * 1000;
 const SMART_WORKING_SYNC_INTERVAL_MS = 5 * 60 * 1000;
+const bmgPerformance = [];
+
+function performanceMark(name, detail = {}) {
+  if (!globalThis.performance?.mark) return;
+  const fullName = `bmg:${name}`;
+  performance.mark(fullName);
+  bmgPerformance.push({ name, at: Math.round(performance.now()), ...detail });
+  if (bmgPerformance.length > 100) bmgPerformance.shift();
+}
+
+function performanceMeasure(name, startedAt, detail = {}) {
+  const duration = Math.max(0, performance.now() - startedAt);
+  bmgPerformance.push({ name, duration: Math.round(duration), ...detail });
+  if (bmgPerformance.length > 100) bmgPerformance.shift();
+  return duration;
+}
+
+globalThis.BMG_PERFORMANCE = bmgPerformance;
+performanceMark("script-ready");
 // Mapping centralizzato: aggiorna questi sinonimi se ClickUp introduce nuovi stati operativi.
 const TASK_STATUS_GROUPS = [
   {
@@ -202,6 +221,7 @@ let clickupOnline = null;
 let calendarOnline = null;
 let serviceHealthTimer = null;
 let maintenanceNoticeTimer = null;
+let homeExtrasScheduled = false;
 let maintenanceNoticeState = {
   enabled: false,
   message: DEFAULT_MAINTENANCE_MESSAGE,
@@ -211,7 +231,7 @@ let maintenanceNoticeState = {
 const backendServiceErrors = { clients: "", clickup: "", site: "", calendar: "", drive: "" };
 let selectedTeamMemberId = ALL_TEAM_TASKS_ID;
 let selectedClientId = "";
-let clientDriveState = { surface: "client", clientId: "", path: [], files: [], libraries: [], source: "", rootId: "", objectUrl: "", thumbnailUrls: new Set(), uploadEnabled: false, bulkMessage: "" };
+let clientDriveState = { surface: "client", clientId: "", path: [], files: [], libraries: [], source: "", rootId: "", objectUrl: "", thumbnailUrls: new Set(), uploadEnabled: false, bulkMessage: "", nextPageToken: "", loadingMore: false };
 let clientDriveSelection = new Map();
 let graphicsDriveClientId = "";
 let selectedPedClientId = "";
@@ -245,7 +265,9 @@ const DRIVE_FOLDER_BROWSER_CACHE_TTL = 2 * 60 * 1000;
 const driveFolderBrowserCache = new Map();
 const driveFolderBrowserRequests = new Map();
 const driveFolderBrowserVersions = new Map();
+const driveClientsNeedingRefresh = new Set();
 let clientDriveFolderLoadId = 0;
+let clientDriveAbortController = null;
 let pedPickerFolderLoadId = 0;
 let driveFolderPrefetchTimer = null;
 let pedMediaViewerState = {
@@ -900,12 +922,12 @@ async function apiFetch(url, options = {}) {
   return response;
 }
 
-function driveFolderBrowserCacheKey(clientId, folderId = "", source = "", includeReviews = false) {
-  return `${String(clientId || "")}:${String(source || "client")}:${String(folderId || "root")}:${includeReviews ? "reviews" : "plain"}`;
+function driveFolderBrowserCacheKey(clientId, folderId = "", source = "", includeReviews = false, pageToken = "", pageSize = 200) {
+  return `${String(clientId || "")}:${String(source || "client")}:${String(folderId || "root")}:${includeReviews ? "reviews" : "plain"}:${String(pageToken || "first")}:${pageSize}`;
 }
 
-function cachedDriveFolder(clientId, folderId = "", source = "", includeReviews = false) {
-  const key = driveFolderBrowserCacheKey(clientId, folderId, source, includeReviews);
+function cachedDriveFolder(clientId, folderId = "", source = "", includeReviews = false, pageToken = "", pageSize = 200) {
+  const key = driveFolderBrowserCacheKey(clientId, folderId, source, includeReviews, pageToken, pageSize);
   const cached = driveFolderBrowserCache.get(key);
   if (!cached) return null;
   if (cached.expiresAt <= Date.now()) {
@@ -915,11 +937,11 @@ function cachedDriveFolder(clientId, folderId = "", source = "", includeReviews 
   return cached.data;
 }
 
-function cacheDriveFolder(clientId, requestedFolderId, data, source = "", includeReviews = false) {
+function cacheDriveFolder(clientId, requestedFolderId, data, source = "", includeReviews = false, pageToken = "", pageSize = 200) {
   const entry = { data, expiresAt: Date.now() + DRIVE_FOLDER_BROWSER_CACHE_TTL };
-  driveFolderBrowserCache.set(driveFolderBrowserCacheKey(clientId, requestedFolderId, source, includeReviews), entry);
+  driveFolderBrowserCache.set(driveFolderBrowserCacheKey(clientId, requestedFolderId, source, includeReviews, pageToken, pageSize), entry);
   if (data?.folder?.id) {
-    driveFolderBrowserCache.set(driveFolderBrowserCacheKey(clientId, data.folder.id, source, includeReviews), entry);
+    driveFolderBrowserCache.set(driveFolderBrowserCacheKey(clientId, data.folder.id, source, includeReviews, pageToken, pageSize), entry);
   }
   return data;
 }
@@ -937,39 +959,50 @@ function clearDriveFolderBrowserCache(clientId = "") {
   }
 }
 
-async function fetchDriveFolder(clientId, folderId = "", { fresh = false, source = "", includeReviews = false } = {}) {
-  const cacheKey = driveFolderBrowserCacheKey(clientId, folderId, source, includeReviews);
+async function fetchDriveFolder(clientId, folderId = "", { fresh = false, source = "", includeReviews = false, pageToken = "", pageSize = 200, signal } = {}) {
+  const normalizedClientId = String(clientId || "");
+  fresh = fresh || driveClientsNeedingRefresh.has(normalizedClientId);
+  const cacheKey = driveFolderBrowserCacheKey(clientId, folderId, source, includeReviews, pageToken, pageSize);
   if (!fresh) {
-    const cached = cachedDriveFolder(clientId, folderId, source, includeReviews);
+    const cached = cachedDriveFolder(clientId, folderId, source, includeReviews, pageToken, pageSize);
     if (cached) return { data: cached, cached: true };
     const pending = driveFolderBrowserRequests.get(cacheKey);
-    if (pending) return { data: await pending, cached: false };
+    if (pending && !signal) return { data: await pending, cached: false };
   } else {
     clearDriveFolderBrowserCache(clientId);
   }
-  const normalizedClientId = String(clientId || "");
   const cacheVersion = driveFolderBrowserVersions.get(normalizedClientId) || 0;
 
   const request = (async () => {
+    const startedAt = performance.now();
     const params = new URLSearchParams({ client_id: clientId });
     if (folderId) params.set("folder_id", folderId);
     if (source) params.set("source", source);
     if (includeReviews) params.set("include_reviews", "1");
+    if (pageToken) params.set("page_token", pageToken);
+    params.set("page_size", String(pageSize));
     if (fresh) params.set("refresh", "1");
-    const response = await apiFetch(`/api/client-drive?${params}`);
+    const response = await apiFetch(`/api/client-drive?${params}`, { signal });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || "Google Drive non disponibile");
+    driveClientsNeedingRefresh.delete(normalizedClientId);
+    performanceMeasure("drive-folder-response", startedAt, {
+      cached: response.headers.get("x-bmg-drive-cache") || "browser-miss",
+      serverTiming: response.headers.get("server-timing") || "",
+      count: Array.isArray(data.files) ? data.files.length : 0,
+      page: pageToken ? "next" : "first"
+    });
     if ((driveFolderBrowserVersions.get(normalizedClientId) || 0) === cacheVersion) {
-      cacheDriveFolder(clientId, folderId, data, source, includeReviews);
+      cacheDriveFolder(clientId, folderId, data, source, includeReviews, pageToken, pageSize);
     }
     return data;
   })();
 
-  driveFolderBrowserRequests.set(cacheKey, request);
+  if (!signal) driveFolderBrowserRequests.set(cacheKey, request);
   try {
     return { data: await request, cached: false };
   } finally {
-    if (driveFolderBrowserRequests.get(cacheKey) === request) driveFolderBrowserRequests.delete(cacheKey);
+    if (!signal && driveFolderBrowserRequests.get(cacheKey) === request) driveFolderBrowserRequests.delete(cacheKey);
   }
 }
 
@@ -988,12 +1021,25 @@ function hideDriveFolderLoading(container) {
   container.querySelector("[data-drive-folder-loading]")?.remove();
 }
 
-function scheduleDriveFolderPrefetch(clientId, folderId, source = "", includeReviews = false) {
+function scheduleDriveFolderPrefetch(clientId, folderId, source = "", includeReviews = false, pageSize = 200) {
   window.clearTimeout(driveFolderPrefetchTimer);
-  if (!clientId || !folderId || cachedDriveFolder(clientId, folderId, source, includeReviews)) return;
+  if (!clientId || !folderId || cachedDriveFolder(clientId, folderId, source, includeReviews, "", pageSize)) return;
   driveFolderPrefetchTimer = window.setTimeout(() => {
-    fetchDriveFolder(clientId, folderId, { source, includeReviews }).catch(() => {});
+    fetchDriveFolder(clientId, folderId, { source, includeReviews, pageSize }).catch(() => {});
   }, 140);
+}
+
+async function fetchDriveLibraries(clientId, { fresh = false } = {}) {
+  const startedAt = performance.now();
+  const params = new URLSearchParams({ client_id: clientId, action: "libraries" });
+  if (fresh) params.set("refresh", "1");
+  const response = await apiFetch(`/api/client-drive?${params}`);
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error || "Raccolte Drive non disponibili");
+  performanceMeasure("drive-libraries-response", startedAt, {
+    serverTiming: response.headers.get("server-timing") || ""
+  });
+  return Array.isArray(data.libraries) ? data.libraries : [];
 }
 
 async function loadCurrentUser() {
@@ -1257,6 +1303,12 @@ function setView(view) {
     loadPedCalendar();
   } else auditModuleView(isGraphicsView ? "graphics" : view);
   if (view === "calendar") loadGoogleCalendar();
+  if (view === "content" && contentOnline === null) loadContentFromBackend();
+  if (view === "users" && !state.staffProfiles.length) loadUsersFromBackend();
+  if (view === "team" && !state.clickupTasks.length) {
+    void Promise.allSettled([loadClickUpTeam(), loadClickUpTasks(), loadClickUpTaskLogs(), loadClientAliases()]);
+  }
+  if (["smart", "counter"].includes(view) && !state.smartWorking?.month) void loadSmartWorking();
   if (["smart", "counter"].includes(view) && state.smartWorking?.month) {
     void refreshSmartWorkingInBackground(smartMonthKey(), { refresh: true });
   }
@@ -1403,16 +1455,23 @@ function renderHomeAttention(){
 function ensureHomeExtras(){
   try { renderHomeAgenda(); } catch (e) {}
   try { renderHomeAttention(); } catch (e) {}
-  try {
-    if ((!(typeof canAccessModule === "function") || canAccessModule("calendar")) && typeof loadGoogleCalendar === "function") {
-      Promise.resolve(loadGoogleCalendar()).catch(() => {}).finally(() => { try { renderHomeAgenda(); } catch (e) {} });
-    }
-  } catch (e) {}
-  try {
-    if ((!(typeof canAccessModule === "function") || canAccessModule("graphics")) && typeof loadGraphicReviews === "function") {
-      Promise.resolve(loadGraphicReviews({ quiet: true })).catch(() => {}).finally(() => { try { renderHomeAttention(); } catch (e) {} });
-    }
-  } catch (e) {}
+  if (homeExtrasScheduled || document.querySelector("[data-view-panel='dashboard'].is-active") === null) return;
+  homeExtrasScheduled = true;
+  runWhenIdle(async () => {
+    try {
+      if (canAccessModule("calendar")) await loadGoogleCalendar();
+      renderHomeAgenda();
+    } catch {}
+    try {
+      if (canAccessModule("graphics")) await loadGraphicReviews({ quiet: true });
+      renderHomeAttention();
+    } catch {}
+  });
+}
+
+function runWhenIdle(callback, timeout = 1500) {
+  if ("requestIdleCallback" in window) window.requestIdleCallback(() => callback(), { timeout });
+  else window.setTimeout(callback, Math.min(timeout, 500));
 }
 
 function renderHome() {
@@ -2316,6 +2375,8 @@ async function saveClientConnections() {
     const result = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(result.error || "Salvataggio non riuscito");
     clientConnectionsCache.delete(id);
+    clearDriveFolderBrowserCache(id);
+    driveClientsNeedingRefresh.add(String(id));
     document.getElementById("clientConnectionsModal").close();
     await loadClientsFromBackend();
     await loadClientConnections(id, { force: true });
@@ -2365,10 +2426,12 @@ function currentClientDrivePanel() {
 
 function resetDriveBrowser(surface = "client") {
   clientDriveFolderLoadId += 1;
+  clientDriveAbortController?.abort();
+  clientDriveAbortController = null;
   if (clientDriveState.objectUrl) URL.revokeObjectURL(clientDriveState.objectUrl);
   clearDriveThumbnailUrls();
   clientDriveSelection.clear();
-  clientDriveState = { surface, clientId: "", path: [], files: [], libraries: [], source: "", rootId: "", objectUrl: "", thumbnailUrls: new Set(), uploadEnabled: false, bulkMessage: "" };
+  clientDriveState = { surface, clientId: "", path: [], files: [], libraries: [], source: "", rootId: "", objectUrl: "", thumbnailUrls: new Set(), uploadEnabled: false, bulkMessage: "", nextPageToken: "", loadingMore: false };
 }
 
 async function openClientDrive(clientId) {
@@ -2376,7 +2439,7 @@ async function openClientDrive(clientId) {
   if (!client) return;
   clearDriveThumbnailUrls();
   clientDriveSelection.clear();
-  clientDriveState = { surface: "client", clientId: String(clientId), path: [], files: [], libraries: [], source: "", rootId: "", objectUrl: "", thumbnailUrls: new Set(), uploadEnabled: false, bulkMessage: "" };
+  clientDriveState = { surface: "client", clientId: String(clientId), path: [], files: [], libraries: [], source: "", rootId: "", objectUrl: "", thumbnailUrls: new Set(), uploadEnabled: false, bulkMessage: "", nextPageToken: "", loadingMore: false };
   await loadClientDriveFolder("", client.name, { source: "" });
 }
 
@@ -2384,6 +2447,9 @@ async function loadClientDriveFolder(folderId = "", folderName = "", { fresh = f
   const panel = currentClientDrivePanel();
   if (!panel) return;
   const loadId = ++clientDriveFolderLoadId;
+  clientDriveAbortController?.abort();
+  clientDriveAbortController = new AbortController();
+  const signal = clientDriveAbortController.signal;
   const normalizedSource = String(source || "");
   const currentFolderId = String(clientDriveState.path[clientDriveState.path.length - 1]?.id || "");
   const isNavigation = Boolean(currentFolderId) && (
@@ -2394,7 +2460,8 @@ async function loadClientDriveFolder(folderId = "", folderName = "", { fresh = f
     clientDriveSelection.clear();
     clientDriveState.bulkMessage = "";
   }
-  const instantlyAvailable = !fresh && cachedDriveFolder(clientDriveState.clientId, folderId, normalizedSource, true);
+  const includeReviews = clientDriveState.surface === "graphics" && normalizedSource === "graphics";
+  const instantlyAvailable = !fresh && cachedDriveFolder(clientDriveState.clientId, folderId, normalizedSource, includeReviews, "", 60);
   panel.classList.remove("is-hidden");
   if (instantlyAvailable) hideDriveFolderLoading(panel);
   else showDriveFolderLoading(panel, fresh ? "Aggiornamento cartella" : "Apertura cartella");
@@ -2403,7 +2470,9 @@ async function loadClientDriveFolder(folderId = "", folderName = "", { fresh = f
     const { data } = await fetchDriveFolder(clientDriveState.clientId, folderId, {
       fresh,
       source: normalizedSource,
-      includeReviews: true
+      includeReviews,
+      pageSize: 60,
+      signal
     });
     if (loadId !== clientDriveFolderLoadId) return;
 
@@ -2422,13 +2491,18 @@ async function loadClientDriveFolder(folderId = "", folderName = "", { fresh = f
     clientDriveState.rootId = String(data.root_id || "");
     if (Array.isArray(data.libraries) && data.libraries.length) clientDriveState.libraries = data.libraries;
     clientDriveState.files = data.files || [];
+    clientDriveState.nextPageToken = String(data.next_page_token || "");
+    clientDriveState.loadingMore = false;
     clientDriveState.uploadEnabled = Boolean(data.upload_enabled);
     clearDriveThumbnailUrls();
     hideDriveFolderLoading(panel);
     panel.innerHTML = driveBrowserMarkup(data.files || [], clientDriveState.uploadEnabled, clientDriveState.libraries);
     hydrateDriveThumbnails(panel);
+    observeDrivePagination(panel);
+    if (!normalizedSource && clientDriveState.path.length === 1) void hydrateClientDriveLibraries(loadId, panel);
     panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
   } catch (error) {
+    if (error?.name === "AbortError") return;
     if (loadId !== clientDriveFolderLoadId) return;
     hideDriveFolderLoading(panel);
     panel.innerHTML = `
@@ -2446,16 +2520,7 @@ function driveBrowserMarkup(files, uploadEnabled, libraries = []) {
       ? `<span>${escapeHtml(item.name)}</span>`
       : `<button data-drive-breadcrumb="${index}" type="button">${escapeHtml(item.name)}</button>`;
   }).join(`<svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>`);
-  const libraryCards = !clientDriveState.source && clientDriveState.path.length === 1
-    ? libraries.map((library) => `
-      <button class="ped-picker-library is-${escapeHtml(library.tone)}" data-drive-library="${escapeHtml(library.id)}" data-drive-library-source="${escapeHtml(library.source)}" data-drive-name="${escapeHtml(library.name)}" type="button">
-        <span class="ped-picker-library-icon" aria-hidden="true">${library.source === "video"
-          ? `<svg class="lc" viewBox="0 0 24 24"><path d="M3 7h6l2 2h10v12H3z"/><path d="m10 11 6 3-6 3z"/></svg>`
-          : `<svg class="lc" viewBox="0 0 24 24"><path d="M3 7h6l2 2h10v12H3z"/><path d="m12 11 .8 1.8 1.9.2-1.4 1.3.4 1.9-1.7-.9-1.7.9.4-1.9L9.3 13l1.9-.2z"/></svg>`}</span>
-        <span><strong>${escapeHtml(library.name)}</strong><small>${escapeHtml(library.description)} · accesso diretto</small></span>
-        <svg class="lc ped-picker-library-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
-      </button>`).join("")
-    : "";
+  const libraryCards = driveLibraryCardsMarkup(libraries);
 
   return `
     <div class="drive-browser-head">
@@ -2464,7 +2529,7 @@ function driveBrowserMarkup(files, uploadEnabled, libraries = []) {
         <nav class="drive-breadcrumbs" aria-label="Percorso cartella">${breadcrumbs}</nav>
       </div>
       <div class="drive-browser-actions">
-        <span class="drive-item-count">${files.length} ${files.length === 1 ? "elemento" : "elementi"}</span>
+        <span class="drive-item-count">${files.length}${clientDriveState.nextPageToken ? "+" : ""} ${files.length === 1 ? "elemento" : "elementi"}</span>
         ${uploadEnabled ? `
           <div class="drive-bulk-actions" data-drive-bulk-actions>
             <span data-drive-selection-count>${clientDriveSelection.size} selezionati</span>
@@ -2485,7 +2550,7 @@ function driveBrowserMarkup(files, uploadEnabled, libraries = []) {
     </div>
     <div class="drive-upload-status is-hidden" data-drive-upload-status role="status"></div>
     ${clientDriveState.bulkMessage ? `<div class="drive-bulk-message" data-drive-bulk-message role="status">${escapeHtml(clientDriveState.bulkMessage)}</div>` : ""}
-    ${libraryCards ? `<div class="drive-library-grid" aria-label="Raccolte del cliente">${libraryCards}</div>` : ""}
+    ${libraryCards}
     <div class="drive-drop-zone${uploadEnabled ? "" : " is-disabled"}" data-drive-drop-zone data-drive-write-enabled="${uploadEnabled ? "1" : "0"}">
       <div class="drive-drop-overlay" aria-hidden="true">
         <span class="drive-drop-icon">
@@ -2497,7 +2562,29 @@ function driveBrowserMarkup(files, uploadEnabled, libraries = []) {
       <div class="drive-file-grid">
         ${driveEntriesMarkup(files, uploadEnabled) || `<div class="drive-empty">Questa cartella è vuota. Trascina qui i file da caricare.</div>`}
       </div>
-    </div>`;
+    </div>
+    ${drivePaginationMarkup()}`;
+}
+
+function driveLibraryCardsMarkup(libraries = []) {
+  if (clientDriveState.source || clientDriveState.path.length !== 1 || !libraries.length) return "";
+  return `<div class="drive-library-grid" aria-label="Raccolte del cliente" data-drive-library-grid>${libraries.map((library) => `
+      <button class="ped-picker-library is-${escapeHtml(library.tone)}" data-drive-library="${escapeHtml(library.id)}" data-drive-library-source="${escapeHtml(library.source)}" data-drive-name="${escapeHtml(library.name)}" type="button">
+        <span class="ped-picker-library-icon" aria-hidden="true">${library.source === "video"
+          ? `<svg class="lc" viewBox="0 0 24 24"><path d="M3 7h6l2 2h10v12H3z"/><path d="m10 11 6 3-6 3z"/></svg>`
+          : `<svg class="lc" viewBox="0 0 24 24"><path d="M3 7h6l2 2h10v12H3z"/><path d="m12 11 .8 1.8 1.9.2-1.4 1.3.4 1.9-1.7-.9-1.7.9.4-1.9L9.3 13l1.9-.2z"/></svg>`}</span>
+        <span><strong>${escapeHtml(library.name)}</strong><small>${escapeHtml(library.description)} · accesso diretto</small></span>
+        <svg class="lc ped-picker-library-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+      </button>`).join("")}</div>`;
+}
+
+function drivePaginationMarkup() {
+  if (!clientDriveState.nextPageToken) return "";
+  return `<div class="drive-pagination" data-drive-pagination>
+    <button class="drive-bulk-button" data-drive-load-more type="button" ${clientDriveState.loadingMore ? "disabled" : ""}>
+      ${clientDriveState.loadingMore ? "Caricamento…" : "Carica altri elementi"}
+    </button>
+  </div>`;
 }
 
 function driveEntriesMarkup(files, writeEnabled) {
@@ -3007,11 +3094,79 @@ function clearDriveThumbnailUrls() {
   clientDriveState.thumbnailUrls = new Set();
 }
 
+async function hydrateClientDriveLibraries(loadId, panel) {
+  try {
+    const clientId = clientDriveState.clientId;
+    const libraries = await fetchDriveLibraries(clientId);
+    if (loadId !== clientDriveFolderLoadId || clientId !== clientDriveState.clientId || clientDriveState.path.length !== 1 || clientDriveState.source) return;
+    clientDriveState.libraries = libraries;
+    panel.querySelector("[data-drive-library-grid]")?.remove();
+    const markup = driveLibraryCardsMarkup(libraries);
+    if (markup) panel.querySelector("[data-drive-drop-zone]")?.insertAdjacentHTML("beforebegin", markup);
+  } catch (error) {
+    console.warn("Raccolte Drive non disponibili", error);
+  }
+}
+
+async function loadMoreClientDriveFiles() {
+  const token = clientDriveState.nextPageToken;
+  const folder = clientDriveState.path[clientDriveState.path.length - 1];
+  if (!token || !folder || clientDriveState.loadingMore) return;
+  clientDriveState.loadingMore = true;
+  const panel = currentClientDrivePanel();
+  const button = panel?.querySelector("[data-drive-load-more]");
+  if (button) {
+    button.disabled = true;
+    button.textContent = "Caricamento…";
+  }
+  try {
+    const includeReviews = clientDriveState.surface === "graphics" && clientDriveState.source === "graphics";
+    const { data } = await fetchDriveFolder(clientDriveState.clientId, folder.id, {
+      source: clientDriveState.source,
+      includeReviews,
+      pageToken: token,
+      pageSize: 60
+    });
+    if (token !== clientDriveState.nextPageToken) return;
+    const knownIds = new Set(clientDriveState.files.map((file) => String(file.id)));
+    const additions = (data.files || []).filter((file) => !knownIds.has(String(file.id)));
+    clientDriveState.files.push(...additions);
+    clientDriveState.nextPageToken = String(data.next_page_token || "");
+    panel?.querySelector(".drive-empty")?.remove();
+    panel?.querySelector(".drive-file-grid")?.insertAdjacentHTML("beforeend", driveEntriesMarkup(additions, clientDriveState.uploadEnabled));
+    panel?.querySelector("[data-drive-pagination]")?.remove();
+    panel?.insertAdjacentHTML("beforeend", drivePaginationMarkup());
+    const count = panel?.querySelector(".drive-item-count");
+    if (count) count.textContent = `${clientDriveState.files.length}${clientDriveState.nextPageToken ? "+" : ""} elementi`;
+    hydrateDriveThumbnails(panel);
+    observeDrivePagination(panel);
+  } catch (error) {
+    if (button) {
+      button.disabled = false;
+      button.textContent = "Riprova a caricare";
+    }
+  } finally {
+    clientDriveState.loadingMore = false;
+  }
+}
+
+function observeDrivePagination(panel) {
+  const target = panel?.querySelector("[data-drive-pagination]");
+  if (!target || !("IntersectionObserver" in window)) return;
+  const observer = new IntersectionObserver((entries) => {
+    if (!entries.some((entry) => entry.isIntersecting)) return;
+    observer.disconnect();
+    void loadMoreClientDriveFiles();
+  }, { rootMargin: "800px" });
+  observer.observe(target);
+}
+
 function hydrateDriveThumbnails(panel) {
-  const images = [...panel.querySelectorAll("[data-drive-thumbnail-url]")];
+  const images = [...panel.querySelectorAll("[data-drive-thumbnail-url]:not([src])")];
   if (!images.length) return;
 
-  const eagerImages = images.slice(0, 8);
+  const eagerCount = window.matchMedia?.("(max-width: 700px)").matches ? 4 : 8;
+  const eagerImages = images.slice(0, eagerCount);
   const deferredImages = images.slice(eagerImages.length);
   eagerImages.forEach((image) => loadDriveThumbnail(image, { highPriority: true }).catch(() => {}));
   if (!deferredImages.length) return;
@@ -3039,7 +3194,12 @@ async function loadDriveThumbnail(image, { highPriority = false } = {}) {
     image.loading = "eager";
     if ("fetchPriority" in image) image.fetchPriority = "high";
   }
-  image.addEventListener("load", () => image.classList.add("is-loaded"), { once: true });
+  image.addEventListener("load", () => {
+    image.classList.add("is-loaded");
+    const panel = image.closest("[data-client-drive-panel], [data-graphics-drive-panel]");
+    const loaded = panel ? [...panel.querySelectorAll("[data-drive-thumbnail-url].is-loaded")].length : 0;
+    if (loaded === 1 || loaded === 4) performanceMark(`drive-thumbnail-${loaded}`);
+  }, { once: true });
   image.src = thumbnailUrl;
 }
 
@@ -5357,6 +5517,7 @@ function renderPedMediaViewerNavigation(stage, gallery, galleryIndex) {
 }
 
 function openPedMediaViewer(button, options = {}) {
+  const viewerStartedAt = performance.now();
   const modal = document.getElementById("pedMediaViewerModal");
   const stage = document.getElementById("pedMediaViewerStage");
   const title = document.getElementById("pedMediaViewerTitle");
@@ -5431,6 +5592,7 @@ function openPedMediaViewer(button, options = {}) {
         updateMediaProgress(stage, 18, "Anteprima pronta", "Caricamento file originale...");
         fitPedMediaViewerImage();
         applyPedMediaViewerTransform();
+        performanceMeasure("drive-photo-preview", viewerStartedAt);
       }, { once: true });
       mediaRoot.append(preview);
       preview.src = poster;
@@ -5454,6 +5616,7 @@ function openPedMediaViewer(button, options = {}) {
       }, 350);
       fitPedMediaViewerImage();
       applyPedMediaViewerTransform();
+      performanceMeasure("drive-photo-original", viewerStartedAt, { width: image.naturalWidth, height: image.naturalHeight });
     }).catch(() => {
       if (loadId !== pedMediaViewerState.loadId) return;
       stage.classList.remove("is-loading");
@@ -5487,6 +5650,9 @@ function openPedMediaViewer(button, options = {}) {
       stage.classList.remove("is-loading");
       const dimensions = video.videoWidth && video.videoHeight ? `${video.videoWidth} × ${video.videoHeight} px · ` : "";
       meta.textContent = `${dimensions}video originale Google Drive`;
+    }, { once: true });
+    video.addEventListener("loadeddata", () => {
+      performanceMeasure("drive-video-first-frame", viewerStartedAt, { width: video.videoWidth, height: video.videoHeight });
     }, { once: true });
   }
 }
@@ -10192,7 +10358,9 @@ async function openGraphicsClientDrive(clientId = graphicsDriveClientId) {
     objectUrl: "",
     thumbnailUrls: new Set(),
     uploadEnabled: false,
-    bulkMessage: ""
+    bulkMessage: "",
+    nextPageToken: "",
+    loadingMore: false
   };
   renderGraphicsDriveClients();
   await loadClientDriveFolder("", `${client.name} · GRAFICHE`, { source: "graphics" });
@@ -11037,6 +11205,7 @@ document.body.addEventListener("click", (event) => {
   const driveSelectAll = event.target.closest("[data-drive-select-all]");
   const driveBulkMove = event.target.closest("[data-drive-bulk-move]");
   const driveClearSelection = event.target.closest("[data-drive-clear-selection]");
+  const driveLoadMore = event.target.closest("[data-drive-load-more]");
   const driveMove = event.target.closest("[data-drive-move]");
   const driveMoveFolder = event.target.closest("[data-drive-move-folder]");
   const driveMoveBreadcrumb = event.target.closest("[data-drive-move-breadcrumb]");
@@ -11179,6 +11348,7 @@ document.body.addEventListener("click", (event) => {
   if (driveSelectAll) return toggleAllClientDriveEntries();
   if (driveBulkMove) return openDriveManageModal("move-batch");
   if (driveClearSelection) return clearClientDriveSelection();
+  if (driveLoadMore) return loadMoreClientDriveFiles();
   if (driveMoveFolder) return loadDriveMoveFolder(driveMoveFolder.dataset.driveMoveFolder, driveMoveFolder.dataset.driveMoveFolderName);
   if (driveMoveBreadcrumb) {
     const index = Number(driveMoveBreadcrumb.dataset.driveMoveBreadcrumb);
@@ -11740,7 +11910,8 @@ document.body.addEventListener("pointerover", (event) => {
       clientDriveState.clientId,
       driveLibrary.dataset.driveLibrary,
       driveLibrary.dataset.driveLibrarySource,
-      true
+      clientDriveState.surface === "graphics" && driveLibrary.dataset.driveLibrarySource === "graphics",
+      60
     );
   } else if (pedLibrary && !pedLibrary.contains(event.relatedTarget)) {
     scheduleDriveFolderPrefetch(
@@ -11751,9 +11922,18 @@ document.body.addEventListener("pointerover", (event) => {
   } else if (pedFolder && !pedFolder.contains(event.relatedTarget)) {
     scheduleDriveFolderPrefetch(selectedPedClientId, pedFolder.dataset.pedPickerFolder);
   } else if (clientFolder && !clientFolder.contains(event.relatedTarget)) {
-    scheduleDriveFolderPrefetch(clientDriveState.clientId, clientFolder.dataset.driveFolder, clientDriveState.source, true);
+    scheduleDriveFolderPrefetch(clientDriveState.clientId, clientFolder.dataset.driveFolder, clientDriveState.source, clientDriveState.surface === "graphics" && clientDriveState.source === "graphics", 60);
   }
 });
+
+document.body.addEventListener("pointerdown", (event) => {
+  if (event.pointerType !== "touch") return;
+  const folder = event.target.closest?.("[data-drive-library], [data-drive-folder]");
+  if (!folder) return;
+  const folderId = folder.dataset.driveLibrary || folder.dataset.driveFolder;
+  const source = folder.dataset.driveLibrarySource || clientDriveState.source;
+  scheduleDriveFolderPrefetch(clientDriveState.clientId, folderId, source, clientDriveState.surface === "graphics" && source === "graphics", 60);
+}, { passive: true });
 
 document.body.addEventListener("pointerout", (event) => {
   const folder = event.target.closest?.("[data-ped-picker-library], [data-ped-picker-folder], [data-drive-library], [data-drive-folder]");
@@ -12428,6 +12608,8 @@ document.getElementById("loginForm").addEventListener("submit", async (event) =>
 });
 
 async function bootApp() {
+  const bootStartedAt = performance.now();
+  performanceMark("boot-start");
   const recoveryMode = consumeRecoverySessionFromUrl();
   if (!authSession?.access_token) {
     showLogin();
@@ -12450,6 +12632,7 @@ async function bootApp() {
   }
 
   showApp();
+  performanceMark("app-visible");
   restoreWorkspaceContext();
   restoreLastView();
   startActivityTracker();
@@ -12461,15 +12644,15 @@ async function bootApp() {
   renderBackendStatus(restoredFromCache ? "Sessione ripristinata. Alcuni dati potrebbero aggiornarsi con qualche secondo di ritardo." : "");
 
   try {
+    const activeView = document.querySelector("[data-view-panel].is-active")?.dataset.viewPanel || "dashboard";
     const loaders = [];
     if (canAccessModule("clients") || canAccessModule("ped") || canAccessModule("tasks") || canAccessModule("graphics")) loaders.push(loadClientsFromBackend());
     if (canAccessModule("tasks") || canAccessModule("smart_working")) loaders.push(loadClickUpTeam());
     if (canAccessModule("tasks")) loaders.push(loadClickUpTasks(), loadClickUpTaskLogs(), loadClientAliases());
-    if (canAccessModule("users")) loaders.push(loadUsersFromBackend());
-    if (canAccessModule("graphics")) loaders.push(loadGraphicReviews({ quiet: true }));
-    if (canAccessModule("smart_working")) loaders.push(loadSmartWorking());
-    if (canAccessModule("site_backend")) loaders.push(loadContentFromBackend());
-    if (canAccessModule("calendar") || canAccessModule("smart_working")) loaders.push(loadServiceHealth({ quiet: true }));
+    if (activeView === "users" && canAccessModule("users")) loaders.push(loadUsersFromBackend());
+    if (["graphics", "graphics-reviews"].includes(activeView) && canAccessModule("graphics")) loaders.push(loadGraphicReviews({ quiet: true }));
+    if (["smart", "counter"].includes(activeView) && canAccessModule("smart_working")) loaders.push(loadSmartWorking());
+    if (activeView === "content" && canAccessModule("site_backend")) loaders.push(loadContentFromBackend());
     loaders.push(loadMaintenanceNotice({ quiet: true }));
     loaders.push(loadPersonalArea({ quiet: true }));
     const results = await Promise.allSettled(loaders);
@@ -12480,6 +12663,14 @@ async function bootApp() {
     startMaintenanceNoticeUpdates();
     startSmartWorkingUpdates();
     renderHome();
+    performanceMeasure("boot-critical", bootStartedAt, { activeView });
+    runWhenIdle(async () => {
+      const deferred = [];
+      if (canAccessModule("calendar") || canAccessModule("smart_working")) deferred.push(loadServiceHealth({ quiet: true }));
+      if (canAccessModule("smart_working") && !state.smartWorking?.month) deferred.push(loadSmartWorking());
+      await Promise.allSettled(deferred);
+      performanceMark("boot-idle-complete");
+    });
   } catch (error) {
     renderBackendStatus(error.message);
   } finally {

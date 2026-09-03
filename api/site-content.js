@@ -1,5 +1,4 @@
 import { jsonHeaders, readJson, requireUser, supabaseFetch } from "./_auth.js";
-import { handleSiteMedia } from "../lib/site-media.js";
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -32,12 +31,6 @@ function normalizePayload(body) {
 }
 
 export default async function handler(request, response) {
-  const requestUrl = new URL(request.url, "https://bmg-hub.local");
-  if (requestUrl.pathname === "/api/site-media") {
-    await handleSiteMedia(request, response);
-    return;
-  }
-
   if (request.method === "OPTIONS") {
     response.writeHead(204, headers());
     response.end();
