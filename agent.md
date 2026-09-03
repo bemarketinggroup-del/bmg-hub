@@ -86,10 +86,15 @@ più recente alla più vecchia:
   `npx vercel build` con esito positivo; controllo browser della build hash a
   1440×900 e 390×844, senza errori console né overflow orizzontale; verifica
   specifica di output statico e funzioni API separate; `git diff --check`.
-- Pubblicazione: commit applicativo `f2f79a3` pubblicato su GitHub `main`; il
+- Pubblicazione: commit applicativo `f2f79a3` e correzione build `a8890bf`
+  pubblicati su GitHub `main`; il
   primo build remoto ha evidenziato l'esclusione storica dell'intera cartella
-  `scripts/` da `.vercelignore`, corretta con un commit di follow-up prima del
-  deploy produzione e delle misure HTTP fredde/calde.
+  `scripts/` da `.vercelignore`, corretta prima del deploy produzione
+  `dpl_DVvS1d1bi1YF2LaCktL7SETU8Vd9`, completato e aliasato su
+  `https://bmg-hub.vercel.app`. Verificati `HIT` CDN e cache immutabile sugli
+  asset hash; JavaScript caldo 260 ms contro 671 ms e CSS caldo 304 ms contro
+  521 ms. API Drive/health ancora protette con `401` anonimo; log runtime senza
+  errori nelle prime richieste.
 - Note: l'indice Drive persistente Supabase, i WebP persistenti e una regione
   Vercel forzata restano subordinati alle misure autenticate e alla verifica
   della regione Supabase; preservata e non inclusa `.bmg-redesign-backup/`.

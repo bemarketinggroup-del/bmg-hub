@@ -26,6 +26,27 @@ La variazione minima dell'HTML è dovuta ai nomi hash degli asset. Il vantaggio
 principale è che HTML, CSS e JS non avviano più Node e gli asset hash possono
 restare nella cache CDN/browser per un anno.
 
+## Verifica produzione dopo il deploy
+
+Deploy `dpl_DVvS1d1bi1YF2LaCktL7SETU8Vd9`, alias
+`https://bmg-hub.vercel.app`:
+
+| Risorsa | CDN | TTFB | Totale | Confronto col totale precedente |
+| --- | --- | ---: | ---: | ---: |
+| `/` prima richiesta | `MISS` / rivalidazione | 275 ms | 306 ms | −17% |
+| `/` seconda richiesta | rivalidazione | 151 ms | 177 ms | −52% |
+| JS hash prima richiesta | `MISS` | 255 ms | 327 ms | −51% |
+| JS hash seconda richiesta | `HIT` | 177 ms | 260 ms | −61% |
+| CSS hash prima richiesta | `MISS` | 379 ms | 438 ms | −16% |
+| CSS hash seconda richiesta | `HIT` | 239 ms | 304 ms | −42% |
+
+Gli asset rispondono con `Cache-Control: public, max-age=31536000,
+immutable`; il loro percorso contiene lo stesso hash generato dal commit. Il
+vecchio `/app.js` risponde `404`, confermando che non viene più servito dalla
+funzione monolitica. `/api/client-drive` e `/api/health` rispondono `401` senza
+Bearer token. I log runtime del deploy non mostrano errori nelle prime richieste
+a health, Drive, area personale, avviso manutenzione e registro accessi.
+
 ## Percorso Google Drive
 
 - prima pagina limitata a 60 elementi, con `next_page_token` e caricamento
