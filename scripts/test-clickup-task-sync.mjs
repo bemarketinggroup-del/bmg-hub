@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { isOperationalTeamTask } from "../lib/clickup-task-access.js";
+import {
+  COMPLETED_TASK_RETENTION_DAYS,
+  isRecentlyCompletedTask,
+  isTaskVisibleDuringCompletionRetention,
+  taskCompletionTimestamp
+} from "../lib/task-completion-retention.js";
 
 const api = readFileSync("api/clickup-tasks.js", "utf8");
 const teamApi = readFileSync("api/clickup-team.js", "utf8");
@@ -26,6 +32,7 @@ assert.match(api, /rows = rows\.filter\(isOperationalTeamTask\)/, "lo staff deve
 assert.match(api, /!isOperationalTeamTask\(current\)/, "lo staff non deve modificare liste ClickUp esterne al team");
 assert.match(api, /const assignees = assigneeIds\(body\.assignees\)/, "la creazione deve rispettare tutti gli assegnatari scelti");
 assert.match(api, /const desiredAssignees = assigneeIds\(body\.assignees\)/, "la modifica deve poter riassegnare la task ai colleghi");
+assert.match(api, /completed_at: taskCompletionTimestamp\(row\)/, "l'API deve esporre la data reale di completamento ClickUp");
 assert.match(teamApi, /canAccessModule\(session\.profile, "tasks"\)/, "chi ha accesso ai Task deve ricevere l'elenco completo del team");
 
 assert.match(vercel, /\/api\/clickup\/webhook/);
@@ -50,6 +57,9 @@ assert.match(app, /taskAssignedTo\(task, user\)/);
 assert.match(app, /TASK_STATUS_GROUPS/);
 assert.match(app, /function taskStatusGroup/);
 assert.match(app, /function compareTaskDueDate/);
+assert.match(app, /COMPLETED_TASK_RETENTION_DAYS = 10/, "la UI deve mantenere le task completate per dieci giorni");
+assert.match(app, /function retainedOperationalTasks/);
+assert.match(app, /ultimi \$\{COMPLETED_TASK_RETENTION_DAYS\} giorni/, "la colonna completate deve dichiarare la finestra temporale");
 assert.match(app, /clickup-task-list/);
 assert.match(app, /taskAssigneeFilter/);
 assert.match(app, /taskStatusFilter/);
@@ -73,5 +83,12 @@ assert.equal(isOperationalTeamTask({ list_name: "Task del team", tags: ["Templat
 assert.equal(isOperationalTeamTask({ list_name: "Task del team", folder_name: "Documenti", tags: [], payload: {} }), false);
 assert.equal(isOperationalTeamTask({ list_name: "Task del team", tags: [], payload: { parent: "subtask-1" } }), false);
 assert.equal(isOperationalTeamTask({ list_name: "Marketing generale", tags: [], payload: {} }), false);
+
+const now = Date.UTC(2026, 8, 3, 12);
+assert.equal(COMPLETED_TASK_RETENTION_DAYS, 10);
+assert.equal(taskCompletionTimestamp({ payload: { date_closed: String(now - 2 * 86400000) } }), now - 2 * 86400000);
+assert.equal(isRecentlyCompletedTask({ status: "complete", payload: { date_closed: String(now - 9 * 86400000) } }, now), true);
+assert.equal(isTaskVisibleDuringCompletionRetention({ status: "in progress" }, now), true);
+assert.equal(isTaskVisibleDuringCompletionRetention({ status: "complete", payload: { date_closed: String(now - 11 * 86400000) } }, now), false);
 
 console.log("ClickUp task sync checks passed");

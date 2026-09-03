@@ -6,6 +6,7 @@ import {
   isCompletedTaskStatus,
   taskAssignedToProfile
 } from "../lib/personal-area.js";
+import { isTaskVisibleDuringCompletionRetention } from "../lib/task-completion-retention.js";
 
 const profile = {
   id: "11111111-1111-4111-8111-111111111111",
@@ -20,6 +21,9 @@ assert.equal(taskAssignedToProfile({ assignees: [{ id: 43, email: profile.email 
 assert.equal(taskAssignedToProfile({ assignees: [] }, profile), false);
 assert.equal(isCompletedTaskStatus("Completato"), true);
 assert.equal(isCompletedTaskStatus("In corso"), false);
+const retentionNow = Date.UTC(2026, 8, 3, 12);
+assert.equal(isTaskVisibleDuringCompletionRetention({ status: "Completato", payload: { date_closed: String(retentionNow - 10 * 86400000) } }, retentionNow), true);
+assert.equal(isTaskVisibleDuringCompletionRetention({ status: "Completato", payload: { date_closed: String(retentionNow - 10 * 86400000 - 1) } }, retentionNow), false);
 assert.equal(eventIncludesProfile({ attendees: [{ email: "MARTA@bemarketinggroup.it" }] }, profile), true);
 assert.equal(eventIncludesProfile({ attendees: [{ email: "altro@example.com" }] }, profile), false);
 assert.equal(eventIncludesProfile({ attendees: [{ email: "MARTA.CALENDAR@example.com" }] }, profile), true);
@@ -53,6 +57,7 @@ assert.match(appSource, /data-calendar-notification-event="\$\{escapeHtml\(item\
 assert.match(appSource, /async function openCalendarNotification\(eventId, eventDate = ""\)[\s\S]*googleCalendarState\.anchor[\s\S]*setView\("calendar"\)[\s\S]*openGoogleCalendarEventDetails\(eventId\)/, "una notifica evento deve aprire data e dettaglio nel calendario CRM");
 assert.match(appSource, /: isCalendarEvent\s*\? `<button[\s\S]*data-calendar-notification-event[\s\S]*:\s*link \? `<a/, "il comando CRM deve avere priorità sull'eventuale vecchio link Google");
 assert.match(await readFile(new URL("../lib/personal-area.js", import.meta.url), "utf8"), /source_type: "event"[\s\S]*?link: ""/, "le nuove notifiche evento non devono salvare collegamenti esterni");
+assert.match(await readFile(new URL("../lib/personal-area.js", import.meta.url), "utf8"), /createMissingNotifications\(profile, activeTasks, personalEvents\)[\s\S]*filterActiveNotifications\([\s\S]*activeTasks\)/, "le task completate visibili non devono restare nelle notifiche");
 assert.match(styleSource, /\.notification-button\.has-notifications[\s\S]*?@keyframes notification-bell-reminder/, "il campanello deve richiamare periodicamente l'attenzione");
 assert.match(styleSource, /\.notification-attention-dot \{[\s\S]*?background: #d5602e;[\s\S]*?animation: notification-dot-pulse/, "il punto notifiche deve essere arancione e pulsante");
 assert.match(styleSource, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.notification-attention-dot \{ animation: none; \}/, "il punto notifiche deve rispettare la preferenza di movimento ridotto");

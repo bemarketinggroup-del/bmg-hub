@@ -433,6 +433,9 @@ supabase/                     schema e migration
 - Modifica, stato, scadenza, priorità e descrizione.
 - Sincronizzazione bidirezionale e webhook ClickUp.
 - Le task completate non devono restare nelle notifiche.
+- Le task completate restano visibili nelle liste del team e personali per 10
+  giorni dalla chiusura ClickUp, poi vengono nascoste automaticamente; Home e
+  notifiche continuano a considerare soltanto le task attive.
 - Nessun pulsante operativo deve portare l'utente fuori dal gestionale.
 
 ### Google Drive

@@ -59,6 +59,32 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-09-03 — Task completate visibili per dieci giorni
+
+- Richiesta: mantenere visibili le task completate per circa dieci giorni
+  invece di rimuoverle immediatamente dalle liste operative.
+- Modifiche: introdotta una finestra esatta di 10 giorni calcolata dalla data di
+  chiusura ClickUp; le task recenti compaiono nella colonna `Completate` delle
+  viste team, collega, senza assegnatario e area personale, ordinate dalla più
+  recente. Dopo il decimo giorno vengono nascoste automaticamente. Home e
+  notifiche continuano a considerare soltanto le task attive. La data viene
+  letta dal payload già sincronizzato, senza nuove query o migration.
+- File: `api/clickup-tasks.js`, `lib/task-completion-retention.js`,
+  `lib/personal-area.js`, `public/app.js`, `package.json`,
+  `scripts/test-clickup-task-sync.mjs`, `scripts/test-personal-area.mjs`,
+  `docs/CLICKUP-TASK-WEBHOOK.md`, `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run check`, `npm run build`, `npm run test:clickup-sync`,
+  `npm run test:personal-area`, `npm run test:permissions`,
+  `npm run test:session-persistence`, `npm run test:primeng-components`,
+  `npm run test:mobile-navigation`, `npm run test:team-chat`,
+  `git diff --check`; controlli automatici dei limiti esatti a 10 giorni e
+  della separazione tra task visibili e notifiche attive; controllo browser
+  desktop e smartphone della colonna completate.
+- Pubblicazione: commit corrente pubblicato su GitHub `main`; deploy Vercel di
+  produzione completato e verificato su `https://bmg-hub.vercel.app`.
+- Note: preservata e non inclusa la cartella locale preesistente
+  `.bmg-redesign-backup/`.
+
 ### 2026-09-03 — Avviso manutenzione controllato dall'amministratore
 
 - Richiesta: aggiungere, prima degli interventi sull'Hub, un popup attivabile e

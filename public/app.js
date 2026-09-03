@@ -9,6 +9,8 @@ const DEFAULT_MAINTENANCE_MESSAGE = "Stiamo apportando delle modifiche al gestio
 const ALL_TEAM_TASKS_ID = "__all";
 const UNASSIGNED_TASKS_ID = "__unassigned";
 const TEAM_TASK_LIST_NAME = "task del team";
+const COMPLETED_TASK_RETENTION_DAYS = 10;
+const COMPLETED_TASK_RETENTION_MS = COMPLETED_TASK_RETENTION_DAYS * 24 * 60 * 60 * 1000;
 const SMART_WORKING_SYNC_INTERVAL_MS = 5 * 60 * 1000;
 // Mapping centralizzato: aggiorna questi sinonimi se ClickUp introduce nuovi stati operativi.
 const TASK_STATUS_GROUPS = [
@@ -7967,7 +7969,7 @@ function renderAgencyUsers() {
   const target = document.getElementById("agencyTeamList");
   if (!target) return;
   ensureTeamSelection();
-  const tasks = activeOperationalTasks();
+  const tasks = retainedOperationalTasks();
   const unassigned = unassignedTasks();
   const users = teamMembers().sort((a, b) => String(a.name).localeCompare(String(b.name), "it", { sensitivity: "base" }));
   const teamTab = `
@@ -7998,7 +8000,7 @@ function renderTeamProfile() {
   const target = document.getElementById("teamProfileHead");
   if (!target) return;
   if (selectedTeamMemberId === ALL_TEAM_TASKS_ID) {
-    const tasks = activeOperationalTasks();
+    const tasks = retainedOperationalTasks();
     const unknown = tasks.filter((task) => unrecognizedAssignees(task).length).length;
     target.innerHTML = `
       <div>
@@ -8031,7 +8033,7 @@ function renderTeamProfile() {
       <h3>Task di ${user.name}</h3>
       <span>${tasks.length} task assegnate${user.email ? ` · ${user.email}` : ""}</span>
     </div>
-    ${taskSummaryMarkup(tasks, activeTaskStatusGroups())}
+    ${taskSummaryMarkup(tasks)}
   `;
 }
 
@@ -8039,14 +8041,15 @@ function renderClickUpTasks() {
   const target = document.getElementById("clickupTaskList");
   if (!target) return;
   const tasks = filteredTeamTasks();
-  const statusGroups = hidesCompletedTasks() ? activeTaskStatusGroups() : TASK_STATUS_GROUPS;
-  const groups = statusGroups.map((group) => {
-    const groupTasks = tasks.filter((task) => taskStatusGroup(task).id === group.id).sort(compareTaskDueDate);
+  const groups = TASK_STATUS_GROUPS.map((group) => {
+    const groupTasks = tasks
+      .filter((task) => taskStatusGroup(task).id === group.id)
+      .sort(group.id === "done" ? compareTaskCompletionDate : compareTaskDueDate);
     return `
       <section class="clickup-status-group is-${group.id}" data-task-group="${group.id}">
         <div class="clickup-group-head">
           <span class="clickup-group-toggle">⌄</span>
-          <span class="clickup-status-pill">${group.label}</span>
+          <span class="clickup-status-pill">${group.label}${group.id === "done" ? ` · ultimi ${COMPLETED_TASK_RETENTION_DAYS} giorni` : ""}</span>
           <strong>${groupTasks.length}</strong>
         </div>
         <div class="clickup-table-head" aria-hidden="true">
@@ -8143,27 +8146,11 @@ function teamMemberTasks(user) {
 }
 
 function personalTeamMemberTasks(user) {
-  return teamMemberTasks(user).filter((task) => taskStatusGroup(task).id !== "done");
-}
-
-function isPersonalTaskView() {
-  return selectedTeamMemberId !== ALL_TEAM_TASKS_ID
-    && selectedTeamMemberId !== UNASSIGNED_TASKS_ID
-    && Boolean(selectedTeamMember());
-}
-
-function hidesCompletedTasks() {
-  return selectedTeamMemberId === ALL_TEAM_TASKS_ID
-    || selectedTeamMemberId === UNASSIGNED_TASKS_ID
-    || isPersonalTaskView();
-}
-
-function activeTaskStatusGroups() {
-  return TASK_STATUS_GROUPS.filter((group) => group.id !== "done");
+  return teamMemberTasks(user).filter(isTaskVisibleDuringCompletionRetention);
 }
 
 function selectedTeamTasks() {
-  if (selectedTeamMemberId === ALL_TEAM_TASKS_ID) return activeOperationalTasks();
+  if (selectedTeamMemberId === ALL_TEAM_TASKS_ID) return retainedOperationalTasks();
   if (selectedTeamMemberId === UNASSIGNED_TASKS_ID) return unassignedTasks();
   const user = selectedTeamMember();
   return user ? personalTeamMemberTasks(user) : operationalTasks();
@@ -8205,7 +8192,7 @@ function filteredTeamTasks() {
 }
 
 function unassignedTasks() {
-  return activeOperationalTasks().filter((task) => !realAssignees(task).length);
+  return retainedOperationalTasks().filter((task) => !realAssignees(task).length);
 }
 
 function taskAssignedTo(task, user) {
@@ -8314,6 +8301,25 @@ function compareTaskDueDate(a, b) {
   return String(a.name).localeCompare(String(b.name), "it", { sensitivity: "base" });
 }
 
+function taskCompletionTimestamp(task) {
+  const raw = task?.completed_at;
+  if (raw === null || raw === undefined || raw === "") return null;
+  const numeric = Number(raw);
+  if (Number.isFinite(numeric) && numeric > 0) return numeric < 1e12 ? numeric * 1000 : numeric;
+  const parsed = Date.parse(String(raw));
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function isTaskVisibleDuringCompletionRetention(task, now = Date.now()) {
+  if (taskStatusGroup(task).id !== "done") return true;
+  const completedAt = taskCompletionTimestamp(task);
+  return Boolean(completedAt && completedAt <= now && completedAt >= now - COMPLETED_TASK_RETENTION_MS);
+}
+
+function compareTaskCompletionDate(a, b) {
+  return (taskCompletionTimestamp(b) || 0) - (taskCompletionTimestamp(a) || 0);
+}
+
 function emptyColumnState(text) {
   return `<div class="task-empty">${text}</div>`;
 }
@@ -8401,6 +8407,10 @@ function operationalTasks() {
 
 function activeOperationalTasks() {
   return operationalTasks().filter((task) => taskStatusGroup(task).id !== "done");
+}
+
+function retainedOperationalTasks() {
+  return operationalTasks().filter(isTaskVisibleDuringCompletionRetention);
 }
 
 function excludedTaskCount() {

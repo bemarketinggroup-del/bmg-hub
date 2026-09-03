@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import { jsonHeaders, readJson, requireUser, supabaseFetch } from "./_auth.js";
 import { handleAiTaskAssist } from "../lib/ai-task-assist.js";
 import { isOperationalTeamTask } from "../lib/clickup-task-access.js";
+import { taskCompletionTimestamp } from "../lib/task-completion-retention.js";
 
 const CLICKUP_API_TOKEN = process.env.CLICKUP_API_TOKEN;
 const CLICKUP_WORKSPACE_ID = process.env.CLICKUP_WORKSPACE_ID || "90152036988";
@@ -92,6 +93,7 @@ function taskFromRow(row) {
     space: row.space_name || "",
     parent_id: String(source.parent || ""),
     is_subtask: Boolean(source.parent),
+    completed_at: taskCompletionTimestamp(row),
     updated_at: row.updated_at
   };
 }
