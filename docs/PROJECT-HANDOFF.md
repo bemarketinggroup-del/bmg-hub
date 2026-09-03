@@ -162,6 +162,14 @@ supabase/                     schema e migration
   backdrop riusa lo stesso comando della X, così restano attive le pulizie
   specifiche di form, Drive, player e download. Il drawer utenti mantiene lo
   stesso comportamento tramite la propria mask laterale.
+- La Home amministratore include il pannello `Avviso manutenzione`: permette di
+  modificare il testo e attivare o disattivare una comunicazione globale prima
+  degli interventi tecnici. Quando è attiva, ogni account autenticato riceve un
+  popup alla prima visualizzazione della versione corrente e mantiene una barra
+  fissa in tutte le pagine finché l'amministratore non la disattiva. Le sessioni
+  aperte rilevano il cambio automaticamente ogni 20 secondi. Lo stato usa il
+  record `site_content` in bozza con slug `hub.maintenance.notice`, quindi non è
+  pubblicato sul sito esterno e non richiede una tabella dedicata.
 - Collegamento univoco dell'utente al membro ClickUp.
 - Gestione permessi, eliminazione/disattivazione utenti e audit accessi.
 - Nel calendario CRM gli eventi senza categoria o con il precedente colore
@@ -629,6 +637,7 @@ npm run test:team-chat
 npm run test:graphic-reviews
 npm run test:session-persistence
 npm run test:primeng-components
+npm run test:maintenance-notice
 ```
 
 Alcuni test interagiscono con servizi reali: leggerli prima di eseguirli e non

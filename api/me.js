@@ -66,6 +66,7 @@ const MODULE_LABELS = Object.freeze({
 
 const ENDPOINT_MODULES = Object.freeze({
   "/api/users": "users",
+  "/api/maintenance-notice": "dashboard",
   "/api/site-content": "site_backend",
   "/api/site-media": "site_backend",
   "/api/clients": "clients",
@@ -85,6 +86,8 @@ const ACTION_LABELS = Object.freeze({
   change_password: "Ha cambiato la propria password",
   create_user: "Ha creato un account utente",
   update_user: "Ha modificato un account utente",
+  activate_maintenance_notice: "Ha attivato l'avviso di manutenzione",
+  disable_maintenance_notice: "Ha disattivato l'avviso di manutenzione",
   create_client: "Ha creato un cliente",
   update_client: "Ha modificato un cliente",
   sync_clients: "Ha sincronizzato i clienti con ClickUp",

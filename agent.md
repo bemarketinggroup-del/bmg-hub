@@ -1,6 +1,6 @@
 # BMG Hub — memoria operativa degli interventi
 
-Ultimo aggiornamento: 2 settembre 2026
+Ultimo aggiornamento: 3 settembre 2026
 
 ## Scopo del file
 
@@ -58,6 +58,30 @@ più recente alla più vecchia:
 ```
 
 ## Registro modifiche
+
+### 2026-09-03 — Avviso manutenzione controllato dall'amministratore
+
+- Richiesta: aggiungere, prima degli interventi sull'Hub, un popup attivabile e
+  disattivabile dal pannello amministratore per avvisare i ragazzi di non
+  effettuare operazioni durante le modifiche.
+- Modifiche: aggiunto nella Home amministratore un pannello con testo
+  personalizzabile, interruttore e conferma di salvataggio. Quando l'avviso è
+  attivo, tutti gli account autenticati ricevono un popup alla prima
+  visualizzazione della versione corrente e vedono una barra persistente in
+  ogni pagina fino alla disattivazione. Le sessioni già aperte controllano lo
+  stato ogni 20 secondi; attivazione e disattivazione entrano nel registro
+  attività. Lo stato è conservato in un record interno `site_content` in bozza,
+  non visibile sul sito pubblico e senza nuova migration.
+- File: `api/maintenance-notice.js`, `api/site-content.js`, `api/me.js`, `public/index.html`,
+  `public/app.js`, `public/styles.css`, `scripts/local-server.mjs`,
+  `scripts/test-maintenance-notice.mjs`, `package.json`, `vercel.json`,
+  `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run check`, `npm run test:maintenance-notice`, test permessi,
+  persistenza sessione, navigazione mobile, registro attività e componenti
+  PrimeNG, `git diff --check`; controllo visivo e misure anti-overflow a
+  1280×900 e 390×844 per pannello, barra e popup.
+- Pubblicazione: commit corrente su GitHub `main` e deploy Vercel produzione.
+- Note: l'avviso informa il team ma non blocca tecnicamente le operazioni.
 
 ### 2026-09-02 — Task condivise e assegnabili tra tutti i colleghi
 

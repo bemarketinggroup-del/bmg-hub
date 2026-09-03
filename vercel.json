@@ -24,6 +24,10 @@
       "dest": "/api/users.js"
     },
     {
+      "src": "/api/maintenance-notice",
+      "dest": "/api/maintenance-notice.js"
+    },
+    {
       "src": "/api/access-logs",
       "dest": "/api/me.js"
     },

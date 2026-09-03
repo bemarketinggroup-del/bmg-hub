@@ -53,7 +53,7 @@ export default async function handler(request, response) {
   if (!await requireUser(request, response, { headers: headers(), module: "site_backend" })) return;
 
   if (request.method === "GET") {
-    const result = await supabaseFetch("/site_content?select=*&order=updated_at.desc");
+    const result = await supabaseFetch("/site_content?select=*&type=neq.system&order=updated_at.desc");
     response.writeHead(result.status, headers());
     response.end(await result.text());
     return;

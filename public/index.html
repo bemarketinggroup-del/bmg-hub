@@ -187,6 +187,11 @@
         </div>
       </header>
 
+      <aside class="maintenance-banner is-hidden" id="maintenanceBanner" role="status" aria-live="polite">
+        <span class="maintenance-banner-icon" aria-hidden="true"><svg class="lc" viewBox="0 0 24 24"><path d="M10.3 2.9 1.8 17a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 2.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg></span>
+        <span class="maintenance-banner-copy"><strong>Modifiche in corso</strong><span id="maintenanceBannerMessage"></span></span>
+      </aside>
+
       <section class="view is-active" id="dashboardView" data-view-panel="dashboard">
         <section class="home-welcome">
           <div class="home-welcome-copy">
@@ -197,6 +202,35 @@
             <span>Oggi</span>
             <strong id="homeToday">-</strong>
           </div>
+        </section>
+
+        <section class="panel maintenance-admin-panel admin-only is-hidden" id="maintenanceAdminPanel" aria-labelledby="maintenanceAdminTitle">
+          <div class="maintenance-admin-heading">
+            <span class="maintenance-admin-icon" aria-hidden="true"><svg class="lc" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.8-3.8a6 6 0 0 1-7.9 7.9l-6.9 6.9a2.1 2.1 0 0 1-3-3l6.9-6.9a6 6 0 0 1 7.9-7.9l-3.8 3.8Z"/></svg></span>
+            <div>
+              <p class="eyebrow">Comunicazione al team</p>
+              <h2 id="maintenanceAdminTitle">Avviso manutenzione</h2>
+              <p>Attivalo prima di intervenire sull'Hub. I ragazzi vedranno un popup e un avviso fisso in ogni pagina.</p>
+            </div>
+            <span class="p-tag maintenance-admin-status" id="maintenanceAdminStatus">Disattivato</span>
+          </div>
+          <div class="maintenance-admin-controls">
+            <label class="maintenance-message-field" for="maintenanceMessageInput">
+              <span>Messaggio</span>
+              <textarea class="p-inputtextarea p-inputtext" id="maintenanceMessageInput" rows="3" maxlength="500"></textarea>
+            </label>
+            <div class="maintenance-admin-actions">
+              <label class="p-toggleswitch-field maintenance-toggle-field" for="maintenanceEnabledToggle">
+                <span class="p-toggleswitch">
+                  <input class="p-toggleswitch-input" id="maintenanceEnabledToggle" type="checkbox" role="switch">
+                  <span class="p-toggleswitch-slider" aria-hidden="true"></span>
+                </span>
+                <span><strong>Avviso attivo</strong><small>Mostra il messaggio a tutto il team</small></span>
+              </label>
+              <button class="primary-button" id="maintenanceSaveButton" type="button">Salva impostazioni</button>
+            </div>
+          </div>
+          <p class="p-message maintenance-admin-feedback" id="maintenanceAdminFeedback" role="status" aria-live="polite"></p>
         </section>
 
         <div class="metric-grid">
@@ -859,6 +893,18 @@
       </section>
     </main>
   </div>
+
+  <dialog class="modal p-dialog maintenance-notice-dialog" id="maintenanceNoticeDialog" aria-modal="true" aria-labelledby="maintenanceNoticeTitle">
+    <section class="maintenance-notice-shell p-dialog-content">
+      <span class="maintenance-notice-icon" aria-hidden="true"><svg class="lc" viewBox="0 0 24 24"><path d="M10.3 2.9 1.8 17a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 2.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg></span>
+      <div class="maintenance-notice-copy">
+        <p class="eyebrow">Avviso dall'amministrazione</p>
+        <h2 id="maintenanceNoticeTitle">Modifiche in corso</h2>
+        <p id="maintenanceNoticeMessage"></p>
+      </div>
+      <button class="primary-button" id="maintenanceNoticeAcknowledge" type="button">Ho capito</button>
+    </section>
+  </dialog>
 
   <dialog class="modal p-dialog user-activity-dialog" id="userActivityDialog" aria-modal="true" aria-labelledby="userActivityDialogTitle">
     <section class="p-dialog-content user-activity-dialog-shell">

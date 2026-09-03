@@ -3,6 +3,9 @@ const PASSWORD_RECOVERY_KEY = "bmg-password-recovery";
 const PED_PICKER_LOCATIONS_KEY = "bmg-hub-ped-picker-locations-v1";
 const LAST_VIEW_KEY = "bmg-hub-last-view-v1";
 const WORKSPACE_CONTEXT_KEY = "bmg-hub-workspace-context-v1";
+const MAINTENANCE_ACK_KEY = "bmg-hub-maintenance-ack-v1";
+const MAINTENANCE_NOTICE_INTERVAL_MS = 20 * 1000;
+const DEFAULT_MAINTENANCE_MESSAGE = "Stiamo apportando delle modifiche al gestionale. Non effettuare operazioni finché questo avviso non viene disattivato.";
 const ALL_TEAM_TASKS_ID = "__all";
 const UNASSIGNED_TASKS_ID = "__unassigned";
 const TEAM_TASK_LIST_NAME = "task del team";
@@ -196,6 +199,13 @@ let clientsOnline = null;
 let clickupOnline = null;
 let calendarOnline = null;
 let serviceHealthTimer = null;
+let maintenanceNoticeTimer = null;
+let maintenanceNoticeState = {
+  enabled: false,
+  message: DEFAULT_MAINTENANCE_MESSAGE,
+  updated_at: "",
+  loading: false
+};
 const backendServiceErrors = { clients: "", clickup: "", site: "", calendar: "", drive: "" };
 let selectedTeamMemberId = ALL_TEAM_TASKS_ID;
 let selectedClientId = "";
@@ -732,6 +742,7 @@ function auditMetadata(url, method, options = {}) {
   const actionKey = (() => {
     if (endpoint === "/api/me") return "change_password";
     if (endpoint === "/api/users") return method === "POST" ? "create_user" : method === "DELETE" ? "delete_user" : "update_user";
+    if (endpoint === "/api/maintenance-notice") return body.enabled === true ? "activate_maintenance_notice" : "disable_maintenance_notice";
     if (endpoint === "/api/clients/sync-clickup") return "sync_clients";
     if (endpoint === "/api/clients") return method === "POST" ? "create_client" : "update_client";
     if (endpoint === "/api/clickup/tasks") return method === "POST" ? "create_task" : "update_task";
@@ -766,9 +777,10 @@ function auditMetadata(url, method, options = {}) {
       : endpoint.includes("graphic-reviews") ? "graphic_review"
       : endpoint.includes("google-calendar") ? "calendar_event"
       : endpoint.includes("ped") ? "ped_content"
-        : endpoint.includes("site-content") ? "site_content"
-          : endpoint.includes("users") ? "user"
-            : "";
+      : endpoint.includes("site-content") ? "site_content"
+      : endpoint.includes("maintenance-notice") ? "system_notice"
+      : endpoint.includes("users") ? "user"
+      : "";
   const pedMetadata = endpoint === "/api/ped"
     ? pedAuditMetadata(body, requestUrl, actionKey)
     : endpoint === "/api/ped-share"
@@ -1071,8 +1083,13 @@ async function logout() {
   stopPersonalAreaUpdates();
   stopTeamChatUpdates();
   stopServiceHealthUpdates();
+  stopMaintenanceNoticeUpdates();
   stopSmartWorkingUpdates();
+  const maintenanceDialog = document.getElementById("maintenanceNoticeDialog");
+  if (maintenanceDialog?.open) maintenanceDialog.close();
+  maintenanceNoticeState = { enabled: false, message: DEFAULT_MAINTENANCE_MESSAGE, updated_at: "", loading: false };
   currentProfile = null;
+  renderMaintenanceNotice();
   personalAreaState = { team: [], tasks: [], events: [], notifications: [], loading: false, loaded: false, error: "" };
   teamChatState = {
     profile: null,
@@ -1717,6 +1734,143 @@ function startServiceHealthUpdates() {
 function stopServiceHealthUpdates() {
   window.clearInterval(serviceHealthTimer);
   serviceHealthTimer = null;
+}
+
+function maintenanceNoticeVersion(notice = maintenanceNoticeState) {
+  return `${String(notice.updated_at || "")}|${String(notice.message || "")}`;
+}
+
+function maintenanceNoticeAcknowledged(version) {
+  try {
+    return localStorage.getItem(MAINTENANCE_ACK_KEY) === version;
+  } catch {
+    return false;
+  }
+}
+
+function acknowledgeMaintenanceNotice() {
+  if (!maintenanceNoticeState.enabled) return;
+  try {
+    localStorage.setItem(MAINTENANCE_ACK_KEY, maintenanceNoticeVersion());
+  } catch {
+    // The persistent banner still communicates the maintenance state.
+  }
+}
+
+function setMaintenanceAdminFeedback(message = "", type = "") {
+  const target = document.getElementById("maintenanceAdminFeedback");
+  if (!target) return;
+  target.textContent = message;
+  target.classList.toggle("is-success", type === "success");
+  target.classList.toggle("is-error", type === "error");
+}
+
+function renderMaintenanceNotice() {
+  const enabled = maintenanceNoticeState.enabled === true;
+  const message = maintenanceNoticeState.message || DEFAULT_MAINTENANCE_MESSAGE;
+  const banner = document.getElementById("maintenanceBanner");
+  banner?.classList.toggle("is-hidden", !enabled || !currentProfile);
+  const bannerMessage = document.getElementById("maintenanceBannerMessage");
+  if (bannerMessage) bannerMessage.textContent = message;
+
+  const panel = document.getElementById("maintenanceAdminPanel");
+  if (panel) panel.classList.toggle("is-hidden", currentProfile?.role !== "admin");
+  const status = document.getElementById("maintenanceAdminStatus");
+  if (status) {
+    status.textContent = enabled ? "Attivo" : "Disattivato";
+    status.classList.toggle("is-active", enabled);
+  }
+  const input = document.getElementById("maintenanceMessageInput");
+  if (input && document.activeElement !== input) input.value = message;
+  const toggle = document.getElementById("maintenanceEnabledToggle");
+  if (toggle && document.activeElement !== toggle) toggle.checked = enabled;
+
+  const dialog = document.getElementById("maintenanceNoticeDialog");
+  const dialogMessage = document.getElementById("maintenanceNoticeMessage");
+  if (dialogMessage) dialogMessage.textContent = message;
+  if (!enabled) {
+    if (dialog?.open) dialog.close();
+    return;
+  }
+  const version = maintenanceNoticeVersion();
+  if (!maintenanceNoticeAcknowledged(version) && dialog && !dialog.open && !document.querySelector("dialog[open]")) {
+    dialog.showModal();
+  }
+}
+
+async function loadMaintenanceNotice({ quiet = false } = {}) {
+  if (!currentProfile || maintenanceNoticeState.loading) return;
+  maintenanceNoticeState.loading = true;
+  try {
+    const response = await apiFetch("/api/maintenance-notice");
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "Avviso di manutenzione non disponibile");
+    maintenanceNoticeState = {
+      enabled: data.notice?.enabled === true,
+      message: String(data.notice?.message || DEFAULT_MAINTENANCE_MESSAGE),
+      updated_at: String(data.notice?.updated_at || ""),
+      loading: false
+    };
+    renderMaintenanceNotice();
+  } catch (error) {
+    maintenanceNoticeState.loading = false;
+    if (!quiet && currentProfile?.role === "admin") setMaintenanceAdminFeedback(error.message, "error");
+  }
+}
+
+async function saveMaintenanceNotice() {
+  if (currentProfile?.role !== "admin" || maintenanceNoticeState.loading) return;
+  const button = document.getElementById("maintenanceSaveButton");
+  const enabled = document.getElementById("maintenanceEnabledToggle")?.checked === true;
+  const message = String(document.getElementById("maintenanceMessageInput")?.value || "").trim();
+  if (enabled && !message) {
+    setMaintenanceAdminFeedback("Inserisci il messaggio da mostrare al team.", "error");
+    document.getElementById("maintenanceMessageInput")?.focus();
+    return;
+  }
+  maintenanceNoticeState.loading = true;
+  if (button) {
+    button.disabled = true;
+    button.textContent = "Salvataggio...";
+  }
+  setMaintenanceAdminFeedback("");
+  try {
+    const response = await apiFetch("/api/maintenance-notice", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ enabled, message })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "Non è stato possibile aggiornare l'avviso");
+    maintenanceNoticeState = {
+      enabled: data.notice?.enabled === true,
+      message: String(data.notice?.message || DEFAULT_MAINTENANCE_MESSAGE),
+      updated_at: String(data.notice?.updated_at || ""),
+      loading: false
+    };
+    renderMaintenanceNotice();
+    setMaintenanceAdminFeedback(enabled ? "Avviso attivato per tutto il team." : "Avviso disattivato.", "success");
+  } catch (error) {
+    maintenanceNoticeState.loading = false;
+    setMaintenanceAdminFeedback(error.message, "error");
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.textContent = "Salva impostazioni";
+    }
+  }
+}
+
+function startMaintenanceNoticeUpdates() {
+  stopMaintenanceNoticeUpdates();
+  maintenanceNoticeTimer = window.setInterval(() => {
+    if (document.visibilityState === "visible" && currentProfile) void loadMaintenanceNotice({ quiet: true });
+  }, MAINTENANCE_NOTICE_INTERVAL_MS);
+}
+
+function stopMaintenanceNoticeUpdates() {
+  window.clearInterval(maintenanceNoticeTimer);
+  maintenanceNoticeTimer = null;
 }
 
 function renderContent() {
@@ -12217,6 +12371,12 @@ document.getElementById("taskForm").addEventListener("submit", async (event) => 
 });
 
 enableDialogBackdropDismiss();
+document.getElementById("maintenanceSaveButton").addEventListener("click", saveMaintenanceNotice);
+document.getElementById("maintenanceNoticeAcknowledge").addEventListener("click", () => {
+  acknowledgeMaintenanceNotice();
+  document.getElementById("maintenanceNoticeDialog").close("acknowledged");
+});
+document.getElementById("maintenanceNoticeDialog").addEventListener("close", acknowledgeMaintenanceNotice);
 document.getElementById("userEditorCloseButton").addEventListener("click", closeUserEditorPanel);
 document.getElementById("userActivityDialogCloseButton").addEventListener("click", closeUserActivityDialog);
 document.getElementById("userActivityDialog").addEventListener("cancel", (event) => {
@@ -12300,12 +12460,14 @@ async function bootApp() {
     if (canAccessModule("smart_working")) loaders.push(loadSmartWorking());
     if (canAccessModule("site_backend")) loaders.push(loadContentFromBackend());
     if (canAccessModule("calendar") || canAccessModule("smart_working")) loaders.push(loadServiceHealth({ quiet: true }));
+    loaders.push(loadMaintenanceNotice({ quiet: true }));
     loaders.push(loadPersonalArea({ quiet: true }));
     const results = await Promise.allSettled(loaders);
     const failed = results.find((result) => result.status === "rejected");
     if (failed) renderBackendStatus(failed.reason?.message || "Alcuni dati non sono ancora disponibili");
     startPersonalAreaUpdates();
     startServiceHealthUpdates();
+    startMaintenanceNoticeUpdates();
     startSmartWorkingUpdates();
     renderHome();
   } catch (error) {
@@ -12324,6 +12486,7 @@ document.addEventListener("visibilitychange", () => {
     void sendActivityEvent("resume");
     void loadPersonalArea({ quiet: true });
     void loadServiceHealth({ quiet: true });
+    void loadMaintenanceNotice({ quiet: true });
     if (document.querySelector("[data-view-panel='chat'].is-active")) void loadTeamChat({ quiet: true });
     if (canAccessModule("smart_working") && smartWorkingViewIsActive()) {
       void refreshSmartWorkingInBackground(smartMonthKey(), { refresh: true });
