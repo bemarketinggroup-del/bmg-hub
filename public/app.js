@@ -1288,6 +1288,7 @@ function setView(view) {
     settings: "Configurazione"
   };
   if (!Object.hasOwn(titles, view) || !canAccessView(view)) view = "dashboard";
+  setNotificationPanelOpen(false);
   rememberLastView(view);
   setMobileNavOpen(false);
   document.body.classList.toggle("chat-view-active", view === "chat");
@@ -10085,6 +10086,18 @@ function positionNotificationPanel(button, panel) {
   panel.style.setProperty("--notification-panel-left", `${left}px`);
 }
 
+function setNotificationPanelOpen(open) {
+  const button = document.getElementById("notificationButton");
+  const panel = document.getElementById("notificationPanel");
+  const sidebar = document.getElementById("appSidebar");
+  if (!button || !panel) return;
+  const shouldOpen = Boolean(open);
+  sidebar?.classList.toggle("has-open-notifications", shouldOpen);
+  panel.classList.toggle("is-hidden", !shouldOpen);
+  button.setAttribute("aria-expanded", String(shouldOpen));
+  if (shouldOpen) requestAnimationFrame(() => positionNotificationPanel(button, panel));
+}
+
 function renderNotifications() {
   const button = document.getElementById("notificationButton");
   const badge = document.getElementById("notificationBadge");
@@ -10150,8 +10163,7 @@ async function openCalendarNotification(eventId, eventDate = "") {
     googleCalendarState.anchor = new Date(targetDate.getFullYear(), targetDate.getMonth(), 1);
   }
   googleCalendarState.mode = "month";
-  document.getElementById("notificationPanel")?.classList.add("is-hidden");
-  document.getElementById("notificationButton")?.setAttribute("aria-expanded", "false");
+  setNotificationPanelOpen(false);
   setView("calendar");
 
   if (!googleCalendarState.loading && !googleCalendarState.events.some((item) => item.id === eventId)) {
@@ -11080,8 +11092,7 @@ async function openTeamChatConversation(conversationKey = "general") {
   teamChatState.loaded = false;
   teamChatState.error = "";
   resetTeamChatDraft();
-  document.getElementById("notificationPanel")?.classList.add("is-hidden");
-  document.getElementById("notificationButton")?.setAttribute("aria-expanded", "false");
+  setNotificationPanelOpen(false);
   setView("chat");
   await loadTeamChat();
   document.getElementById("chatMessageInput")?.focus();
@@ -11301,7 +11312,7 @@ document.body.addEventListener("click", (event) => {
   if (openGraphicsReview) {
     if (!canAccessModule("graphics")) return;
     setView("graphics-reviews");
-    document.getElementById("notificationPanel")?.classList.add("is-hidden");
+    setNotificationPanelOpen(false);
     return loadGraphicReviews({ quiet: true });
   }
   if (notificationDismiss) return dismissPersonalNotification(notificationDismiss.dataset.notificationDismiss);
@@ -11944,12 +11955,19 @@ document.getElementById("profileButton").addEventListener("click", openProfileMo
 document.getElementById("logoutButton").addEventListener("click", logout);
 document.getElementById("notificationButton").addEventListener("click", (event) => {
   event.stopPropagation();
-  const button = event.currentTarget;
   const panel = document.getElementById("notificationPanel");
   const willOpen = panel.classList.contains("is-hidden");
-  if (willOpen) positionNotificationPanel(button, panel);
-  panel.classList.toggle("is-hidden", !willOpen);
-  button.setAttribute("aria-expanded", String(willOpen));
+  setNotificationPanelOpen(willOpen);
+});
+document.getElementById("appSidebar").addEventListener("transitionend", (event) => {
+  const panel = document.getElementById("notificationPanel");
+  if (event.propertyName !== "width" || panel?.classList.contains("is-hidden")) return;
+  positionNotificationPanel(document.getElementById("notificationButton"), panel);
+});
+window.addEventListener("resize", () => {
+  const panel = document.getElementById("notificationPanel");
+  if (panel?.classList.contains("is-hidden")) return;
+  positionNotificationPanel(document.getElementById("notificationButton"), panel);
 });
 document.getElementById("notificationPanel").addEventListener("click", (event) => {
   event.stopPropagation();
@@ -11980,8 +11998,7 @@ document.getElementById("notificationPanel").addEventListener("click", (event) =
 document.addEventListener("click", () => {
   const panel = document.getElementById("notificationPanel");
   if (!panel || panel.classList.contains("is-hidden")) return;
-  panel.classList.add("is-hidden");
-  document.getElementById("notificationButton")?.setAttribute("aria-expanded", "false");
+  setNotificationPanelOpen(false);
 });
 document.getElementById("contentPageFilter").addEventListener("change", () => {
   selectedContentSection = "all";

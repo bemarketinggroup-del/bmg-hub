@@ -9500,16 +9500,21 @@ body.chat-view-active #chatView {
     width: 76px;
     transition: width .22s cubic-bezier(.2,.7,.2,1), box-shadow .22s;
   }
-  .sidebar.p-sidebar:hover{ width: 272px; z-index: 60; box-shadow: var(--shadow-lg); }
+  .sidebar.p-sidebar:hover,
+  .sidebar.p-sidebar.has-open-notifications{ width: 272px; z-index: 60; box-shadow: var(--shadow-lg); }
   .sidebar .brand-logo{ width: 44px; height: auto; }
   .sidebar .brand-copy{ opacity: 0; transition: opacity .16s; white-space: nowrap; }
-  .sidebar.p-sidebar:hover .brand-copy{ opacity: 1; }
+  .sidebar.p-sidebar:hover .brand-copy,
+  .sidebar.p-sidebar.has-open-notifications .brand-copy{ opacity: 1; }
   .sidebar-nav-label{ opacity: 0; transition: opacity .16s; white-space: nowrap; }
-  .sidebar.p-sidebar:hover .sidebar-nav-label{ opacity: 1; }
+  .sidebar.p-sidebar:hover .sidebar-nav-label,
+  .sidebar.p-sidebar.has-open-notifications .sidebar-nav-label{ opacity: 1; }
   .nav-item > span:not(.icon){ opacity: 0; transition: opacity .16s; white-space: nowrap; }
-  .sidebar.p-sidebar:hover .nav-item > span:not(.icon){ opacity: 1; }
+  .sidebar.p-sidebar:hover .nav-item > span:not(.icon),
+  .sidebar.p-sidebar.has-open-notifications .nav-item > span:not(.icon){ opacity: 1; }
   .nav-branch-trailing{ opacity: 0; transition: opacity .16s; }
-  .sidebar.p-sidebar:hover .nav-branch-trailing{ opacity: 1; }
+  .sidebar.p-sidebar:hover .nav-branch-trailing,
+  .sidebar.p-sidebar.has-open-notifications .nav-branch-trailing{ opacity: 1; }
 }
 
 

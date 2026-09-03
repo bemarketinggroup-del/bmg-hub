@@ -131,7 +131,10 @@ supabase/                     schema e migration
   mostra soltanto il titolo della vista e il menu mobile, senza esportazione
   dati o altre azioni globali ridondanti. Le notifiche degli eventi aprono il
   mese e il dettaglio dell'evento nel calendario interno del CRM, senza
-  rimandare direttamente a Google Calendar.
+  rimandare direttamente a Google Calendar. Su desktop la sidebar compatta
+  resta espansa finche il pannello notifiche e aperto, così il popover conserva
+  sempre il proprio ancoraggio alla campanella; cambio vista, click esterno e
+  chiusura del popover ripristinano lo stato compatto.
 - Directory utenti in linguaggio CMS, con tabella PrimeNG-style, ricerca e
   filtri per ruolo/stato; la modifica avviene in un drawer modale sovrapposto
   alla pagina, con overlay e ingresso animato da destra. L'editor usa

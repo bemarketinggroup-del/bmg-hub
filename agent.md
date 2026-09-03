@@ -59,6 +59,23 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-09-03 — Pannello notifiche ancorato alla sidebar
+
+- Richiesta: correggere il pannello notifiche che, dopo la chiusura della
+  sidebar espansa, rimaneva isolato al centro dello schermo.
+- Modifiche: unificato lo stato di apertura del popover; finche le notifiche
+  sono visibili la sidebar desktop resta espansa e il pannello viene
+  riposizionato al termine della transizione e dopo un ridimensionamento. Click
+  esterno, cambio vista e apertura di task, Calendar, Chat o Revisioni chiudono
+  ora il popover e ripristinano insieme lo stato della sidebar.
+- File: `public/app.js`, `public/styles.css`,
+  `scripts/test-mobile-navigation.mjs`, `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run check`, `npm run test:mobile-navigation`, `npm run
+  test:personal-area`, `git diff --check`; verifica visiva desktop e smartphone
+  da completare sulla build pubblicata.
+- Pubblicazione: da completare su GitHub `main` e Vercel produzione.
+- Note: `.bmg-redesign-backup/` resta esclusa e non modificata.
+
 ### 2026-09-03 — Ripristino endpoint Clienti dopo la separazione API
 
 - Richiesta: verificare perche VETERA risultasse senza cartella Drive e

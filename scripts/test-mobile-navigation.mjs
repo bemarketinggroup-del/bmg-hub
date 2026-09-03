@@ -49,5 +49,8 @@ assert.match(appSource, /function setView\(view\) \{[\s\S]*?setMobileNavOpen\(fa
 assert.doesNotMatch(appSource, /getElementById\("viewKicker"\)/, "la navigazione non deve gestire sottotitoli di pagina ridondanti");
 assert.match(appSource, /function renderSession\(\)[\s\S]*?sidebarUserName[\s\S]*?sidebarUserAvatar[\s\S]*?Amministratore/, "il footer deve mostrare nome, iniziali e ruolo dell'utente corrente");
 assert.match(appSource, /function positionNotificationPanel\(button, panel\)[\s\S]*?getBoundingClientRect/, "il pannello notifiche deve aprirsi accanto alla nuova voce laterale");
+assert.match(appSource, /function setNotificationPanelOpen\(open\)[\s\S]*?classList\.toggle\("has-open-notifications", shouldOpen\)[\s\S]*?positionNotificationPanel/, "il pannello notifiche deve mantenere aperta la sidebar che lo ancora");
+assert.match(styleSource, /\.sidebar\.p-sidebar:hover,[\s\S]*?\.sidebar\.p-sidebar\.has-open-notifications\{ width: 272px;/, "la sidebar desktop deve restare espansa finche il pannello notifiche e aperto");
+assert.match(appSource, /addEventListener\("transitionend"[\s\S]*?event\.propertyName !== "width"[\s\S]*?positionNotificationPanel/, "il pannello notifiche deve riallinearsi al termine dell'espansione laterale");
 
 console.log("Mobile navigation tests passed");
