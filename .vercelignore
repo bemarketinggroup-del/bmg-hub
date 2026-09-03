@@ -1,7 +1,9 @@
 .env
 .env.local
 .env.*.local
-scripts/
+scripts/*
+!scripts/build-static-assets.mjs
+!scripts/check-syntax.mjs
 supabase/
 site-integration/
 README.md

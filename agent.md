@@ -75,7 +75,7 @@ più recente alla più vecchia:
   Aggiunti `Server-Timing`, log strutturati e metriche browser; boot e controlli
   non essenziali sono differiti con `requestIdleCallback` e i polling rispettano
   la visibilità della pagina.
-- File: `.gitignore`, `package.json`, `package-lock.json`, `vercel.json`,
+- File: `.gitignore`, `.vercelignore`, `package.json`, `package-lock.json`, `vercel.json`,
   `api/app.js` (rimosso), nuovi entrypoint in `api/`, `api/clients.js`,
   `api/site-content.js`, `lib/client-drive-api.js`,
   `lib/client-drive-libraries.js`, `lib/google-drive.js`, `public/app.js`,
@@ -86,8 +86,10 @@ più recente alla più vecchia:
   `npx vercel build` con esito positivo; controllo browser della build hash a
   1440×900 e 390×844, senza errori console né overflow orizzontale; verifica
   specifica di output statico e funzioni API separate; `git diff --check`.
-- Pubblicazione: commit corrente da pubblicare su GitHub `main` e distribuire
-  su Vercel produzione nello stesso intervento, con misure HTTP fredde/calde.
+- Pubblicazione: commit applicativo `f2f79a3` pubblicato su GitHub `main`; il
+  primo build remoto ha evidenziato l'esclusione storica dell'intera cartella
+  `scripts/` da `.vercelignore`, corretta con un commit di follow-up prima del
+  deploy produzione e delle misure HTTP fredde/calde.
 - Note: l'indice Drive persistente Supabase, i WebP persistenti e una regione
   Vercel forzata restano subordinati alle misure autenticate e alla verifica
   della regione Supabase; preservata e non inclusa `.bmg-redesign-backup/`.
