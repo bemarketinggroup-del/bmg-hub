@@ -73,10 +73,15 @@ più recente alla più vecchia:
   `scripts/test-client-drive-libraries.mjs`, `agent.md`.
 - Verifiche: `npm run check`, `npm run build`,
   `npm run test:client-drive-libraries`, `npm run test:client-management`,
-  `npm run test:permissions`, `git diff --check`; verifica visiva desktop e
-  smartphone da completare dopo il deploy.
-- Pubblicazione: da completare.
-- Note: Nessuna.
+  `npm run test:permissions`, `git diff --check`; verifica in produzione con
+  l'account staff Sabrina abdelkafi sulla scheda Vetera, sia desktop sia in
+  finestra stretta sotto il breakpoint mobile. Confermati PED, Drive
+  principale, Grafiche e Video collegati e confermati entrambi gli accessi
+  rapidi nel browser Drive integrato.
+- Pubblicazione: commit `95795c0`, push GitHub su `main`, deploy Vercel
+  `dpl_5of5Hs8VsQXTGhiQJy9RYWaEe6Wu` pubblicato e verificato su
+  `https://bmg-hub.vercel.app`.
+- Note: nessun file, cartella Drive o contenuto PED è stato modificato.
 
 ### 2026-09-03 — Pannello notifiche ancorato alla sidebar
 
