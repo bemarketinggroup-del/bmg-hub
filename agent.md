@@ -59,6 +59,29 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-09-10 — Caroselli in attesa modificabili
+
+- Richiesta: rendere modificabili i post nella sezione “In attesa di
+  programmazione”, in particolare permettere anche ai caroselli di aggiungere,
+  rimuovere e riordinare i contenuti come nella programmazione normale.
+- Modifiche: rimossa la modalità forzata di sola lettura per i caroselli
+  momentanei; lo stesso editor visuale del PED ora salva riordino e rimozione
+  sulla raccolta staging, aggiorna subito la card e conserva copy, stato e file
+  originali Drive. L'aggiunta di contenuti continua a usare il selettore Drive
+  già presente nell'editor. Introdotta una funzione database dedicata e atomica
+  per impedire aggiornamenti parziali o incroci con i post già programmati.
+- File: `public/app.js`, `lib/ped.js`,
+  `supabase/migrations/20260910032000_ped_staging_carousel_editor.sql`,
+  `scripts/test-ped-carousel.mjs`, `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `node --check public/app.js`, `node --check lib/ped.js`,
+  `npm run test:ped-carousel`, `npm run check`, `npm run build`,
+  `git diff --check`; verifica visuale desktop e smartphone, Chrome e Safari.
+- Pubblicazione: commit corrente pubblicato su GitHub `main`, migration applicata
+  a Supabase, deploy Vercel di produzione verificato su
+  `https://bmg-hub.vercel.app`.
+- Note: i file rimossi dal carosello restano nel Drive del cliente; il carosello
+  conserva sempre almeno due elementi.
+
 ### 2026-09-10 — Grafiche e Video visibili a tutti gli utenti Clienti
 
 - Richiesta: correggere la scheda cliente perché agli utenti staff compariva

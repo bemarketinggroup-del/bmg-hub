@@ -69,6 +69,7 @@ const feedCalendarSyncMigration = await readFile(new URL("../supabase/20260717_p
 const publishingStatusMigration = await readFile(new URL("../supabase/20260718_ped_publishing_status.sql", import.meta.url), "utf8");
 const richCaptionMigration = await readFile(new URL("../supabase/20260718_ped_rich_caption.sql", import.meta.url), "utf8");
 const carouselEditorMigration = await readFile(new URL("../supabase/migrations/20260729170000_ped_carousel_editor.sql", import.meta.url), "utf8");
+const stagingCarouselEditorMigration = await readFile(new URL("../supabase/migrations/20260910032000_ped_staging_carousel_editor.sql", import.meta.url), "utf8");
 const shareTokenMigration = await readFile(new URL("../supabase/migrations/20260805181000_ped_share_recoverable_token.sql", import.meta.url), "utf8");
 const parallelLegacyShareMigration = await readFile(new URL("../supabase/migrations/20260805183000_ped_share_parallel_legacy.sql", import.meta.url), "utf8");
 const reelCoverMigration = await readFile(new URL("../supabase/migrations/20260902135000_ped_reel_cover_frame.sql", import.meta.url), "utf8");
@@ -332,8 +333,14 @@ assert.match(pedSource, /\/ped_staging_items\?\$\{filter\}/, "il copy dei carose
 assert.match(styleSource, /\.ped-staging-caption-preview[\s\S]*?-webkit-line-clamp: 2;/, "l'anteprima del copy deve restare compatta");
 assert.match(pedSource, /Array\.isArray\(body\.carousel_member_ids\)/, "l'API PED deve accettare l'ordine completo del carosello");
 assert.match(pedSource, /\/rpc\/sync_ped_carousel_members/, "ordine e rimozioni devono essere applicati atomicamente");
+assert.match(appSource, /openPedCarouselPreviewWithOptions\(item, \{ staging: true \}\)/, "i caroselli in attesa devono aprirsi in modifica e non in sola lettura");
+assert.match(appSource, /staging_carousel_id: currentItem\.id/, "l'editor deve distinguere i caroselli in attesa da quelli gia programmati");
+assert.match(pedSource, /body\.staging_carousel_id !== undefined/, "l'API deve accettare riordino e rimozione dei caroselli in attesa");
+assert.match(pedSource, /\/rpc\/sync_ped_staging_carousel_members/, "le modifiche ai caroselli in attesa devono essere atomiche");
 assert.match(carouselEditorMigration, /delete from public\.ped_items/, "la funzione database deve rimuovere soltanto i membri esclusi");
 assert.match(carouselEditorMigration, /group_position = \(requested\.position - 1\)::integer/, "la funzione database deve rinumerare il carosello");
+assert.match(stagingCarouselEditorMigration, /delete from public\.ped_staging_items/, "la funzione staging deve rimuovere soltanto i membri esclusi");
+assert.match(stagingCarouselEditorMigration, /group_position = \(requested\.position - 1\)::integer/, "la funzione staging deve rinumerare il carosello");
 assert.match(styleSource, /\.ped-carousel-editor-track[\s\S]*?display: flex;[\s\S]*?overflow-x: auto;/, "le foto devono essere affiancate in una riga scorrevole");
 assert.match(styleSource, /\.ped-carousel-editor-media img,[\s\S]*?object-fit: contain;/, "le anteprime non devono ritagliare le foto");
 assert.match(styleSource, /\.ped-carousel-editor-remove/, "ogni foto deve avere un comando di eliminazione distinto");

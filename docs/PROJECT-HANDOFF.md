@@ -346,6 +346,10 @@ supabase/                     schema e migration
   celle verticalmente rettangolari da almeno 84 px, senza scroll orizzontale.
 - Sezione “Contenuti momentanei / In attesa di programmazione”: import dal Drive,
   anteprima del copy, editor completo uguale al PED e trascinamento nel giorno.
+  Anche prima di assegnare una data, i caroselli si aprono in modifica: i file
+  possono essere riordinati, rimossi senza cancellarli da Drive e integrati con
+  nuovi contenuti. Riordino e rimozione vengono salvati atomicamente sulla
+  raccolta momentanea, senza passare per la tabella dei contenuti programmati.
 - L'agenda apre di default sulle uscite da oggi in poi e carica tutti i
   contenuti futuri fino in fondo nella pagina, senza una finestra con scroll
   interno. Se il PED contiene uscite passate, il comando `Carica precedenti`
@@ -602,6 +606,7 @@ supabase/migrations/20260729173000_ped_staging_rich_editor.sql
 supabase/migrations/20260805103000_staff_email_aliases.sql
 supabase/migrations/20260805181000_ped_share_recoverable_token.sql
 supabase/migrations/20260805183000_ped_share_parallel_legacy.sql
+supabase/migrations/20260910032000_ped_staging_carousel_editor.sql
 ```
 
 Non modificare retroattivamente migration già applicate in produzione. Creare

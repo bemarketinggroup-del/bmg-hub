@@ -713,7 +713,7 @@ function formatPedAuditDate(value) {
 }
 
 function pedAuditMetadata(body = {}, requestUrl = null, actionKey = "") {
-  const itemId = body.id || body.staging_id || body.staging_append_id || requestUrl?.searchParams.get("id") || requestUrl?.searchParams.get("staging_id") || "";
+  const itemId = body.id || body.staging_id || body.staging_append_id || body.staging_carousel_id || requestUrl?.searchParams.get("id") || requestUrl?.searchParams.get("staging_id") || "";
   const item = itemId
     ? pedStateItem(itemId) || (state.pedStagingItems || []).find((entry) => String(entry.id) === String(itemId))
     : null;
@@ -751,7 +751,7 @@ function pedAuditActionKey(method, body, requestUrl) {
   if (body.staging_id && body.scheduled_date) return "schedule_ped_content";
   if (body.note_date) return "update_ped_note";
   if (Array.isArray(body.instagram_order)) return "reorder_ped";
-  if (Array.isArray(body.carousel_member_ids) || Array.isArray(body.append_drive_file_ids) || body.staging_append_id) return "update_ped_carousel";
+  if (Array.isArray(body.carousel_member_ids) || Array.isArray(body.append_drive_file_ids) || body.staging_append_id || body.staging_carousel_id) return "update_ped_carousel";
   return "update_ped_content";
 }
 
@@ -3635,6 +3635,14 @@ function replacePedStateItem(updatedItem) {
   }
 }
 
+function replacePedStagingStateItem(updatedItem) {
+  if (!updatedItem) return;
+  const itemId = String(updatedItem.id);
+  state.pedStagingItems = (state.pedStagingItems || []).map((item) => (
+    String(item.id) === itemId ? updatedItem : item
+  ));
+}
+
 function pedStateItemsOnDate(date) {
   const items = new Map();
   for (const item of [...(state.pedAgendaItems || []), ...state.pedItems]) {
@@ -4263,23 +4271,12 @@ function updatePedStagingEditorCount() {
   document.getElementById("pedStagingEditorSaveButton").disabled = count > 10000;
 }
 
-function openPedStagingEditor(id) {
-  const item = (state.pedStagingItems || []).find((entry) => String(entry.id) === String(id));
-  if (!item) return;
-  editingPedStagingId = String(item.id);
+function syncPedStagingEditorMedia(item) {
   const format = pedTypeMeta(item.content_type);
   const files = pedItemFiles(item);
-  const isStory = format.type === "story";
   document.getElementById("pedStagingEditorTitle").textContent = pedItemTitle(item);
   document.getElementById("pedStagingEditorMeta").textContent = `${format.label} · ${files.length} ${files.length === 1 ? "contenuto" : "contenuti"} · in attesa di programmazione`;
   renderPedStagingEditorItems(item);
-  const editor = document.getElementById("pedStagingText");
-  editor.innerHTML = item.caption_html || pedPlainCaptionHtml(item.caption || "");
-  editor.contentEditable = isStory ? "false" : "true";
-  document.getElementById("pedStagingEditorBlock").hidden = isStory;
-  document.getElementById("pedStagingEditorStoryNote").hidden = !isStory;
-  document.getElementById("pedStagingCopyButton").hidden = isStory;
-  document.getElementById("pedStagingPublishingStatus").value = pedPublishingStatus(item.publishing_status);
   const canAppend = Boolean(item.is_group && pedContentType(item.content_type) === "carousel");
   const addLink = document.getElementById("pedStagingAddLink");
   addLink.hidden = !canAppend;
@@ -4290,6 +4287,22 @@ function openPedStagingEditor(id) {
   previewLink.dataset.pedStagingPreview = String(item.id);
   previewLink.hidden = !files.some((file) => file.content_url || file.drive_web_url || file.drive_file_id);
   previewLink.textContent = files.length > 1 ? `Apri ${files.length} contenuti` : "Apri contenuto";
+}
+
+function openPedStagingEditor(id) {
+  const item = (state.pedStagingItems || []).find((entry) => String(entry.id) === String(id));
+  if (!item) return;
+  editingPedStagingId = String(item.id);
+  const format = pedTypeMeta(item.content_type);
+  const isStory = format.type === "story";
+  syncPedStagingEditorMedia(item);
+  const editor = document.getElementById("pedStagingText");
+  editor.innerHTML = item.caption_html || pedPlainCaptionHtml(item.caption || "");
+  editor.contentEditable = isStory ? "false" : "true";
+  document.getElementById("pedStagingEditorBlock").hidden = isStory;
+  document.getElementById("pedStagingEditorStoryNote").hidden = !isStory;
+  document.getElementById("pedStagingCopyButton").hidden = isStory;
+  document.getElementById("pedStagingPublishingStatus").value = pedPublishingStatus(item.publishing_status);
   document.getElementById("pedStagingEditorMessage").textContent = "";
   updatePedStagingEditorCount();
   document.getElementById("pedStagingEditorModal").showModal();
@@ -6425,7 +6438,8 @@ function openPedCarouselPreview(item) {
   return openPedCarouselPreviewWithOptions(item);
 }
 
-function openPedCarouselPreviewWithOptions(item, { readOnly = false } = {}) {
+function openPedCarouselPreviewWithOptions(item, { readOnly = false, staging = false } = {}) {
+  let currentItem = item;
   let files = pedItemFiles(item);
   if (files.length < 2) {
     const file = files[0];
@@ -6477,11 +6491,15 @@ function openPedCarouselPreviewWithOptions(item, { readOnly = false } = {}) {
   }
 
   function replaceEditorItem(updatedItem) {
-    replacePedStateItem(updatedItem);
+    currentItem = updatedItem;
+    if (staging) replacePedStagingStateItem(updatedItem);
+    else replacePedStateItem(updatedItem);
     files = pedItemFiles(updatedItem);
     title.textContent = `Editor carosello · ${files.length} contenuti`;
     renderPed();
-    if (document.getElementById("pedCaptionModal")?.open && String(editingPedCaptionId) === String(updatedItem.id)) {
+    if (staging && document.getElementById("pedStagingEditorModal")?.open && String(editingPedStagingId) === String(updatedItem.id)) {
+      syncPedStagingEditorMedia(updatedItem);
+    } else if (document.getElementById("pedCaptionModal")?.open && String(editingPedCaptionId) === String(updatedItem.id)) {
       selectPedCaptionItem(updatedItem.id);
     }
   }
@@ -6497,10 +6515,9 @@ function openPedCarouselPreviewWithOptions(item, { readOnly = false } = {}) {
       const response = await apiFetch("/api/ped", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: item.id,
-          carousel_member_ids: nextFiles.map(memberId)
-        })
+        body: JSON.stringify(staging
+          ? { staging_carousel_id: currentItem.id, carousel_member_ids: nextFiles.map(memberId) }
+          : { id: currentItem.id, carousel_member_ids: nextFiles.map(memberId) })
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || "Impossibile aggiornare il carosello");
@@ -6664,7 +6681,7 @@ function openPedStagingContentPreview(id) {
   const item = (state.pedStagingItems || []).find((entry) => String(entry.id) === String(id));
   if (!item) return;
   const files = pedItemFiles(item);
-  if (files.length > 1) return openPedCarouselPreviewWithOptions(item, { readOnly: true });
+  if (files.length > 1) return openPedCarouselPreviewWithOptions(item, { staging: true });
   const file = files[0];
   if (!file) return;
   return openDriveFile(file.drive_file_id, file.drive_file_name, file.drive_mime_type, file.content_url || "");
