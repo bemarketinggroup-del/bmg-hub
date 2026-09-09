@@ -2500,7 +2500,11 @@ async function loadClientDriveFolder(folderId = "", folderName = "", { fresh = f
     panel.innerHTML = driveBrowserMarkup(data.files || [], clientDriveState.uploadEnabled, clientDriveState.libraries);
     hydrateDriveThumbnails(panel);
     observeDrivePagination(panel);
-    if (!normalizedSource && clientDriveState.path.length === 1) void hydrateClientDriveLibraries(loadId, panel);
+    const librarySources = new Set(clientDriveState.libraries.map((library) => String(library?.source || "")));
+    const hasAllLibraries = librarySources.has("graphics") && librarySources.has("video");
+    if (!normalizedSource && clientDriveState.path.length === 1 && !hasAllLibraries) {
+      void hydrateClientDriveLibraries(loadId, panel);
+    }
     panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
   } catch (error) {
     if (error?.name === "AbortError") return;

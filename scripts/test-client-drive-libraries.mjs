@@ -76,6 +76,8 @@ assert.match(driveApiSource, /authorizedRootId = clientLibrary\.id/, "le raccolt
 assert.match(driveApiSource, /includeReviews \? graphicReviewRelations/, "PED e chat non devono attendere le relazioni delle revisioni che non visualizzano");
 assert.match(driveApiSource, /Promise\.all\(\[[\s\S]*?listDriveFolderPage\(folderId/, "metadati e prima pagina Drive devono essere caricati in parallelo");
 assert.match(driveApiSource, /action === "libraries"/, "le raccolte secondarie devono essere richieste dopo i file");
+assert.match(driveApiSource, /shouldResolveLibraries = !librarySource && isAuthorizedRoot && !pageToken/, "la radice del cliente deve includere GRAFICHE e VIDEO gia nella prima risposta");
+assert.match(driveApiSource, /resolveClientDriveLibraries\(client\.name, listDriveFolder, clientConnectionSettings\(client\.notes\)\)/, "i collegamenti salvati devono essere risolti ugualmente per admin e staff");
 assert.match(driveApiSource, /isAuthorizedRoot[\s\S]*?Promise\.resolve\(\{ id: folderId, name: client\.name, mimeType: FOLDER_MIME \}\)/, "la radice autorizzata non deve richiedere una lettura metadati aggiuntiva");
 assert.match(driveApiSource, /mediaUrl\(client\.id, authorizedRootId, file\.id, "thumbnail", file\)/, "le miniature devono firmare i metadati gia ottenuti dall'elenco Drive");
 assert.match(driveApiSource, /trustedMediaMetadata\(fileId, tokenData\)/, "il proxy media deve riusare i metadati firmati senza una seconda chiamata Google");
@@ -96,6 +98,7 @@ assert.match(appSource, /rootMargin: "720px"/, "le anteprime vicine al viewport 
 assert.match(appSource, /clientDriveState\.surface === "graphics" && normalizedSource === "graphics"/, "solo l'archivio grafiche deve caricare le relazioni di revisione");
 assert.match(appSource, /function loadMoreClientDriveFiles/, "il Drive deve caricare progressivamente le pagine successive");
 assert.match(appSource, /new AbortController\(\)/, "una nuova navigazione deve annullare la richiesta precedente");
+assert.match(appSource, /librarySources\.has\("graphics"\) && librarySources\.has\("video"\)/, "il recupero differito deve restare disponibile quando una raccolta manca dalla prima risposta");
 assert.match(appSource, /data-drive-select=/, "ogni elemento del Drive interno deve poter essere selezionato");
 assert.match(appSource, /has-selection-control/, "le schede Drive modificabili devono riservare uno spazio al selettore");
 assert.match(appSource, /file\.is_folder \? " is-folder-card"/, "le cartelle Drive devono usare una scheda visuale della stessa famiglia di foto e video");

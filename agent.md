@@ -1,6 +1,6 @@
 # BMG Hub — memoria operativa degli interventi
 
-Ultimo aggiornamento: 3 settembre 2026
+Ultimo aggiornamento: 10 settembre 2026
 
 ## Scopo del file
 
@@ -58,6 +58,25 @@ più recente alla più vecchia:
 ```
 
 ## Registro modifiche
+
+### 2026-09-10 — Grafiche e Video visibili a tutti gli utenti Clienti
+
+- Richiesta: correggere la scheda cliente perché agli utenti staff compariva
+  soltanto il Drive principale, senza gli accessi alle cartelle Grafiche e
+  Video.
+- Modifiche: la prima risposta della radice Drive include nuovamente Grafiche e
+  Video, risolte in parallelo ai file e usando subito gli ID espliciti già
+  salvati. Il caricamento differito resta come recupero se una raccolta manca;
+  il ripristino vale anche per il selettore Drive del PED e non modifica né
+  sposta file o contenuti degli utenti.
+- File: `lib/client-drive-api.js`, `public/app.js`,
+  `scripts/test-client-drive-libraries.mjs`, `agent.md`.
+- Verifiche: `npm run check`, `npm run build`,
+  `npm run test:client-drive-libraries`, `npm run test:client-management`,
+  `npm run test:permissions`, `git diff --check`; verifica visiva desktop e
+  smartphone da completare dopo il deploy.
+- Pubblicazione: da completare.
+- Note: Nessuna.
 
 ### 2026-09-03 — Pannello notifiche ancorato alla sidebar
 
