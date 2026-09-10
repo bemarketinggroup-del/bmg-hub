@@ -75,7 +75,9 @@ const styleSource = await readFile(new URL("../public/styles.css", import.meta.u
 assert.match(driveApiSource, /authorizedRootId = clientLibrary\.id/, "le raccolte speciali devono usare la cartella cliente come radice autorizzata");
 assert.match(driveApiSource, /fullDrive = librarySource === "all"/, "il selettore PED deve riconoscere la modalita Drive completo");
 assert.match(driveApiSource, /fullDrive[\s\S]*?module: "ped"/, "soltanto chi puo usare il PED deve poter sfogliare il Drive completo");
-assert.match(driveApiSource, /driveMetadata\("root", \{ fresh \}\)/, "la modalita completa deve risolvere la radice Google Drive effettiva");
+assert.match(driveApiSource, /driveMetadataWithWriteAccess\("root"\)/, "la modalita completa deve risolvere la radice dell'account Drive operativo");
+assert.match(driveApiSource, /listDriveFolderPageWithWriteAccess\(folderId/, "la modalita completa deve leggere cartelle e file con l'account Drive operativo");
+assert.match(driveApiSource, /signedMediaRootId = `oauth:/, "i media del Drive completo devono conservare l'origine OAuth nel link firmato");
 assert.match(driveApiSource, /!fullDrive && googleDriveWriteConfigured\(\)/, "il Drive completo del PED deve restare in sola lettura");
 assert.match(driveApiSource, /includeReviews \? graphicReviewRelations/, "PED e chat non devono attendere le relazioni delle revisioni che non visualizzano");
 assert.match(driveApiSource, /Promise\.all\(\[[\s\S]*?listDriveFolderPage\(folderId/, "metadati e prima pagina Drive devono essere caricati in parallelo");
@@ -83,7 +85,7 @@ assert.match(driveApiSource, /action === "libraries"/, "le raccolte secondarie d
 assert.match(driveApiSource, /shouldResolveLibraries = !librarySource && isAuthorizedRoot && !pageToken/, "la radice del cliente deve includere GRAFICHE e VIDEO gia nella prima risposta");
 assert.match(driveApiSource, /resolveClientDriveLibraries\(client\.name, listDriveFolder, clientConnectionSettings\(client\.notes\)\)/, "i collegamenti salvati devono essere risolti ugualmente per admin e staff");
 assert.match(driveApiSource, /isAuthorizedRoot[\s\S]*?Promise\.resolve\(\{ id: folderId, name: authorizedRootName, mimeType: FOLDER_MIME \}\)/, "la radice autorizzata non deve richiedere una lettura metadati aggiuntiva");
-assert.match(driveApiSource, /mediaUrl\(client\.id, authorizedRootId, file\.id, "thumbnail", file\)/, "le miniature devono firmare i metadati gia ottenuti dall'elenco Drive");
+assert.match(driveApiSource, /mediaUrl\(client\.id, signedMediaRootId, file\.id, "thumbnail", file\)/, "le miniature devono firmare origine e metadati gia ottenuti dall'elenco Drive");
 assert.match(driveApiSource, /trustedMediaMetadata\(fileId, tokenData\)/, "il proxy media deve riusare i metadati firmati senza una seconda chiamata Google");
 assert.match(driveApiSource, /private, max-age=20, stale-while-revalidate=120/, "l'elenco Drive deve poter essere riusato brevemente dal browser");
 assert.match(driveApiSource, /createFolder\(request, response, authorizedRootId\)/, "la gestione cartelle deve funzionare anche dentro GRAFICHE e VIDEO");
@@ -96,6 +98,7 @@ assert.match(driveApiSource, /sendJson\(response, errors\.length \? 207 : 200/, 
 assert.match(driveApiSource, /isInsideDriveRoot\(targetParentId, rootId, target\)/, "la destinazione deve restare nel Drive autorizzato del cliente");
 assert.match(driveApiSource, /isInsideDriveRoot\(targetParentId, fileId, target\)/, "una cartella non deve potersi spostare dentro una propria sottocartella");
 assert.match(googleDriveSource, /export async function moveDriveFile/, "Google Drive deve aggiornare i genitori di file e cartelle");
+assert.match(googleDriveSource, /export async function isInsideDriveRootWithWriteAccess/, "la radice OAuth completa deve avere una verifica di appartenenza dedicata");
 assert.match(appSource, /data-drive-move=/, "ogni elemento del Drive interno deve avere il comando Sposta");
 assert.match(appSource, /const eagerCount = window\.matchMedia/, "le prime anteprime Drive devono adattarsi a smartphone e desktop");
 assert.match(appSource, /rootMargin: "720px"/, "le anteprime vicine al viewport devono essere precaricate prima dello scroll");

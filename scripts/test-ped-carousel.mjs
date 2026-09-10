@@ -413,7 +413,8 @@ assert.equal(sanitizeCaptionHtml('<img src=x onerror=alert(1)><em>Test</em>'), '
 assert.match(pedSource, /used_file_ids:/, "l'API PED deve restituire tutti i file gia usati dal cliente");
 assert.match(pedSource, /resolveClientDriveLibraries\(client\.name, listDriveFolder, clientConnectionSettings\(client\.notes\)\)/, "il PED deve accettare file dalle raccolte grafiche e video collegate manualmente al cliente");
 assert.match(pedSource, /const rootIds = \[clientRootId, \.\.\.libraryRoots\.map/, "la validazione deve includere le cartelle autorizzate del cliente");
-assert.match(pedSource, /if \(driveSource === "all"\) \{[\s\S]*?driveMetadata\("root"\)/, "la radice completa deve essere autorizzata soltanto quando il selettore la dichiara");
+assert.match(pedSource, /if \(driveSource === "all"\) \{[\s\S]*?driveMetadataWithWriteAccess\("root"\)/, "la radice OAuth completa deve essere autorizzata soltanto quando il selettore la dichiara");
+assert.match(pedSource, /isInsideDriveRootWithWriteAccess\(fileId, authorization\.fullDriveRootId/, "ogni file esterno al cliente deve restare dentro la radice Drive completa");
 assert.match(appSource, /let pedUsedFileIds = new Set\(\)/, "il PED deve mantenere l'indice dei file gia usati");
 assert.match(appSource, /pedUsedFileIds\.has\(String\(file\.id\)\)/, "il selettore deve riconoscere i file Drive gia usati");
 assert.match(appSource, /pedPickerState\.showUsed/, "il filtro dei contenuti gia usati deve essere reversibile");

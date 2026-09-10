@@ -71,7 +71,9 @@ più recente alla più vecchia:
   Post, contenuti in attesa e caroselli possono usare i file scelti altrove;
   anche una selezione mista conserva l'origine corretta. Il server autorizza il
   percorso aggiuntivo soltanto su richiesta esplicita e verifica ogni file
-  contro la radice Google Drive effettiva.
+  contro la radice effettiva dell'account Drive operativo OAuth. Le anteprime e
+  i download provenienti da questa vista mantengono la stessa identita OAuth,
+  mentre i normali Drive cliente continuano a usare l'account di servizio.
 - File: `lib/client-drive-api.js`, `lib/ped.js`, `public/index.html`,
   `public/app.js`, `public/styles.css`,
   `scripts/test-client-drive-libraries.mjs`, `scripts/test-ped-carousel.mjs`,

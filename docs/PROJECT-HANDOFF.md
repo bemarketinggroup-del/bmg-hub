@@ -286,7 +286,9 @@ supabase/                     schema e migration
   comando diventa `Drive cliente` per tornare rapidamente al percorso normale.
   Il backend accetta questi file soltanto quando il selettore dichiara
   esplicitamente la provenienza completa e verifica comunque che appartengano
-  alla radice Google Drive autorizzata.
+  alla radice Google Drive dell'account operativo OAuth. Navigazione, anteprime
+  e download del percorso completo usano la stessa identita; i percorsi cliente
+  esistenti continuano a usare l'account di servizio condiviso.
 - Il selettore Drive ricorda l'ultima cartella visitata per cliente.
 - Foto/video si aprono cliccando l'anteprima; il comando principale inserisce il
   contenuto nel PED.
