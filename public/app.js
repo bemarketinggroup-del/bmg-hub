@@ -536,7 +536,7 @@ function lastPedPickerLocation(clientId) {
 
 function rememberPedPickerLocation() {
   const folder = pedPickerState.path[pedPickerState.path.length - 1];
-  if (!selectedPedClientId || !folder?.id) return;
+  if (!selectedPedClientId || !folder?.id || pedPickerState.source === "all") return;
   pedPickerLocations[pedPickerLocationKey(selectedPedClientId)] = {
     source: String(pedPickerState.source || ""),
     folder: { id: String(folder.id), name: String(folder.name || "") },
@@ -5064,7 +5064,7 @@ async function loadPedPickerFolder(folderId = "", folderName = "", { source = pe
     const existingIndex = pedPickerState.path.findIndex((item) => item.id === data.folder.id);
     if (existingIndex >= 0) pedPickerState.path = pedPickerState.path.slice(0, existingIndex + 1);
     else pedPickerState.path.push({ id: data.folder.id, name: folderName || data.folder.name, source });
-    if (pedPickerState.path.length === 1) pedPickerState.path[0].name = data.client.name;
+    if (pedPickerState.path.length === 1) pedPickerState.path[0].name = source === "all" ? "Drive completo" : data.client.name;
     pedPickerState.files = data.files || [];
     pedPickerState.rootId = String(data.root_id || "");
     pedPickerState.uploadEnabled = Boolean(data.upload_enabled);
@@ -5145,6 +5145,7 @@ function renderPedPicker() {
   const summary = document.getElementById("pedUnusedMediaSummary");
   const usedToggle = document.getElementById("pedUsedMediaToggle");
   const createFolderButton = document.getElementById("pedCreateFolderButton");
+  const fullDriveButton = document.getElementById("pedFullDriveButton");
   const usedCount = pedPickerState.files.filter(isPedDriveFileUsed).length;
   const visibleFiles = pedPickerState.files.filter((file) => (
     file.is_folder || (!isPedSpreadsheetFile(file) && (pedPickerState.showUsed || !isPedDriveFileUsed(file)))
@@ -5168,8 +5169,17 @@ function renderPedPicker() {
       ? "Crea una cartella nel percorso aperto"
       : "Autorizzazione Google Drive necessaria";
   }
+  if (fullDriveButton) {
+    const browsingFullDrive = pedPickerState.source === "all";
+    fullDriveButton.setAttribute("aria-pressed", String(browsingFullDrive));
+    fullDriveButton.title = browsingFullDrive
+      ? "Torna alla cartella Drive del cliente"
+      : "Sfoglia tutte le cartelle del Drive autorizzato";
+    const label = fullDriveButton.querySelector("span");
+    if (label) label.textContent = browsingFullDrive ? "Drive cliente" : "Drive completo";
+  }
   const isCarouselSelection = pedContentType(pedPickerState.contentType) === "carousel";
-  const libraryCards = pedPickerState.libraries.map((library) => `
+  const libraryCards = pedPickerState.source === "all" ? "" : pedPickerState.libraries.map((library) => `
       <button class="ped-picker-library is-${escapeHtml(library.tone)}" data-ped-picker-library="${escapeHtml(library.id)}" data-ped-picker-library-source="${escapeHtml(library.source)}" data-ped-picker-name="${escapeHtml(library.name)}" type="button">
         <span class="ped-picker-library-icon" aria-hidden="true">${library.source === "video"
           ? `<svg class="lc" viewBox="0 0 24 24"><path d="M3 7h6l2 2h10v12H3z"/><path d="m10 11 6 3-6 3z"/></svg>`
@@ -5228,7 +5238,7 @@ function renderPedPicker() {
       <svg class="lc" viewBox="0 0 24 24" aria-hidden="true">${selected ? `<path d="m5 12 4 4L19 6"/>` : `<path d="M12 5v14M5 12h14"/>`}</svg>
       <span>${insertLabel}</span>
     </button>`;
-    const graphicReviewButton = isImage ? `<button class="ped-picker-review-button" data-graphic-review-file="${escapeHtml(file.id)}" data-graphic-review-surface="ped" type="button" aria-label="Manda ${escapeHtml(file.name)} in revisione ai grafici">
+    const graphicReviewButton = isImage && pedPickerState.source !== "all" ? `<button class="ped-picker-review-button" data-graphic-review-file="${escapeHtml(file.id)}" data-graphic-review-surface="ped" type="button" aria-label="Manda ${escapeHtml(file.name)} in revisione ai grafici">
       <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h16"/><path d="m14 4 6 6L9 21H3v-6Z"/><path d="m12 6 6 6"/></svg>
       <span>Manda ai grafici</span>
     </button>` : "";
@@ -5788,7 +5798,7 @@ function togglePedCarouselFile(fileId) {
       return;
     }
     const file = pedPickerState.files.find((item) => String(item.id) === String(fileId));
-    if (file) pedPickerState.selectedFiles.push(file);
+    if (file) pedPickerState.selectedFiles.push({ ...file, drive_source: pedPickerState.source });
   }
   document.getElementById("pedPickerMessage").textContent = "";
   renderPedPicker();
@@ -5801,6 +5811,10 @@ async function attachPedDriveFiles(fileIds) {
   const appendMode = Boolean(pedPickerState.appendGroupId);
   const stagingMode = pedPickerState.destination === "staging";
   const stagingAppendMode = pedPickerState.destination === "staging_append";
+  const driveSource = pedPickerState.source === "all"
+    || pedPickerState.selectedFiles.some((file) => file.drive_source === "all")
+    ? "all"
+    : "";
   if (format === "carousel" && !appendMode && fileIds.length < 2) {
     message.textContent = "Seleziona almeno due contenuti per creare il carosello.";
     return;
@@ -5820,8 +5834,8 @@ async function attachPedDriveFiles(fileIds) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(appendMode
         ? stagingAppendMode
-          ? { staging_append_id: pedPickerState.appendGroupId, append_drive_file_ids: fileIds }
-          : { id: pedPickerState.appendGroupId, append_drive_file_ids: fileIds }
+          ? { staging_append_id: pedPickerState.appendGroupId, append_drive_file_ids: fileIds, drive_source: driveSource }
+          : { id: pedPickerState.appendGroupId, append_drive_file_ids: fileIds, drive_source: driveSource }
         : {
             client_id: selectedPedClientId,
             scheduled_date: pedPickerState.date,
@@ -5829,7 +5843,8 @@ async function attachPedDriveFiles(fileIds) {
             drive_file_ids: fileIds,
             content_type: format,
             caption: format === "story" ? "" : document.getElementById("pedPickerCaption").value,
-            staging: stagingMode
+            staging: stagingMode,
+            drive_source: driveSource
           })
     });
     const data = await response.json().catch(() => ({}));
@@ -11274,6 +11289,7 @@ document.body.addEventListener("click", (event) => {
   const pedPickerClose = event.target.closest("[data-ped-picker-close]");
   const pedUsedToggle = event.target.closest("[data-ped-used-toggle]");
   const pedCreateFolder = event.target.closest("[data-ped-create-folder]");
+  const pedFullDrive = event.target.closest("[data-ped-full-drive]");
   const pedCreateCarousel = event.target.closest("[data-ped-create-carousel]");
   const pedCarouselDownload = event.target.closest("[data-ped-carousel-download]");
   const pedSingleDownload = event.target.closest("[data-ped-single-download]");
@@ -11445,6 +11461,17 @@ document.body.addEventListener("click", (event) => {
     pedPickerState.showUsed = !pedPickerState.showUsed;
     renderPedPicker();
     return;
+  }
+  if (pedFullDrive) {
+    const client = state.clients.find((item) => String(item.id) === String(selectedPedClientId));
+    const source = pedPickerState.source === "all" ? "" : "all";
+    pedPickerState.path = [];
+    pedPickerState.files = [];
+    pedPickerState.source = source;
+    return loadPedPickerFolder("", source === "all" ? "Drive completo" : client?.name || "Drive cliente", {
+      source,
+      resetPath: true
+    });
   }
   if (pedCreateFolder) return openDriveManageModal("create-folder", "", "", false, currentDriveManageContext("ped"));
   if (pedMediaViewer) return openPedMediaViewer(pedMediaViewer);

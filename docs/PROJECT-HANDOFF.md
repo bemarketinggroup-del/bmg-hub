@@ -1,6 +1,6 @@
 # BMG Hub — contesto per una nuova chat
 
-Ultimo aggiornamento: 3 settembre 2026
+Ultimo aggiornamento: 10 settembre 2026
 Repository locale: `/Users/davidedeluca/Desktop/bmg-hub`  
 Branch di produzione: `main`  
 Ultimo commit applicativo precedente all'ottimizzazione: `435d236`
@@ -280,6 +280,13 @@ supabase/                     schema e migration
   smartphone.
 - Ogni giorno può contenere una breve nota testuale.
 - I contenuti possono essere scelti dal Drive senza uscire dal gestionale.
+- Dal selettore PED il comando `Drive completo` apre la radice generale
+  autorizzata e permette di scegliere contenuti anche fuori dalla cartella del
+  cliente. La vista generale e in sola lettura, richiede il permesso PED e il
+  comando diventa `Drive cliente` per tornare rapidamente al percorso normale.
+  Il backend accetta questi file soltanto quando il selettore dichiara
+  esplicitamente la provenienza completa e verifica comunque che appartengano
+  alla radice Google Drive autorizzata.
 - Il selettore Drive ricorda l'ultima cartella visitata per cliente.
 - Foto/video si aprono cliccando l'anteprima; il comando principale inserisce il
   contenuto nel PED.

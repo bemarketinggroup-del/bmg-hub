@@ -59,6 +59,35 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-09-10 — Drive completo nel selettore PED
+
+- Richiesta: aggiungere, nella schermata che sceglie i contenuti Drive per il
+  feed/PED, un comando per uscire dalla cartella del cliente e consultare tutte
+  le cartelle del Drive quando il materiale necessario si trova altrove.
+- Modifiche: aggiunto il comando `Drive completo`, che apre dentro BMG Hub la
+  radice generale autorizzata e diventa `Drive cliente` per tornare alla
+  cartella iniziale. La vista completa e limitata agli utenti con permesso PED,
+  resta in sola lettura e non sostituisce l'ultima cartella cliente ricordata.
+  Post, contenuti in attesa e caroselli possono usare i file scelti altrove;
+  anche una selezione mista conserva l'origine corretta. Il server autorizza il
+  percorso aggiuntivo soltanto su richiesta esplicita e verifica ogni file
+  contro la radice Google Drive effettiva.
+- File: `lib/client-drive-api.js`, `lib/ped.js`, `public/index.html`,
+  `public/app.js`, `public/styles.css`,
+  `scripts/test-client-drive-libraries.mjs`, `scripts/test-ped-carousel.mjs`,
+  `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run check`, `npm run build`,
+  `npm run test:client-drive-libraries`, `npm run test:ped-carousel`,
+  `npm run test:permissions`, `npm run test:primeng-components`,
+  `git diff --check`; verifica visuale desktop e smartphone, Chrome e Safari,
+  inclusi apertura della radice completa, navigazione e ritorno al Drive
+  cliente.
+- Pubblicazione: commit corrente pubblicato su GitHub `main`; deploy Vercel di
+  produzione verificato su `https://bmg-hub.vercel.app`.
+- Note: la vista completa non consente creazione, rinomina, spostamento, upload
+  o eliminazione di file e cartelle; `.bmg-redesign-backup/` resta esclusa e non
+  modificata.
+
 ### 2026-09-10 — Caroselli in attesa modificabili
 
 - Richiesta: rendere modificabili i post nella sezione “In attesa di

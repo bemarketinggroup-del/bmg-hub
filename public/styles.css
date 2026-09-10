@@ -3737,6 +3737,9 @@ code { font-family: var(--font-mono); font-size: 12px; }
 }
 .ped-used-media-toggle .lc { width: 15px; height: 15px; }
 .ped-used-media-toggle[aria-pressed="true"] { border-color: var(--terra-line); background: var(--terra-tint); color: var(--terracotta); }
+.ped-full-drive-button { min-height: 30px; display: inline-flex; align-items: center; gap: 6px; color: var(--ink); }
+.ped-full-drive-button .lc { width: 15px; height: 15px; }
+.ped-full-drive-button[aria-pressed="true"] { border-color: var(--terra-line); background: var(--terra-tint); color: var(--terracotta); }
 .ped-create-folder-button { min-height: 30px; display: inline-flex; align-items: center; gap: 6px; color: var(--ink); }
 .ped-create-folder-button .lc { width: 15px; height: 15px; }
 .ped-create-folder-button:disabled { cursor: not-allowed; opacity: .5; }
