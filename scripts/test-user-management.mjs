@@ -60,6 +60,8 @@ assert.match(appSource, /!userDirectoryState\.loaded[\s\S]*Carico tutti gli acco
 assert.match(appSource, /data-users-retry/, "un errore iniziale deve offrire il ricaricamento esplicito degli account");
 assert.match(appSource, /auth_without_profile[\s\S]*Sincronizza ClickUp/, "gli accessi Auth privi di profilo devono essere segnalati senza creare account automaticamente");
 assert.match(appSource, /function userDirectoryProfiles\(\)[\s\S]*clickup_members[\s\S]*pending_profile: true/, "la directory deve includere subito i membri ClickUp ancora privi di accesso Hub");
+assert.match(appSource, /apiFetch\("\/api\/clickup\/tasks"\)[\s\S]*state\.clickupTasks = tasks/, "il primo caricamento utenti deve usare anche gli assegnatari già sincronizzati quando la rubrica ClickUp non risponde");
+assert.match(appSource, /sourceMembers[\s\S]*state\.clickupTasks[\s\S]*task\.assignees[\s\S]*pending_profile: true/, "gli assegnatari delle task devono completare la directory senza duplicati");
 assert.match(appSource, /pendingClickUpCount[\s\S]*Sono già visibili nell'elenco/, "i membri ClickUp in attesa devono essere spiegati senza sincronizzazioni automatiche");
 assert.match(appSource, /isPending \? "Da sincronizzare"[\s\S]*isPending \? "Accesso da creare"/, "le righe ClickUp senza profilo devono distinguere stato e permessi mancanti");
 assert.match(appSource, /data-delete-user=/, "ogni utente eliminabile deve avere il relativo comando");

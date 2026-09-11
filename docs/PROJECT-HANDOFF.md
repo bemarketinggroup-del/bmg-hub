@@ -163,7 +163,9 @@ supabase/                     schema e migration
   inoltre mostrato subito l'intero team ClickUp insieme agli accessi Hub. I
   membri che non hanno ancora il corrispondente profilo operativo sono marcati
   `Da sincronizzare`, restano non modificabili e vengono creati o collegati
-  soltanto dopo la conferma esplicita di `Sincronizza ClickUp`.
+  soltanto dopo la conferma esplicita di `Sincronizza ClickUp`. Se la rubrica
+  live ClickUp non è disponibile, il primo caricamento completa l'elenco con
+  gli assegnatari presenti nelle task già sincronizzate.
 - Nel tab `Profilo` ogni account può avere più email di integrazione, marcate
   per `Calendar`, `ClickUp` o entrambi. L'email principale resta l'unica email
   di accesso; gli alias permettono di riconoscere lo stesso utente quando i due

@@ -74,7 +74,9 @@ più recente alla più vecchia:
   Supabase Auth e con il team ClickUp. Tutti i membri ClickUp compaiono quindi
   subito nella directory; chi non possiede ancora un accesso Hub è marcato `Da
   sincronizzare` e resta non modificabile finché l'amministratore non conferma
-  il comando esplicito, evitando creazioni e duplicati automatici.
+  il comando esplicito, evitando creazioni e duplicati automatici. Se la
+  rubrica live ClickUp non risponde, la directory usa anche gli assegnatari
+  presenti nelle task già sincronizzate, senza dipendere da nuove scritture.
 - File: `public/app.js`, `public/styles.css`, `api/users.js`,
   `scripts/test-user-management.mjs`, `docs/PROJECT-HANDOFF.md`, `agent.md`.
 - Verifiche: `node --check public/app.js`, `node --check api/users.js`,

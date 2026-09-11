@@ -7494,14 +7494,21 @@ async function loadUsersFromBackend() {
   userDirectoryState.error = "";
   renderUsers();
   userDirectoryLoadPromise = (async () => {
-    const response = await apiFetch("/api/users?include_diagnostics=1", {
-      cache: "no-store",
-      headers: { "Cache-Control": "no-cache" }
-    });
+    const [response, taskResponse] = await Promise.all([
+      apiFetch("/api/users?include_diagnostics=1", {
+        cache: "no-store",
+        headers: { "Cache-Control": "no-cache" }
+      }),
+      apiFetch("/api/clickup/tasks")
+    ]);
     if (!response.ok) throw new Error(`Users backend error ${response.status}`);
     const payload = await response.json();
     const profiles = Array.isArray(payload) ? payload : payload?.users;
     if (!Array.isArray(profiles)) throw new Error("Users backend response non valida");
+    if (taskResponse.ok) {
+      const tasks = await taskResponse.json().catch(() => []);
+      if (Array.isArray(tasks)) state.clickupTasks = tasks;
+    }
     state.staffProfiles = profiles;
     userDirectoryState.diagnostics = payload?.diagnostics || null;
     userDirectoryState.loaded = true;
@@ -7741,7 +7748,17 @@ function userDirectoryProfiles() {
     String(profile.email || "").trim().toLowerCase(),
     ...userProfileEmailAliases(profile).map((item) => item.email)
   ]).filter(Boolean));
-  const pending = (userDirectoryState.diagnostics?.clickup_members || [])
+  const sourceMembers = new Map();
+  const addSourceMember = (member) => {
+    const memberId = String(member?.clickup_user_id || member?.id || "").trim();
+    const email = String(member?.email || "").trim().toLowerCase();
+    const name = normalizeIdentity(member?.full_name || member?.name || member?.username);
+    const key = memberId || email || name;
+    if (key && !sourceMembers.has(key)) sourceMembers.set(key, member);
+  };
+  (userDirectoryState.diagnostics?.clickup_members || []).forEach(addSourceMember);
+  (state.clickupTasks || []).forEach((task) => (task.assignees || []).forEach(addSourceMember));
+  const pending = [...sourceMembers.values()]
     .filter((member) => {
       const memberId = String(member.clickup_user_id || member.id || "").trim();
       const email = String(member.email || "").trim().toLowerCase();
@@ -7749,7 +7766,7 @@ function userDirectoryProfiles() {
     })
     .map((member) => ({
       id: `clickup:${String(member.clickup_user_id || member.id)}`,
-      full_name: member.full_name || member.name || member.email || "Membro ClickUp",
+      full_name: member.full_name || member.name || member.username || member.email || "Membro ClickUp",
       email: member.email || "",
       role: "staff",
       active: false,
