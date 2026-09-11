@@ -246,6 +246,9 @@ let pedPickerState = {
   path: [],
   files: [],
   libraries: [],
+  fullDriveClientId: "",
+  fullDriveClientName: "",
+  fullDriveLibraries: [],
   source: "",
   rootId: "",
   uploadEnabled: false,
@@ -3655,6 +3658,60 @@ function clientHasDrive(client) {
   return Boolean(client && /^https:\/\/drive\.google\.com\//i.test(String(client.drive || "")));
 }
 
+function clientDriveFolderIdentifier(client) {
+  const driveUrl = String(client?.drive || "").trim();
+  const folderMatch = driveUrl.match(/\/folders\/([A-Za-z0-9_-]+)/i);
+  if (folderMatch?.[1]) return folderMatch[1];
+  try {
+    const parsed = new URL(driveUrl);
+    return String(parsed.searchParams.get("id") || "").trim();
+  } catch {
+    return "";
+  }
+}
+
+function pedFullDriveClientForFolder(folderId, folderName = "") {
+  const matches = state.clients.filter((client) => (
+    clientHasDrive(client) && clientDriveFolderIdentifier(client) === String(folderId || "")
+  ));
+  if (matches.length < 2) return matches[0] || null;
+  const normalizedFolderName = normalizeIdentity(folderName);
+  return matches.find((client) => normalizeIdentity(client.name) === normalizedFolderName)
+    || matches.find((client) => normalizedFolderName.includes(normalizeIdentity(client.name)))
+    || matches[0];
+}
+
+function configuredPedClientLibraries(client) {
+  const connections = client?.connections || {};
+  return [
+    {
+      source: "graphics",
+      id: String(connections.graphics_folder_id || ""),
+      name: "GRAFICHE",
+      description: "Grafiche del cliente",
+      tone: "graphics"
+    },
+    {
+      source: "video",
+      id: String(connections.video_folder_id || ""),
+      name: "VIDEO",
+      description: "Video del cliente",
+      tone: "video"
+    }
+  ].filter((library) => library.id);
+}
+
+function mergePedClientLibraries(primary = [], fallback = []) {
+  const libraries = new Map();
+  fallback.forEach((library) => {
+    if (library?.id && library?.source) libraries.set(String(library.source), library);
+  });
+  primary.forEach((library) => {
+    if (library?.id && library?.source) libraries.set(String(library.source), library);
+  });
+  return [...libraries.values()];
+}
+
 function ensurePedClientSelection() {
   const available = [...state.clients].sort((a, b) => String(a.name).localeCompare(String(b.name), "it"));
   if (available.some((client) => String(client.id) === String(selectedPedClientId))) return;
@@ -4947,6 +5004,9 @@ async function openPedDrivePicker(date = "", { appendItem = null, stagingAppendI
     path: remembered?.path || [],
     files: [],
     libraries: remembered?.libraries || [],
+    fullDriveClientId: "",
+    fullDriveClientName: "",
+    fullDriveLibraries: [],
     source: remembered?.source || "",
     rootId: "",
     uploadEnabled: false,
@@ -5050,9 +5110,17 @@ function renderPedCarouselSelection() {
     : addedCount >= 2 ? `Crea carosello (${addedCount})` : "Crea carosello";
 }
 
-async function loadPedPickerFolder(folderId = "", folderName = "", { source = pedPickerState.source, resetPath = false, fresh = false } = {}) {
+async function loadPedPickerFolder(folderId = "", folderName = "", options = {}) {
+  const {
+    source = pedPickerState.source,
+    resetPath = false,
+    fresh = false,
+    fullDriveClient
+  } = options;
   const grid = document.getElementById("pedPickerGrid");
   const loadId = ++pedPickerFolderLoadId;
+  const hasFullDriveClientChange = Object.prototype.hasOwnProperty.call(options, "fullDriveClient");
+  const configuredFullDriveLibraries = fullDriveClient ? configuredPedClientLibraries(fullDriveClient) : [];
   const instantlyAvailable = cachedDriveFolder(selectedPedClientId, folderId, source);
   if (instantlyAvailable) hideDriveFolderLoading(grid);
   else showDriveFolderLoading(grid, "Apertura cartella");
@@ -5069,9 +5137,31 @@ async function loadPedPickerFolder(folderId = "", folderName = "", { source = pe
     pedPickerState.rootId = String(data.root_id || "");
     pedPickerState.uploadEnabled = Boolean(data.upload_enabled);
     if (Array.isArray(data.libraries) && data.libraries.length) pedPickerState.libraries = data.libraries;
+    if (source !== "all") {
+      pedPickerState.fullDriveClientId = "";
+      pedPickerState.fullDriveClientName = "";
+      pedPickerState.fullDriveLibraries = [];
+    } else if (hasFullDriveClientChange) {
+      pedPickerState.fullDriveClientId = String(fullDriveClient?.id || "");
+      pedPickerState.fullDriveClientName = String(fullDriveClient?.name || "");
+      pedPickerState.fullDriveLibraries = configuredFullDriveLibraries;
+    }
     rememberPedPickerLocation();
     hideDriveFolderLoading(grid);
     renderPedPicker();
+    if (source === "all" && fullDriveClient?.id) {
+      fetchDriveLibraries(fullDriveClient.id).then((libraries) => {
+        if (
+          pedPickerState.source !== "all"
+          || String(pedPickerState.fullDriveClientId) !== String(fullDriveClient.id)
+        ) return;
+        pedPickerState.fullDriveLibraries = mergePedClientLibraries(libraries, configuredFullDriveLibraries);
+        renderPedPicker();
+      }).catch(() => {
+        // Gli ID espliciti gia caricati restano disponibili anche se la
+        // risoluzione automatica delle raccolte non risponde temporaneamente.
+      });
+    }
     return true;
   } catch (error) {
     if (loadId !== pedPickerFolderLoadId) return;
@@ -5179,12 +5269,17 @@ function renderPedPicker() {
     if (label) label.textContent = browsingFullDrive ? "Drive cliente" : "Drive completo";
   }
   const isCarouselSelection = pedContentType(pedPickerState.contentType) === "carousel";
-  const libraryCards = pedPickerState.source === "all" ? "" : pedPickerState.libraries.map((library) => `
-      <button class="ped-picker-library is-${escapeHtml(library.tone)}" data-ped-picker-library="${escapeHtml(library.id)}" data-ped-picker-library-source="${escapeHtml(library.source)}" data-ped-picker-name="${escapeHtml(library.name)}" type="button">
+  const browsingFullDrive = pedPickerState.source === "all";
+  const displayedLibraries = browsingFullDrive ? pedPickerState.fullDriveLibraries : pedPickerState.libraries;
+  const libraryClientSuffix = browsingFullDrive && pedPickerState.fullDriveClientName
+    ? ` di ${pedPickerState.fullDriveClientName}`
+    : "";
+  const libraryCards = displayedLibraries.map((library) => `
+      <button class="ped-picker-library is-${escapeHtml(library.tone)}" data-ped-picker-library="${escapeHtml(library.id)}" data-ped-picker-library-source="${escapeHtml(browsingFullDrive ? "all" : library.source)}" data-ped-picker-name="${escapeHtml(library.name)}" type="button">
         <span class="ped-picker-library-icon" aria-hidden="true">${library.source === "video"
           ? `<svg class="lc" viewBox="0 0 24 24"><path d="M3 7h6l2 2h10v12H3z"/><path d="m10 11 6 3-6 3z"/></svg>`
           : `<svg class="lc" viewBox="0 0 24 24"><path d="M3 7h6l2 2h10v12H3z"/><path d="m12 11 .8 1.8 1.9.2-1.4 1.3.4 1.9-1.7-.9-1.7.9.4-1.9L9.3 13l1.9-.2z"/></svg>`}</span>
-        <span><strong>${escapeHtml(library.name)}</strong><small>${escapeHtml(library.description)} · accesso diretto</small></span>
+        <span><strong>${escapeHtml(library.name)}</strong><small>${escapeHtml(library.description)}${escapeHtml(libraryClientSuffix)} · accesso diretto</small></span>
         <svg class="lc ped-picker-library-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
       </button>`).join("");
   breadcrumbs.innerHTML = pedPickerState.path.map((item, index) => {
@@ -11468,9 +11563,13 @@ document.body.addEventListener("click", (event) => {
     pedPickerState.path = [];
     pedPickerState.files = [];
     pedPickerState.source = source;
+    pedPickerState.fullDriveClientId = "";
+    pedPickerState.fullDriveClientName = "";
+    pedPickerState.fullDriveLibraries = [];
     return loadPedPickerFolder("", source === "all" ? "Drive completo" : client?.name || "Drive cliente", {
       source,
-      resetPath: true
+      resetPath: true,
+      fullDriveClient: null
     });
   }
   if (pedCreateFolder) return openDriveManageModal("create-folder", "", "", false, currentDriveManageContext("ped"));
@@ -11482,13 +11581,27 @@ document.body.addEventListener("click", (event) => {
   if (pedViewerPrevious) return navigatePedMediaViewer(-1);
   if (pedViewerNext) return navigatePedMediaViewer(1);
   if (pedPickerLibrary) {
+    const browsingFullDrive = pedPickerState.source === "all";
+    if (browsingFullDrive) pedPickerState.path = pedPickerState.path.slice(0, 2);
     return loadPedPickerFolder(
       pedPickerLibrary.dataset.pedPickerLibrary,
       pedPickerLibrary.dataset.pedPickerName,
-      { source: pedPickerLibrary.dataset.pedPickerLibrarySource, resetPath: true }
+      {
+        source: browsingFullDrive ? "all" : pedPickerLibrary.dataset.pedPickerLibrarySource,
+        resetPath: !browsingFullDrive
+      }
     );
   }
-  if (pedPickerFolder) return loadPedPickerFolder(pedPickerFolder.dataset.pedPickerFolder, pedPickerFolder.dataset.pedPickerName);
+  if (pedPickerFolder) {
+    const opensFullDriveClient = pedPickerState.source === "all" && pedPickerState.path.length === 1;
+    return loadPedPickerFolder(
+      pedPickerFolder.dataset.pedPickerFolder,
+      pedPickerFolder.dataset.pedPickerName,
+      opensFullDriveClient
+        ? { fullDriveClient: pedFullDriveClientForFolder(pedPickerFolder.dataset.pedPickerFolder, pedPickerFolder.dataset.pedPickerName) }
+        : undefined
+    );
+  }
   if (pedPickerFile) return pedContentType(pedPickerState.contentType) === "carousel"
     ? togglePedCarouselFile(pedPickerFile.dataset.pedPickerFile)
     : attachPedDriveFile(pedPickerFile.dataset.pedPickerFile);
@@ -11496,7 +11609,14 @@ document.body.addEventListener("click", (event) => {
   if (pedPickerBreadcrumb) {
     const index = Number(pedPickerBreadcrumb.dataset.pedPickerBreadcrumb);
     const target = pedPickerState.path[index];
-    if (target) return loadPedPickerFolder(target.id, target.name, { source: target.source || "", resetPath: index === 0 });
+    if (target) {
+      const returnsToFullDriveRoot = target.source === "all" && index === 0;
+      return loadPedPickerFolder(target.id, target.name, {
+        source: target.source || "",
+        resetPath: index === 0,
+        ...(returnsToFullDriveRoot ? { fullDriveClient: null } : {})
+      });
+    }
   }
   if (pedPickerClose) return document.getElementById("pedDrivePickerModal").close();
   if (pedCaption) return openPedCaptionModal(pedCaption.dataset.pedCaption);

@@ -1,6 +1,6 @@
 # BMG Hub — memoria operativa degli interventi
 
-Ultimo aggiornamento: 10 settembre 2026
+Ultimo aggiornamento: 11 settembre 2026
 
 ## Scopo del file
 
@@ -58,6 +58,30 @@ più recente alla più vecchia:
 ```
 
 ## Registro modifiche
+
+### 2026-09-11 — Grafiche e Video del cliente nel Drive completo PED
+
+- Richiesta: mostrare gli accessi rapidi alle cartelle Grafiche e Video del
+  cliente aperto quando, dal PED di un altro cliente, si usa `Drive completo`
+  e si entra nella sua cartella.
+- Modifiche: il selettore riconosce la cartella principale del cliente tramite
+  l'ID Drive gia presente nell'anagrafica e sovrappone in alto i collegamenti
+  `GRAFICHE` e `VIDEO` corrispondenti. Gli accessi restano disponibili durante
+  la navigazione nelle sottocartelle e mantengono l'origine OAuth in sola
+  lettura. Nei Drive condivisi, come AMINTA/DAFNE, viene preferito il cliente
+  il cui nome corrisponde alla cartella aperta; uscendo verso la radice generale
+  i collegamenti vengono rimossi per non mostrare raccolte fuori contesto.
+- File: `public/app.js`, `scripts/test-client-drive-libraries.mjs`,
+  `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `node --check public/app.js`, `npm run check`, `npm run build`,
+  `npm run test:client-drive-libraries`, `npm run test:ped-carousel`,
+  `npm run test:permissions`, `npm run test:mobile-navigation`,
+  `git diff --check`; verifica visuale desktop e smartphone in Safari e
+  caricamento produzione in Chrome.
+- Pubblicazione: commit corrente pubblicato su GitHub `main`; deploy Vercel di
+  produzione verificato su `https://bmg-hub.vercel.app`.
+- Note: nessun file Drive o contenuto PED viene creato, spostato o eliminato;
+  `.bmg-redesign-backup/` resta esclusa e non modificata.
 
 ### 2026-09-10 — Drive completo nel selettore PED
 

@@ -1,6 +1,6 @@
 # BMG Hub — contesto per una nuova chat
 
-Ultimo aggiornamento: 10 settembre 2026
+Ultimo aggiornamento: 11 settembre 2026
 Repository locale: `/Users/davidedeluca/Desktop/bmg-hub`  
 Branch di produzione: `main`  
 Ultimo commit applicativo precedente all'ottimizzazione: `435d236`
@@ -284,6 +284,11 @@ supabase/                     schema e migration
   autorizzata e permette di scegliere contenuti anche fuori dalla cartella del
   cliente. La vista generale e in sola lettura, richiede il permesso PED e il
   comando diventa `Drive cliente` per tornare rapidamente al percorso normale.
+  Quando dalla radice completa si entra nella cartella di un altro cliente, il
+  selettore riconosce il cliente tramite l'ID della sua cartella principale e
+  mostra in alto gli accessi diretti alle sue raccolte `GRAFICHE` e `VIDEO`;
+  gli accessi restano visibili anche nelle sottocartelle. Per i Drive condivisi
+  viene preferito il cliente il cui nome corrisponde alla cartella aperta.
   Il backend accetta questi file soltanto quando il selettore dichiara
   esplicitamente la provenienza completa e verifica comunque che appartengano
   alla radice Google Drive dell'account operativo OAuth. Navigazione, anteprime

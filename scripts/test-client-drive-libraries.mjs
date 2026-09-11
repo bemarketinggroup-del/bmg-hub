@@ -141,7 +141,11 @@ assert.match(appSource, /rememberPedPickerLocation\(\)/, "ogni navigazione nel D
 assert.match(appSource, /lastPedPickerLocation\(selectedPedClientId\)/, "il nuovo contenuto PED deve riaprire l'ultima cartella del cliente");
 assert.match(appSource, /libraries: remembered\?\.libraries \|\| \[\]/, "il PED deve ripristinare gli accessi rapidi GRAFICHE e VIDEO");
 assert.match(appSource, /ensurePedPickerLibraries\(selectedPedClientId\)/, "una vecchia cartella ricordata deve recuperare gli accessi rapidi mancanti");
-assert.match(appSource, /const libraryCards = pedPickerState\.source === "all" \? "" : pedPickerState\.libraries\.map/, "GRAFICHE e VIDEO devono comparire nelle sottocartelle del cliente ma non duplicare il Drive completo");
+assert.match(appSource, /function pedFullDriveClientForFolder/, "il Drive completo deve riconoscere la cartella cliente aperta");
+assert.match(appSource, /const displayedLibraries = browsingFullDrive \? pedPickerState\.fullDriveLibraries : pedPickerState\.libraries/, "GRAFICHE e VIDEO devono usare il cliente riconosciuto anche nel Drive completo");
+assert.match(appSource, /data-ped-picker-library-source="\$\{escapeHtml\(browsingFullDrive \? "all" : library\.source\)\}"/, "gli accessi rapidi del Drive completo devono mantenere l'origine OAuth");
+assert.match(appSource, /opensFullDriveClient[\s\S]*?pedFullDriveClientForFolder/, "l'apertura di una cartella cliente deve attivare i suoi accessi rapidi");
+assert.match(appSource, /normalizedFolderName[\s\S]*?normalizeIdentity\(client\.name\) === normalizedFolderName/, "i Drive condivisi devono preferire il cliente che corrisponde al nome della cartella");
 assert.doesNotMatch(appSource, /const libraryCards = !pedPickerState\.source && pedPickerState\.path\.length === 1/, "gli accessi rapidi non devono essere limitati alla radice del cliente");
 assert.match(appSource, /data-drive-download-mime=/, "Clienti e Drive devono conservare il MIME per scegliere Foto su iPhone");
 assert.match(appSource, /function galleryMediaMimeType\(filename = "", mimeType = ""\)/, "il download deve riconoscere foto e video anche dall'estensione");
