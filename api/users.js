@@ -88,12 +88,13 @@ export default async function handler(request, response) {
       return;
     }
     const includeDiagnostics = requestUrl.searchParams.get("include_diagnostics") === "1" && session.profile.role === "admin";
-    const [result, accessResult, authSource] = await Promise.all([
+    const [result, accessResult, authSource, clickUpSource] = await Promise.all([
       supabaseFetch("/staff_profiles?select=*&order=full_name.asc,email.asc"),
       session.profile.role === "admin"
         ? supabaseFetch("/staff_access_logs?select=profile_id,last_activity_at&order=last_activity_at.desc&limit=500")
         : Promise.resolve(null),
-      includeDiagnostics ? listAuthUsers() : Promise.resolve(null)
+      includeDiagnostics ? listAuthUsers() : Promise.resolve(null),
+      includeDiagnostics ? fetchClickUpMembers() : Promise.resolve(null)
     ]);
     const accessRows = accessResult?.ok ? await accessResult.json() : [];
     const accessByProfile = accessRows.reduce((map, item) => {
@@ -113,7 +114,8 @@ export default async function handler(request, response) {
     const profileUserIds = new Set(rows.map((profile) => String(profile.user_id || "")).filter(Boolean));
     const diagnostics = includeDiagnostics && authSource?.ok ? {
       auth_users: authSource.users.length,
-      auth_without_profile: authSource.users.filter((user) => !profileUserIds.has(String(user.id || ""))).length
+      auth_without_profile: authSource.users.filter((user) => !profileUserIds.has(String(user.id || ""))).length,
+      clickup_members: Array.isArray(clickUpSource?.members) ? clickUpSource.members : []
     } : null;
     response.writeHead(result.status, noStoreHeaders);
     response.end(result.ok

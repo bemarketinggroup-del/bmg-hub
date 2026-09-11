@@ -7564,7 +7564,8 @@ function renderUsers() {
     return;
   }
   const canManage = currentProfile?.role === "admin";
-  const profiles = [...(state.staffProfiles || [])].sort((left, right) => (
+  const accounts = [...(state.staffProfiles || [])];
+  const profiles = userDirectoryProfiles().sort((left, right) => (
     String(left.full_name || left.email || "").localeCompare(String(right.full_name || right.email || ""), "it", { sensitivity: "base" })
   ));
   const search = normalizeUserDirectoryText(document.getElementById("userDirectorySearch")?.value);
@@ -7578,16 +7579,21 @@ function renderUsers() {
     return matchesSearch && matchesRole && matchesStatus;
   });
 
-  setUserDirectoryMetric("userTotalCount", profiles.length);
-  setUserDirectoryMetric("userActiveCount", profiles.filter((profile) => profile.active !== false).length);
-  setUserDirectoryMetric("userClickUpCount", profiles.filter((profile) => profile.clickup_user_id).length);
+  setUserDirectoryMetric("userTotalCount", accounts.length);
+  setUserDirectoryMetric("userActiveCount", accounts.filter((profile) => profile.active !== false).length);
+  setUserDirectoryMetric("userClickUpCount", accounts.filter((profile) => profile.clickup_user_id).length);
   const directoryCount = document.getElementById("userDirectoryCount");
   if (directoryCount) directoryCount.textContent = visibleProfiles.length === profiles.length
-    ? `${profiles.length} account`
-    : `${visibleProfiles.length} di ${profiles.length} account`;
+    ? `${profiles.length} persone · ${accounts.length} accessi Hub`
+    : `${visibleProfiles.length} di ${profiles.length} persone`;
 
   const missingProfileCount = Number(userDirectoryState.diagnostics?.auth_without_profile || 0);
-  const integrityNotice = missingProfileCount > 0 ? `<div class="user-directory-integrity p-message p-message-warn"><strong>${missingProfileCount} ${missingProfileCount === 1 ? "accesso esistente non ha" : "accessi esistenti non hanno"} ancora un profilo operativo.</strong><span>Usa Sincronizza ClickUp per collegare gli account mancanti senza creare duplicati.</span></div>` : "";
+  const pendingClickUpCount = profiles.filter((profile) => profile.pending_profile).length;
+  const integrityNotice = missingProfileCount > 0
+    ? `<div class="user-directory-integrity p-message p-message-warn"><strong>${missingProfileCount} ${missingProfileCount === 1 ? "accesso esistente non ha" : "accessi esistenti non hanno"} ancora un profilo operativo.</strong><span>Usa Sincronizza ClickUp per collegare gli account mancanti senza creare duplicati.</span></div>`
+    : pendingClickUpCount > 0
+      ? `<div class="user-directory-integrity p-message p-message-warn"><strong>${pendingClickUpCount} ${pendingClickUpCount === 1 ? "membro ClickUp deve" : "membri ClickUp devono"} ancora essere sincronizzati.</strong><span>Sono già visibili nell'elenco; Sincronizza ClickUp crea o collega gli accessi soltanto dopo la tua conferma.</span></div>`
+      : "";
   target.innerHTML = `${integrityNotice}<div class="p-datatable user-datatable">
     <div class="p-datatable-table-container">
       <table class="p-datatable-table" aria-label="Elenco utenti del gestionale">
@@ -7728,8 +7734,36 @@ function userPermissionCount(profile) {
   return MODULE_DEFINITIONS.filter(({ key }) => profile.module_permissions?.[key]).length;
 }
 
+function userDirectoryProfiles() {
+  const profiles = [...(state.staffProfiles || [])];
+  const linkedClickUpIds = new Set(profiles.map((profile) => String(profile.clickup_user_id || "")).filter(Boolean));
+  const linkedEmails = new Set(profiles.flatMap((profile) => [
+    String(profile.email || "").trim().toLowerCase(),
+    ...userProfileEmailAliases(profile).map((item) => item.email)
+  ]).filter(Boolean));
+  const pending = (userDirectoryState.diagnostics?.clickup_members || [])
+    .filter((member) => {
+      const memberId = String(member.clickup_user_id || member.id || "").trim();
+      const email = String(member.email || "").trim().toLowerCase();
+      return memberId && !linkedClickUpIds.has(memberId) && (!email || !linkedEmails.has(email));
+    })
+    .map((member) => ({
+      id: `clickup:${String(member.clickup_user_id || member.id)}`,
+      full_name: member.full_name || member.name || member.email || "Membro ClickUp",
+      email: member.email || "",
+      role: "staff",
+      active: false,
+      clickup_user_id: String(member.clickup_user_id || member.id),
+      module_permissions: {},
+      pending_profile: true,
+      last_access_at: null
+    }));
+  return [...profiles, ...pending];
+}
+
 function renderUserTableRow(profile, canManage) {
   const label = profile.full_name || profile.email || "Utente";
+  const isPending = profile.pending_profile === true;
   const isActive = profile.active !== false;
   const permissionCount = userPermissionCount(profile);
   const isSelected = userEditorMode === "edit" && String(editingUserProfileId) === String(profile.id);
@@ -7741,12 +7775,12 @@ function renderUserTableRow(profile, canManage) {
       </div>
     </td>
     <td data-label="Ruolo"><span class="p-tag user-role-tag is-${profile.role === "admin" ? "admin" : "staff"}">${profile.role === "admin" ? "Amministratore" : "Staff"}</span></td>
-    <td data-label="Stato"><span class="p-tag user-status-tag ${isActive ? "is-active" : "is-inactive"}"><i aria-hidden="true"></i>${isActive ? "Attivo" : "Disattivato"}</span></td>
+    <td data-label="Stato"><span class="p-tag user-status-tag ${isPending ? "is-pending" : isActive ? "is-active" : "is-inactive"}"><i aria-hidden="true"></i>${isPending ? "Da sincronizzare" : isActive ? "Attivo" : "Disattivato"}</span></td>
     <td data-label="ClickUp"><span class="user-table-link ${profile.clickup_user_id ? "is-linked" : "is-unlinked"}">${profile.clickup_user_id ? "Collegato" : profile.role === "admin" ? "Non richiesto" : "Da collegare"}</span></td>
-    <td data-label="Permessi"><strong class="user-permission-count">${profile.role === "admin" ? "Completi" : `${permissionCount} moduli`}</strong></td>
-    <td data-label="Ultima attività"><span class="user-table-date">${escapeHtml(profile.last_access_at ? formatUserAccessTime(profile.last_access_at) : "Mai registrata")}</span></td>
+    <td data-label="Permessi"><strong class="user-permission-count">${isPending ? "Accesso da creare" : profile.role === "admin" ? "Completi" : `${permissionCount} moduli`}</strong></td>
+    <td data-label="Ultima attività"><span class="user-table-date">${escapeHtml(isPending ? "Non disponibile" : profile.last_access_at ? formatUserAccessTime(profile.last_access_at) : "Mai registrata")}</span></td>
     <td data-label="Azioni" class="user-table-actions">
-      ${canManage ? `<div class="user-table-action-group"><button class="user-table-activity" data-user-activity="${escapeHtml(profile.id)}" type="button" aria-label="Registro attività di ${escapeHtml(label)}"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg><span>Attività</span></button><button class="user-table-edit" data-edit-user="${escapeHtml(profile.id)}" type="button" aria-label="Modifica ${escapeHtml(label)}"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg><span>Modifica</span></button></div>` : `<span class="user-table-readonly">Solo lettura</span>`}
+      ${isPending ? `<span class="user-table-readonly">Sincronizza in alto</span>` : canManage ? `<div class="user-table-action-group"><button class="user-table-activity" data-user-activity="${escapeHtml(profile.id)}" type="button" aria-label="Registro attività di ${escapeHtml(label)}"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg><span>Attività</span></button><button class="user-table-edit" data-edit-user="${escapeHtml(profile.id)}" type="button" aria-label="Modifica ${escapeHtml(label)}"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg><span>Modifica</span></button></div>` : `<span class="user-table-readonly">Solo lettura</span>`}
     </td>
   </tr>`;
 }

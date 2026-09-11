@@ -59,6 +59,9 @@ assert.match(appSource, /apiFetch\("\/api\/users\?include_diagnostics=1", \{[\s\
 assert.match(appSource, /!userDirectoryState\.loaded[\s\S]*Carico tutti gli account/, "il primo accesso deve mostrare il caricamento invece di un elenco locale parziale");
 assert.match(appSource, /data-users-retry/, "un errore iniziale deve offrire il ricaricamento esplicito degli account");
 assert.match(appSource, /auth_without_profile[\s\S]*Sincronizza ClickUp/, "gli accessi Auth privi di profilo devono essere segnalati senza creare account automaticamente");
+assert.match(appSource, /function userDirectoryProfiles\(\)[\s\S]*clickup_members[\s\S]*pending_profile: true/, "la directory deve includere subito i membri ClickUp ancora privi di accesso Hub");
+assert.match(appSource, /pendingClickUpCount[\s\S]*Sono già visibili nell'elenco/, "i membri ClickUp in attesa devono essere spiegati senza sincronizzazioni automatiche");
+assert.match(appSource, /isPending \? "Da sincronizzare"[\s\S]*isPending \? "Accesso da creare"/, "le righe ClickUp senza profilo devono distinguere stato e permessi mancanti");
 assert.match(appSource, /data-delete-user=/, "ogni utente eliminabile deve avere il relativo comando");
 assert.match(appSource, /method: "DELETE"[\s\S]*?JSON\.stringify\(\{ id: profileId \}\)/, "la cancellazione deve passare dall'API utenti");
 assert.match(appSource, /non verra rimosso dal workspace ClickUp/, "la conferma deve spiegare che ClickUp resta intatto");
@@ -67,7 +70,7 @@ assert.match(appSource, /method === "DELETE" \? "delete_user"/, "la cancellazion
 assert.match(apiSource, /jsonHeaders\("GET,POST,PATCH,DELETE,OPTIONS"\)/, "l'API deve dichiarare DELETE");
 assert.match(apiSource, /headers: noStoreHeaders, module: "users"/, "l'API utenti deve disabilitare la cache anche durante la verifica sessione");
 assert.match(apiSource, /response\.writeHead\(result\.status, noStoreHeaders\)/, "l'elenco utenti non deve essere conservato nelle cache intermedie");
-assert.match(apiSource, /include_diagnostics[\s\S]*listAuthUsers\(\)[\s\S]*auth_without_profile/, "l'API deve confrontare in sola lettura profili e account Auth su richiesta admin");
+assert.match(apiSource, /include_diagnostics[\s\S]*listAuthUsers\(\)[\s\S]*fetchClickUpMembers\(\)[\s\S]*auth_without_profile[\s\S]*clickup_members/, "l'API deve confrontare in sola lettura profili, Auth e membri ClickUp su richiesta admin");
 assert.match(apiSource, /body\.action === "create_workspace_user"/, "l'API deve gestire la creazione coordinata");
 assert.match(apiSource, /ensureClickUpWorkspaceMember\(email\)/, "la creazione deve aggiungere o invitare l'utente su ClickUp");
 assert.match(apiSource, /rollbackCreatedUser\(authUser\.id, profile\?\.id\)/, "un errore ClickUp deve annullare l'account interno");
@@ -112,6 +115,7 @@ assert.match(styleSource, /\.user-activity-chart\s*\{[^}]*grid-template-columns:
 assert.match(styleSource, /\.user-activity-bar-meta b\s*\{[^}]*font-size:\s*10px[^}]*\}[\s\S]*\.user-activity-bar-meta small\s*\{[^}]*font-size:\s*9px/, "giorno e durata sotto le barre devono essere più leggibili");
 assert.match(styleSource, /\.user-editor-panel \.p-toggleswitch-input:checked \+ \.p-toggleswitch-slider/, "ToggleSwitch PrimeNG deve mostrare lo stato attivo");
 assert.match(styleSource, /\.user-editor-panel \.p-checkbox-input:checked \+ \.p-checkbox-box/, "Checkbox PrimeNG deve mostrare lo stato selezionato");
+assert.match(styleSource, /\.user-status-tag\.is-pending\s*\{[^}]*amber/, "gli utenti ClickUp da sincronizzare devono avere uno stato visivo dedicato");
 assert.match(styleSource, /\.user-email-add-row\s*\{[^}]*grid-template-columns:[^}]*128px[^}]*auto/, "l'aggiunta email deve avere un layout desktop leggibile");
 assert.match(styleSource, /@media \(max-width: 760px\)[\s\S]*\.user-email-add-row \{ grid-template-columns: 1fr; \}/, "su smartphone i campi email devono impilarsi senza overflow");
 assert.match(styleSource, /@media \(max-width: 760px\)[\s\S]*\.p-datatable-tbody td::before[^}]*attr\(data-label\)/, "su mobile le righe devono mantenere le etichette delle colonne");

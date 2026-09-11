@@ -160,9 +160,10 @@ supabase/                     schema e migration
   deduplica le richieste iniziali concorrenti e non conserva la risposta nelle
   cache del browser o di Vercel; un errore offre il comando `Riprova` senza
   sostituire i profili reali con dati locali parziali. Agli amministratori viene
-  inoltre segnalato se Supabase Auth contiene accessi senza la corrispondente
-  riga operativa, lasciando ogni eventuale riconciliazione al comando esplicito
-  `Sincronizza ClickUp`.
+  inoltre mostrato subito l'intero team ClickUp insieme agli accessi Hub. I
+  membri che non hanno ancora il corrispondente profilo operativo sono marcati
+  `Da sincronizzare`, restano non modificabili e vengono creati o collegati
+  soltanto dopo la conferma esplicita di `Sincronizza ClickUp`.
 - Nel tab `Profilo` ogni account può avere più email di integrazione, marcate
   per `Calendar`, `ClickUp` o entrambi. L'email principale resta l'unica email
   di accesso; gli alias permettono di riconoscere lo stesso utente quando i due
