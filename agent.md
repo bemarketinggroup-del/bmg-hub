@@ -82,7 +82,9 @@ più recente alla più vecchia:
 - Verifiche: `node --check public/app.js`, `node --check api/users.js`,
   `npm run test:users`, `npm run check`, `npm run build`, suite completa degli
   script `scripts/test-*.mjs`, `git diff --check`; verifica visuale desktop e
-  smartphone del primo caricamento e dell'elenco completo in produzione.
+  smartphone del primo caricamento e dell'elenco completo in produzione: 10
+  accessi Hub e il membro ClickUp ancora da sincronizzare sono comparsi insieme
+  al primo refresh, per un totale di 11 persone.
 - Pubblicazione: commit corrente pubblicato su GitHub `main`; deploy Vercel di
   produzione verificato su `https://bmg-hub.vercel.app`.
 - Note: il semplice caricamento non crea né modifica account, permessi,

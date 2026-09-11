@@ -7599,7 +7599,7 @@ function renderUsers() {
   const integrityNotice = missingProfileCount > 0
     ? `<div class="user-directory-integrity p-message p-message-warn"><strong>${missingProfileCount} ${missingProfileCount === 1 ? "accesso esistente non ha" : "accessi esistenti non hanno"} ancora un profilo operativo.</strong><span>Usa Sincronizza ClickUp per collegare gli account mancanti senza creare duplicati.</span></div>`
     : pendingClickUpCount > 0
-      ? `<div class="user-directory-integrity p-message p-message-warn"><strong>${pendingClickUpCount} ${pendingClickUpCount === 1 ? "membro ClickUp deve" : "membri ClickUp devono"} ancora essere sincronizzati.</strong><span>Sono già visibili nell'elenco; Sincronizza ClickUp crea o collega gli accessi soltanto dopo la tua conferma.</span></div>`
+      ? `<div class="user-directory-integrity p-message p-message-warn"><strong>${pendingClickUpCount === 1 ? "1 membro ClickUp deve ancora essere sincronizzato." : `${pendingClickUpCount} membri ClickUp devono ancora essere sincronizzati.`}</strong><span>Sono già visibili nell'elenco; Sincronizza ClickUp crea o collega gli accessi soltanto dopo la tua conferma.</span></div>`
       : "";
   target.innerHTML = `${integrityNotice}<div class="p-datatable user-datatable">
     <div class="p-datatable-table-container">
