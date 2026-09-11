@@ -59,6 +59,29 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-09-11 — Elenco Utenti completo al primo caricamento
+
+- Richiesta: correggere il modulo Utenti che alla prima apertura mostrava
+  soltanto BMG Admin e Staff Test e visualizzava gli altri profili solo dopo
+  più ricariche della pagina.
+- Modifiche: la directory non ripristina più dal browser vecchi snapshot dei
+  profili; l'apertura del modulo richiede sempre l'elenco corrente al backend,
+  unifica le richieste iniziali concorrenti e mostra uno stato di caricamento
+  fino alla risposta completa. Frontend e API disabilitano esplicitamente la
+  cache dell'elenco; in caso di errore resta disponibile `Riprova` e non viene
+  presentata come valida una lista locale parziale.
+- File: `public/app.js`, `api/users.js`,
+  `scripts/test-user-management.mjs`, `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `node --check public/app.js`, `node --check api/users.js`,
+  `npm run test:users`, `npm run check`, `npm run build`, suite completa degli
+  script `scripts/test-*.mjs`, `git diff --check`; verifica visuale desktop e
+  smartphone del primo caricamento e dell'elenco completo in produzione.
+- Pubblicazione: commit corrente pubblicato su GitHub `main`; deploy Vercel di
+  produzione verificato su `https://bmg-hub.vercel.app`.
+- Note: nessun account, permesso, collegamento ClickUp o dato attività viene
+  creato, modificato o eliminato; `.bmg-redesign-backup/` resta esclusa e non
+  modificata.
+
 ### 2026-09-11 — Grafiche e Video del cliente nel Drive completo PED
 
 - Richiesta: mostrare gli accessi rapidi alle cartelle Grafiche e Video del

@@ -77,7 +77,7 @@ export default async function handler(request, response) {
     return;
   }
 
-  const session = await requireUser(request, response, { headers, module: "users" });
+  const session = await requireUser(request, response, { headers: noStoreHeaders, module: "users" });
   if (!session) return;
 
   if (request.method === "GET") {
@@ -108,7 +108,7 @@ export default async function handler(request, response) {
         last_access_at: history[0] || null
       };
     }) : [];
-    response.writeHead(result.status, headers);
+    response.writeHead(result.status, noStoreHeaders);
     response.end(result.ok ? JSON.stringify(rows) : JSON.stringify({ error: "Utenti non disponibili" }));
     return;
   }
@@ -646,12 +646,12 @@ async function provisionClickUpMembers(response) {
 
 async function sendUserActivity(response, session, profileId, requestedDays) {
   if (session.profile.role !== "admin") {
-    response.writeHead(403, headers);
+    response.writeHead(403, noStoreHeaders);
     response.end(JSON.stringify({ error: "Solo gli admin possono vedere le attivita degli utenti" }));
     return;
   }
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(profileId)) {
-    response.writeHead(400, headers);
+    response.writeHead(400, noStoreHeaders);
     response.end(JSON.stringify({ error: "Profilo utente non valido" }));
     return;
   }
@@ -667,14 +667,14 @@ async function sendUserActivity(response, session, profileId, requestedDays) {
     supabaseFetch(`/staff_action_logs?select=id,action_key,action_label,context_label,module_key,endpoint,method,entity_type,entity_id,created_at&profile_id=eq.${profileFilter}&created_at=gte.${encodeURIComponent(actionsSince)}&order=created_at.desc&limit=300`)
   ]);
   if (!profileResult.ok || !dailyResult.ok || !actionsResult.ok) {
-    response.writeHead(502, headers);
+    response.writeHead(502, noStoreHeaders);
     response.end(JSON.stringify({ error: "Registro attivita non disponibile" }));
     return;
   }
 
   const profiles = await profileResult.json();
   if (!profiles[0]) {
-    response.writeHead(404, headers);
+    response.writeHead(404, noStoreHeaders);
     response.end(JSON.stringify({ error: "Profilo utente non trovato" }));
     return;
   }
@@ -688,7 +688,7 @@ async function sendUserActivity(response, session, profileId, requestedDays) {
     session_count: Number(byDate.get(date)?.session_count || 0)
   }));
   const actions = await actionsResult.json();
-  response.writeHead(200, headers);
+  response.writeHead(200, noStoreHeaders);
   response.end(JSON.stringify({ profile: profiles[0], days, daily, actions }));
 }
 

@@ -371,6 +371,8 @@ let authConfig = null;
 let authSession = loadAuthSession();
 let authRefreshPromise = null;
 let currentProfile = null;
+let userDirectoryState = { loading: false, loaded: false, error: "" };
+let userDirectoryLoadPromise = null;
 const userActivityCache = new Map();
 let userActivityDialogProfileId = "";
 let userEditorMode = "";
@@ -387,7 +389,14 @@ function loadState() {
   const saved = localStorage.getItem(STORAGE_KEY);
   if (!saved) return structuredClone(seed);
   try {
-    return { ...structuredClone(seed), ...JSON.parse(saved) };
+    const savedState = JSON.parse(saved);
+    return {
+      ...structuredClone(seed),
+      ...savedState,
+      // La directory utenti e' un dato operativo: non mostrare snapshot locali
+      // precedenti mentre il backend sta ancora caricando l'elenco completo.
+      staffProfiles: []
+    };
   } catch {
     return structuredClone(seed);
   }
@@ -1308,7 +1317,7 @@ function setView(view) {
   } else auditModuleView(isGraphicsView ? "graphics" : view);
   if (view === "calendar") loadGoogleCalendar();
   if (view === "content" && contentOnline === null) loadContentFromBackend();
-  if (view === "users" && !state.staffProfiles.length) loadUsersFromBackend();
+  if (view === "users") void loadUsersFromBackend();
   if (view === "team" && !state.clickupTasks.length) {
     void Promise.allSettled([loadClickUpTeam(), loadClickUpTasks(), loadClickUpTaskLogs(), loadClientAliases()]);
   }
@@ -7480,13 +7489,29 @@ async function saveSmartRules(form) {
 
 async function loadUsersFromBackend() {
   if (!canAccessModule("users")) return;
-  try {
-    const response = await apiFetch("/api/users");
+  if (userDirectoryLoadPromise) return userDirectoryLoadPromise;
+  userDirectoryState.loading = true;
+  userDirectoryState.error = "";
+  renderUsers();
+  userDirectoryLoadPromise = (async () => {
+    const response = await apiFetch("/api/users", {
+      cache: "no-store",
+      headers: { "Cache-Control": "no-cache" }
+    });
     if (!response.ok) throw new Error(`Users backend error ${response.status}`);
-    state.staffProfiles = await response.json();
-    renderUsers();
+    const profiles = await response.json();
+    if (!Array.isArray(profiles)) throw new Error("Users backend response non valida");
+    state.staffProfiles = profiles;
+    userDirectoryState.loaded = true;
+  })();
+  try {
+    await userDirectoryLoadPromise;
   } catch (error) {
+    userDirectoryState.error = error.message || "Utenti non disponibili";
     renderBackendStatus(error.message);
+  } finally {
+    userDirectoryState.loading = false;
+    userDirectoryLoadPromise = null;
     renderUsers();
   }
 }
@@ -7523,6 +7548,17 @@ function renderUsers() {
   if (!canAccessModule("users")) {
     target.innerHTML = emptyState("Il modulo Utenti non e abilitato per questo account.");
     closeUserEditorPanel();
+    return;
+  }
+  if (!userDirectoryState.loaded) {
+    setUserDirectoryMetric("userTotalCount", "—");
+    setUserDirectoryMetric("userActiveCount", "—");
+    setUserDirectoryMetric("userClickUpCount", "—");
+    const directoryCount = document.getElementById("userDirectoryCount");
+    if (directoryCount) directoryCount.textContent = userDirectoryState.loading ? "Caricamento account…" : "Account non disponibili";
+    target.innerHTML = userDirectoryState.loading
+      ? `<div class="graphics-empty"><span class="drive-folder-spinner" aria-hidden="true"></span><strong>Carico tutti gli account…</strong></div>`
+      : `<div class="graphics-empty is-error"><strong>${escapeHtml(userDirectoryState.error || "Non riesco a caricare gli utenti.")}</strong><button class="text-button" data-users-retry type="button">Riprova</button></div>`;
     return;
   }
   const canManage = currentProfile?.role === "admin";
@@ -11308,6 +11344,11 @@ mobileNavigationMedia.addEventListener?.("change", syncMobileNavigation);
 syncMobileNavigation();
 
 document.body.addEventListener("click", (event) => {
+  const usersRetry = event.target.closest("[data-users-retry]");
+  if (usersRetry) {
+    void loadUsersFromBackend();
+    return;
+  }
   if (Date.now() < pedDragSuppressClickUntil && event.target.closest("[data-ped-content], [data-ped-staging]")) {
     event.preventDefault();
     event.stopPropagation();

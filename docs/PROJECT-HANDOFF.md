@@ -154,6 +154,12 @@ supabase/                     schema e migration
   vengono registrati con il relativo cliente.
 - La pagina Utenti non espone la creazione di nuovi account; il provisioning
   coordinato resta disponibile soltanto nel backend.
+- La directory Utenti viene sempre letta dal backend quando si apre il modulo:
+  eventuali vecchi snapshot presenti nel browser vengono ignorati. Il primo
+  caricamento mostra uno stato di attesa fino all'arrivo dell'elenco completo,
+  deduplica le richieste iniziali concorrenti e non conserva la risposta nelle
+  cache del browser o di Vercel; un errore offre il comando `Riprova` senza
+  sostituire i profili reali con dati locali parziali.
 - Nel tab `Profilo` ogni account può avere più email di integrazione, marcate
   per `Calendar`, `ClickUp` o entrambi. L'email principale resta l'unica email
   di accesso; gli alias permettono di riconoscere lo stesso utente quando i due
