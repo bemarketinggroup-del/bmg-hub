@@ -87,11 +87,13 @@ export default async function handler(request, response) {
       await sendUserActivity(response, session, activityProfileId, requestUrl.searchParams.get("days"));
       return;
     }
-    const [result, accessResult] = await Promise.all([
+    const includeDiagnostics = requestUrl.searchParams.get("include_diagnostics") === "1" && session.profile.role === "admin";
+    const [result, accessResult, authSource] = await Promise.all([
       supabaseFetch("/staff_profiles?select=*&order=full_name.asc,email.asc"),
       session.profile.role === "admin"
         ? supabaseFetch("/staff_access_logs?select=profile_id,last_activity_at&order=last_activity_at.desc&limit=500")
-        : Promise.resolve(null)
+        : Promise.resolve(null),
+      includeDiagnostics ? listAuthUsers() : Promise.resolve(null)
     ]);
     const accessRows = accessResult?.ok ? await accessResult.json() : [];
     const accessByProfile = accessRows.reduce((map, item) => {
@@ -108,8 +110,15 @@ export default async function handler(request, response) {
         last_access_at: history[0] || null
       };
     }) : [];
+    const profileUserIds = new Set(rows.map((profile) => String(profile.user_id || "")).filter(Boolean));
+    const diagnostics = includeDiagnostics && authSource?.ok ? {
+      auth_users: authSource.users.length,
+      auth_without_profile: authSource.users.filter((user) => !profileUserIds.has(String(user.id || ""))).length
+    } : null;
     response.writeHead(result.status, noStoreHeaders);
-    response.end(result.ok ? JSON.stringify(rows) : JSON.stringify({ error: "Utenti non disponibili" }));
+    response.end(result.ok
+      ? JSON.stringify(includeDiagnostics ? { users: rows, diagnostics } : rows)
+      : JSON.stringify({ error: "Utenti non disponibili" }));
     return;
   }
 

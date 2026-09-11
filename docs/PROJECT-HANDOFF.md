@@ -159,7 +159,10 @@ supabase/                     schema e migration
   caricamento mostra uno stato di attesa fino all'arrivo dell'elenco completo,
   deduplica le richieste iniziali concorrenti e non conserva la risposta nelle
   cache del browser o di Vercel; un errore offre il comando `Riprova` senza
-  sostituire i profili reali con dati locali parziali.
+  sostituire i profili reali con dati locali parziali. Agli amministratori viene
+  inoltre segnalato se Supabase Auth contiene accessi senza la corrispondente
+  riga operativa, lasciando ogni eventuale riconciliazione al comando esplicito
+  `Sincronizza ClickUp`.
 - Nel tab `Profilo` ogni account può avere più email di integrazione, marcate
   per `Calendar`, `ClickUp` o entrambi. L'email principale resta l'unica email
   di accesso; gli alias permettono di riconoscere lo stesso utente quando i due

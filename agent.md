@@ -69,7 +69,10 @@ più recente alla più vecchia:
   unifica le richieste iniziali concorrenti e mostra uno stato di caricamento
   fino alla risposta completa. Frontend e API disabilitano esplicitamente la
   cache dell'elenco; in caso di errore resta disponibile `Riprova` e non viene
-  presentata come valida una lista locale parziale.
+  presentata come valida una lista locale parziale. Per gli amministratori la
+  stessa lettura confronta in sola lettura i profili operativi con gli account
+  Supabase Auth e segnala eventuali accessi rimasti senza profilo, senza
+  crearli o modificarli automaticamente.
 - File: `public/app.js`, `api/users.js`,
   `scripts/test-user-management.mjs`, `docs/PROJECT-HANDOFF.md`, `agent.md`.
 - Verifiche: `node --check public/app.js`, `node --check api/users.js`,

@@ -371,7 +371,7 @@ let authConfig = null;
 let authSession = loadAuthSession();
 let authRefreshPromise = null;
 let currentProfile = null;
-let userDirectoryState = { loading: false, loaded: false, error: "" };
+let userDirectoryState = { loading: false, loaded: false, error: "", diagnostics: null };
 let userDirectoryLoadPromise = null;
 const userActivityCache = new Map();
 let userActivityDialogProfileId = "";
@@ -7494,14 +7494,16 @@ async function loadUsersFromBackend() {
   userDirectoryState.error = "";
   renderUsers();
   userDirectoryLoadPromise = (async () => {
-    const response = await apiFetch("/api/users", {
+    const response = await apiFetch("/api/users?include_diagnostics=1", {
       cache: "no-store",
       headers: { "Cache-Control": "no-cache" }
     });
     if (!response.ok) throw new Error(`Users backend error ${response.status}`);
-    const profiles = await response.json();
+    const payload = await response.json();
+    const profiles = Array.isArray(payload) ? payload : payload?.users;
     if (!Array.isArray(profiles)) throw new Error("Users backend response non valida");
     state.staffProfiles = profiles;
+    userDirectoryState.diagnostics = payload?.diagnostics || null;
     userDirectoryState.loaded = true;
   })();
   try {
@@ -7584,7 +7586,9 @@ function renderUsers() {
     ? `${profiles.length} account`
     : `${visibleProfiles.length} di ${profiles.length} account`;
 
-  target.innerHTML = `<div class="p-datatable user-datatable">
+  const missingProfileCount = Number(userDirectoryState.diagnostics?.auth_without_profile || 0);
+  const integrityNotice = missingProfileCount > 0 ? `<div class="user-directory-integrity p-message p-message-warn"><strong>${missingProfileCount} ${missingProfileCount === 1 ? "accesso esistente non ha" : "accessi esistenti non hanno"} ancora un profilo operativo.</strong><span>Usa Sincronizza ClickUp per collegare gli account mancanti senza creare duplicati.</span></div>` : "";
+  target.innerHTML = `${integrityNotice}<div class="p-datatable user-datatable">
     <div class="p-datatable-table-container">
       <table class="p-datatable-table" aria-label="Elenco utenti del gestionale">
         <thead class="p-datatable-thead">

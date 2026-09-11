@@ -55,9 +55,10 @@ assert.match(appSource, /event\.key === "Tab" && userEditorMode[\s\S]*panel\?\.q
 assert.match(appSource, /normalizeUserDirectoryText[\s\S]*matchesSearch[\s\S]*matchesRole[\s\S]*matchesStatus/, "ricerca e filtri devono essere applicati insieme");
 assert.match(appSource, /staffProfiles:\s*\[\][\s\S]*snapshot locali/, "gli snapshot utenti salvati nel browser non devono apparire prima della risposta backend");
 assert.match(appSource, /if \(userDirectoryLoadPromise\) return userDirectoryLoadPromise/, "le richieste utenti iniziali concorrenti devono condividere la stessa chiamata");
-assert.match(appSource, /apiFetch\("\/api\/users", \{[\s\S]*cache: "no-store"/, "il browser non deve riusare risposte precedenti della directory utenti");
+assert.match(appSource, /apiFetch\("\/api\/users\?include_diagnostics=1", \{[\s\S]*cache: "no-store"/, "il browser non deve riusare risposte precedenti della directory utenti");
 assert.match(appSource, /!userDirectoryState\.loaded[\s\S]*Carico tutti gli account/, "il primo accesso deve mostrare il caricamento invece di un elenco locale parziale");
 assert.match(appSource, /data-users-retry/, "un errore iniziale deve offrire il ricaricamento esplicito degli account");
+assert.match(appSource, /auth_without_profile[\s\S]*Sincronizza ClickUp/, "gli accessi Auth privi di profilo devono essere segnalati senza creare account automaticamente");
 assert.match(appSource, /data-delete-user=/, "ogni utente eliminabile deve avere il relativo comando");
 assert.match(appSource, /method: "DELETE"[\s\S]*?JSON\.stringify\(\{ id: profileId \}\)/, "la cancellazione deve passare dall'API utenti");
 assert.match(appSource, /non verra rimosso dal workspace ClickUp/, "la conferma deve spiegare che ClickUp resta intatto");
@@ -66,6 +67,7 @@ assert.match(appSource, /method === "DELETE" \? "delete_user"/, "la cancellazion
 assert.match(apiSource, /jsonHeaders\("GET,POST,PATCH,DELETE,OPTIONS"\)/, "l'API deve dichiarare DELETE");
 assert.match(apiSource, /headers: noStoreHeaders, module: "users"/, "l'API utenti deve disabilitare la cache anche durante la verifica sessione");
 assert.match(apiSource, /response\.writeHead\(result\.status, noStoreHeaders\)/, "l'elenco utenti non deve essere conservato nelle cache intermedie");
+assert.match(apiSource, /include_diagnostics[\s\S]*listAuthUsers\(\)[\s\S]*auth_without_profile/, "l'API deve confrontare in sola lettura profili e account Auth su richiesta admin");
 assert.match(apiSource, /body\.action === "create_workspace_user"/, "l'API deve gestire la creazione coordinata");
 assert.match(apiSource, /ensureClickUpWorkspaceMember\(email\)/, "la creazione deve aggiungere o invitare l'utente su ClickUp");
 assert.match(apiSource, /rollbackCreatedUser\(authUser\.id, profile\?\.id\)/, "un errore ClickUp deve annullare l'account interno");
