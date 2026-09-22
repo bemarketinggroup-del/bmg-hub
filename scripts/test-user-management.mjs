@@ -6,6 +6,7 @@ import {
   taskWithoutDirectoryExclusions,
   visibleClickUpMembers
 } from "../lib/user-directory-exclusions.js";
+import { isCompleteStaffName, normalizeStaffFullName, staffNameParts } from "../lib/staff-names.js";
 
 const [apiSource, clickUpSource, smartEmployeeSource, directoryExclusionSource, clickUpTeamApiSource, clickUpTasksApiSource, appSource, htmlSource, styleSource, schemaSource, migrationSource] = await Promise.all([
   readFile(new URL("../api/users.js", import.meta.url), "utf8"),
@@ -47,7 +48,7 @@ assert.match(appSource, /function openUserEditPanel\(profileId\)/, "la modifica 
 assert.match(appSource, /class="p-tabs user-editor-tabs"/, "l'editor deve usare Tabs PrimeNG");
 assert.doesNotMatch(appSource, /data-user-editor-tab="activity"|id="userEditorActivityPanel"/, "il registro attività non deve più essere dentro il pannello di modifica");
 assert.match(appSource, /data-user-editor-tab="profile"[^>]*aria-selected="true"/, "Profilo deve essere la prima tab attiva dell'editor");
-assert.match(appSource, /class="p-toggleswitch"[\s\S]*class="p-inputtext" data-user-name[\s\S]*class="p-select" data-user-role/, "profilo e stato devono usare i controlli PrimeNG");
+assert.match(appSource, /class="p-toggleswitch"[\s\S]*data-user-first-name[\s\S]*data-user-last-name[\s\S]*class="p-select" data-user-role/, "profilo e stato devono usare i controlli PrimeNG e separare nome e cognome");
 assert.match(appSource, /Email integrazioni[\s\S]*data-user-email-input[\s\S]*data-user-email-service[\s\S]*data-add-user-email/, "il profilo deve permettere di aggiungere email per Calendar e ClickUp");
 assert.match(appSource, /email_aliases: collectUserEmailAliases\(row\)/, "il salvataggio utente deve inviare tutte le email collegate");
 assert.match(appSource, /preferredUserProfileEmail\(member, "calendar"\)/, "gli inviti Calendar devono usare l'email Calendar preferita");
@@ -88,6 +89,8 @@ assert.match(apiSource, /headers: noStoreHeaders, module: "users"/, "l'API utent
 assert.match(apiSource, /response\.writeHead\(result\.status, noStoreHeaders\)/, "l'elenco utenti non deve essere conservato nelle cache intermedie");
 assert.match(apiSource, /include_diagnostics[\s\S]*listAuthUsers\(\)[\s\S]*fetchClickUpMembers\(\)[\s\S]*auth_without_profile[\s\S]*clickup_members/, "l'API deve confrontare in sola lettura profili, Auth e membri ClickUp su richiesta admin");
 assert.match(apiSource, /body\.action === "create_workspace_user"/, "l'API deve gestire la creazione coordinata");
+assert.match(apiSource, /isCompleteStaffName\(payloadInput\.full_name\)[\s\S]*Inserisci nome e cognome/, "l'API deve rifiutare la creazione di profili senza nome e cognome");
+assert.match(apiSource, /isCompleteStaffName\(payload\.full_name\)[\s\S]*Inserisci nome e cognome/, "l'API deve rifiutare l'aggiornamento di profili senza nome e cognome");
 assert.match(apiSource, /ensureClickUpWorkspaceMember\(email\)/, "la creazione deve aggiungere o invitare l'utente su ClickUp");
 assert.match(apiSource, /rollbackCreatedUser\(authUser\.id, profile\?\.id\)/, "un errore ClickUp deve annullare l'account interno");
 assert.match(apiSource, /profileId === session\.profile\.id/, "un amministratore non deve potersi eliminare da solo");
@@ -158,6 +161,14 @@ assert.deepEqual(
 
 assert.match(clickUpSource, /\/team\/\$\{encodeURIComponent\(workspaceId\)\}\/user/, "l'invito deve usare l'endpoint membri del workspace");
 assert.match(clickUpSource, /JSON\.stringify\(\{ email: normalizedEmail, admin: false \}\)/, "l'utente ClickUp deve essere invitato come membro non amministratore");
+
+assert.equal(normalizeStaffFullName("  andriy   yudka "), "Andriy Yudka", "il nome deve essere formattato in modo uniforme");
+assert.equal(normalizeStaffFullName("sabrina abdelkafi"), "Sabrina Abdelkafi", "anche il cognome deve avere maiuscole coerenti");
+assert.equal(normalizeStaffFullName("bmg admin"), "BMG Admin", "l'acronimo BMG deve essere preservato");
+assert.equal(isCompleteStaffName("Marcello Carrino"), true, "nome e cognome devono essere accettati");
+assert.equal(isCompleteStaffName("Andriy"), false, "il solo nome deve essere rifiutato");
+assert.equal(isCompleteStaffName("marcellocarrino@gmail.com"), false, "un'email non deve essere accettata come nome");
+assert.deepEqual(staffNameParts("Davide De Luca"), { firstName: "Davide", lastName: "De Luca" }, "i cognomi composti devono essere conservati");
 
 assert.match(styleSource, /\.p-datatable-table\s*\{[^}]*width:\s*100%/, "la DataTable deve occupare il pannello disponibile");
 assert.match(styleSource, /\.user-editor-overlay\s*\{[^}]*position:\s*fixed[^}]*opacity:\s*0/, "l'overlay deve coprire la pagina ed entrare con dissolvenza");

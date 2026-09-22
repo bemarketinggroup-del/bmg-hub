@@ -9,6 +9,7 @@ import {
   validStaffEmail
 } from "../lib/staff-email-identities.js";
 import { syncSmartWorkingEmployee } from "../lib/smart-working-employees.js";
+import { isCompleteStaffName, normalizeStaffFullName } from "../lib/staff-names.js";
 import {
   hydrateDirectoryExclusions,
   loadDirectoryExclusions,
@@ -105,7 +106,7 @@ async function restoreDirectoryMember(response, session, body) {
 function userPayload(body) {
   const role = body.role === "admin" ? "admin" : "staff";
   return {
-    full_name: String(body.full_name || "").trim() || null,
+    full_name: normalizeStaffFullName(body.full_name) || null,
     role,
     clickup_user_id: String(body.clickup_user_id || "").trim() || null,
     active: body.active !== false,
@@ -223,6 +224,11 @@ export default async function handler(request, response) {
     }
 
     const payloadInput = userPayload(body);
+    if (!isCompleteStaffName(payloadInput.full_name)) {
+      response.writeHead(400, headers);
+      response.end(JSON.stringify({ error: "Inserisci nome e cognome" }));
+      return;
+    }
     const emailAliases = await validateStaffEmailAliases(body.email_aliases || [], body.email);
     if (!emailAliases.ok) {
       response.writeHead(emailAliases.status, headers);
@@ -255,7 +261,7 @@ export default async function handler(request, response) {
         email,
         password,
         email_confirm: true,
-        user_metadata: { full_name: clickUpMember.member?.full_name || String(body.full_name || "").trim() }
+        user_metadata: { full_name: payloadInput.full_name }
       })
     });
     const authBody = await authResult.json().catch(() => ({}));
@@ -268,7 +274,7 @@ export default async function handler(request, response) {
 
     const payload = {
       ...payloadInput,
-      full_name: clickUpMember.member?.full_name || payloadInput.full_name,
+      full_name: payloadInput.full_name,
       clickup_user_id: clickUpMember.member?.id || payloadInput.clickup_user_id,
       user_id: authUser.id,
       email
@@ -315,6 +321,11 @@ export default async function handler(request, response) {
     }
 
     const payload = userPayload(body);
+    if (!isCompleteStaffName(payload.full_name)) {
+      response.writeHead(400, headers);
+      response.end(JSON.stringify({ error: "Inserisci nome e cognome" }));
+      return;
+    }
     const emailAliases = await validateStaffEmailAliases(
       body.email_aliases,
       body.email,
@@ -335,7 +346,6 @@ export default async function handler(request, response) {
     }
     if (clickUpMember.member) {
       payload.clickup_user_id = clickUpMember.member.id;
-      payload.full_name = payload.full_name || clickUpMember.member.full_name;
     }
     if (id === session.profile.id && (payload.role !== "admin" || payload.active === false)) {
       response.writeHead(400, headers);
@@ -379,7 +389,7 @@ export default async function handler(request, response) {
 async function createWorkspaceUser(response, body) {
   const firstName = String(body.first_name || "").trim();
   const lastName = String(body.last_name || "").trim();
-  const fullName = [firstName, lastName].filter(Boolean).join(" ");
+  const fullName = normalizeStaffFullName([firstName, lastName].filter(Boolean).join(" "));
   const email = normalizedEmail(body.email);
   const password = String(body.password || "");
   if (!firstName || !lastName) {
@@ -635,7 +645,7 @@ async function createStaffProfileForMember(member, userId) {
     body: JSON.stringify({
       user_id: userId,
       email: member.email,
-      full_name: member.full_name,
+      full_name: normalizeStaffFullName(member.full_name),
       role: "staff",
       clickup_user_id: member.id,
       active: true,
@@ -678,8 +688,14 @@ async function provisionClickUpMembers(response) {
       skipped.push({ clickup_user_id: member.id, full_name: member.full_name, reason: "email ClickUp mancante" });
       continue;
     }
+    const memberHasCompleteName = isCompleteStaffName(member.full_name);
+    if (memberHasCompleteName) member.full_name = normalizeStaffFullName(member.full_name);
     const byId = profiles.find((profile) => profileMatchesClickUpMember(profile, member));
     if (byId) {
+      if (!isCompleteStaffName(byId.full_name)) {
+        skipped.push({ clickup_user_id: member.id, full_name: member.full_name, reason: "nome e cognome mancanti nel profilo Hub" });
+        continue;
+      }
       const smartEmployee = await syncSmartWorkingEmployee(byId);
       if (!smartEmployee.ok) {
         skipped.push({ clickup_user_id: member.id, full_name: member.full_name, reason: "sincronizzazione Turni / Smart Working non riuscita" });
@@ -694,10 +710,17 @@ async function provisionClickUpMembers(response) {
         skipped.push({ clickup_user_id: member.id, full_name: member.full_name, reason: "email collegata a un altro ID ClickUp" });
         continue;
       }
+      if (!isCompleteStaffName(byEmail.full_name) && !memberHasCompleteName) {
+        skipped.push({ clickup_user_id: member.id, full_name: member.full_name, reason: "nome e cognome mancanti nel profilo Hub e su ClickUp" });
+        continue;
+      }
       const patchResult = await supabaseFetch(`/staff_profiles?id=eq.${encodeURIComponent(byEmail.id)}`, {
         method: "PATCH",
         headers: { Prefer: "return=representation" },
-        body: JSON.stringify({ clickup_user_id: member.id, full_name: byEmail.full_name || member.full_name })
+        body: JSON.stringify({
+          clickup_user_id: member.id,
+          full_name: isCompleteStaffName(byEmail.full_name) ? normalizeStaffFullName(byEmail.full_name) : member.full_name
+        })
       });
       if (!patchResult.ok) {
         skipped.push({ clickup_user_id: member.id, full_name: member.full_name, reason: "collegamento profilo non riuscito" });
@@ -710,6 +733,11 @@ async function provisionClickUpMembers(response) {
         continue;
       }
       linked.push({ clickup_user_id: member.id, email: member.email, full_name: member.full_name, status: "collegato ora" });
+      continue;
+    }
+
+    if (!memberHasCompleteName) {
+      skipped.push({ clickup_user_id: member.id, full_name: member.full_name, reason: "nome e cognome mancanti su ClickUp" });
       continue;
     }
 

@@ -7289,7 +7289,31 @@ function staffById(data, id) {
 }
 
 function staffName(employee) {
-  return employee?.full_name || employee?.email || "Staff";
+  return formatStaffFullName(employee?.full_name) || employee?.email || "Staff";
+}
+
+function formatStaffFullName(value) {
+  const cleaned = String(value || "").trim().replace(/\s+/g, " ");
+  if (cleaned.includes("@")) return cleaned;
+  return cleaned
+    .split(" ")
+    .filter(Boolean)
+    .map((token) => token.toUpperCase() === "BMG" ? "BMG" : token
+      .split(/([-'])/)
+      .map((part) => {
+        if (part === "-" || part === "'") return part;
+        const lower = part.toLocaleLowerCase("it-IT");
+        return `${lower.charAt(0).toLocaleUpperCase("it-IT")}${lower.slice(1)}`;
+      })
+      .join(""))
+    .join(" ");
+}
+
+function staffFullNameParts(value) {
+  const normalized = formatStaffFullName(value);
+  if (!normalized || normalized.includes("@")) return { firstName: "", lastName: "" };
+  const [firstName = "", ...lastNameParts] = normalized.split(" ");
+  return { firstName, lastName: lastNameParts.join(" ") };
 }
 
 function formatSmartDate(date) {
@@ -7523,7 +7547,10 @@ async function loadUsersFromBackend() {
       const tasks = await taskResponse.json().catch(() => []);
       if (Array.isArray(tasks)) state.clickupTasks = tasks;
     }
-    state.staffProfiles = profiles;
+    state.staffProfiles = profiles.map((profile) => ({
+      ...profile,
+      full_name: formatStaffFullName(profile.full_name)
+    }));
     userDirectoryState.diagnostics = payload?.diagnostics || null;
     userDirectoryState.loaded = true;
   })();
@@ -7831,7 +7858,7 @@ function excludedUserDirectoryProfiles() {
 }
 
 function renderUserTableRow(profile, canManage) {
-  const label = profile.full_name || profile.email || "Utente";
+  const label = formatStaffFullName(profile.full_name) || profile.email || "Utente";
   const isPending = profile.pending_profile === true;
   const isExcluded = profile.excluded_profile === true;
   const isActive = profile.active !== false;
@@ -7922,7 +7949,8 @@ function openUserEditPanel(profileId) {
 
 function renderUserEditPanel(profile) {
   const target = document.getElementById("userEditContent");
-  const label = profile.full_name || profile.email || "Utente";
+  const label = formatStaffFullName(profile.full_name) || profile.email || "Utente";
+  const { firstName, lastName } = staffFullNameParts(profile.full_name);
   if (!target) return;
   document.getElementById("userEditorEyebrow").textContent = "Modifica account CMS";
   document.getElementById("userEditorTitle").textContent = label;
@@ -7951,8 +7979,11 @@ function renderUserEditPanel(profile) {
             </label>
           </div>
           <div class="user-access-fields p-fluid">
-            <label>Nome visualizzato
-              <input class="p-inputtext" data-user-name value="${escapeHtml(profile.full_name || "")}" placeholder="Nome staff">
+            <label>Nome
+              <input class="p-inputtext" data-user-first-name value="${escapeHtml(firstName)}" placeholder="Nome" autocomplete="given-name" required>
+            </label>
+            <label>Cognome
+              <input class="p-inputtext" data-user-last-name value="${escapeHtml(lastName)}" placeholder="Cognome" autocomplete="family-name" required>
             </label>
             <label>Ruolo
               <select class="p-select" data-user-role>
@@ -7965,6 +7996,7 @@ function renderUserEditPanel(profile) {
                 ${clickUpMemberOptions(profile.clickup_user_id, profile.id, profile.role === "admin")}
               </select>
             </label>
+            <p class="user-name-format-note">Il nome verrà mostrato sempre nel formato Nome Cognome.</p>
           </div>
           <section class="user-email-section p-panel" aria-labelledby="userEmailSectionTitle">
             <div class="user-email-section-head">
@@ -8289,11 +8321,22 @@ async function saveUserProfile(row) {
   const id = row.dataset.userId;
   const profile = state.staffProfiles.find((item) => item.id === id);
   if (!profile) return;
+  const firstNameInput = row.querySelector("[data-user-first-name]");
+  const lastNameInput = row.querySelector("[data-user-last-name]");
+  const firstNameValue = String(firstNameInput?.value || "").trim();
+  const lastNameValue = String(lastNameInput?.value || "").trim();
+  if (!firstNameValue || !lastNameValue) {
+    const missingInput = !firstNameValue ? firstNameInput : lastNameInput;
+    missingInput?.focus();
+    missingInput?.reportValidity();
+    alert("Inserisci nome e cognome.");
+    return;
+  }
   const payload = {
     id,
     email: profile.email,
     email_aliases: collectUserEmailAliases(row),
-    full_name: row.querySelector("[data-user-name]").value,
+    full_name: formatStaffFullName(`${firstNameValue} ${lastNameValue}`),
     role: row.querySelector("[data-user-role]").value,
     clickup_user_id: row.querySelector("[data-user-clickup]").value,
     active: row.querySelector("[data-user-active]").checked,

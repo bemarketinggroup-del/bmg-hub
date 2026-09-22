@@ -190,6 +190,11 @@ supabase/                     schema e migration
   servizi usano indirizzi diversi. Gli inviti creati dal calendario CRM usano
   l'indirizzo Calendar preferito e le email non possono essere condivise tra
   profili diversi.
+- Ogni profilo deve avere nome e cognome: il drawer li raccoglie in due campi
+  distinti e li mostra in modo uniforme come `Nome Cognome`. L'API rifiuta sia
+  i nomi composti da una sola parola sia le email usate come nome visualizzato;
+  anche la sincronizzazione ClickUp non può creare nuovi profili incompleti.
+  Salvare il profilo aggiorna la stessa anagrafica nei Turni / Smart Working.
 - Il layer PrimeNG condiviso converte trasversalmente Button, InputText,
   Textarea, Select, Checkbox, RadioButton, FileUpload, Card, Panel, Toolbar,
   Table, Tabs, Dialog, Drawer, Popover, Tag, Badge, Avatar, Message,

@@ -5384,8 +5384,8 @@ body.user-editor-visible { overflow: hidden; }
 .user-editor-account.p-card { border: 1px solid var(--line); border-radius: 10px; background: var(--surface-soft); padding: 13px; }
 .user-editor-account .user-identity strong,
 .user-editor-account .user-identity span { display: block; max-width: 230px; }
-.user-editor-panel .user-access-fields { grid-template-columns: minmax(0, 1fr) 132px; }
-.user-editor-panel .user-access-fields label:last-child { grid-column: 1 / -1; }
+.user-editor-panel .user-access-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.user-name-format-note { grid-column: 1 / -1; margin: -4px 0 0; color: var(--muted); font-size: 10px; line-height: 1.45; }
 .user-editor-panel .user-permission-section { grid-template-columns: 1fr; gap: 12px; padding-top: 14px; }
 .user-editor-panel .user-permission-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .user-editor-panel .user-access-actions {
@@ -8821,7 +8821,7 @@ body.chat-view-active #chatView {
   .user-editor-account { align-items: flex-start; flex-direction: column; }
   .user-editor-panel .user-access-fields,
   .user-editor-panel .user-permission-grid { grid-template-columns: 1fr; }
-  .user-editor-panel .user-access-fields label:last-child { grid-column: auto; }
+  .user-name-format-note { grid-column: auto; }
   .user-email-section-head { align-items: stretch; flex-direction: column; }
   .user-primary-email-tag.p-tag { max-width: none; }
   .user-email-add-row { grid-template-columns: 1fr; }

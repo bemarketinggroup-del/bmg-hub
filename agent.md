@@ -59,6 +59,27 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-09-22 — Nomi utenti uniformi con nome e cognome obbligatori
+
+- Richiesta: mostrare tutti gli utenti con nome e cognome, senza record composti
+  dal solo nome o dall'email e con la stessa formattazione.
+- Modifiche: il profilo utente separa ora `Nome` e `Cognome`, formatta in modo
+  uniforme il nome completo e impedisce il salvataggio se uno dei due manca.
+  Il backend applica la stessa normalizzazione, rifiuta nomi incompleti o
+  email usate come nome e impedisce al provisioning ClickUp di creare nuovi
+  profili senza nome e cognome. I nomi corretti vengono propagati anche
+  all'anagrafica Turni / Smart Working.
+- File: `lib/staff-names.js`, `api/users.js`, `public/app.js`,
+  `public/styles.css`, `scripts/test-user-management.mjs`,
+  `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run test:users`, `npm run test:smart-working`, `npm run
+  test:permissions`, `npm run test:mobile-navigation`, `npm run build`, `git
+  diff --check`; controllo desktop e smartphone sulla versione pubblicata.
+- Pubblicazione: commit corrente pubblicato su GitHub `main`; deploy Vercel di
+  produzione verificato su `https://bmg-hub.vercel.app`.
+- Note: anagrafiche attive normalizzate in produzione per Andriy Yudka,
+  Marcello Carrino e Sabrina Abdelkafi, senza eliminare account o storico.
+
 ### 2026-09-22 — Turni e Smart Working modificabili solo dagli amministratori
 
 - Richiesta: impedire agli utenti non amministratori di modificare i turni
