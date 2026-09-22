@@ -69,8 +69,9 @@ più recente alla più vecchia:
   i membri del team occupano due righe. Luogo, invitati esterni e descrizione
   restano disponibili nel pannello progressivo `Altri dettagli`, chiuso nelle
   nuove creazioni e aperto automaticamente quando si modifica un evento che
-  contiene quei dati. La variante smartphone mantiene il dialogo fermo e usa
-  una griglia compatta con scorrimento limitato al solo elenco partecipanti.
+  contiene quei dati. La variante compatta, attiva anche sui tablet stretti
+  fino a 800 px, mantiene il dialogo fermo e usa una griglia con scorrimento
+  limitato al solo elenco partecipanti.
 - File: `public/index.html`, `public/styles.css`, `public/app.js`,
   `scripts/test-google-calendar.mjs`, `docs/PROJECT-HANDOFF.md`, `agent.md`.
 - Verifiche: `node --check public/app.js`, `npm run test:google-calendar`, `npm

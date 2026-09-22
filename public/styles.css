@@ -6727,20 +6727,6 @@ body.user-activity-dialog-visible { overflow: hidden; }
   .google-calendar-legend { padding: 10px 14px; gap: 8px 12px; overflow-x: auto; flex-wrap: nowrap; }
   .google-calendar-grid { min-height: 520px; overflow-x: auto; }
   .google-calendar-weekdays, .google-calendar-month-grid { min-width: 770px; }
-  .calendar-event-modal { width: calc(100vw - 12px); max-height: calc(100dvh - 12px); }
-  .calendar-event-modal form { max-height: calc(100dvh - 12px); padding: 14px; }
-  .calendar-event-modal .modal-head { margin-bottom: 9px; padding-bottom: 9px; }
-  .calendar-event-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-  .calendar-event-title-field,
-  .calendar-event-category-field { grid-column: 1 / -1; }
-  .calendar-event-category-field small { display: none; }
-  .calendar-event-schedule { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; padding: 8px; }
-  .calendar-all-day-field { grid-column: 1 / -1; }
-  .calendar-event-more summary > small { display: none; }
-  .calendar-event-more-grid { grid-template-columns: 1fr; }
-  .calendar-event-more-grid .full { grid-column: auto; }
-  .calendar-event-actions { flex-wrap: wrap; margin-top: 9px; padding-top: 9px; }
-  .calendar-actions-spacer { display: none; }
   .calendar-event-detail-shell { padding: 20px; }
   .calendar-event-detail-actions { align-items: stretch; flex-direction: column-reverse; }
   .calendar-event-detail-actions > * { justify-content: center; width: 100%; }
@@ -8163,7 +8149,19 @@ body.user-activity-dialog-visible { overflow: hidden; }
   .task-assignee-checklist { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
-@media (max-width: 720px) {
+@media (max-width: 800px) {
+  .calendar-event-modal { width: calc(100vw - 12px); max-height: calc(100dvh - 12px); }
+  .calendar-event-modal form { max-height: calc(100dvh - 12px); padding: 14px; }
+  .calendar-event-modal .modal-head { margin-bottom: 9px; padding-bottom: 9px; }
+  .calendar-event-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .calendar-event-title-field,
+  .calendar-event-category-field { grid-column: 1 / -1; }
+  .calendar-event-category-field small { display: none; }
+  .calendar-event-schedule { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; padding: 8px; }
+  .calendar-all-day-field { grid-column: 1 / -1; }
+  .calendar-event-more summary > small { display: none; }
+  .calendar-event-actions { flex-wrap: wrap; margin-top: 9px; padding-top: 9px; }
+  .calendar-actions-spacer { display: none; }
   .calendar-attendees-field { padding: 8px; }
   .calendar-team-attendees {
     grid-template-columns: repeat(2, minmax(0, 1fr));
