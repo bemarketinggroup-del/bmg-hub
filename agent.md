@@ -59,6 +59,31 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-09-22 — Creazione eventi calendario compatta e senza scroll
+
+- Richiesta: rendere la schermata di creazione evento piu minimale e semplice,
+  senza scroll della finestra, mantenendo date, orari, partecipanti e tutte le
+  informazioni gia disponibili.
+- Modifiche: ampliato e compattato il dialogo desktop; titolo e categoria sono
+  affiancati, date, orari e intera giornata sono raccolti in una sola fascia e
+  i membri del team occupano due righe. Luogo, invitati esterni e descrizione
+  restano disponibili nel pannello progressivo `Altri dettagli`, chiuso nelle
+  nuove creazioni e aperto automaticamente quando si modifica un evento che
+  contiene quei dati. La variante smartphone mantiene il dialogo fermo e usa
+  una griglia compatta con scorrimento limitato al solo elenco partecipanti.
+- File: `public/index.html`, `public/styles.css`, `public/app.js`,
+  `scripts/test-google-calendar.mjs`, `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `node --check public/app.js`, `npm run test:google-calendar`, `npm
+  run test:permissions`, `npm run test:mobile-navigation`, `npm run
+  test:primeng-components`, `npm run check`, `npm run build`, `git diff
+  --check`; controllo visuale desktop e smartphone del dialogo senza creare o
+  salvare eventi reali.
+- Pubblicazione: commit corrente pubblicato su GitHub `main`; deploy Vercel di
+  produzione verificato su `https://bmg-hub.vercel.app`.
+- Note: tutti i campi e il comportamento di modifica/eliminazione restano
+  invariati; su smartphone puo scorrere soltanto la lista compatta dei membri,
+  non l'intera finestra evento.
+
 ### 2026-09-22 — AI integrata nella bozza e cliente riconosciuto durante la scrittura
 
 - Richiesta: permettere di usare l'AI mentre si crea una task, senza doverla

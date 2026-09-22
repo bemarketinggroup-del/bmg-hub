@@ -140,6 +140,11 @@ const appSource = await readFile(new URL("../public/app.js", import.meta.url), "
 const styleSource = await readFile(new URL("../public/styles.css", import.meta.url), "utf8");
 const calendarSource = await readFile(new URL("../lib/google-calendar.js", import.meta.url), "utf8");
 assert.match(htmlSource, /id="googleCalendarMonthStrip"/, "il calendario mobile deve avere una navigazione rapida per mesi");
+assert.match(htmlSource, /id="calendarEventMoreDetails"/, "luogo, invitati esterni e descrizione devono restare disponibili nei dettagli compatti");
+assert.match(htmlSource, /class="calendar-event-schedule full"/, "date, orari e durata devono essere raccolti in una fascia unica");
+assert.match(styleSource, /\.calendar-event-modal \{[\s\S]*?overflow: hidden/, "il dialogo evento non deve scorrere");
+assert.match(styleSource, /\.calendar-team-attendees \{[\s\S]*?repeat\(5/, "i partecipanti desktop devono occupare due righe compatte");
+assert.match(appSource, /moreDetails\.open = Boolean\(event && \(event\.location \|\| event\.description \|\| externalAttendees\.length\)\)/, "i dettagli esistenti devono aprirsi automaticamente in modifica");
 assert.match(appSource, /function renderGoogleCalendarMonthStrip\(\)/, "i mesi rapidi devono seguire il periodo selezionato");
 assert.match(appSource, /data-calendar-month="\$\{key\}"/, "ogni mese rapido deve essere selezionabile");
 assert.match(appSource, /function setGoogleCalendarMode\(mode\) \{[\s\S]*?googleCalendarState\.mode = mode === "week" \? "week" : "month";[\s\S]*?if \(googleCalendarState\.mode === "week"\) googleCalendarState\.anchor = new Date\(\);[\s\S]*?loadGoogleCalendar\(\);[\s\S]*?\}/, "selezionando la vista settimanale il calendario deve partire dalla settimana corrente");

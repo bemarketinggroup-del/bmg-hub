@@ -10160,6 +10160,7 @@ function openGoogleCalendarEventDetails(eventId) {
 function openGoogleCalendarEvent(eventId = "", dateKey = "") {
   const modal = document.getElementById("calendarEventModal");
   const form = document.getElementById("calendarEventForm");
+  const moreDetails = document.getElementById("calendarEventMoreDetails");
   const event = googleCalendarState.events.find((item) => item.id === eventId);
   form.reset();
   form.elements.event_id.value = event?.id || "";
@@ -10172,8 +10173,9 @@ function openGoogleCalendarEvent(eventId = "", dateKey = "") {
   form.elements.event_category.value = event?.event_category || "auto";
   const existingAttendees = attendeeEmails(event?.attendees || []);
   const teamEmails = new Set(personalAreaState.team.flatMap((member) => userProfileServiceEmails(member, "calendar")));
+  const externalAttendees = existingAttendees.filter((email) => !teamEmails.has(email));
   renderCalendarTeamAttendees(existingAttendees);
-  form.elements.external_attendees.value = existingAttendees.filter((email) => !teamEmails.has(email)).join(", ");
+  form.elements.external_attendees.value = externalAttendees.join(", ");
 
   if (event) {
     form.elements.title.value = event.title || "";
@@ -10190,6 +10192,10 @@ function openGoogleCalendarEvent(eventId = "", dateKey = "") {
       form.elements.end_date.value = end.date;
       form.elements.end_time.value = end.time;
     }
+  }
+
+  if (moreDetails) {
+    moreDetails.open = Boolean(event && (event.location || event.description || externalAttendees.length));
   }
 
   document.getElementById("calendarEventModalTitle").textContent = event ? "Modifica evento" : "Nuovo evento";

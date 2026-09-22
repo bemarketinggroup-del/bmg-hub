@@ -506,6 +506,11 @@ supabase/                     schema e migration
 - Vista mese e settimana, eventi multi-giorno continui e griglia invariata.
 - Vista settimana centrata sulla settimana corrente quando viene aperta.
 - Import/sincronizzazione degli eventi e gestione partecipanti.
+- Il dialogo di creazione/modifica evento resta fermo senza scroll su desktop:
+  titolo e categoria sono affiancati, date/orari/intera giornata condividono una
+  fascia compatta e il team occupa al massimo due righe. Luogo, invitati esterni
+  e descrizione restano disponibili in `Altri dettagli`, chiuso nelle nuove
+  creazioni e aperto automaticamente quando si modifica un evento che li usa.
 - Riconoscimento di nomi e abbreviazioni per collegare gli utenti agli eventi.
 - Calendar usa esclusivamente il client OAuth dedicato in produzione e il refresh
   token offline di `beviralagency@gmail.com`; non deve riusare le credenziali Drive

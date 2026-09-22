@@ -970,10 +970,10 @@
       </div>
       <input name="event_id" type="hidden">
       <div class="form-grid calendar-event-form-grid">
-        <label class="full">Titolo
+        <label class="calendar-event-title-field">Titolo
           <input name="title" maxlength="500" autocomplete="off" required placeholder="Es. Shooting cliente Europa Palace">
         </label>
-        <label class="full">Categoria e colore
+        <label class="calendar-event-category-field">Categoria
           <select name="event_category">
             <option value="auto">Automatico dal titolo</option>
             <option value="staff_leave">OFF / Ferie personale · Banana</option>
@@ -982,28 +982,32 @@
             <option value="client_event">Evento cliente · Basilico</option>
             <option value="tentative">Appuntamento in forse · Vinaccia</option>
           </select>
-          <small>Il colore viene salvato anche sull'evento Google Calendar.</small>
+          <small>Il colore viene sincronizzato con Google Calendar.</small>
         </label>
-        <label class="calendar-all-day-field">
-          <span>Durata</span>
-          <span class="calendar-all-day-toggle"><input id="calendarAllDay" name="all_day" type="checkbox"><span>Intera giornata</span></span>
-        </label>
-        <span class="calendar-form-spacer" aria-hidden="true"></span>
-        <label>Data inizio<input name="start_date" type="date" required></label>
-        <label>Data fine<input name="end_date" type="date" required></label>
-        <label data-calendar-time-field>Ora inizio<input name="start_time" type="time" value="09:00" required></label>
-        <label data-calendar-time-field>Ora fine<input name="end_time" type="time" value="10:00" required></label>
-        <label class="full">Luogo<input name="location" maxlength="500" autocomplete="off" placeholder="Sede, indirizzo o link riunione"></label>
+        <section class="calendar-event-schedule full" aria-label="Data e orario">
+          <label>Data inizio<input name="start_date" type="date" required></label>
+          <label data-calendar-time-field>Ora inizio<input name="start_time" type="time" value="09:00" required></label>
+          <label>Data fine<input name="end_date" type="date" required></label>
+          <label data-calendar-time-field>Ora fine<input name="end_time" type="time" value="10:00" required></label>
+          <label class="calendar-all-day-field">
+            <span>Durata</span>
+            <span class="calendar-all-day-toggle"><input id="calendarAllDay" name="all_day" type="checkbox"><span>Intera giornata</span></span>
+          </label>
+        </section>
         <fieldset class="full calendar-attendees-field">
           <legend>Persone del team</legend>
-          <p>Seleziona chi deve partecipare all'evento.</p>
           <div class="calendar-team-attendees" id="calendarTeamAttendees"></div>
         </fieldset>
-        <label class="full">Altri partecipanti via email
-          <textarea name="external_attendees" rows="2" placeholder="cliente@azienda.it, collaboratore@email.it"></textarea>
-          <small>Puoi aggiungere persone esterne separando le email con virgole o andando a capo.</small>
-        </label>
-        <label class="full">Descrizione<textarea name="description" rows="5" maxlength="8000" placeholder="Dettagli, note e informazioni utili"></textarea></label>
+        <details class="calendar-event-more full" id="calendarEventMoreDetails">
+          <summary><span>Altri dettagli</span><small>Luogo, invitati esterni e descrizione</small></summary>
+          <div class="calendar-event-more-grid">
+            <label>Luogo<input name="location" maxlength="500" autocomplete="off" placeholder="Sede, indirizzo o link riunione"></label>
+            <label>Partecipanti esterni
+              <textarea name="external_attendees" rows="1" placeholder="cliente@azienda.it, collaboratore@email.it"></textarea>
+            </label>
+            <label class="full">Descrizione<textarea name="description" rows="2" maxlength="8000" placeholder="Dettagli, note e informazioni utili"></textarea></label>
+          </div>
+        </details>
       </div>
       <p class="form-message" id="calendarEventMessage" role="status"></p>
       <div class="modal-actions calendar-event-actions">

@@ -6631,14 +6631,79 @@ body.user-activity-dialog-visible { overflow: hidden; }
 .calendar-event-detail-person i { grid-column: 2; grid-row: 1 / span 2; color: var(--muted); font-size: 9px; font-style: normal; text-transform: capitalize; }
 .calendar-event-detail-actions { justify-content: space-between; }
 .calendar-event-detail-actions .lc { width: 16px; height: 16px; margin-right: 6px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; vertical-align: -3px; }
-.calendar-event-modal { width: min(760px, calc(100vw - 30px)); }
-.calendar-event-form-grid { padding-bottom: 4px; }
+.calendar-event-modal {
+  width: min(1040px, calc(100vw - 32px));
+  max-height: calc(100dvh - 24px);
+  overflow: hidden;
+}
+.calendar-event-modal form {
+  max-height: calc(100dvh - 24px);
+  overflow: hidden;
+  padding: 18px 22px 20px;
+}
+.calendar-event-modal .modal-head { margin-bottom: 12px; padding-bottom: 12px; }
+.calendar-event-form-grid {
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 10px 12px;
+  padding-bottom: 0;
+}
+.calendar-event-title-field { grid-column: span 7; }
+.calendar-event-category-field { grid-column: span 5; }
+.calendar-event-schedule {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, .8fr) minmax(0, 1.2fr) minmax(0, .8fr) minmax(150px, 1fr);
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--surface-soft);
+}
+.calendar-event-schedule label { gap: 5px; }
 .calendar-all-day-field { align-content: start; }
-.calendar-all-day-toggle { display: flex; align-items: center; gap: 9px; min-height: 43px; padding: 0 12px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--surface); }
+.calendar-all-day-toggle { display: flex; align-items: center; gap: 9px; min-height: 40px; padding: 0 12px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--surface); }
 .calendar-all-day-toggle input { width: auto; min-height: 0; accent-color: var(--terracotta); }
 .calendar-all-day-toggle span { color: var(--text); font-size: 13px; font-weight: 600; }
 .calendar-event-form-grid small { margin-top: 5px; color: var(--muted); font-size: 11px; font-weight: 400; }
-.calendar-event-actions { align-items: center; }
+.calendar-event-more {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+}
+.calendar-event-more summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  padding: 8px 12px;
+  color: var(--ink);
+  cursor: pointer;
+  list-style: none;
+}
+.calendar-event-more summary::-webkit-details-marker { display: none; }
+.calendar-event-more summary > span { font-size: 12.5px; font-weight: 700; }
+.calendar-event-more summary > small { margin: 0; }
+.calendar-event-more summary::after {
+  content: "+";
+  margin-left: auto;
+  color: var(--terracotta);
+  font-size: 19px;
+  font-weight: 400;
+  line-height: 1;
+}
+.calendar-event-more[open] summary { border-bottom: 1px solid var(--line); }
+.calendar-event-more[open] summary::after { content: "−"; }
+.calendar-event-more-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 12px;
+  padding: 10px 12px 12px;
+}
+.calendar-event-more-grid > label { display: grid; gap: 5px; color: var(--text); font-size: 12.5px; font-weight: 600; }
+.calendar-event-more-grid .full { grid-column: 1 / -1; }
+.calendar-event-more textarea { resize: none; }
+.calendar-event-modal .form-message:empty { display: none; }
+.calendar-event-actions { align-items: center; margin-top: 12px; padding-top: 12px; }
 .calendar-actions-spacer { flex: 1 1 auto; }
 
 @media (max-width: 980px) {
@@ -6662,9 +6727,19 @@ body.user-activity-dialog-visible { overflow: hidden; }
   .google-calendar-legend { padding: 10px 14px; gap: 8px 12px; overflow-x: auto; flex-wrap: nowrap; }
   .google-calendar-grid { min-height: 520px; overflow-x: auto; }
   .google-calendar-weekdays, .google-calendar-month-grid { min-width: 770px; }
-  .calendar-form-spacer { display: none; }
-  .calendar-event-form-grid { grid-template-columns: 1fr; }
-  .calendar-event-actions { flex-wrap: wrap; }
+  .calendar-event-modal { width: calc(100vw - 12px); max-height: calc(100dvh - 12px); }
+  .calendar-event-modal form { max-height: calc(100dvh - 12px); padding: 14px; }
+  .calendar-event-modal .modal-head { margin-bottom: 9px; padding-bottom: 9px; }
+  .calendar-event-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .calendar-event-title-field,
+  .calendar-event-category-field { grid-column: 1 / -1; }
+  .calendar-event-category-field small { display: none; }
+  .calendar-event-schedule { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; padding: 8px; }
+  .calendar-all-day-field { grid-column: 1 / -1; }
+  .calendar-event-more summary > small { display: none; }
+  .calendar-event-more-grid { grid-template-columns: 1fr; }
+  .calendar-event-more-grid .full { grid-column: auto; }
+  .calendar-event-actions { flex-wrap: wrap; margin-top: 9px; padding-top: 9px; }
   .calendar-actions-spacer { display: none; }
   .calendar-event-detail-shell { padding: 20px; }
   .calendar-event-detail-actions { align-items: stretch; flex-direction: column-reverse; }
@@ -8055,36 +8130,50 @@ body.user-activity-dialog-visible { overflow: hidden; }
 
 .calendar-attendees-field {
   margin: 0;
-  padding: 14px;
+  padding: 10px 12px 12px;
   border: 1px solid var(--line);
   border-radius: 8px;
 }
 .calendar-attendees-field legend { padding: 0 6px; color: var(--ink); font-size: 12px; font-weight: 700; }
 .calendar-attendees-field > p { margin: 0 0 11px; color: var(--muted); font-size: 11px; }
-.calendar-team-attendees { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.calendar-team-attendees { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
 .calendar-attendee-option {
   display: flex;
-  gap: 9px;
+  gap: 7px;
   align-items: center;
   min-width: 0;
-  padding: 9px 10px;
+  min-height: 38px;
+  padding: 6px 8px;
   border: 1px solid var(--line);
   border-radius: 7px;
   background: var(--paper);
   cursor: pointer;
 }
 .calendar-attendee-option:has(input:checked) { border-color: var(--terracotta); background: var(--terracotta-tint); }
-.calendar-attendee-option input { width: 16px; height: 16px; margin: 0; accent-color: var(--terracotta); }
+.calendar-attendee-option input { width: 15px; height: 15px; margin: 0; accent-color: var(--terracotta); }
 .calendar-attendee-option span { min-width: 0; }
 .calendar-attendee-option strong,
 .calendar-attendee-option small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.calendar-attendee-option strong { font-size: 11.5px; }
-.calendar-attendee-option small { margin-top: 2px; color: var(--muted); font-size: 9.5px; }
+.calendar-attendee-option strong { font-size: 10.5px; }
+.calendar-attendee-option small { margin-top: 1px; color: var(--muted); font-size: 8.5px; }
 
 @media (max-width: 980px) {
   .personal-grid { grid-template-columns: 1fr; }
-  .calendar-team-attendees { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .calendar-team-attendees { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .task-assignee-checklist { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 720px) {
+  .calendar-attendees-field { padding: 8px; }
+  .calendar-team-attendees {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-height: 96px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-right: 2px;
+  }
+  .calendar-attendee-option { min-height: 34px; padding: 5px 7px; }
+  .calendar-attendee-option small { display: none; }
 }
 
 @media (max-width: 640px) {
@@ -8092,7 +8181,7 @@ body.user-activity-dialog-visible { overflow: hidden; }
   .personal-summary { align-items: flex-start; flex-direction: column; padding: 20px; }
   .personal-metrics { width: 100%; justify-content: stretch; }
   .personal-metrics span { flex: 1 1 120px; }
-  .calendar-team-attendees { grid-template-columns: 1fr; }
+  .calendar-team-attendees { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .smart-month-weekdays,
   .smart-month-grid,
   .smart-month-week-days { width: 100%; min-width: 0; }
