@@ -2,9 +2,10 @@ import { jsonHeaders, requireUser } from "./_auth.js";
 import { fetchClickUpMembers } from "../lib/clickup-members.js";
 import { profileMatchesClickUpMember } from "../lib/clickup-identity.js";
 import { canAccessModule } from "../lib/staff-permissions.js";
+import { loadDirectoryExclusions, visibleClickUpMembers } from "../lib/user-directory-exclusions.js";
 
 function headers() {
-  return jsonHeaders("GET,OPTIONS");
+  return { ...jsonHeaders("GET,OPTIONS"), "Cache-Control": "no-store, max-age=0" };
 }
 
 export default async function handler(request, response) {
@@ -21,13 +22,21 @@ export default async function handler(request, response) {
   });
   if (!session) return;
 
-  const source = await fetchClickUpMembers();
-  let members = source.members;
-  if (!members.length) {
+  const [source, exclusionSource] = await Promise.all([
+    fetchClickUpMembers(),
+    loadDirectoryExclusions()
+  ]);
+  if (!exclusionSource.ok) {
+    response.writeHead(502, headers());
+    response.end(JSON.stringify({ error: "Non riesco a verificare gli utenti rimossi dall'Hub" }));
+    return;
+  }
+  if (!source.members.length) {
     response.writeHead(source.status, headers());
     response.end(JSON.stringify({ error: source.error }));
     return;
   }
+  let members = visibleClickUpMembers(source.members, exclusionSource.exclusions);
   if (session.profile.role === "staff" && !canAccessModule(session.profile, "tasks")) {
     if (!session.profile.clickup_user_id) {
       response.writeHead(403, headers());

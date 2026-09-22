@@ -1,10 +1,17 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import {
+  taskWithoutDirectoryExclusions,
+  visibleClickUpMembers
+} from "../lib/user-directory-exclusions.js";
 
-const [apiSource, clickUpSource, smartEmployeeSource, appSource, htmlSource, styleSource, schemaSource, migrationSource] = await Promise.all([
+const [apiSource, clickUpSource, smartEmployeeSource, directoryExclusionSource, clickUpTeamApiSource, clickUpTasksApiSource, appSource, htmlSource, styleSource, schemaSource, migrationSource] = await Promise.all([
   readFile(new URL("../api/users.js", import.meta.url), "utf8"),
   readFile(new URL("../lib/clickup-members.js", import.meta.url), "utf8"),
   readFile(new URL("../lib/smart-working-employees.js", import.meta.url), "utf8"),
+  readFile(new URL("../lib/user-directory-exclusions.js", import.meta.url), "utf8"),
+  readFile(new URL("../api/clickup-team.js", import.meta.url), "utf8"),
+  readFile(new URL("../api/clickup-tasks.js", import.meta.url), "utf8"),
   readFile(new URL("../public/app.js", import.meta.url), "utf8"),
   readFile(new URL("../public/index.html", import.meta.url), "utf8"),
   readFile(new URL("../public/styles.css", import.meta.url), "utf8"),
@@ -83,7 +90,7 @@ assert.match(apiSource, /ensureClickUpWorkspaceMember\(email\)/, "la creazione d
 assert.match(apiSource, /rollbackCreatedUser\(authUser\.id, profile\?\.id\)/, "un errore ClickUp deve annullare l'account interno");
 assert.match(apiSource, /profileId === session\.profile\.id/, "un amministratore non deve potersi eliminare da solo");
 assert.match(apiSource, /clickup_membership_preserved/, "la rimozione interna deve dichiarare che ClickUp viene conservato");
-assert.match(apiSource, /hub\.users\.directory_exclusions/, "le rimozioni dalla directory devono essere persistenti e condivise tra i dispositivi");
+assert.match(directoryExclusionSource, /hub\.users\.directory_exclusions/, "le rimozioni dalla directory devono essere persistenti e condivise tra i dispositivi");
 assert.match(apiSource, /body\.action === "exclude_clickup_member"[\s\S]*excludeDirectoryMember/, "l'API deve rimuovere i membri ClickUp non ancora sincronizzati");
 assert.match(apiSource, /body\.action === "restore_clickup_member"[\s\S]*restoreDirectoryMember/, "l'API deve ripristinare i membri rimossi");
 assert.match(apiSource, /excludedClickUpIds[\s\S]*rimosso dalla directory Hub/, "la sincronizzazione ClickUp deve rispettare le esclusioni salvate");
@@ -93,6 +100,10 @@ assert.match(apiSource, /syncSmartWorkingEmployee\(profiles\[0\]\)/, "creare un 
 assert.match(apiSource, /const smartEmployee = await syncSmartWorkingEmployee\(profile\)/, "la creazione coordinata deve sincronizzare la persona nei turni");
 assert.match(apiSource, /smart_work_employees\?\$\{filter\}[\s\S]*?is_active: false/, "la disattivazione turni deve usare profilo o email quando disponibili");
 assert.match(apiSource, /!matchedEmployees && profile\.full_name[\s\S]*?smart_work_employees\?full_name=eq\./, "la disattivazione deve ripiegare sul nome per i record storici non collegati");
+assert.match(clickUpTeamApiSource, /loadDirectoryExclusions\(\)[\s\S]*visibleClickUpMembers/, "la rubrica task deve escludere centralmente i membri rimossi");
+assert.match(clickUpTasksApiSource, /savedTasks\(session, exclusions\)[\s\S]*taskWithoutDirectoryExclusions/, "le task lette dal backend non devono restituire assegnatari rimossi");
+assert.match(clickUpTasksApiSource, /excludedIds\.has\(String\(id\)\)[\s\S]*!desiredAssignees\.includes\(id\)/, "modificare una task non deve rimuovere da ClickUp gli assegnatari nascosti nell'Hub");
+assert.match(appSource, /loadUsersFromBackend\(\), loadClickUpTeam\(\), loadClickUpTasks\(\)/, "rimozione e ripristino devono aggiornare subito tutti i dati task nel browser");
 assert.match(apiSource, /validateStaffEmailAliases[\s\S]*massimo 12 email/, "l'API deve validare e limitare le email collegate");
 assert.match(apiSource, /reservedEmails[\s\S]*già collegata a un altro utente/, "l'API deve impedire che la stessa email venga collegata a profili diversi");
 assert.match(smartEmployeeSource, /preferredStaffProfileEmail\(profile, "calendar"\)/, "i turni devono usare l'email Calendar preferita del profilo");
@@ -103,6 +114,21 @@ assert.match(smartEmployeeSource, /moveEmployeeReferences\("smart_work_assignmen
 assert.match(smartEmployeeSource, /smart_work_employees\?id=eq\.[\s\S]*?method: "DELETE"/, "la vecchia anagrafica deve essere eliminata solo dopo il trasferimento dei riferimenti");
 assert.match(schemaSource, /email_aliases jsonb not null default '\[\]'::jsonb/, "lo schema deve conservare le email integrazione sul profilo staff");
 assert.match(migrationSource, /add column if not exists email_aliases jsonb/, "la migration deve aggiungere la colonna in modo idempotente");
+
+const directoryExclusions = [{ clickup_user_id: "22", full_name: "Utente eliminato", email: "removed@example.com" }];
+assert.deepEqual(
+  visibleClickUpMembers([
+    { id: "11", name: "Utente attivo", email: "active@example.com" },
+    { id: "22", name: "Utente eliminato", email: "removed@example.com" }
+  ], directoryExclusions).map((member) => member.id),
+  ["11"],
+  "un membro eliminato non deve rientrare dalla rubrica ClickUp"
+);
+assert.deepEqual(
+  taskWithoutDirectoryExclusions({ assignees: [{ id: "22", name: "Utente eliminato" }] }, directoryExclusions).assignees,
+  [],
+  "un membro eliminato non deve restare visibile tra gli assegnatari delle task"
+);
 
 assert.match(clickUpSource, /\/team\/\$\{encodeURIComponent\(workspaceId\)\}\/user/, "l'invito deve usare l'endpoint membri del workspace");
 assert.match(clickUpSource, /JSON\.stringify\(\{ email: normalizedEmail, admin: false \}\)/, "l'utente ClickUp deve essere invitato come membro non amministratore");

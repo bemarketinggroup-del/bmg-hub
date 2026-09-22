@@ -9,10 +9,14 @@ import {
   validStaffEmail
 } from "../lib/staff-email-identities.js";
 import { syncSmartWorkingEmployee } from "../lib/smart-working-employees.js";
+import {
+  loadDirectoryExclusions,
+  normalizeDirectoryExclusion,
+  saveDirectoryExclusions
+} from "../lib/user-directory-exclusions.js";
 
 const headers = jsonHeaders("GET,POST,PATCH,DELETE,OPTIONS");
 const noStoreHeaders = { ...headers, "Cache-Control": "no-store, max-age=0" };
-const DIRECTORY_EXCLUSIONS_SLUG = "hub.users.directory_exclusions";
 
 function adminAuthHeaders(includeJson = false) {
   return {
@@ -31,50 +35,6 @@ async function adminAuthFetch(path, options = {}) {
 
 function temporaryPassword() {
   return `Bmg!${crypto.randomBytes(18).toString("base64url")}`;
-}
-
-function normalizeDirectoryExclusion(item = {}) {
-  const clickupUserId = String(item.clickup_user_id || item.id || "").trim();
-  if (!clickupUserId) return null;
-  return {
-    clickup_user_id: clickupUserId,
-    full_name: String(item.full_name || item.name || "").trim().slice(0, 200),
-    email: normalizedEmail(item.email).slice(0, 320),
-    removed_at: String(item.removed_at || ""),
-    removed_by: String(item.removed_by || "")
-  };
-}
-
-async function loadDirectoryExclusions() {
-  const result = await supabaseFetch(`/site_content?select=payload&slug=eq.${DIRECTORY_EXCLUSIONS_SLUG}&limit=1`);
-  if (!result.ok) return { ok: false, status: result.status, exclusions: [] };
-  const rows = await result.json().catch(() => []);
-  const members = Array.isArray(rows[0]?.payload?.members) ? rows[0].payload.members : [];
-  return {
-    ok: true,
-    status: 200,
-    exclusions: members.map(normalizeDirectoryExclusion).filter(Boolean)
-  };
-}
-
-async function saveDirectoryExclusions(exclusions, profileId) {
-  const payload = {
-    slug: DIRECTORY_EXCLUSIONS_SLUG,
-    type: "system",
-    title: "Utenti esclusi dalla directory Hub",
-    status: "draft",
-    published_at: null,
-    payload: {
-      members: exclusions.map(normalizeDirectoryExclusion).filter(Boolean),
-      updated_by: profileId
-    },
-    updated_at: new Date().toISOString()
-  };
-  return supabaseFetch("/site_content?on_conflict=slug", {
-    method: "POST",
-    headers: { Prefer: "resolution=merge-duplicates,return=representation" },
-    body: JSON.stringify(payload)
-  });
 }
 
 async function excludeDirectoryMember(response, session, body) {

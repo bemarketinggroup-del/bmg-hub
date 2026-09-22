@@ -171,7 +171,12 @@ supabase/                     schema e migration
   task o storico ClickUp e impedisce che `Sincronizza ClickUp` li ricrei. Il
   filtro `Rimossi dall'Hub` permette di recuperarli singolarmente. Anche
   eliminare un accesso Hub già collegato salva la stessa esclusione, evitando
-  che il membro riappaia subito come `Da sincronizzare`.
+  che il membro riappaia subito come `Da sincronizzare`. La stessa esclusione
+  viene applicata centralmente alle API della rubrica ClickUp e delle task: un
+  membro rimosso sparisce da tab personali, filtri, assegnatari mostrati e
+  selettori di creazione/modifica in tutto l'Hub, anche dopo nuove
+  sincronizzazioni. Le assegnazioni e lo storico originali restano conservati
+  su ClickUp e tornano visibili nell'Hub soltanto con il ripristino esplicito.
 - Nel tab `Profilo` ogni account può avere più email di integrazione, marcate
   per `Calendar`, `ClickUp` o entrambi. L'email principale resta l'unica email
   di accesso; gli alias permettono di riconoscere lo stesso utente quando i due

@@ -3,6 +3,11 @@ import { jsonHeaders, readJson, requireUser, supabaseFetch } from "./_auth.js";
 import { handleAiTaskAssist } from "../lib/ai-task-assist.js";
 import { isOperationalTeamTask } from "../lib/clickup-task-access.js";
 import { taskCompletionTimestamp } from "../lib/task-completion-retention.js";
+import {
+  excludedClickUpIds,
+  loadDirectoryExclusions,
+  taskWithoutDirectoryExclusions
+} from "../lib/user-directory-exclusions.js";
 
 const CLICKUP_API_TOKEN = process.env.CLICKUP_API_TOKEN;
 const CLICKUP_WORKSPACE_ID = process.env.CLICKUP_WORKSPACE_ID || "90152036988";
@@ -11,7 +16,7 @@ const CLICKUP_WEBHOOK_SECRET = process.env.CLICKUP_WEBHOOK_SECRET;
 const CLICKUP_API = "https://api.clickup.com/api/v2";
 
 function headers() {
-  return jsonHeaders("GET,POST,PATCH,OPTIONS");
+  return { ...jsonHeaders("GET,POST,PATCH,OPTIONS"), "Cache-Control": "no-store, max-age=0" };
 }
 
 function webhookHeaders() {
@@ -267,12 +272,12 @@ async function syncFromClickUp() {
   return { status: 200, body: taskRows };
 }
 
-async function savedTasks(session) {
+async function savedTasks(session, exclusions) {
   const result = await supabaseFetch("/clickup_tasks?select=*&order=updated_at.desc");
   if (!result.ok) return { status: result.status, body: await result.json().catch(() => ({ error: "Task query failed" })) };
   let rows = await result.json();
   if (session.profile.role === "staff") rows = rows.filter(isOperationalTeamTask);
-  return { status: 200, body: rows.map(taskFromRow) };
+  return { status: 200, body: rows.map(taskFromRow).map((task) => taskWithoutDirectoryExclusions(task, exclusions)) };
 }
 
 async function logs() {
@@ -280,7 +285,13 @@ async function logs() {
   return { status: result.status, body: await result.json().catch(() => []) };
 }
 
-async function createTask(body, session, clientRows) {
+function allowedAssigneeIds(value, exclusions) {
+  const requested = assigneeIds(value);
+  const excludedIds = excludedClickUpIds(exclusions);
+  return requested.filter((id) => !excludedIds.has(String(id)));
+}
+
+async function createTask(body, session, clientRows, exclusions) {
   const listId = session.profile.role === "staff"
     ? CLICKUP_DEFAULT_TASK_LIST_ID
     : clean(body.list_id || CLICKUP_DEFAULT_TASK_LIST_ID);
@@ -289,7 +300,7 @@ async function createTask(body, session, clientRows) {
   const clientMatch = validateClientTag(body.client_tag, clientRows) || clientFromTaskText(body, clientRows);
   if (!clientMatch) return { status: 400, body: { error: "Cliente non riconosciuto: scegli un tag cliente valido" } };
 
-  const assignees = assigneeIds(body.assignees);
+  const assignees = allowedAssigneeIds(body.assignees, exclusions);
 
   const payload = {
     name: clean(body.name),
@@ -311,10 +322,10 @@ async function createTask(body, session, clientRows) {
   }
   await logSync(data.id, "hub", "create", "success", "Task creata dal gestionale");
   const row = await upsertTask({ ...data, tags: [{ name: clientMatch.tag }] }, clientRows);
-  return { status: 200, body: taskFromRow(row) };
+  return { status: 200, body: taskWithoutDirectoryExclusions(taskFromRow(row), exclusions) };
 }
 
-async function updateTask(body, session, clientRows) {
+async function updateTask(body, session, clientRows, exclusions) {
   const taskId = clean(body.clickup_task_id || body.id);
   if (!taskId) return { status: 400, body: { error: "clickup_task_id is required" } };
 
@@ -345,16 +356,17 @@ async function updateTask(body, session, clientRows) {
     }
     const row = await upsertTask(fresh.data, clientRows);
     await logSync(taskId, "hub", "quick_status", "success", `Stato task aggiornato: ${status}`);
-    return { status: 200, body: taskFromRow(row) };
+    return { status: 200, body: taskWithoutDirectoryExclusions(taskFromRow(row), exclusions) };
   }
 
   const clientMatch = validateClientTag(body.client_tag, clientRows);
   if (!clientMatch) return { status: 400, body: { error: "Cliente non riconosciuto: scegli un tag cliente valido" } };
 
-  const desiredAssignees = assigneeIds(body.assignees);
+  const desiredAssignees = allowedAssigneeIds(body.assignees, exclusions);
+  const excludedIds = excludedClickUpIds(exclusions);
   const currentAssignees = (current?.assignees || []).map((item) => Number(item.id)).filter(Number.isFinite);
   const add = desiredAssignees.filter((id) => !currentAssignees.includes(id));
-  const rem = currentAssignees.filter((id) => !desiredAssignees.includes(id));
+  const rem = currentAssignees.filter((id) => !excludedIds.has(String(id)) && !desiredAssignees.includes(id));
 
   const payload = {
     name: clean(body.name),
@@ -379,7 +391,7 @@ async function updateTask(body, session, clientRows) {
   const fresh = await fetchTask(taskId);
   const row = await upsertTask({ ...fresh.data, tags: [{ name: clientMatch.tag }, ...normalizeTags(fresh.data).filter((tag) => normalizeName(tag) !== normalizeName(clientMatch.tag)).map((name) => ({ name }))] }, clientRows);
   await logSync(taskId, "hub", "update", "success", "Task aggiornata dal gestionale");
-  return { status: 200, body: taskFromRow(row) };
+  return { status: 200, body: taskWithoutDirectoryExclusions(taskFromRow(row), exclusions) };
 }
 
 async function reconcileClientTag(taskId, currentTags, desiredTag, clientRows) {
@@ -495,20 +507,24 @@ export default async function handler(request, response) {
     }
 
     if (request.method === "GET") {
+      const exclusionSource = await loadDirectoryExclusions();
+      if (!exclusionSource.ok) return json(response, 502, { error: "Non riesco a verificare gli utenti rimossi dall'Hub" });
       const pulled = url.searchParams.get("sync") === "1" ? await syncFromClickUp() : null;
       if (pulled && pulled.status !== 200) return json(response, pulled.status, pulled.body);
-      const result = await savedTasks(session);
+      const result = await savedTasks(session, exclusionSource.exclusions);
       return json(response, result.status, result.body);
     }
 
+    const exclusionSource = await loadDirectoryExclusions();
+    if (!exclusionSource.ok) return json(response, 502, { error: "Non riesco a verificare gli utenti rimossi dall'Hub" });
     const clientRows = await clients();
     if (request.method === "POST") {
-      const result = await createTask(await readJson(request), session, clientRows);
+      const result = await createTask(await readJson(request), session, clientRows, exclusionSource.exclusions);
       return json(response, result.status, result.body);
     }
 
     if (request.method === "PATCH") {
-      const result = await updateTask(await readJson(request), session, clientRows);
+      const result = await updateTask(await readJson(request), session, clientRows, exclusionSource.exclusions);
       return json(response, result.status, result.body);
     }
 

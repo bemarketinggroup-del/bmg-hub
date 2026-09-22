@@ -8285,7 +8285,7 @@ async function deleteUserProfile(profileId) {
   const confirmed = confirm(
     `Eliminare definitivamente l'accesso di ${label}?\n\n` +
     "Verranno eliminati account, profilo e registri interni. " +
-    "L'utente non verra rimosso dal workspace ClickUp."
+    "L'utente sparira da tutti i moduli BMG Hub, ma non verra rimosso dal workspace ClickUp."
   );
   if (!confirmed) return;
 
@@ -8298,11 +8298,11 @@ async function deleteUserProfile(profileId) {
     const result = await response.json();
     if (!response.ok) throw new Error(result.error || `Users backend error ${response.status}`);
     if (String(editingUserProfileId) === String(profileId)) closeUserEditorPanel();
-    await Promise.all([loadUsersFromBackend(), loadClickUpTeam()]);
+    await Promise.all([loadUsersFromBackend(), loadClickUpTeam(), loadClickUpTasks()]);
     const deletedLabel = result.deleted?.full_name || result.deleted?.email || label;
     alert(result.directory_hidden === false
       ? `Accesso eliminato per ${deletedLabel}. Il membro ClickUp e rimasto nel workspace, ma la rimozione dalla directory non e stata salvata: se riappare come “Da sincronizzare”, usa il nuovo tasto Elimina sulla sua riga.`
-      : `Accesso eliminato per ${deletedLabel}. Il membro ClickUp e rimasto nel workspace e non comparira piu nella directory Hub.`);
+      : `Accesso eliminato per ${deletedLabel}. Il membro ClickUp e rimasto nel workspace, ma e stato rimosso da tutti i moduli BMG Hub.`);
   } catch (error) {
     renderBackendStatus(error.message);
     alert(error.message || "Non riesco a eliminare l'utente.");
@@ -8313,7 +8313,7 @@ async function removePendingDirectoryUser(clickupUserId) {
   const profile = userDirectoryProfiles().find((item) => item.pending_profile && String(item.clickup_user_id) === String(clickupUserId));
   if (!profile) return;
   const label = profile.full_name || profile.email || "questo membro";
-  if (!confirm(`Rimuovere ${label} dalla directory Utenti?\n\nClickUp, task e storico non verranno cancellati. Potrai ripristinarlo dal filtro “Rimossi dall'Hub”.`)) return;
+  if (!confirm(`Rimuovere ${label} da BMG Hub?\n\nSparira da task, selettori e moduli del gestionale. ClickUp, task e storico non verranno cancellati. Potrai ripristinarlo dal filtro “Rimossi dall'Hub”.`)) return;
   try {
     const response = await apiFetch("/api/users", {
       method: "POST",
@@ -8327,8 +8327,8 @@ async function removePendingDirectoryUser(clickupUserId) {
     });
     const result = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(result.error || "Rimozione dalla directory non riuscita");
-    await loadUsersFromBackend();
-    alert(`${label} non compare piu negli utenti Hub. ClickUp, task e storico sono rimasti intatti.`);
+    await Promise.all([loadUsersFromBackend(), loadClickUpTeam(), loadClickUpTasks()]);
+    alert(`${label} non compare piu in BMG Hub. ClickUp, task e storico sono rimasti intatti.`);
   } catch (error) {
     renderBackendStatus(error.message);
     alert(error.message || "Non riesco a rimuovere il membro dalla directory.");
@@ -8346,10 +8346,10 @@ async function restorePendingDirectoryUser(clickupUserId) {
     });
     const result = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(result.error || "Ripristino non riuscito");
-    await loadUsersFromBackend();
+    await Promise.all([loadUsersFromBackend(), loadClickUpTeam(), loadClickUpTasks()]);
     document.getElementById("userStatusFilter").value = "all";
     renderUsers();
-    alert(`${profile.full_name || profile.email || "Il membro"} e di nuovo visibile nella directory Hub.`);
+    alert(`${profile.full_name || profile.email || "Il membro"} e di nuovo visibile nei moduli BMG Hub.`);
   } catch (error) {
     renderBackendStatus(error.message);
     alert(error.message || "Non riesco a ripristinare il membro.");

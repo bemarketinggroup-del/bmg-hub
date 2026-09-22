@@ -59,6 +59,31 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-09-22 — Utenti eliminati esclusi da tutti i moduli Hub
+
+- Richiesta: impedire che utenti già eliminati, come Federica e Daniele,
+  continuino a comparire nella sezione Task o in altre parti del gestionale.
+- Modifiche: centralizzata la lista persistente degli utenti rimossi e
+  applicata alle API della rubrica ClickUp e delle task. Gli esclusi non
+  compaiono più nelle tab personali, nei filtri, negli assegnatari mostrati o
+  nei selettori delle task; nuove sincronizzazioni non possono reintrodurli. La
+  rimozione e il ripristino aggiornano immediatamente Utenti, team e task nel
+  browser. Le assegnazioni e lo storico su ClickUp non vengono cancellati e una
+  successiva modifica della task non li rimuove accidentalmente da ClickUp.
+- File: `lib/user-directory-exclusions.js`, `api/users.js`,
+  `api/clickup-team.js`, `api/clickup-tasks.js`, `public/app.js`,
+  `scripts/test-user-management.mjs`, `scripts/test-clickup-task-sync.mjs`,
+  `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: controlli sintattici Node, test unitari del filtro per ID/email/nome,
+  `npm run test:users`, test permessi/task/area personale pertinenti, `npm run
+  check`, `npm run build`, `git diff --check`; controllo in produzione della
+  sezione Task desktop e smartphone.
+- Pubblicazione: commit corrente pubblicato su GitHub `main`; deploy Vercel di
+  produzione verificato su `https://bmg-hub.vercel.app`.
+- Note: il filtro `Rimossi dall'Hub` nella pagina Utenti continua a mostrare gli
+  esclusi soltanto per consentirne il ripristino; ClickUp resta la fonte dello
+  storico originale e non viene modificato dalla rimozione interna.
+
 ### 2026-09-22 — Creazione eventi calendario compatta e senza scroll
 
 - Richiesta: rendere la schermata di creazione evento piu minimale e semplice,

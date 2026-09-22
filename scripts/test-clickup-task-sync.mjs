@@ -31,8 +31,9 @@ assert.match(api, /url\.searchParams\.get\("sync"\) === "1"/);
 assert.doesNotMatch(api, /taskBelongsToProfile/, "le task del team non devono essere filtrate sul solo account staff");
 assert.match(api, /rows = rows\.filter\(isOperationalTeamTask\)/, "lo staff deve ricevere tutte e sole le task operative del team");
 assert.match(api, /!isOperationalTeamTask\(current\)/, "lo staff non deve modificare liste ClickUp esterne al team");
-assert.match(api, /const assignees = assigneeIds\(body\.assignees\)/, "la creazione deve rispettare tutti gli assegnatari scelti");
-assert.match(api, /const desiredAssignees = assigneeIds\(body\.assignees\)/, "la modifica deve poter riassegnare la task ai colleghi");
+assert.match(api, /const assignees = allowedAssigneeIds\(body\.assignees, exclusions\)/, "la creazione deve rispettare gli assegnatari scelti ancora attivi nell'Hub");
+assert.match(api, /const desiredAssignees = allowedAssigneeIds\(body\.assignees, exclusions\)/, "la modifica deve poter riassegnare la task ai colleghi attivi");
+assert.match(api, /taskWithoutDirectoryExclusions\(taskFromRow\(row\), exclusions\)/, "le risposte task devono nascondere centralmente gli utenti eliminati");
 assert.match(api, /completed_at: taskCompletionTimestamp\(row\)/, "l'API deve esporre la data reale di completamento ClickUp");
 assert.match(teamApi, /canAccessModule\(session\.profile, "tasks"\)/, "chi ha accesso ai Task deve ricevere l'elenco completo del team");
 
