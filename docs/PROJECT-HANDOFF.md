@@ -1,6 +1,6 @@
 # BMG Hub — contesto per una nuova chat
 
-Ultimo aggiornamento: 11 settembre 2026
+Ultimo aggiornamento: 22 settembre 2026
 Repository locale: `/Users/davidedeluca/Desktop/bmg-hub`  
 Branch di produzione: `main`  
 Ultimo commit applicativo precedente all'ottimizzazione: `435d236`
@@ -519,13 +519,15 @@ supabase/                     schema e migration
   esclusi dall'anagrafica dei turni. Le righe storiche con il solo nome breve
   vengono unite al profilo completo, trasferendo prima turni, assenze e
   partecipazioni Calendar per non perdere lo storico.
-- Le settimane future sono visibili e le proposte smart sono trascinabili.
-- Ogni fascia settimanale e selezionabile. `Genera bozza settimana` sostituisce
-  soltanto le proposte automatiche comprese tra quel lunedi e quella domenica;
-  `Pubblica settimana` approva e invia a Google Calendar esclusivamente il
-  piano selezionato. Il cambio di settimana non modifica bozze o pubblicazioni
-  delle altre settimane e la sincronizzazione automatica Calendar non genera
-  piu bozze per l'intero mese.
+- Le settimane future sono visibili e le proposte smart verdi sono
+  trascinabili anche nella settimana corrente. Il trascinamento resta nella
+  stessa settimana e non consente di scegliere giorni gia trascorsi.
+- Ogni fascia settimanale contiene direttamente i tre comandi `Sincronizza`,
+  `Genera proposta` e `Pubblica`. Il primo aggiorna da Google Calendar soltanto
+  quei sette giorni e non pubblica smart; il secondo sostituisce soltanto le
+  proposte automatiche di quel lunedi-domenica; il terzo approva e invia a
+  Calendar esclusivamente il piano della stessa settimana. Le altre settimane
+  non cambiano e la sincronizzazione automatica non genera proposte.
 - Più persone possono essere inserite manualmente nello stesso giorno; in caso di
   impegno già presente deve apparire un avviso.
 - Davide e Simone sono esclusi dall'assegnazione smart automatica, ma non dal

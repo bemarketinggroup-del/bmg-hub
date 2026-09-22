@@ -718,12 +718,6 @@
             <button class="icon-button" id="smartNextMonthButton" type="button" title="Mese successivo" aria-label="Mese successivo"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>
             <h2 id="smartMonthTitle">Turni del mese</h2>
           </div>
-          <div class="smart-month-actions admin-only">
-            <span class="smart-selected-week" id="smartSelectedWeekLabel" aria-live="polite">Seleziona una settimana</span>
-            <button class="ghost-button" id="syncCalendarButton" type="button">Sincronizza Calendar</button>
-            <button class="ghost-button" id="generateSmartWeekButton" type="button">Genera bozza settimana</button>
-            <button class="primary-button" id="approveSmartWeekButton" type="button">Pubblica settimana</button>
-          </div>
         </div>
         <nav class="smart-month-strip" id="smartMonthStrip" aria-label="Navigazione rapida mesi turni"></nav>
 
@@ -731,6 +725,7 @@
           <div class="smart-plan-status-group">
             <span id="smartPlanStatus">Nessuna bozza</span>
             <span class="smart-auto-sync" id="smartAutoSyncStatus"><i aria-hidden="true"></i>Calendar automatico · ogni 5 min</span>
+            <span class="smart-week-flow"><strong>Per ogni settimana:</strong> sincronizza, genera la proposta, sposta i nomi verdi e pubblica quando è pronta.</span>
           </div>
           <button class="ghost-button is-hidden" id="smartPastWeeksButton" type="button" aria-expanded="false">Mostra settimane precedenti</button>
           <div class="smart-legend" aria-label="Legenda turni">

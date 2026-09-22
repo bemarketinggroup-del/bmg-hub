@@ -1,6 +1,6 @@
 # BMG Hub — memoria operativa degli interventi
 
-Ultimo aggiornamento: 11 settembre 2026
+Ultimo aggiornamento: 22 settembre 2026
 
 ## Scopo del file
 
@@ -58,6 +58,33 @@ più recente alla più vecchia:
 ```
 
 ## Registro modifiche
+
+### 2026-09-22 — Flusso settimanale Smart Working semplificato
+
+- Richiesta: ripristinare il trascinamento degli smart e rendere chiaro il
+  processo proposta, modifica e pubblicazione, mostrando sincronizzazione,
+  generazione e pubblicazione su ogni settimana invece che nella barra del
+  mese.
+- Modifiche: rimossi i comandi globali mensili e aggiunti nella testata di ogni
+  settimana i tre pulsanti `Sincronizza`, `Genera proposta` e `Pubblica`, con
+  stato `Da generare`, `Bozza pronta` o `Pubblicata` e una spiegazione sintetica
+  del flusso. La sincronizzazione manuale legge soltanto i sette giorni scelti
+  e non pubblica smart. Le proposte verdi della settimana corrente sono di
+  nuovo trascinabili come quelle future; i giorni gia trascorsi, i weekend e
+  le altre settimane restano destinazioni non valide. Generazione e
+  pubblicazione continuano a filtrare l'esatto inizio settimana.
+- File: `public/index.html`, `public/app.js`, `public/styles.css`,
+  `lib/smart-working.js`, `scripts/test-smart-working-monthly.mjs`,
+  `docs/SMART-WORKING.md`, `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `node --check public/app.js`, `node --check
+  lib/smart-working.js`, `npm run test:smart-working`, `npm run check`, `npm run
+  build`, test correlati, `git diff --check`; verifica visuale desktop e
+  smartphone e controllo Chrome/Safari del contratto drag-and-drop.
+- Pubblicazione: commit corrente pubblicato su GitHub `main`; deploy Vercel di
+  produzione verificato su `https://bmg-hub.vercel.app`.
+- Note: nessuna settimana viene generata o pubblicata automaticamente; i test
+  non modificano turni, eventi Calendar o proposte reali. La cartella locale
+  `.bmg-redesign-backup/` resta esclusa e non modificata.
 
 ### 2026-09-11 — Elenco Utenti completo al primo caricamento
 

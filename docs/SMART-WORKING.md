@@ -11,14 +11,20 @@ Modulo MVP per generare bozze settimanali di smart working usando gli impegni da
 - Cache eventi su Supabase.
 - Mapping invitati evento -> dipendenti smart tramite email.
 - Creazione indisponibilita' giornaliere per eventi bloccanti.
-- Selezione esplicita della settimana dalla relativa fascia del calendario.
-- Generazione di una bozza modificabile limitata alla settimana selezionata,
+- Tre azioni direttamente nella testata di ogni settimana: `Sincronizza`,
+  `Genera proposta` e `Pubblica`.
+- Sincronizzazione manuale limitata ai sette giorni scelti, senza generare o
+  pubblicare smart working.
+- Generazione di una proposta modificabile limitata alla settimana scelta,
   senza sostituire le proposte delle altre settimane.
-- Spostamento manuale di un dipendente su un altro giorno.
+- Spostamento manuale dei nomi verdi su un altro giorno disponibile della
+  stessa settimana, inclusa la settimana corrente; i giorni gia trascorsi
+  restano esclusi.
 - Blocco quando si supera `max_remote_per_day`.
 - Approvazione e pubblicazione su Google Calendar della sola settimana
   selezionata.
-- Vista staff in sola lettura.
+- Lo staff autorizzato puo spostare le proposte verdi; generazione e
+  pubblicazione restano amministrative.
 - Pannello amministrativo per attivare o disattivare le persone mostrate nei
   turni, conservando lo storico.
 
@@ -69,10 +75,12 @@ Gli eventi brevi senza keyword vengono salvati in cache ma non generano indispon
 7. Se non trova una soluzione perfetta, crea assegnazione `conflict` con motivazione.
 
 La sincronizzazione ogni cinque minuti mantiene aggiornati impegni e OFF, ma non crea
-automaticamente bozze per tutte le settimane. L'amministratore seleziona la
-fascia desiderata e usa `Genera bozza settimana`; la pubblicazione filtra il
-piano per l'esatto `week_start_date`, quindi una settimana gia approvata o una
-bozza successiva non viene toccata.
+automaticamente proposte per tutte le settimane. Ogni fascia settimanale espone
+il flusso completo: `Sincronizza` aggiorna soltanto quel lunedi-domenica,
+`Genera proposta` crea il piano iniziale, i nomi verdi possono essere
+trascinati e `Pubblica` invia il risultato a Google Calendar. Tutte le azioni
+filtrano l'esatto `week_start_date`, quindi le altre settimane non vengono
+toccate.
 
 ## Dipendenti smart
 

@@ -6871,7 +6871,6 @@ function renderSmartWorking() {
     autoSyncStatus.classList.toggle("is-syncing", smartWorkingBackgroundMonths.has(data.month));
   }
   renderSmartSettings(data);
-  renderSmartWeekControls(data);
   renderSmartStaffManager(data);
   renderSmartMonth(data);
   renderSmartDay(data);
@@ -6885,24 +6884,6 @@ function smartWeekDateLabel(weekStart) {
   const weekEndDate = new Date(`${weekStart}T12:00:00`);
   weekEndDate.setDate(weekEndDate.getDate() + 6);
   return `${formatter.format(new Date(`${weekStart}T12:00:00`))} – ${formatter.format(weekEndDate)}`;
-}
-
-function renderSmartWeekControls(data) {
-  const label = document.getElementById("smartSelectedWeekLabel");
-  const generateButton = document.getElementById("generateSmartWeekButton");
-  const approveButton = document.getElementById("approveSmartWeekButton");
-  if (!label || !generateButton || !approveButton) return;
-  const weekStart = smartWeekStart(selectedSmartDate || localDateKey(new Date()));
-  const inRange = weekStart >= (data.range_start || "") && weekStart < (data.range_end || "");
-  const plan = (data.plans || []).find((item) => item.week_start_date === weekStart);
-  const statusLabel = plan?.status === "approved" ? "Pubblicata" : plan?.status === "draft" ? "Bozza" : "Da generare";
-  label.innerHTML = inRange
-    ? `<small>Settimana selezionata</small><strong>${escapeHtml(smartWeekDateLabel(weekStart))}</strong><i class="is-${escapeHtml(plan?.status || "empty")}">${escapeHtml(statusLabel)}</i>`
-    : "Seleziona una settimana";
-  generateButton.disabled = !inRange || smartWorkingLoading;
-  generateButton.textContent = plan ? "Rigenera bozza settimana" : "Genera bozza settimana";
-  approveButton.disabled = !inRange || plan?.status !== "draft" || smartWorkingLoading;
-  approveButton.textContent = plan?.status === "approved" ? "Settimana pubblicata" : "Pubblica settimana";
 }
 
 function renderSmartStaffManager(data) {
@@ -6986,11 +6967,22 @@ function renderSmartMonth(data) {
     const summary = smartWeekSummary(data, weekDates);
     const eventBars = smartWeekEventBars(data, weekDates);
     const selectedWeek = smartWeekStart(selectedSmartDate) === weekDates[0];
+    const plan = (data.plans || []).find((item) => item.week_start_date === weekDates[0]);
+    const actionable = weekDates[0] >= currentWeek;
+    const planStatus = plan?.status === "approved" ? "Pubblicata" : plan?.status === "draft" ? "Bozza pronta" : "Da generare";
+    const weekActions = data.can_manage ? `<div class="smart-week-actions" aria-label="Azioni settimana ${escapeHtml(smartWeekDateLabel(weekDates[0]))}">
+      <button class="ghost-button" type="button" data-smart-week-action="sync" data-smart-week-start="${escapeHtml(weekDates[0])}" title="Aggiorna da Google Calendar soltanto questa settimana">Sincronizza</button>
+      <button class="ghost-button" type="button" data-smart-week-action="generate" data-smart-week-start="${escapeHtml(weekDates[0])}" ${actionable && !smartWorkingLoading ? "" : "disabled"} title="Crea la proposta iniziale soltanto per questa settimana">${plan ? "Rigenera proposta" : "Genera proposta"}</button>
+      <button class="primary-button" type="button" data-smart-week-action="publish" data-smart-week-start="${escapeHtml(weekDates[0])}" ${actionable && plan?.status === "draft" && !smartWorkingLoading ? "" : "disabled"} title="Pubblica su Google Calendar soltanto questa settimana">${plan?.status === "approved" ? "Pubblicata" : "Pubblica"}</button>
+    </div>` : "";
     return `<section class="smart-month-week${summary.future ? " is-future" : ""}${selectedWeek ? " is-selected" : ""}" data-smart-week="${escapeHtml(weekDates[0])}">
-      <button class="smart-week-status${summary.complete ? " is-complete" : " is-incomplete"}" type="button" data-smart-week-select="${escapeHtml(weekDates[0])}" aria-pressed="${selectedWeek ? "true" : "false"}">
-        <span class="smart-week-heading"><strong>${escapeHtml(summary.label)}</strong>${selectedWeek ? "<i>Selezionata</i>" : ""}</span>
-        <span>${summary.complete ? "Tutte le persone hanno lo smart" : `Mancano: ${escapeHtml(summary.missingNames.join(", "))}`}</span>
-      </button>
+      <header class="smart-week-toolbar">
+        <button class="smart-week-status${summary.complete ? " is-complete" : " is-incomplete"}" type="button" data-smart-week-select="${escapeHtml(weekDates[0])}" aria-pressed="${selectedWeek ? "true" : "false"}">
+          <span class="smart-week-heading"><strong>${escapeHtml(summary.label)}</strong><i class="is-${escapeHtml(plan?.status || "empty")}">${escapeHtml(planStatus)}</i></span>
+          <span>${summary.complete ? "Tutte le persone hanno lo smart" : `Mancano: ${escapeHtml(summary.missingNames.join(", "))}`}</span>
+        </button>
+        ${weekActions}
+      </header>
       <div class="smart-month-week-days" style="--smart-event-lanes:${eventBars.laneCount}">${weekDates.map((date, columnIndex) => smartMonthDay(data, date, eventBars.consumedEntries, columnIndex)).join("")}${eventBars.html}</div>
     </section>`;
   }).join("");
@@ -7101,7 +7093,7 @@ function smartMonthChip(item, type, data) {
   const externalCalendar = item.source === "google_calendar";
   const editable = type !== "busy" && data.can_manage && !externalCalendar;
   const proposal = type === "smart" && item.status === "suggested" && item.source === "auto";
-  const draggable = proposal && data.can_move_smart && smartWeekStart(item.date) > smartWeekStart(localDateKey(new Date()));
+  const draggable = proposal && data.can_move_smart && smartWeekStart(item.date) >= smartWeekStart(localDateKey(new Date()));
   const title = externalCalendar
     ? "Importato da Google Calendar. Modificalo dal calendario."
     : item.reason || item.notes || item.title || label;
@@ -7416,55 +7408,51 @@ async function deleteSmartEntry() {
   }
 }
 
-async function syncSmartCalendar() {
-  const button = document.getElementById("syncCalendarButton");
+async function syncSmartWeek(weekStart, button) {
+  if (!weekStart || !button) return;
   button.disabled = true;
-  button.textContent = "Sincronizzo mese e OFF...";
+  button.textContent = "Sincronizzo…";
   try {
-    const monthData = await smartWorkingAction("sync_calendar", { force: true });
-    const data = await smartWorkingAction("sync_off_year", { force: true });
+    const data = await smartWorkingAction("sync_week", { week_start: weekStart, force: true });
     smartWorkingLastSyncedAt = new Date().toISOString();
     renderSmartWorking();
-    const invited = Number(monthData.result?.invited) || 0;
-    const invitationErrors = Number(monthData.result?.invitation_errors) || 0;
-    alert(`Calendar sincronizzato. ${monthData.result?.cached || 0} eventi mensili letti, ${monthData.result?.blocked || 0} impegni associati e ${data.result?.off_days || 0} registrazioni OFF annuali aggiornate${invited ? `, ${invited} nuovi inviti inviati` : ""}${invitationErrors ? `, ${invitationErrors} inviti non riusciti` : ""}.`);
+    const invited = Number(data.result?.invited) || 0;
+    const invitationErrors = Number(data.result?.invitation_errors) || 0;
+    alert(`Settimana ${smartWeekDateLabel(weekStart)} sincronizzata. ${data.result?.cached || 0} eventi letti e ${data.result?.blocked || 0} impegni associati${invited ? `, ${invited} nuovi inviti inviati` : ""}${invitationErrors ? `, ${invitationErrors} inviti non riusciti` : ""}. Nessuno smart è stato pubblicato.`);
   } catch (error) {
     renderBackendStatus(error.message);
-    alert(error.message || "Non riesco a sincronizzare Google Calendar.");
+    alert(error.message || "Non riesco a sincronizzare questa settimana con Google Calendar.");
   } finally {
-    button.disabled = false;
-    button.textContent = "Sincronizza Calendar";
+    renderSmartWorking();
   }
 }
 
-async function generateSmartWeek() {
-  const button = document.getElementById("generateSmartWeekButton");
-  const weekStart = smartWeekStart(selectedSmartDate);
+async function generateSmartWeek(weekStart, button) {
+  if (!weekStart || !button) return;
   const existingPlan = (state.smartWorking?.plans || []).find((plan) => plan.week_start_date === weekStart);
   if (existingPlan?.status === "approved" && !confirm(`La settimana ${smartWeekDateLabel(weekStart)} è già pubblicata. Vuoi rigenerarne la bozza? Gli smart automatici già pubblicati verranno sostituiti.`)) return;
   button.disabled = true;
-  button.textContent = "Genero la settimana...";
+  button.textContent = "Genero…";
   try {
     const data = await smartWorkingAction("generate_week", { week_start: weekStart });
     renderSmartWorking();
     const conflicts = data.result?.conflicts?.length || 0;
-    alert(`Bozza della settimana ${smartWeekDateLabel(weekStart)} generata: ${data.result?.created || 0} assegnazioni${conflicts ? `, ${conflicts} conflitti da verificare` : ""}.`);
+    alert(`Proposta della settimana ${smartWeekDateLabel(weekStart)} generata: ${data.result?.created || 0} assegnazioni${conflicts ? `, ${conflicts} conflitti da verificare` : ""}. Ora puoi spostare i nomi verdi e pubblicare quando è pronta.`);
   } catch (error) {
     renderBackendStatus(error.message);
     alert(error.message || "Non riesco a generare la settimana.");
   } finally {
-    renderSmartWeekControls(state.smartWorking || {});
+    renderSmartWorking();
   }
 }
 
-async function approveSmartWeek() {
-  const weekStart = smartWeekStart(selectedSmartDate);
+async function approveSmartWeek(weekStart, button) {
+  if (!weekStart || !button) return;
   const plan = (state.smartWorking?.plans || []).find((item) => item.week_start_date === weekStart);
-  if (plan?.status !== "draft") return alert("Genera prima la bozza della settimana selezionata.");
+  if (plan?.status !== "draft") return alert("Genera prima la proposta di questa settimana.");
   if (!confirm(`Pubblicare soltanto la settimana ${smartWeekDateLabel(weekStart)} su Google Calendar?`)) return;
-  const button = document.getElementById("approveSmartWeekButton");
   button.disabled = true;
-  button.textContent = "Pubblico la settimana...";
+  button.textContent = "Pubblico…";
   try {
     const data = await smartWorkingAction("approve_week", { week_start: weekStart });
     renderSmartWorking();
@@ -7473,7 +7461,7 @@ async function approveSmartWeek() {
     renderBackendStatus(error.message);
     alert(error.message || "Non riesco a pubblicare la settimana.");
   } finally {
-    renderSmartWeekControls(state.smartWorking || {});
+    renderSmartWorking();
   }
 }
 
@@ -11805,7 +11793,7 @@ document.body.addEventListener("dragstart", (event) => {
     smartChip.classList.add("is-dragging");
     const sourceWeek = smartWeekStart(assignment.date);
     document.querySelectorAll(".smart-month-day[data-smart-date]").forEach((day) => {
-      if (!day.classList.contains("is-weekend") && smartWeekStart(day.dataset.smartDate) === sourceWeek) day.classList.add("is-smart-drop-ready");
+      if (!day.classList.contains("is-weekend") && day.dataset.smartDate >= localDateKey(new Date()) && smartWeekStart(day.dataset.smartDate) === sourceWeek) day.classList.add("is-smart-drop-ready");
     });
     event.dataTransfer.effectAllowed = "move";
     event.dataTransfer.setData("application/x-bmg-smart-assignment", smartDraggedAssignmentId);
@@ -12474,9 +12462,6 @@ document.getElementById("smartPastWeeksButton").addEventListener("click", () => 
   showPastSmartWeeks = !showPastSmartWeeks;
   renderSmartMonth(state.smartWorking || {});
 });
-document.getElementById("syncCalendarButton").addEventListener("click", syncSmartCalendar);
-document.getElementById("generateSmartWeekButton").addEventListener("click", generateSmartWeek);
-document.getElementById("approveSmartWeekButton").addEventListener("click", approveSmartWeek);
 document.getElementById("smartRulesForm").addEventListener("submit", (event) => {
   event.preventDefault();
   saveSmartRules(event.currentTarget);
@@ -12487,6 +12472,17 @@ document.getElementById("smartOffCounters").addEventListener("click", (event) =>
   openSmartOffDetail(offRow.dataset.smartOffEmployee);
 });
 document.getElementById("smartView").addEventListener("click", (event) => {
+  const weekAction = event.target.closest("[data-smart-week-action][data-smart-week-start]");
+  if (weekAction) {
+    event.stopPropagation();
+    const weekStart = weekAction.dataset.smartWeekStart;
+    selectedSmartDate = weekStart;
+    scheduleWorkspaceContextSave();
+    if (weekAction.dataset.smartWeekAction === "sync") void syncSmartWeek(weekStart, weekAction);
+    else if (weekAction.dataset.smartWeekAction === "generate") void generateSmartWeek(weekStart, weekAction);
+    else if (weekAction.dataset.smartWeekAction === "publish") void approveSmartWeek(weekStart, weekAction);
+    return;
+  }
   const weekButton = event.target.closest("[data-smart-week-select]");
   if (weekButton) {
     selectedSmartDate = weekButton.dataset.smartWeekSelect;
@@ -12510,7 +12506,6 @@ document.getElementById("smartView").addEventListener("click", (event) => {
   selectedSmartDate = dateCell.dataset.smartDate;
   scheduleWorkspaceContextSave();
   renderSmartMonth(state.smartWorking || {});
-  renderSmartWeekControls(state.smartWorking || {});
   renderSmartDay(state.smartWorking || {});
 });
 document.getElementById("smartStaffManager").addEventListener("change", (event) => {
