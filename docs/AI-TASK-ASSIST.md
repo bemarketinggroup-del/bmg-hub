@@ -83,6 +83,9 @@ La descrizione viene modificata solo dopo click su `Applica proposta`.
 - I log salvano metadati minimi, non il contenuto completo delle task.
 - Gli errori del provider registrano soltanto stato, tipo, codice, parametro e
   messaggio sanitizzato; eventuali token con prefisso `sk-` vengono oscurati.
+- Se OpenAI restituisce `credit_balance_exhausted`/`insufficient_quota`, il
+  gestionale indica esplicitamente che l'amministratore deve ricaricare il saldo
+  API invece di mostrare un generico errore temporaneo.
 
 ## Test minimi
 

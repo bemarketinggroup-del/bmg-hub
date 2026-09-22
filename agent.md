@@ -83,7 +83,11 @@ più recente alla più vecchia:
 - Pubblicazione: commit corrente pubblicato su GitHub `main`; deploy Vercel di
   produzione verificato su `https://bmg-hub.vercel.app`.
 - Note: l'AI continua a richiedere una conferma esplicita prima di sostituire la
-  descrizione; i test non creano task e non scrivono dati su ClickUp.
+  descrizione; i test non creano task e non scrivono dati su ClickUp. La prova
+  reale in produzione ha rilevato che l'account OpenAI configurato risponde con
+  `credit_balance_exhausted`: il flusso e pronto, ma la generazione tornera
+  operativa soltanto dopo la ricarica dei crediti API. Il gestionale ora mostra
+  questo blocco in modo esplicito.
 
 ### 2026-09-22 — Eliminazione sicura dei membri dalla directory Utenti
 

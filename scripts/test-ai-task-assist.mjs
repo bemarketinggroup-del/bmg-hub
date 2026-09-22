@@ -16,6 +16,7 @@ assert.match(api, /https:\/\/api\.openai\.com\/v1\/responses/);
 assert.match(api, /json_schema/);
 assert.match(api, /safeProviderError/, "gli errori OpenAI devono essere diagnosticabili senza esporre chiavi");
 assert.match(api, /OpenAI task assist request failed/, "gli errori del provider devono lasciare un log tecnico sicuro");
+assert.match(api, /credit_balance_exhausted/, "il saldo OpenAI esaurito deve avere un messaggio esplicito");
 assert.match(api, /deterministicClientMatch/);
 assert.match(api, /rateLimit/);
 assert.match(api, /requireUser/);
