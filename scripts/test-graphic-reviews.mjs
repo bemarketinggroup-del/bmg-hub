@@ -69,6 +69,8 @@ assert.match(htmlSource, /id="graphicsDriveCloseButton"/);
 assert.match(htmlSource, /data-graphics-drive-panel/);
 assert.match(htmlSource, /id="graphicReviewModal"/);
 assert.match(htmlSource, /id="graphicReviewInstructions"/);
+assert.match(htmlSource, /id="graphicReviewToast"[^>]*aria-live="assertive"/, "le revisioni devono avere un banner live non modale");
+assert.match(htmlSource, /id="graphicReviewToastOpen"[^>]*data-open-graphics-review=/, "il banner deve aprire direttamente le revisioni");
 assert.match(appSource, /\{ key: "graphics", label: "Grafiche" \}/);
 assert.match(appSource, /data-user-module="\$\{module\.key\}"/);
 assert.match(appSource, /data-graphic-review-file/);
@@ -91,6 +93,10 @@ assert.match(appSource, /Salva versione in Foto/, "le versioni modificate devono
 assert.match(appSource, /"graphics-reviews": "graphics"/, "la pagina revisioni deve conservare il permesso Grafiche");
 assert.match(appSource, /function setGraphicsNavExpanded\(expanded\)/, "il sottomenu deve avere uno stato accessibile centralizzato");
 assert.match(appSource, /setView\("graphics-reviews"\)/, "le notifiche devono aprire direttamente la pagina revisioni");
+assert.match(appSource, /function queueGraphicReviewToasts\([\s\S]*canAccessModule\("graphics"\)[\s\S]*source_type === "graphic_review"/, "il banner deve essere riservato alle notifiche dei grafici");
+assert.match(appSource, /sessionStorage\.setItem\(graphicReviewToastStorageKey\(\)/, "il banner non deve ripetersi a ogni aggiornamento");
+assert.match(appSource, /function closeGraphicReviewToast\([\s\S]*clearQueue/, "il banner deve potersi chiudere senza eliminare la notifica");
+assert.match(appSource, /function logout\([\s\S]*closeGraphicReviewToast\(\{ clearQueue: true \}\)/, "il banner deve essere ripulito al logout");
 assert.doesNotMatch(appSource, /updateGraphicsDriveScrollHint|graphicsDriveClientGrid"\)\.addEventListener\("scroll"/);
 assert.match(appSource, /Nessun cliente corrisponde alla ricerca/);
 assert.match(appSource, /source: "graphics"/);
@@ -112,6 +118,7 @@ assert.match(styleSource, /\.graphics-drive-client-grid \.client-folder\.is-acti
 assert.match(styleSource, /\.graphic-review-comparison-pair/);
 assert.match(styleSource, /\.drive-version-pair/);
 assert.match(styleSource, /\.graphic-review-modal/);
+assert.match(styleSource, /\.graphic-review-toast\s*\{[\s\S]*position:\s*fixed[\s\S]*top:\s*50%[\s\S]*left:\s*50%/, "il banner deve comparire piccolo al centro dello schermo");
 
 for (const sql of [migrationSource, schemaSource]) {
   assert.match(sql, /create table if not exists public\.graphic_review_requests/);

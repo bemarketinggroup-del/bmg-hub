@@ -50,6 +50,8 @@ assert.doesNotMatch(appSource, /getElementById\("viewKicker"\)/, "la navigazione
 assert.match(appSource, /function renderSession\(\)[\s\S]*?sidebarUserName[\s\S]*?sidebarUserAvatar[\s\S]*?Amministratore/, "il footer deve mostrare nome, iniziali e ruolo dell'utente corrente");
 assert.match(appSource, /function positionNotificationPanel\(button, panel\)[\s\S]*?getBoundingClientRect/, "il pannello notifiche deve aprirsi accanto alla nuova voce laterale");
 assert.match(appSource, /function setNotificationPanelOpen\(open\)[\s\S]*?classList\.toggle\("has-open-notifications", shouldOpen\)[\s\S]*?positionNotificationPanel/, "il pannello notifiche deve mantenere aperta la sidebar che lo ancora");
+assert.match(styleSource, /\.sidebar-notification \.notification-button\.has-notifications\s*\{[\s\S]*background:\s*linear-gradient[\s\S]*color:\s*#fff[\s\S]*box-shadow:/, "la voce notifiche con elementi non letti deve essere immediatamente visibile");
+assert.match(styleSource, /\.notification-button\.has-notifications \.notification-icon\s*\{[\s\S]*background:\s*rgba\(255, 255, 255, \.16\)/, "la campanella attiva deve avere un contenitore ad alto contrasto");
 assert.match(styleSource, /\.sidebar\.p-sidebar:hover,[\s\S]*?\.sidebar\.p-sidebar\.has-open-notifications\{ width: 272px;/, "la sidebar desktop deve restare espansa finche il pannello notifiche e aperto");
 assert.match(appSource, /addEventListener\("transitionend"[\s\S]*?event\.propertyName !== "width"[\s\S]*?positionNotificationPanel/, "il pannello notifiche deve riallinearsi al termine dell'espansione laterale");
 

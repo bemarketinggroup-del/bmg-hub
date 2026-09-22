@@ -469,6 +469,12 @@ supabase/                     schema e migration
 - Il contatore notifiche resta sulla voce padre `Grafiche` e continua a mostrare
   le revisioni nuove ancora da prendere in carico; una notifica apre
   direttamente la pagina `Revisioni grafiche`.
+- Quando arriva una nuova revisione, gli utenti attivi con permesso `graphics`
+  vedono anche un banner piccolo e non bloccante al centro dello schermo, con
+  accesso diretto alla pagina delle revisioni. Il banner scompare da solo, può
+  essere chiuso e non viene riproposto a ogni aggiornamento della stessa
+  sessione; la notifica resta comunque disponibile nella sidebar finché non
+  viene archiviata dall'utente.
 
 ### Chat interna
 
@@ -583,9 +589,11 @@ supabase/                     schema e migration
 ### Backend sito, notifiche e setup
 
 - CMS leggero per testi, immagini e contenuti del sito.
-- Notifiche più evidenti con contatore e punto arancione pulsante visibile solo
-  quando sono presenti nuovi elementi; animazione non invasiva, compatibile con
-  `prefers-reduced-motion`, e chiusura persistente.
+- Notifiche più evidenti: quando ci sono elementi non letti l'intera voce della
+  sidebar usa un fondo terracotta ad alto contrasto, campanella bianca più
+  grande, contatore chiaro e punto arancione pulsante. L'animazione resta non
+  invasiva, compatibile con `prefers-reduced-motion`, e la chiusura è
+  persistente.
 - Le notifiche legate a task completate spariscono automaticamente.
 - Il controllo di salute delle integrazioni resta attivo in background, senza
   indicatori sintetici nella sidebar.

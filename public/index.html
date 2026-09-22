@@ -170,6 +170,21 @@
       <div class="notification-list" id="notificationList"></div>
     </section>
 
+    <aside class="graphic-review-toast is-hidden" id="graphicReviewToast" role="status" aria-live="assertive" aria-atomic="true">
+      <span class="graphic-review-toast-icon" aria-hidden="true">
+        <svg class="lc" viewBox="0 0 24 24"><path d="M4 20h16"/><path d="m14 4 6 6L9 21H3v-6Z"/><path d="m12 6 6 6"/></svg>
+      </span>
+      <div class="graphic-review-toast-copy">
+        <small>Nuova revisione grafica</small>
+        <strong id="graphicReviewToastTitle">Revisione da lavorare</strong>
+        <span id="graphicReviewToastMessage"></span>
+      </div>
+      <button class="graphic-review-toast-open" id="graphicReviewToastOpen" data-open-graphics-review="" type="button">Apri</button>
+      <button class="graphic-review-toast-close" data-close-graphic-review-toast type="button" aria-label="Chiudi avviso revisione">
+        <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </aside>
+
     <main class="main">
       <header class="topbar">
         <div class="topbar-heading">

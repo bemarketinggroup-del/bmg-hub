@@ -324,6 +324,10 @@ let personalAreaState = {
   error: ""
 };
 let personalAreaTimer = null;
+let graphicReviewToastTimer = null;
+let graphicReviewToastHideTimer = null;
+let graphicReviewToastQueue = [];
+let activeGraphicReviewToast = null;
 let teamChatState = {
   profile: null,
   team: [],
@@ -1150,6 +1154,7 @@ async function logout() {
   stopServiceHealthUpdates();
   stopMaintenanceNoticeUpdates();
   stopSmartWorkingUpdates();
+  closeGraphicReviewToast({ clearQueue: true });
   const maintenanceDialog = document.getElementById("maintenanceNoticeDialog");
   if (maintenanceDialog?.open) maintenanceDialog.close();
   maintenanceNoticeState = { enabled: false, message: DEFAULT_MAINTENANCE_MESSAGE, updated_at: "", loading: false };
@@ -10365,6 +10370,7 @@ function formatPersonalDate(value, includeTime = true) {
 
 async function loadPersonalArea({ quiet = false } = {}) {
   if (personalAreaState.loading) return;
+  const hadLoadedPersonalArea = personalAreaState.loaded;
   personalAreaState.loading = true;
   if (!quiet) renderPersonalArea();
   try {
@@ -10380,6 +10386,7 @@ async function loadPersonalArea({ quiet = false } = {}) {
       loaded: true,
       error: ""
     };
+    queueGraphicReviewToasts(personalAreaState.notifications, { onlyLatest: !hadLoadedPersonalArea });
   } catch (error) {
     personalAreaState.loading = false;
     personalAreaState.error = error.message;
@@ -10535,6 +10542,77 @@ function renderNotifications() {
     </article>`;
   }).join("") : `<div class="notification-empty"><strong>Nessuna nuova notifica</strong><span>Sei aggiornato.</span></div>`;
   renderChatNavBadge();
+}
+
+function graphicReviewToastStorageKey() {
+  return `bmg.graphic-review-toast.seen.${String(currentProfile?.id || "anonymous")}`;
+}
+
+function readSeenGraphicReviewToasts() {
+  try {
+    const value = JSON.parse(sessionStorage.getItem(graphicReviewToastStorageKey()) || "[]");
+    return new Set(Array.isArray(value) ? value.map(String) : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function rememberSeenGraphicReviewToasts(seen) {
+  try {
+    sessionStorage.setItem(graphicReviewToastStorageKey(), JSON.stringify([...seen].slice(-100)));
+  } catch {
+    // Il banner resta funzionante anche se il browser blocca lo storage di sessione.
+  }
+}
+
+function queueGraphicReviewToasts(notifications, { onlyLatest = false } = {}) {
+  if (!currentProfile || !canAccessModule("graphics")) return;
+  const seen = readSeenGraphicReviewToasts();
+  const incoming = (Array.isArray(notifications) ? notifications : [])
+    .filter((item) => item?.source_type === "graphic_review" && item.id && item.source_id && !seen.has(String(item.id)))
+    .sort((left, right) => String(left.occurred_at || "").localeCompare(String(right.occurred_at || "")));
+  if (!incoming.length) return;
+  incoming.forEach((item) => seen.add(String(item.id)));
+  rememberSeenGraphicReviewToasts(seen);
+  const visibleIncoming = onlyLatest ? incoming.slice(-1) : incoming.slice(-3);
+  const queuedIds = new Set([
+    activeGraphicReviewToast?.id,
+    ...graphicReviewToastQueue.map((item) => item.id)
+  ].filter(Boolean).map(String));
+  visibleIncoming.forEach((item) => {
+    if (!queuedIds.has(String(item.id))) graphicReviewToastQueue.push(item);
+  });
+  if (!activeGraphicReviewToast) showNextGraphicReviewToast();
+}
+
+function showNextGraphicReviewToast() {
+  const toast = document.getElementById("graphicReviewToast");
+  const item = graphicReviewToastQueue.shift();
+  if (!toast || !item) return;
+  activeGraphicReviewToast = item;
+  document.getElementById("graphicReviewToastTitle").textContent = item.title || "Nuova revisione grafica";
+  document.getElementById("graphicReviewToastMessage").textContent = item.message || "È arrivata una nuova richiesta da lavorare.";
+  const openButton = document.getElementById("graphicReviewToastOpen");
+  openButton.dataset.openGraphicsReview = String(item.source_id);
+  toast.classList.remove("is-hidden");
+  window.clearTimeout(graphicReviewToastHideTimer);
+  requestAnimationFrame(() => requestAnimationFrame(() => toast.classList.add("is-visible")));
+  window.clearTimeout(graphicReviewToastTimer);
+  graphicReviewToastTimer = window.setTimeout(() => closeGraphicReviewToast(), 9000);
+}
+
+function closeGraphicReviewToast({ clearQueue = false } = {}) {
+  const toast = document.getElementById("graphicReviewToast");
+  window.clearTimeout(graphicReviewToastTimer);
+  window.clearTimeout(graphicReviewToastHideTimer);
+  graphicReviewToastTimer = null;
+  if (clearQueue) graphicReviewToastQueue = [];
+  activeGraphicReviewToast = null;
+  toast?.classList.remove("is-visible");
+  graphicReviewToastHideTimer = window.setTimeout(() => {
+    toast?.classList.add("is-hidden");
+    if (graphicReviewToastQueue.length) showNextGraphicReviewToast();
+  }, 220);
 }
 
 async function dismissPersonalNotification(notificationId) {
@@ -11688,11 +11766,13 @@ document.body.addEventListener("click", (event) => {
   const graphicsPreview = event.target.closest("[data-graphics-preview]");
   const graphicsDeliverable = event.target.closest("[data-graphics-deliverable]");
   const openGraphicsReview = event.target.closest("[data-open-graphics-review]");
+  const closeGraphicsReviewToast = event.target.closest("[data-close-graphic-review-toast]");
   const personalRefresh = event.target.closest("[data-personal-refresh]");
   const chatConversation = event.target.closest("[data-chat-conversation]");
   const chatRetry = event.target.closest("[data-chat-retry]");
   const chatOpen = event.target.closest("[data-chat-open]");
   if (graphicReviewFile) return openGraphicReviewModal(graphicReviewFile.dataset.graphicReviewFile, graphicReviewFile.dataset.graphicReviewSurface);
+  if (closeGraphicsReviewToast) return closeGraphicReviewToast();
   if (graphicsFilter) {
     graphicReviewState.filter = graphicsFilter.dataset.graphicsFilter || "active";
     return renderGraphicReviews();
@@ -11719,6 +11799,7 @@ document.body.addEventListener("click", (event) => {
   }
   if (openGraphicsReview) {
     if (!canAccessModule("graphics")) return;
+    closeGraphicReviewToast({ clearQueue: true });
     setView("graphics-reviews");
     setNotificationPanelOpen(false);
     return loadGraphicReviews({ quiet: true });

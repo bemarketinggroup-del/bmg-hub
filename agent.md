@@ -59,6 +59,31 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-09-22 — Notifiche evidenti e popup per le revisioni grafiche
+
+- Richiesta: rendere molto più visibile l'icona quando un utente ha notifiche e
+  mostrare ai grafici un piccolo popup centrale quando arriva una revisione.
+- Modifiche: la voce Notifiche della sidebar passa a un'evidenziazione
+  terracotta ad alto contrasto con campanella più grande, contatore chiaro e
+  richiamo animato. Le nuove notifiche `graphic_review` mostrano agli utenti
+  attivi con permesso Grafiche un banner centrale non bloccante, apribile o
+  chiudibile e con scomparsa automatica dopo nove secondi. Gli avvisi già
+  mostrati vengono ricordati per la sessione, così il polling non li ripete;
+  coda e banner vengono ripuliti al logout senza chiudere la notifica
+  persistente nella sidebar.
+- File: `public/index.html`, `public/app.js`, `public/styles.css`,
+  `scripts/test-graphic-reviews.mjs`, `scripts/test-mobile-navigation.mjs`,
+  `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run test:graphic-reviews`, `npm run
+  test:mobile-navigation`, `npm run test:personal-area`, `npm run
+  test:permissions`, `npm run build`, `git diff --check`; controllo desktop e
+  smartphone sulla versione pubblicata.
+- Pubblicazione: commit corrente pubblicato su GitHub `main`; deploy Vercel di
+  produzione verificato su `https://bmg-hub.vercel.app`.
+- Note: il backend esistente invia già le revisioni soltanto agli utenti attivi
+  con accesso al modulo Grafiche; nessuna revisione o notifica esistente viene
+  eliminata.
+
 ### 2026-09-22 — Nomi utenti uniformi con nome e cognome obbligatori
 
 - Richiesta: mostrare tutti gli utenti con nome e cognome, senza record composti
