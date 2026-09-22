@@ -1705,6 +1705,7 @@ async function loadSmartWorking() {
 }
 
 async function refreshSmartWorkingInBackground(month, { refresh = false } = {}) {
+  if (currentProfile?.role !== "admin") return;
   if (!month || smartWorkingBackgroundMonths.has(month) || (!refresh && smartCalendarRefreshedMonths.has(month))) return;
   smartCalendarRefreshedMonths.add(month);
   smartWorkingBackgroundMonths.add(month);
@@ -1738,7 +1739,7 @@ function smartWorkingViewIsActive() {
 function startSmartWorkingUpdates() {
   stopSmartWorkingUpdates();
   smartWorkingUpdatesTimer = window.setInterval(() => {
-    if (document.visibilityState !== "visible" || !currentProfile || !canAccessModule("smart_working") || !smartWorkingViewIsActive()) return;
+    if (document.visibilityState !== "visible" || currentProfile?.role !== "admin" || !canAccessModule("smart_working") || !smartWorkingViewIsActive()) return;
     void refreshSmartWorkingInBackground(smartMonthKey(), { refresh: true });
   }, SMART_WORKING_SYNC_INTERVAL_MS);
 }
@@ -1749,6 +1750,11 @@ function stopSmartWorkingUpdates() {
 }
 
 async function smartWorkingAction(action, payload = {}, options = {}) {
+  if (currentProfile?.role !== "admin") {
+    const error = new Error("Solo l'amministratore può modificare turni e smart working.");
+    error.status = 403;
+    throw error;
+  }
   const response = await apiFetch("/api/smart-working", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -6871,9 +6877,15 @@ function renderSmartWorking() {
     const syncTime = smartWorkingLastSyncedAt
       ? new Intl.DateTimeFormat("it-IT", { hour: "2-digit", minute: "2-digit" }).format(new Date(smartWorkingLastSyncedAt))
       : "";
-    autoSyncStatus.innerHTML = `<i aria-hidden="true"></i>${smartWorkingBackgroundMonths.has(data.month) ? "Sincronizzazione Calendar in corso…" : syncTime ? `Calendar aggiornato alle ${escapeHtml(syncTime)} · ogni 5 min` : "Calendar automatico · ogni 5 min"}`;
+    autoSyncStatus.innerHTML = `<i aria-hidden="true"></i>${data.can_manage ? smartWorkingBackgroundMonths.has(data.month) ? "Sincronizzazione Calendar in corso…" : syncTime ? `Calendar aggiornato alle ${escapeHtml(syncTime)} · ogni 5 min` : "Calendar automatico · ogni 5 min" : "Sola lettura · aggiornamento gestito dall'amministratore"}`;
     autoSyncStatus.classList.toggle("is-syncing", smartWorkingBackgroundMonths.has(data.month));
   }
+  const weekFlow = document.getElementById("smartWeekFlow");
+  if (weekFlow) weekFlow.innerHTML = data.can_manage
+    ? "<strong>Per ogni settimana:</strong> sincronizza, genera la proposta, sposta i nomi verdi e pubblica quando è pronta."
+    : "<strong>Sola lettura:</strong> soltanto l'amministratore può modificare e pubblicare i turni.";
+  const proposalLegend = document.getElementById("smartProposalLegend");
+  if (proposalLegend) proposalLegend.innerHTML = `<i class="is-proposal"></i>${data.can_manage ? "Proposta futura trascinabile" : "Proposta futura"}`;
   renderSmartSettings(data);
   renderSmartStaffManager(data);
   renderSmartMonth(data);
@@ -6909,6 +6921,7 @@ function renderSmartStaffManager(data) {
 }
 
 async function setSmartEmployeeActive(input) {
+  if (currentProfile?.role !== "admin") return;
   const employeeId = input.dataset.smartEmployeeActive;
   const nextActive = input.checked;
   input.disabled = true;
@@ -7239,6 +7252,7 @@ function renderSmartOffDetail() {
 }
 
 async function reviewSmartOffDay(button) {
+  if (currentProfile?.role !== "admin") return;
   const date = button.dataset.smartOffDate;
   const included = button.dataset.smartOffReview === "true";
   if (!date || !selectedSmartOffEmployeeId) return;
@@ -7312,6 +7326,7 @@ function clearSmartDragVisuals() {
 }
 
 async function moveSmartProposal(assignmentId, targetDate, force = false) {
+  if (currentProfile?.role !== "admin") return;
   const assignment = (state.smartWorking?.assignments || []).find((item) => String(item.id) === String(assignmentId));
   if (!assignment || !targetDate || assignment.date === targetDate) return;
   try {
@@ -7337,6 +7352,7 @@ async function moveSmartProposal(assignmentId, targetDate, force = false) {
 }
 
 function openSmartEntryModal({ date = selectedSmartDate, type = "smart", id = "" } = {}) {
+  if (currentProfile?.role !== "admin") return;
   const data = state.smartWorking || {};
   const assignment = type === "smart" ? (data.assignments || []).find((item) => String(item.id) === String(id)) : (data.leave_entries || []).find((item) => String(item.id) === String(id));
   const form = document.getElementById("smartEntryForm");
@@ -7372,6 +7388,7 @@ function closeSmartEntryModal() {
 }
 
 async function submitSmartEntry(form, force = false) {
+  if (currentProfile?.role !== "admin") return;
   const payload = Object.fromEntries(new FormData(form).entries());
   payload.employee_id = form.elements.employee_id.value;
   payload.entry_type = form.elements.entry_type.value;
@@ -7400,6 +7417,7 @@ async function submitSmartEntry(form, force = false) {
 }
 
 async function deleteSmartEntry() {
+  if (currentProfile?.role !== "admin") return;
   const form = document.getElementById("smartEntryForm");
   const entryId = form.elements.entry_id.value;
   if (!entryId || !confirm("Eliminare questo turno anche da Google Calendar?")) return;
@@ -7413,6 +7431,7 @@ async function deleteSmartEntry() {
 }
 
 async function syncSmartWeek(weekStart, button) {
+  if (currentProfile?.role !== "admin") return;
   if (!weekStart || !button) return;
   button.disabled = true;
   button.textContent = "Sincronizzo…";
@@ -7432,6 +7451,7 @@ async function syncSmartWeek(weekStart, button) {
 }
 
 async function generateSmartWeek(weekStart, button) {
+  if (currentProfile?.role !== "admin") return;
   if (!weekStart || !button) return;
   const existingPlan = (state.smartWorking?.plans || []).find((plan) => plan.week_start_date === weekStart);
   if (existingPlan?.status === "approved" && !confirm(`La settimana ${smartWeekDateLabel(weekStart)} è già pubblicata. Vuoi rigenerarne la bozza? Gli smart automatici già pubblicati verranno sostituiti.`)) return;
@@ -7451,6 +7471,7 @@ async function generateSmartWeek(weekStart, button) {
 }
 
 async function approveSmartWeek(weekStart, button) {
+  if (currentProfile?.role !== "admin") return;
   if (!weekStart || !button) return;
   const plan = (state.smartWorking?.plans || []).find((item) => item.week_start_date === weekStart);
   if (plan?.status !== "draft") return alert("Genera prima la proposta di questa settimana.");
@@ -7470,6 +7491,7 @@ async function approveSmartWeek(weekStart, button) {
 }
 
 async function saveSmartRules(form) {
+  if (currentProfile?.role !== "admin") return;
   try {
     await smartWorkingAction("save_rules", Object.fromEntries(new FormData(form).entries()));
     renderSmartWorking();
@@ -11916,6 +11938,10 @@ function driveDropZoneFromEvent(event) {
 document.body.addEventListener("dragstart", (event) => {
   const smartChip = event.target.closest?.("[data-smart-drag]");
   if (smartChip) {
+    if (currentProfile?.role !== "admin") {
+      event.preventDefault();
+      return;
+    }
     smartDraggedAssignmentId = String(smartChip.dataset.smartDrag || "");
     const assignment = (state.smartWorking?.assignments || []).find((item) => String(item.id) === smartDraggedAssignmentId);
     if (!assignment) return;

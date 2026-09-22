@@ -534,9 +534,14 @@ supabase/                     schema e migration
 ### Turni, Smart Working e contatore
 
 - Calendario settimanale dalla settimana corrente in avanti.
+- Per gli utenti staff la pagina è interamente in sola lettura: non possono
+  aggiungere, modificare, eliminare o trascinare turni, cambiare le persone
+  attive, salvare regole, sincronizzare, generare proposte o pubblicarle.
+  Tutte le azioni `POST` sono protette anche dal backend e richiedono il ruolo
+  `admin`; la sola autorizzazione del frontend non è considerata sufficiente.
 - La pagina aggiorna Google Calendar automaticamente ogni 5 minuti mentre è
-  visibile e immediatamente quando l'utente torna sulla scheda. Il backend usa
-  una cache breve per evitare richieste duplicate tra più utenti.
+  visibile e immediatamente quando l'amministratore torna sulla scheda. Il
+  backend usa una cache breve per evitare richieste duplicate.
 - L'amministratore dispone del pannello `Persone nei turni`: una persona
   disattivata scompare da turni, ferie, contatori e proposte future, mantenendo
   lo storico. Eliminare un account da `Utenti` disattiva automaticamente la
@@ -567,8 +572,8 @@ supabase/                     schema e migration
 - Controllo settimanale delle persone senza smart e proposte future in verde.
 - `Contatore` è una pagina amministrativa separata: conteggi mensili/annuali,
   conferma/esclusione dei singoli giorni e grafici a colonne per utente.
-- Lo spostamento smart può essere concesso a tutti gli utenti quando la relativa
-  finestra/permesso è attivo.
+- Solo l'amministratore può spostare le proposte smart tramite trascinamento;
+  per gli altri utenti i turni restano consultabili senza controlli di modifica.
 
 ### Backend sito, notifiche e setup
 

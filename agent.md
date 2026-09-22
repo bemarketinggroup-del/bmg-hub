@@ -59,6 +59,29 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-09-22 — Turni e Smart Working modificabili solo dagli amministratori
+
+- Richiesta: impedire agli utenti non amministratori di modificare i turni
+  dello Smart Working.
+- Modifiche: tutte le azioni `POST` del modulo Turni/Smart Working richiedono
+  ora il ruolo `admin`, senza più eccezioni per spostamento proposte o
+  sincronizzazioni. Per lo staff la vista resta consultabile ma non avvia
+  riconciliazioni o sincronizzazioni in background, non espone controlli di
+  modifica e blocca localmente anche tentativi di drag-and-drop o azioni
+  richiamate manualmente. I testi della pagina chiariscono la modalità sola
+  lettura e non indicano più le proposte come trascinabili agli utenti staff.
+- File: `lib/smart-working.js`, `public/app.js`, `public/index.html`,
+  `scripts/test-smart-working-monthly.mjs`, `docs/PROJECT-HANDOFF.md`,
+  `agent.md`.
+- Verifiche: `npm run test:smart-working`, `npm run test:permissions`, `npm run
+  test:mobile-navigation`, `npm run build`, `git diff --check`; controllo
+  desktop e smartphone e verifica drag-and-drop in Chrome e Safari sulla
+  versione pubblicata.
+- Pubblicazione: commit corrente pubblicato su GitHub `main`; deploy Vercel di
+  produzione verificato su `https://bmg-hub.vercel.app`.
+- Note: nessuna modifica ai dati o ai turni esistenti; gli utenti staff
+  conservano l'accesso in sola lettura se il modulo è assegnato al loro profilo.
+
 ### 2026-09-22 — Recupero degli utenti eliminati prima del registro esclusioni
 
 - Richiesta: eliminare dalle task anche Federica e Daniele, già cancellati
