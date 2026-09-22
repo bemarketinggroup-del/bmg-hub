@@ -8162,6 +8162,44 @@ body.user-activity-dialog-visible { overflow: hidden; }
 .personal-panel { min-width: 0; overflow: hidden; }
 .personal-panel .panel-head { border-bottom: 1px solid var(--line); }
 .personal-list { min-height: 150px; }
+.personal-task-group + .personal-task-group { border-top: 1px solid var(--line); }
+.personal-task-group-head {
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 18px;
+  background: var(--surface-soft);
+}
+.personal-task-group-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.personal-task-group-label::before { width: 8px; height: 8px; border-radius: 50%; background: var(--amber); content: ""; }
+.personal-task-group.is-progress .personal-task-group-label::before { background: var(--teal); }
+.personal-task-group-head > strong {
+  min-width: 24px;
+  height: 22px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: var(--pill);
+  background: var(--surface);
+  color: var(--muted);
+  padding: 0 7px;
+  font-size: 11px;
+}
+.personal-task-group-list { min-height: 54px; }
+.personal-task-group .personal-item:last-child { border-bottom: 0; }
+.personal-group-empty { min-height: 66px; display: grid; place-items: center; padding: 18px; }
+.personal-group-empty strong { color: var(--subtle); font-size: 11px; font-weight: 600; }
 
 .personal-item {
   display: grid;
@@ -8178,6 +8216,8 @@ body.user-activity-dialog-visible { overflow: hidden; }
 .personal-item:last-child { border-bottom: 0; }
 .personal-item:hover { background: var(--paper); }
 .personal-item-marker { width: 9px; height: 9px; margin-top: 5px; border-radius: 50%; background: var(--terracotta); }
+.personal-item-marker.is-todo { background: var(--amber); }
+.personal-item-marker.is-progress { background: var(--teal); }
 .personal-item.is-event .personal-item-marker { background: var(--teal); }
 .personal-item-body { min-width: 0; }
 .personal-item-body strong,

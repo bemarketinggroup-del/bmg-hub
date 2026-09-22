@@ -223,7 +223,9 @@ supabase/                     schema e migration
 ### Home e area personale
 
 - Dashboard con riepiloghi di clienti, task e smart working.
-- “La mia area” mostra le task e gli eventi del singolo utente.
+- “La mia area” mostra per ogni utente soltanto le task attive assegnate, divise
+  nei due blocchi `Da fare` e `In corso`; le completate sono escluse sia
+  dall'API sia dall'interfaccia. Gli eventi personali restano affiancati.
 - Il click su una task apre la vista task del rispettivo utente dentro BMG Hub,
   non ClickUp e non la vista generica del team.
 
@@ -507,9 +509,9 @@ supabase/                     schema e migration
 - Modifica, stato, scadenza, priorità e descrizione.
 - Sincronizzazione bidirezionale e webhook ClickUp.
 - Le task completate non devono restare nelle notifiche.
-- Le task completate restano visibili nelle liste del team e personali per 10
-  giorni dalla chiusura ClickUp, poi vengono nascoste automaticamente; Home e
-  notifiche continuano a considerare soltanto le task attive.
+- Le task completate restano visibili per 10 giorni nelle liste del modulo Task,
+  incluse le viste per singolo membro, poi vengono nascoste automaticamente;
+  `La mia area`, Home e notifiche considerano soltanto le task attive.
 - Nessun pulsante operativo deve portare l'utente fuori dal gestionale.
 
 ### Google Drive

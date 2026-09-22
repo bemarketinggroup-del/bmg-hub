@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import {
+  activePersonalTasks,
   eventIncludesProfile,
   filterActiveNotifications,
   isCompletedTaskStatus,
@@ -21,6 +22,11 @@ assert.equal(taskAssignedToProfile({ assignees: [{ id: 43, email: profile.email 
 assert.equal(taskAssignedToProfile({ assignees: [] }, profile), false);
 assert.equal(isCompletedTaskStatus("Completato"), true);
 assert.equal(isCompletedTaskStatus("In corso"), false);
+assert.deepEqual(activePersonalTasks([
+  { id: "todo", status: "to do" },
+  { id: "progress", status: "in progress" },
+  { id: "done", status: "complete" }
+]).map((task) => task.id), ["todo", "progress"], "la Mia area deve escludere sempre le task completate");
 const retentionNow = Date.UTC(2026, 8, 3, 12);
 assert.equal(isTaskVisibleDuringCompletionRetention({ status: "Completato", payload: { date_closed: String(retentionNow - 10 * 86400000) } }, retentionNow), true);
 assert.equal(isTaskVisibleDuringCompletionRetention({ status: "Completato", payload: { date_closed: String(retentionNow - 10 * 86400000 - 1) } }, retentionNow), false);
@@ -40,6 +46,9 @@ const appSource = await readFile(new URL("../public/app.js", import.meta.url), "
 const htmlSource = await readFile(new URL("../public/index.html", import.meta.url), "utf8");
 const styleSource = await readFile(new URL("../public/styles.css", import.meta.url), "utf8");
 assert.match(appSource, /data-personal-task="\$\{escapeHtml\(taskId\)\}"/, "le task personali devono essere selezionabili nel gestionale");
+assert.match(appSource, /const personalGroups = \[[\s\S]*id: "todo", label: "Da fare"[\s\S]*id: "progress", label: "In corso"/, "la Mia area deve separare Da fare e In corso");
+assert.match(appSource, /tasks: \(Array\.isArray\(data\.tasks\)[\s\S]*taskStatusGroup\(task\)\.id !== "done"/, "il frontend deve scartare anche eventuali completate ricevute da una risposta obsoleta");
+assert.match(styleSource, /\.personal-task-group \+ \.personal-task-group[\s\S]*\.personal-task-group-head/, "i due stati personali devono essere visivamente separati");
 assert.match(appSource, /async function openPersonalTask\(taskId\)[\s\S]*?setView\("team"\)[\s\S]*?openTaskDetailModal\(taskId\)/, "una task personale deve aprire la vista e il dettaglio interni");
 assert.match(appSource, /function personalTaskOwner\(task\)[\s\S]*?taskAssignedTo\(task, currentUser\)[\s\S]*?users\.find\(\(user\) => taskAssignedTo\(task, user\)\)/, "la task personale deve aprire la vista del rispettivo assegnatario");
 const personalTaskNavigationSource = appSource.slice(

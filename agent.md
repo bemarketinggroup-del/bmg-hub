@@ -59,6 +59,26 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-09-22 — Mia area divisa tra task da fare e in corso
+
+- Richiesta: mostrare nella Mia area di tutti gli utenti soltanto le task da
+  fare e in corso, senza completate e con i due stati separati.
+- Modifiche: l'API personale restituisce ora esclusivamente le task assegnate
+  non completate; il frontend applica una seconda protezione contro risposte
+  obsolete e organizza l'elenco in due sezioni sempre distinte, `Da fare` e `In
+  corso`, ciascuna con contatore e stato vuoto. La conservazione per dieci
+  giorni delle completate resta invariata nel modulo Task e nelle viste dei
+  singoli membri.
+- File: `lib/personal-area.js`, `public/app.js`, `public/styles.css`,
+  `scripts/test-personal-area.mjs`, `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run test:personal-area`, `npm run test:permissions`, `npm run
+  test:mobile-navigation`, `npm run build`, `git diff --check`; controllo
+  desktop e smartphone sulla versione pubblicata.
+- Pubblicazione: commit corrente pubblicato su GitHub `main`; deploy Vercel di
+  produzione verificato su `https://bmg-hub.vercel.app`.
+- Note: nessuna task o dato ClickUp viene cancellato; cambia soltanto ciò che la
+  Mia area riceve e visualizza.
+
 ### 2026-09-22 — Notifiche evidenti e popup per le revisioni grafiche
 
 - Richiesta: rendere molto più visibile l'icona quando un utente ha notifiche e

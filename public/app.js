@@ -10379,7 +10379,8 @@ async function loadPersonalArea({ quiet = false } = {}) {
     if (!response.ok) throw new Error(data.error || "Area personale non disponibile");
     personalAreaState = {
       team: Array.isArray(data.team) ? data.team : [],
-      tasks: Array.isArray(data.tasks) ? data.tasks : [],
+      tasks: (Array.isArray(data.tasks) ? data.tasks : [])
+        .filter((task) => taskStatusGroup(task).id !== "done"),
       events: Array.isArray(data.events) ? data.events : [],
       notifications: Array.isArray(data.notifications) ? data.notifications : [],
       loading: false,
@@ -10442,7 +10443,9 @@ function renderPersonalArea() {
   document.getElementById("personalGreeting").textContent = currentProfile?.full_name
     ? `Il lavoro di ${currentProfile.full_name}`
     : "Il tuo lavoro";
-  document.getElementById("personalTaskCount").textContent = personalAreaState.tasks.length;
+  const activePersonalTasks = personalAreaState.tasks
+    .filter((task) => taskStatusGroup(task).id !== "done");
+  document.getElementById("personalTaskCount").textContent = activePersonalTasks.length;
   document.getElementById("personalEventCount").textContent = personalAreaState.events.length;
 
   if (personalAreaState.loading && !personalAreaState.loaded) {
@@ -10454,8 +10457,8 @@ function renderPersonalArea() {
     return;
   }
 
-  const tasks = [...personalAreaState.tasks].sort(compareTaskDueDate);
-  taskList.innerHTML = tasks.length ? tasks.map((task) => {
+  const tasks = [...activePersonalTasks].sort(compareTaskDueDate);
+  const personalTaskMarkup = (task) => {
     const taskId = String(task.clickup_task_id || task.id || "");
     const due = task.due_date_ms ? formatPersonalDate(task.due_date_ms, false) : "Senza scadenza";
     const group = taskStatusGroup(task);
@@ -10465,7 +10468,23 @@ function renderPersonalArea() {
       <time class="personal-date">${escapeHtml(due)}</time>
       <svg class="lc personal-item-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
     </article>`;
-  }).join("") : `<div class="personal-empty"><strong>Nessuna task attiva</strong><span>Le nuove assegnazioni ClickUp compariranno qui.</span></div>`;
+  };
+  const personalGroups = [
+    { id: "todo", label: "Da fare", empty: "Nessuna task da fare" },
+    { id: "progress", label: "In corso", empty: "Nessuna task in corso" }
+  ];
+  taskList.innerHTML = personalGroups.map((group) => {
+    const groupTasks = tasks.filter((task) => taskStatusGroup(task).id === group.id);
+    return `<section class="personal-task-group is-${group.id}" aria-labelledby="personal-task-${group.id}">
+      <header class="personal-task-group-head">
+        <span class="personal-task-group-label" id="personal-task-${group.id}">${group.label}</span>
+        <strong aria-label="${groupTasks.length} task ${group.label.toLowerCase()}">${groupTasks.length}</strong>
+      </header>
+      <div class="personal-task-group-list">
+        ${groupTasks.map(personalTaskMarkup).join("") || `<div class="personal-empty personal-group-empty"><strong>${group.empty}</strong></div>`}
+      </div>
+    </section>`;
+  }).join("");
 
   const events = [...personalAreaState.events].sort((left, right) => String(left.start_at).localeCompare(String(right.start_at)));
   eventList.innerHTML = events.length ? events.map((item) => {
