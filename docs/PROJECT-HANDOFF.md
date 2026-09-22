@@ -474,7 +474,13 @@ supabase/                     schema e migration
 - Creazione task interna con stato iniziale sempre `to do`.
 - Assegnatari selezionabili con checkbox ben visibili.
 - Cliente ricercabile e rilevato automaticamente se citato in titolo o
-  descrizione.
+  descrizione, anche quando viene scritta una parte distintiva e univoca del
+  nome (per esempio `Bellevue` per `Bellevue Syrene`). Gli alias sono
+  disponibili anche agli utenti staff; una selezione manuale non viene
+  sovrascritta dal riconoscimento automatico.
+- `Migliora descrizione con AI` funziona direttamente sulla bozza nel modulo di
+  creazione, prima che la task venga salvata su ClickUp. La proposta resta da
+  confermare e la richiesta AI non crea o modifica task.
 - Modifica, stato, scadenza, priorità e descrizione.
 - Sincronizzazione bidirezionale e webhook ClickUp.
 - Le task completate non devono restare nelle notifiche.

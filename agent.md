@@ -59,6 +59,30 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-09-22 — AI integrata nella bozza e cliente riconosciuto durante la scrittura
+
+- Richiesta: permettere di usare l'AI mentre si crea una task, senza doverla
+  prima salvare su ClickUp, e selezionare automaticamente il cliente quando il
+  suo nome compare nel titolo o nella descrizione.
+- Modifiche: rimosso il vincolo dell'ID ClickUp dal miglioramento descrizione;
+  il backend accetta una bozza autenticata, restituisce soltanto la proposta e
+  non crea o modifica task. Il cliente viene ora riconosciuto anche da una
+  parola distintiva e univoca del nome, come `Bellevue` per `Bellevue Syrene`,
+  senza sovrascrivere una selezione manuale e senza scegliere nei casi ambigui.
+  Gli alias cliente vengono letti anche dagli utenti staff e il riconoscimento
+  viene rieseguito dopo l'applicazione della proposta AI.
+- File: `public/app.js`, `lib/ai-task-assist.js`, `api/clickup-tasks.js`,
+  `scripts/test-ai-task-assist.mjs`, `scripts/test-clickup-task-sync.mjs`,
+  `docs/AI-TASK-ASSIST.md`, `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: controlli sintattici Node, `npm run test:ai-task-assist`, `npm run
+  test:clickup-sync`, test permessi/UI pertinenti, `npm run check`, `npm run
+  build`, `git diff --check`; controllo visuale desktop e smartphone del form,
+  del riconoscimento `Bellevue` e della proposta AI su bozza senza creare task.
+- Pubblicazione: commit corrente pubblicato su GitHub `main`; deploy Vercel di
+  produzione verificato su `https://bmg-hub.vercel.app`.
+- Note: l'AI continua a richiedere una conferma esplicita prima di sostituire la
+  descrizione; i test non creano task e non scrivono dati su ClickUp.
+
 ### 2026-09-22 — Eliminazione sicura dei membri dalla directory Utenti
 
 - Richiesta: permettere di eliminare dalla pagina Utenti anche membri come

@@ -1664,15 +1664,14 @@ async function loadClickUpTaskLogs() {
 }
 
 async function loadClientAliases() {
-  if (currentProfile?.role !== "admin") return;
   try {
     const response = await apiFetch("/api/ai/task-assist?aliases=1");
     if (!response.ok) throw new Error(`AI aliases error ${response.status}`);
     state.clientAliases = await response.json();
-    renderAliasControls();
+    if (currentProfile?.role === "admin") renderAliasControls();
   } catch (error) {
     renderBackendStatus(error.message);
-    renderAliasControls();
+    if (currentProfile?.role === "admin") renderAliasControls();
   }
 }
 
@@ -8908,6 +8907,24 @@ function normalizedClientSearch(value) {
   return normalizeIdentity(value).replace(/[^a-z0-9]+/g, " ").trim();
 }
 
+const TASK_CLIENT_GENERIC_TERMS = new Set([
+  "azienda", "cliente", "company", "group", "gruppo", "hotel", "matera",
+  "restaurant", "ristorante", "resort", "societa", "spa", "srl"
+]);
+
+function taskClientMatchTerms(client) {
+  const aliases = (state.clientAliases || [])
+    .filter((alias) => String(alias.client_id) === String(client.id))
+    .map((alias) => alias.alias);
+  return [...new Set([client.name, ...aliases].flatMap((label) => {
+    const normalized = normalizedClientSearch(label);
+    if (!normalized) return [];
+    const distinctiveWords = normalized.split(" ")
+      .filter((word) => word.length >= 4 && !TASK_CLIENT_GENERIC_TERMS.has(word));
+    return [normalized, ...distinctiveWords];
+  }))];
+}
+
 function taskClientByName(value) {
   const selected = normalizeClientLabel(value);
   return state.clients.find((client) => normalizeClientLabel(client.name) === selected) || null;
@@ -8982,13 +8999,13 @@ function taskClientMention() {
   if (!form) return null;
   const text = ` ${normalizedClientSearch(`${form.elements.name.value} ${form.elements.description.value}`)} `;
   if (!text.trim()) return null;
-  const candidates = state.clients.flatMap((client) => {
-    const aliases = (state.clientAliases || [])
-      .filter((alias) => String(alias.client_id) === String(client.id))
-      .map((alias) => alias.alias);
-    return [client.name, ...aliases].map((term) => ({ client, term: normalizedClientSearch(term) }));
-  }).filter((item) => item.term).sort((left, right) => right.term.length - left.term.length);
-  return candidates.find((item) => text.includes(` ${item.term} `))?.client || null;
+  const candidates = state.clients.map((client) => {
+    const matches = taskClientMatchTerms(client).filter((term) => text.includes(` ${term} `));
+    const score = matches.reduce((best, term) => Math.max(best, term.split(" ").length * 1000 + term.length), 0);
+    return { client, score };
+  }).filter((item) => item.score > 0).sort((left, right) => right.score - left.score);
+  if (!candidates.length || (candidates[1] && candidates[0].score === candidates[1].score)) return null;
+  return candidates[0].client;
 }
 
 function autoSelectTaskClient() {
@@ -9117,10 +9134,14 @@ async function applyAiClientTag(button) {
 async function improveDescriptionWithAi() {
   const form = document.getElementById("taskForm");
   const taskId = form.elements.clickup_task_id.value;
-  if (!taskId) {
-    alert("Salva o seleziona una task ClickUp prima di usare l'AI.");
+  const name = form.elements.name.value.trim();
+  const description = form.elements.description.value.trim();
+  if (!taskId && !name && !description) {
+    alert("Scrivi prima il titolo o la descrizione della task.");
+    form.elements.name.focus();
     return;
   }
+  autoSelectTaskClient();
   const button = document.getElementById("improveDescriptionButton");
   button.disabled = true;
   button.textContent = "Genero proposta...";
@@ -9130,10 +9151,13 @@ async function improveDescriptionWithAi() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         action: "improve_description",
-        clickup_task_id: taskId,
-        name: form.elements.name.value,
-        description: form.elements.description.value,
-        client_tag: form.elements.client_tag.value
+        clickup_task_id: taskId || undefined,
+        draft: !taskId,
+        name,
+        description,
+        client_tag: form.elements.client_tag.value,
+        status: form.elements.status.value,
+        priority: form.elements.priority.value
       })
     });
     const result = await response.json();
@@ -9159,6 +9183,7 @@ async function improveDescriptionWithAi() {
 function applyAiDescription() {
   if (!aiDescriptionProposal?.improved_description) return;
   document.getElementById("taskForm").elements.description.value = aiDescriptionProposal.improved_description;
+  autoSelectTaskClient();
   document.getElementById("aiDescriptionModal").close();
 }
 

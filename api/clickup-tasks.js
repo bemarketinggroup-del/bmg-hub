@@ -170,12 +170,17 @@ function normalizedClientText(value) {
 
 function clientFromTaskText(body, clientRows) {
   const text = ` ${normalizedClientText(`${body.name || ""} ${body.description || ""}`)} `;
-  const match = [...clientRows]
-    .map((client) => ({ client, term: normalizedClientText(client.name) }))
-    .filter((item) => item.term)
-    .sort((left, right) => right.term.length - left.term.length)
-    .find((item) => text.includes(` ${item.term} `));
-  return match ? { status: "ok", tag: match.client.name, client: match.client } : null;
+  const genericTerms = new Set(["azienda", "cliente", "company", "group", "gruppo", "hotel", "matera", "restaurant", "ristorante", "resort", "societa", "spa", "srl"]);
+  const matches = [...clientRows].map((client) => {
+    const fullName = normalizedClientText(client.name);
+    const terms = [fullName, ...fullName.split(" ").filter((word) => word.length >= 4 && !genericTerms.has(word))];
+    const score = terms
+      .filter((term) => term && text.includes(` ${term} `))
+      .reduce((best, term) => Math.max(best, term.split(" ").length * 1000 + term.length), 0);
+    return { client, score };
+  }).filter((item) => item.score > 0).sort((left, right) => right.score - left.score);
+  if (!matches.length || (matches[1] && matches[0].score === matches[1].score)) return null;
+  return { status: "ok", tag: matches[0].client.name, client: matches[0].client };
 }
 
 async function upsertTask(task, clientRows) {

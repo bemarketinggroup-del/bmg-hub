@@ -22,10 +22,16 @@ assert.match(api, /!isOperationalTeamTask\(task\)/, "lo staff deve usare AI solt
 assert.match(api, /action === "analyze_missing_clients"/);
 assert.match(api, /action === "apply_client_tag"/);
 assert.match(api, /action === "improve_description"/);
+assert.match(api, /const isDraft = !taskId/, "l'AI deve accettare una task ancora in bozza");
+assert.match(api, /if \(!isDraft && session\.profile\.role === "staff"/, "il controllo ClickUp deve applicarsi soltanto alle task gia salvate");
 assert.doesNotMatch(app, /OPENAI_API_KEY/);
 assert.match(app, /Analizza task senza cliente/);
 assert.match(app, /Migliora descrizione con AI/);
 assert.match(app, /applyAiDescription/);
+assert.doesNotMatch(app, /Salva o seleziona una task ClickUp prima di usare l'AI/, "la bozza non deve richiedere un ID ClickUp");
+assert.match(app, /draft: !taskId/, "il frontend deve dichiarare esplicitamente la bozza AI");
+assert.match(app, /function taskClientMatchTerms/, "il form deve riconoscere anche parti univoche del nome cliente");
+assert.match(app, /function applyAiDescription\(\)[\s\S]*?autoSelectTaskClient\(\)/, "applicare la proposta AI deve rieseguire il riconoscimento cliente");
 assert.match(html, /aiAnalysisModal/);
 assert.match(html, /aiDescriptionModal/);
 assert.match(migration, /client_aliases/);
@@ -40,10 +46,12 @@ const clients = [
   { id: "client-1", name: "Grand Hotel La Favorita", aliases: [] },
   { id: "client-2", name: "Artema", aliases: [{ alias: "Artema Matera" }] },
   { id: "client-3", name: "Zest Restaurant", aliases: [{ alias: "zest" }] },
-  { id: "client-4", name: "Zest Lab", aliases: [{ alias: "zest" }] }
+  { id: "client-4", name: "Zest Lab", aliases: [{ alias: "zest" }] },
+  { id: "client-5", name: "Bellevue Syrene", aliases: [] }
 ];
 assert.equal(deterministicClientMatch({ name: "Shooting Grand Hotel La Favorita", description: "", tags: [] }, clients).client_id, "client-1");
 assert.equal(deterministicClientMatch({ name: "Creativita adv Artema Matera", description: "", tags: [] }, clients).client_id, "client-2");
 assert.equal(deterministicClientMatch({ name: "Nuove grafiche zest", description: "", tags: [] }, clients).action, "suggest");
+assert.equal(deterministicClientMatch({ name: "", description: "Grafica storia Bellevue Capodanno", tags: [] }, clients).client_id, "client-5");
 
 console.log("AI task assist checks passed");

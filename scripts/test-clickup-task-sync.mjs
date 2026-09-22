@@ -25,6 +25,7 @@ assert.match(api, /Collegamento ClickUp scaduto o non valido/);
 assert.match(api, /method === "PATCH"/);
 assert.match(api, /client_tag/);
 assert.match(api, /function clientFromTaskText/);
+assert.match(api, /matches\[0\]\.score === matches\[1\]\.score/, "un nome parziale ambiguo non deve scegliere un cliente");
 assert.match(api, /status: "to do"/);
 assert.match(api, /url\.searchParams\.get\("sync"\) === "1"/);
 assert.doesNotMatch(api, /taskBelongsToProfile/, "le task del team non devono essere filtrate sul solo account staff");
