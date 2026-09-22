@@ -134,7 +134,10 @@ supabase/                     schema e migration
   rimandare direttamente a Google Calendar. Su desktop la sidebar compatta
   resta espansa finche il pannello notifiche e aperto, così il popover conserva
   sempre il proprio ancoraggio alla campanella; cambio vista, click esterno e
-  chiusura del popover ripristinano lo stato compatto.
+  chiusura del popover ripristinano lo stato compatto. Nel footer compatto il
+  profilo diventa un monogramma a squircle terracotta con indicatore di stato e
+  comandi tema/uscita centrati, senza mostrare frammenti del nome; quando la
+  sidebar si espande ricompare la scheda completa con nome e ruolo.
 - Directory utenti in linguaggio CMS, con tabella PrimeNG-style, ricerca e
   filtri per ruolo/stato; la modifica avviene in un drawer modale sovrapposto
   alla pagina, con overlay e ingresso animato da destra. L'editor usa

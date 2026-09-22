@@ -29,7 +29,13 @@ assert.match(styleSource, /@media \(max-width: 980px\)[\s\S]*?\.sidebar\.p-sideb
 assert.match(styleSource, /@media \(max-width: 980px\)[\s\S]*?\.icon-button\.mobile-nav-toggle \{[\s\S]*?display: grid;/, "su smartphone deve comparire il burger");
 assert.match(styleSource, /\.sidebar\.is-mobile-open,[\s\S]*?\.sidebar\.p-sidebar-active \{[^}]*transform: translateX\(0\)/, "la Sidebar PrimeNG attiva deve entrare completamente nello schermo");
 assert.match(styleSource, /\.mobile-nav-backdrop\.is-active,[\s\S]*?\.mobile-nav-backdrop\.p-sidebar-mask-active \{ opacity: 1; pointer-events: auto; \}/, "la mask PrimeNG deve intercettare il tocco solo a menu aperto");
-assert.match(styleSource, /\.sidebar-account \{[\s\S]*?grid-template-columns: minmax\(0, 1fr\) 38px;/, "il profilo deve restare ancorato in basso con il logout affiancato");
+assert.match(styleSource, /\.sidebar-account \{[\s\S]*?grid-template-columns: minmax\(0, 1fr\) 38px 38px;/, "il profilo deve restare ancorato in basso con tema e logout affiancati");
+assert.match(styleSource, /\.sidebar\.p-sidebar \{[\s\S]*?grid-template-columns: minmax\(0, 1fr\);/, "la colonna della sidebar deve poter restringersi senza spingere il profilo fuori schermo");
+assert.match(styleSource, /@media \(min-width: 1024px\)[\s\S]*?\.sidebar-account\{[\s\S]*?position:absolute;[\s\S]*?grid-template-columns:repeat\(2, 1fr\);[\s\S]*?\.sidebar-account-copy\{ display:none; \}/, "la sidebar compatta deve mostrare un dock autonomo senza testo ritagliato");
+assert.match(styleSource, /\.sidebar-account-profile\.p-button\{[\s\S]*?grid-column:1 \/ -1;[\s\S]*?\.sidebar-account-theme\.p-button,[\s\S]*?width:26px; height:26px;/, "tema e uscita devono restare compatti e interamente visibili sotto il monogramma");
+assert.match(styleSource, /\.sidebar\.p-sidebar:hover \.sidebar-account-profile\.p-button,[\s\S]*?grid-column:auto;/, "aprendo la sidebar il profilo deve tornare nella riga completa con nome e comandi");
+assert.match(styleSource, /\.sidebar-user-avatar\s*\{[\s\S]*?border-radius: 13px;[\s\S]*?linear-gradient[\s\S]*?\.sidebar-user-avatar::after/, "il monogramma deve avere una firma visuale distinta con stato");
+assert.match(appSource, /profileButton\.setAttribute\("aria-label", `Apri il profilo di \$\{displayName\}`\)/, "il monogramma compatto deve conservare un nome accessibile completo");
 assert.match(styleSource, /\.sidebar-nav-section \{[\s\S]*?padding-bottom:/, "i gruppi della navigazione devono avere una gerarchia visiva distinta");
 assert.match(styleSource, /\.topbar \{[\s\S]*?margin-bottom: 18px;[\s\S]*?padding-bottom: 12px;/, "la testata pagina deve restare compatta");
 assert.match(styleSource, /\.topbar \{ align-items: center; gap: 9px; margin-bottom: 10px; padding-bottom: 8px; \}/, "su smartphone la testata deve lasciare più spazio al contenuto");

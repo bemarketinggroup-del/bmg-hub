@@ -59,6 +59,26 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-09-22 — Profilo compatto della sidebar ridisegnato
+
+- Richiesta: correggere la zona con le iniziali dell'utente nella sidebar
+  compatta, che appariva ritagliata, rendendola più particolare.
+- Modifiche: il footer chiuso usa ora una firma verticale autonoma con
+  monogramma terracotta a squircle, indicatore di stato e pulsanti tema/uscita
+  centrati; nome e ruolo non vengono più parzialmente mostrati fuori dal bordo.
+  All'espansione della sidebar torna una scheda account completa con nome,
+  ruolo e azioni affiancate. Aggiunta anche l'etichetta accessibile completa al
+  pulsante del profilo e rifinita la variante scura.
+- File: `public/app.js`, `public/styles.css`,
+  `scripts/test-mobile-navigation.mjs`, `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run test:mobile-navigation`, `npm run test:permissions`, `npm
+  run build`, `git diff --check`; controllo desktop negli stati compatto/esteso
+  e controllo smartphone sulla versione pubblicata.
+- Pubblicazione: commit corrente pubblicato su GitHub `main`; deploy Vercel di
+  produzione verificato su `https://bmg-hub.vercel.app`.
+- Note: nessun dato profilo o permesso viene modificato; l'intervento riguarda
+  esclusivamente presentazione e accessibilità del footer.
+
 ### 2026-09-22 — Mia area divisa tra task da fare e in corso
 
 - Richiesta: mostrare nella Mia area di tutti gli utenti soltanto le task da

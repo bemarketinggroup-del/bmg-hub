@@ -1094,7 +1094,10 @@ function renderSession() {
   name.textContent = displayName;
   badge.textContent = currentProfile.role === "admin" ? "Amministratore" : "Staff";
   avatar.textContent = initials;
-  if (profileButton) profileButton.title = `Apri il profilo di ${displayName}`;
+  if (profileButton) {
+    profileButton.title = `Apri il profilo di ${displayName}`;
+    profileButton.setAttribute("aria-label", `Apri il profilo di ${displayName}`);
+  }
 }
 
 function canAccessModule(moduleKey) {
