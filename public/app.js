@@ -777,7 +777,12 @@ function auditMetadata(url, method, options = {}) {
 
   const actionKey = (() => {
     if (endpoint === "/api/me") return "change_password";
-    if (endpoint === "/api/users") return method === "POST" ? "create_user" : method === "DELETE" ? "delete_user" : "update_user";
+    if (endpoint === "/api/users") {
+      if (body.action === "exclude_clickup_member") return "remove_user_from_directory";
+      if (body.action === "restore_clickup_member") return "restore_user_to_directory";
+      if (body.action === "provision_clickup_members") return "sync_users";
+      return method === "POST" ? "create_user" : method === "DELETE" ? "delete_user" : "update_user";
+    }
     if (endpoint === "/api/maintenance-notice") return body.enabled === true ? "activate_maintenance_notice" : "disable_maintenance_notice";
     if (endpoint === "/api/clients/sync-clickup") return "sync_clients";
     if (endpoint === "/api/clients") return method === "POST" ? "create_client" : "update_client";
@@ -7560,17 +7565,18 @@ function renderUsers() {
   }
   const canManage = currentProfile?.role === "admin";
   const accounts = [...(state.staffProfiles || [])];
-  const profiles = userDirectoryProfiles().sort((left, right) => (
+  const status = document.getElementById("userStatusFilter")?.value || "all";
+  const sourceProfiles = status === "removed" ? excludedUserDirectoryProfiles() : userDirectoryProfiles();
+  const profiles = sourceProfiles.sort((left, right) => (
     String(left.full_name || left.email || "").localeCompare(String(right.full_name || right.email || ""), "it", { sensitivity: "base" })
   ));
   const search = normalizeUserDirectoryText(document.getElementById("userDirectorySearch")?.value);
   const role = document.getElementById("userRoleFilter")?.value || "all";
-  const status = document.getElementById("userStatusFilter")?.value || "all";
   const visibleProfiles = profiles.filter((profile) => {
     const matchesSearch = !search || normalizeUserDirectoryText(`${profile.full_name || ""} ${profile.email || ""} ${userProfileEmailAliases(profile).map((item) => item.email).join(" ")}`).includes(search);
     const matchesRole = role === "all" || profile.role === role;
     const isActive = profile.active !== false;
-    const matchesStatus = status === "all" || (status === "active" ? isActive : !isActive);
+    const matchesStatus = status === "removed" ? profile.excluded_profile === true : status === "all" || (status === "active" ? isActive : !isActive);
     return matchesSearch && matchesRole && matchesStatus;
   });
 
@@ -7583,8 +7589,10 @@ function renderUsers() {
     : `${visibleProfiles.length} di ${profiles.length} persone`;
 
   const missingProfileCount = Number(userDirectoryState.diagnostics?.auth_without_profile || 0);
-  const pendingClickUpCount = profiles.filter((profile) => profile.pending_profile).length;
-  const integrityNotice = missingProfileCount > 0
+  const pendingClickUpCount = userDirectoryProfiles().filter((profile) => profile.pending_profile).length;
+  const integrityNotice = status === "removed"
+    ? `<div class="user-directory-integrity p-message"><strong>Questi membri sono nascosti soltanto da BMG Hub.</strong><span>Account ClickUp, task e storico sono intatti. Usa Ripristina per farli tornare nell'elenco e poterli sincronizzare.</span></div>`
+    : missingProfileCount > 0
     ? `<div class="user-directory-integrity p-message p-message-warn"><strong>${missingProfileCount} ${missingProfileCount === 1 ? "accesso esistente non ha" : "accessi esistenti non hanno"} ancora un profilo operativo.</strong><span>Usa Sincronizza ClickUp per collegare gli account mancanti senza creare duplicati.</span></div>`
     : pendingClickUpCount > 0
       ? `<div class="user-directory-integrity p-message p-message-warn"><strong>${pendingClickUpCount === 1 ? "1 membro ClickUp deve ancora essere sincronizzato." : `${pendingClickUpCount} membri ClickUp devono ancora essere sincronizzati.`}</strong><span>Sono già visibili nell'elenco; Sincronizza ClickUp crea o collega gli accessi soltanto dopo la tua conferma.</span></div>`
@@ -7737,6 +7745,9 @@ function userDirectoryProfiles() {
     ...userProfileEmailAliases(profile).map((item) => item.email)
   ]).filter(Boolean));
   const sourceMembers = new Map();
+  const excludedClickUpIds = new Set((userDirectoryState.diagnostics?.directory_exclusions || [])
+    .map((item) => String(item.clickup_user_id || "").trim())
+    .filter(Boolean));
   const addSourceMember = (member) => {
     const memberId = String(member?.clickup_user_id || member?.id || "").trim();
     const email = String(member?.email || "").trim().toLowerCase();
@@ -7750,7 +7761,7 @@ function userDirectoryProfiles() {
     .filter((member) => {
       const memberId = String(member.clickup_user_id || member.id || "").trim();
       const email = String(member.email || "").trim().toLowerCase();
-      return memberId && !linkedClickUpIds.has(memberId) && (!email || !linkedEmails.has(email));
+      return memberId && !excludedClickUpIds.has(memberId) && !linkedClickUpIds.has(memberId) && (!email || !linkedEmails.has(email));
     })
     .map((member) => ({
       id: `clickup:${String(member.clickup_user_id || member.id)}`,
@@ -7766,9 +7777,25 @@ function userDirectoryProfiles() {
   return [...profiles, ...pending];
 }
 
+function excludedUserDirectoryProfiles() {
+  return (userDirectoryState.diagnostics?.directory_exclusions || []).map((item) => ({
+    id: `excluded:${String(item.clickup_user_id || "")}`,
+    full_name: item.full_name || item.email || "Membro ClickUp",
+    email: item.email || "",
+    role: "staff",
+    active: false,
+    clickup_user_id: String(item.clickup_user_id || ""),
+    module_permissions: {},
+    excluded_profile: true,
+    removed_at: item.removed_at || "",
+    last_access_at: null
+  })).filter((profile) => profile.clickup_user_id);
+}
+
 function renderUserTableRow(profile, canManage) {
   const label = profile.full_name || profile.email || "Utente";
   const isPending = profile.pending_profile === true;
+  const isExcluded = profile.excluded_profile === true;
   const isActive = profile.active !== false;
   const permissionCount = userPermissionCount(profile);
   const isSelected = userEditorMode === "edit" && String(editingUserProfileId) === String(profile.id);
@@ -7780,12 +7807,12 @@ function renderUserTableRow(profile, canManage) {
       </div>
     </td>
     <td data-label="Ruolo"><span class="p-tag user-role-tag is-${profile.role === "admin" ? "admin" : "staff"}">${profile.role === "admin" ? "Amministratore" : "Staff"}</span></td>
-    <td data-label="Stato"><span class="p-tag user-status-tag ${isPending ? "is-pending" : isActive ? "is-active" : "is-inactive"}"><i aria-hidden="true"></i>${isPending ? "Da sincronizzare" : isActive ? "Attivo" : "Disattivato"}</span></td>
-    <td data-label="ClickUp"><span class="user-table-link ${profile.clickup_user_id ? "is-linked" : "is-unlinked"}">${profile.clickup_user_id ? "Collegato" : profile.role === "admin" ? "Non richiesto" : "Da collegare"}</span></td>
-    <td data-label="Permessi"><strong class="user-permission-count">${isPending ? "Accesso da creare" : profile.role === "admin" ? "Completi" : `${permissionCount} moduli`}</strong></td>
-    <td data-label="Ultima attività"><span class="user-table-date">${escapeHtml(isPending ? "Non disponibile" : profile.last_access_at ? formatUserAccessTime(profile.last_access_at) : "Mai registrata")}</span></td>
+    <td data-label="Stato"><span class="p-tag user-status-tag ${isExcluded ? "is-removed" : isPending ? "is-pending" : isActive ? "is-active" : "is-inactive"}"><i aria-hidden="true"></i>${isExcluded ? "Rimosso dall'Hub" : isPending ? "Da sincronizzare" : isActive ? "Attivo" : "Disattivato"}</span></td>
+    <td data-label="ClickUp"><span class="user-table-link ${profile.clickup_user_id ? "is-linked" : "is-unlinked"}">${isExcluded ? "Conservato" : profile.clickup_user_id ? "Collegato" : profile.role === "admin" ? "Non richiesto" : "Da collegare"}</span></td>
+    <td data-label="Permessi"><strong class="user-permission-count">${isExcluded ? "Nessun accesso" : isPending ? "Accesso da creare" : profile.role === "admin" ? "Completi" : `${permissionCount} moduli`}</strong></td>
+    <td data-label="Ultima attività"><span class="user-table-date">${escapeHtml(isExcluded ? profile.removed_at ? `Rimosso ${formatUserAccessTime(profile.removed_at)}` : "Rimosso" : isPending ? "Non disponibile" : profile.last_access_at ? formatUserAccessTime(profile.last_access_at) : "Mai registrata")}</span></td>
     <td data-label="Azioni" class="user-table-actions">
-      ${isPending ? `<span class="user-table-readonly">Sincronizza in alto</span>` : canManage ? `<div class="user-table-action-group"><button class="user-table-activity" data-user-activity="${escapeHtml(profile.id)}" type="button" aria-label="Registro attività di ${escapeHtml(label)}"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg><span>Attività</span></button><button class="user-table-edit" data-edit-user="${escapeHtml(profile.id)}" type="button" aria-label="Modifica ${escapeHtml(label)}"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg><span>Modifica</span></button></div>` : `<span class="user-table-readonly">Solo lettura</span>`}
+      ${isExcluded && canManage ? `<button class="user-table-restore" data-restore-directory-user="${escapeHtml(profile.clickup_user_id)}" type="button" aria-label="Ripristina ${escapeHtml(label)} nella directory Hub">Ripristina</button>` : isPending && canManage ? `<button class="user-table-remove" data-remove-directory-user="${escapeHtml(profile.clickup_user_id)}" type="button" aria-label="Rimuovi ${escapeHtml(label)} dalla directory Hub"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v5M14 11v5"/></svg><span>Elimina</span></button>` : isPending ? `<span class="user-table-readonly">Sincronizza in alto</span>` : canManage ? `<div class="user-table-action-group"><button class="user-table-activity" data-user-activity="${escapeHtml(profile.id)}" type="button" aria-label="Registro attività di ${escapeHtml(label)}"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg><span>Attività</span></button><button class="user-table-edit" data-edit-user="${escapeHtml(profile.id)}" type="button" aria-label="Modifica ${escapeHtml(label)}"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg><span>Modifica</span></button></div>` : `<span class="user-table-readonly">Solo lettura</span>`}
     </td>
   </tr>`;
 }
@@ -8273,10 +8300,60 @@ async function deleteUserProfile(profileId) {
     if (!response.ok) throw new Error(result.error || `Users backend error ${response.status}`);
     if (String(editingUserProfileId) === String(profileId)) closeUserEditorPanel();
     await Promise.all([loadUsersFromBackend(), loadClickUpTeam()]);
-    alert(`Accesso eliminato per ${result.deleted?.full_name || result.deleted?.email || label}. Il membro ClickUp e rimasto nel workspace.`);
+    const deletedLabel = result.deleted?.full_name || result.deleted?.email || label;
+    alert(result.directory_hidden === false
+      ? `Accesso eliminato per ${deletedLabel}. Il membro ClickUp e rimasto nel workspace, ma la rimozione dalla directory non e stata salvata: se riappare come “Da sincronizzare”, usa il nuovo tasto Elimina sulla sua riga.`
+      : `Accesso eliminato per ${deletedLabel}. Il membro ClickUp e rimasto nel workspace e non comparira piu nella directory Hub.`);
   } catch (error) {
     renderBackendStatus(error.message);
     alert(error.message || "Non riesco a eliminare l'utente.");
+  }
+}
+
+async function removePendingDirectoryUser(clickupUserId) {
+  const profile = userDirectoryProfiles().find((item) => item.pending_profile && String(item.clickup_user_id) === String(clickupUserId));
+  if (!profile) return;
+  const label = profile.full_name || profile.email || "questo membro";
+  if (!confirm(`Rimuovere ${label} dalla directory Utenti?\n\nClickUp, task e storico non verranno cancellati. Potrai ripristinarlo dal filtro “Rimossi dall'Hub”.`)) return;
+  try {
+    const response = await apiFetch("/api/users", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "exclude_clickup_member",
+        clickup_user_id: profile.clickup_user_id,
+        full_name: profile.full_name,
+        email: profile.email
+      })
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || "Rimozione dalla directory non riuscita");
+    await loadUsersFromBackend();
+    alert(`${label} non compare piu negli utenti Hub. ClickUp, task e storico sono rimasti intatti.`);
+  } catch (error) {
+    renderBackendStatus(error.message);
+    alert(error.message || "Non riesco a rimuovere il membro dalla directory.");
+  }
+}
+
+async function restorePendingDirectoryUser(clickupUserId) {
+  const profile = excludedUserDirectoryProfiles().find((item) => String(item.clickup_user_id) === String(clickupUserId));
+  if (!profile) return;
+  try {
+    const response = await apiFetch("/api/users", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "restore_clickup_member", clickup_user_id: profile.clickup_user_id })
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || "Ripristino non riuscito");
+    await loadUsersFromBackend();
+    document.getElementById("userStatusFilter").value = "all";
+    renderUsers();
+    alert(`${profile.full_name || profile.email || "Il membro"} e di nuovo visibile nella directory Hub.`);
+  } catch (error) {
+    renderBackendStatus(error.message);
+    alert(error.message || "Non riesco a ripristinare il membro.");
   }
 }
 
@@ -11481,6 +11558,8 @@ document.body.addEventListener("click", (event) => {
   const closeUserEditor = event.target.closest("[data-close-user-editor]");
   const saveUser = event.target.closest("[data-save-user]");
   const deleteUser = event.target.closest("[data-delete-user]");
+  const removeDirectoryUser = event.target.closest("[data-remove-directory-user]");
+  const restoreDirectoryUser = event.target.closest("[data-restore-directory-user]");
   const addUserEmail = event.target.closest("[data-add-user-email]");
   const removeUserEmail = event.target.closest("[data-remove-user-email]");
   const copyProvisionPasswordButton = event.target.closest("[data-copy-provision-password]");
@@ -11722,6 +11801,8 @@ document.body.addEventListener("click", (event) => {
   if (removeUserEmail) return removeUserEmailAlias(removeUserEmail);
   if (saveUser) return saveUserProfile(saveUser.closest("[data-user-id]"));
   if (deleteUser) return deleteUserProfile(deleteUser.dataset.deleteUser);
+  if (removeDirectoryUser) return removePendingDirectoryUser(removeDirectoryUser.dataset.removeDirectoryUser);
+  if (restoreDirectoryUser) return restorePendingDirectoryUser(restoreDirectoryUser.dataset.restoreDirectoryUser);
   if (copyProvisionPasswordButton) return copyProvisionPassword(copyProvisionPasswordButton);
   if (applyAiClient) applyAiClientTag(applyAiClient);
   if (deleteAlias) deleteClientAlias(deleteAlias.dataset.deleteAlias);

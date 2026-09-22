@@ -12,6 +12,7 @@ import { syncSmartWorkingEmployee } from "../lib/smart-working-employees.js";
 
 const headers = jsonHeaders("GET,POST,PATCH,DELETE,OPTIONS");
 const noStoreHeaders = { ...headers, "Cache-Control": "no-store, max-age=0" };
+const DIRECTORY_EXCLUSIONS_SLUG = "hub.users.directory_exclusions";
 
 function adminAuthHeaders(includeJson = false) {
   return {
@@ -30,6 +31,114 @@ async function adminAuthFetch(path, options = {}) {
 
 function temporaryPassword() {
   return `Bmg!${crypto.randomBytes(18).toString("base64url")}`;
+}
+
+function normalizeDirectoryExclusion(item = {}) {
+  const clickupUserId = String(item.clickup_user_id || item.id || "").trim();
+  if (!clickupUserId) return null;
+  return {
+    clickup_user_id: clickupUserId,
+    full_name: String(item.full_name || item.name || "").trim().slice(0, 200),
+    email: normalizedEmail(item.email).slice(0, 320),
+    removed_at: String(item.removed_at || ""),
+    removed_by: String(item.removed_by || "")
+  };
+}
+
+async function loadDirectoryExclusions() {
+  const result = await supabaseFetch(`/site_content?select=payload&slug=eq.${DIRECTORY_EXCLUSIONS_SLUG}&limit=1`);
+  if (!result.ok) return { ok: false, status: result.status, exclusions: [] };
+  const rows = await result.json().catch(() => []);
+  const members = Array.isArray(rows[0]?.payload?.members) ? rows[0].payload.members : [];
+  return {
+    ok: true,
+    status: 200,
+    exclusions: members.map(normalizeDirectoryExclusion).filter(Boolean)
+  };
+}
+
+async function saveDirectoryExclusions(exclusions, profileId) {
+  const payload = {
+    slug: DIRECTORY_EXCLUSIONS_SLUG,
+    type: "system",
+    title: "Utenti esclusi dalla directory Hub",
+    status: "draft",
+    published_at: null,
+    payload: {
+      members: exclusions.map(normalizeDirectoryExclusion).filter(Boolean),
+      updated_by: profileId
+    },
+    updated_at: new Date().toISOString()
+  };
+  return supabaseFetch("/site_content?on_conflict=slug", {
+    method: "POST",
+    headers: { Prefer: "resolution=merge-duplicates,return=representation" },
+    body: JSON.stringify(payload)
+  });
+}
+
+async function excludeDirectoryMember(response, session, body) {
+  const exclusion = normalizeDirectoryExclusion({
+    ...body,
+    removed_at: new Date().toISOString(),
+    removed_by: session.profile.id
+  });
+  if (!exclusion) {
+    response.writeHead(400, noStoreHeaders);
+    response.end(JSON.stringify({ error: "Membro ClickUp non valido" }));
+    return;
+  }
+  const linkedResult = await supabaseFetch(`/staff_profiles?select=id&clickup_user_id=eq.${encodeURIComponent(exclusion.clickup_user_id)}&limit=1`);
+  if (!linkedResult.ok) {
+    response.writeHead(502, noStoreHeaders);
+    response.end(JSON.stringify({ error: "Non riesco a verificare l'accesso Hub collegato" }));
+    return;
+  }
+  if ((await linkedResult.json().catch(() => [])).length) {
+    response.writeHead(409, noStoreHeaders);
+    response.end(JSON.stringify({ error: "Questo membro ha già un accesso Hub: usa Elimina utente dal suo profilo" }));
+    return;
+  }
+  const source = await loadDirectoryExclusions();
+  if (!source.ok) {
+    response.writeHead(502, noStoreHeaders);
+    response.end(JSON.stringify({ error: "Non riesco a salvare gli utenti rimossi" }));
+    return;
+  }
+  const exclusions = source.exclusions.filter((item) => item.clickup_user_id !== exclusion.clickup_user_id);
+  exclusions.push(exclusion);
+  const saved = await saveDirectoryExclusions(exclusions, session.profile.id);
+  if (!saved.ok) {
+    response.writeHead(502, noStoreHeaders);
+    response.end(JSON.stringify({ error: "Non riesco a salvare la rimozione dalla directory" }));
+    return;
+  }
+  response.writeHead(200, noStoreHeaders);
+  response.end(JSON.stringify({ ok: true, removed: exclusion, clickup_membership_preserved: true }));
+}
+
+async function restoreDirectoryMember(response, session, body) {
+  const clickupUserId = String(body.clickup_user_id || "").trim();
+  if (!clickupUserId) {
+    response.writeHead(400, noStoreHeaders);
+    response.end(JSON.stringify({ error: "Membro ClickUp non valido" }));
+    return;
+  }
+  const source = await loadDirectoryExclusions();
+  if (!source.ok) {
+    response.writeHead(502, noStoreHeaders);
+    response.end(JSON.stringify({ error: "Non riesco a leggere gli utenti rimossi" }));
+    return;
+  }
+  const exclusions = source.exclusions.filter((item) => item.clickup_user_id !== clickupUserId);
+  const saved = await saveDirectoryExclusions(exclusions, session.profile.id);
+  if (!saved.ok) {
+    response.writeHead(502, noStoreHeaders);
+    response.end(JSON.stringify({ error: "Non riesco a ripristinare il membro nella directory" }));
+    return;
+  }
+  response.writeHead(200, noStoreHeaders);
+  response.end(JSON.stringify({ ok: true, restored: { clickup_user_id: clickupUserId } }));
 }
 
 function userPayload(body) {
@@ -88,13 +197,14 @@ export default async function handler(request, response) {
       return;
     }
     const includeDiagnostics = requestUrl.searchParams.get("include_diagnostics") === "1" && session.profile.role === "admin";
-    const [result, accessResult, authSource, clickUpSource] = await Promise.all([
+    const [result, accessResult, authSource, clickUpSource, exclusionSource] = await Promise.all([
       supabaseFetch("/staff_profiles?select=*&order=full_name.asc,email.asc"),
       session.profile.role === "admin"
         ? supabaseFetch("/staff_access_logs?select=profile_id,last_activity_at&order=last_activity_at.desc&limit=500")
         : Promise.resolve(null),
       includeDiagnostics ? listAuthUsers() : Promise.resolve(null),
-      includeDiagnostics ? fetchClickUpMembers() : Promise.resolve(null)
+      includeDiagnostics ? fetchClickUpMembers() : Promise.resolve(null),
+      includeDiagnostics ? loadDirectoryExclusions() : Promise.resolve(null)
     ]);
     const accessRows = accessResult?.ok ? await accessResult.json() : [];
     const accessByProfile = accessRows.reduce((map, item) => {
@@ -112,10 +222,11 @@ export default async function handler(request, response) {
       };
     }) : [];
     const profileUserIds = new Set(rows.map((profile) => String(profile.user_id || "")).filter(Boolean));
-    const diagnostics = includeDiagnostics && authSource?.ok ? {
-      auth_users: authSource.users.length,
-      auth_without_profile: authSource.users.filter((user) => !profileUserIds.has(String(user.id || ""))).length,
-      clickup_members: Array.isArray(clickUpSource?.members) ? clickUpSource.members : []
+    const diagnostics = includeDiagnostics ? {
+      auth_users: authSource?.ok ? authSource.users.length : 0,
+      auth_without_profile: authSource?.ok ? authSource.users.filter((user) => !profileUserIds.has(String(user.id || ""))).length : 0,
+      clickup_members: Array.isArray(clickUpSource?.members) ? clickUpSource.members : [],
+      directory_exclusions: exclusionSource?.ok ? exclusionSource.exclusions : []
     } : null;
     response.writeHead(result.status, noStoreHeaders);
     response.end(result.ok
@@ -131,6 +242,14 @@ export default async function handler(request, response) {
       return;
     }
     const body = await readJson(request);
+    if (body.action === "exclude_clickup_member") {
+      await excludeDirectoryMember(response, session, body);
+      return;
+    }
+    if (body.action === "restore_clickup_member") {
+      await restoreDirectoryMember(response, session, body);
+      return;
+    }
     if (body.action === "provision_clickup_members") {
       await provisionClickUpMembers(response);
       return;
@@ -459,11 +578,31 @@ async function deleteStaffUser(response, session, profileId) {
     return;
   }
 
+  let directoryHidden = true;
+  if (profile.clickup_user_id) {
+    const source = await loadDirectoryExclusions();
+    if (!source.ok) directoryHidden = false;
+    else {
+      const exclusion = normalizeDirectoryExclusion({
+        clickup_user_id: profile.clickup_user_id,
+        full_name: profile.full_name,
+        email: profile.email,
+        removed_at: new Date().toISOString(),
+        removed_by: session.profile.id
+      });
+      const exclusions = source.exclusions.filter((item) => item.clickup_user_id !== exclusion.clickup_user_id);
+      exclusions.push(exclusion);
+      const saved = await saveDirectoryExclusions(exclusions, session.profile.id);
+      directoryHidden = saved.ok;
+    }
+  }
+
   response.writeHead(200, noStoreHeaders);
   response.end(JSON.stringify({
     ok: true,
     deleted: { id: profile.id, email: profile.email, full_name: profile.full_name },
-    clickup_membership_preserved: Boolean(profile.clickup_user_id)
+    clickup_membership_preserved: Boolean(profile.clickup_user_id),
+    directory_hidden: directoryHidden
   }));
 }
 
@@ -549,11 +688,12 @@ async function provisionClickUpMembers(response) {
     response.end(JSON.stringify({ error: source.error }));
     return;
   }
-  const [profilesResult, authSource] = await Promise.all([
+  const [profilesResult, authSource, exclusionSource] = await Promise.all([
     supabaseFetch("/staff_profiles?select=id,user_id,email,email_aliases,full_name,role,clickup_user_id"),
-    listAuthUsers()
+    listAuthUsers(),
+    loadDirectoryExclusions()
   ]);
-  if (!profilesResult.ok || !authSource.ok) {
+  if (!profilesResult.ok || !authSource.ok || !exclusionSource.ok) {
     response.writeHead(502, noStoreHeaders);
     response.end(JSON.stringify({ error: "Non riesco a verificare gli account esistenti" }));
     return;
@@ -564,8 +704,13 @@ async function provisionClickUpMembers(response) {
   const created = [];
   const linked = [];
   const skipped = [];
+  const excludedClickUpIds = new Set(exclusionSource.exclusions.map((item) => item.clickup_user_id));
 
   for (const member of source.members) {
+    if (excludedClickUpIds.has(String(member.id))) {
+      skipped.push({ clickup_user_id: member.id, full_name: member.full_name, reason: "rimosso dalla directory Hub" });
+      continue;
+    }
     if (!member.email) {
       skipped.push({ clickup_user_id: member.id, full_name: member.full_name, reason: "email ClickUp mancante" });
       continue;

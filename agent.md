@@ -59,6 +59,33 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-09-22 — Eliminazione sicura dei membri dalla directory Utenti
+
+- Richiesta: permettere di eliminare dalla pagina Utenti anche membri come
+  Federica e Daniele, visibili da ClickUp ma ancora senza accesso Hub.
+- Modifiche: aggiunto il comando `Elimina` alle righe `Da sincronizzare`; la
+  rimozione viene salvata come impostazione di sistema condivisa e impedisce al
+  membro di riapparire dagli assegnatari delle task o dalla sincronizzazione
+  ClickUp. Account, task e storico ClickUp restano intatti. Il filtro `Rimossi
+  dall'Hub` mostra le esclusioni e permette il ripristino singolo. Anche
+  eliminare un account Hub già collegato nasconde il corrispondente membro
+  ClickUp, così non ritorna subito come accesso da creare. Aggiornato inoltre
+  il registro attività con azioni distinte per rimozione, ripristino e
+  sincronizzazione.
+- File: `api/users.js`, `api/me.js`, `public/index.html`, `public/app.js`,
+  `public/styles.css`, `scripts/test-user-management.mjs`,
+  `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `node --check api/users.js`, `node --check public/app.js`, `npm run
+  test:users`, `npm run test:permissions`, `npm run test:mobile-navigation`,
+  `npm run test:primeng-components`, `npm run check`, `npm run build`, `git
+  diff --check`; controllo visuale desktop e smartphone della directory, del
+  comando Elimina e del filtro di ripristino.
+- Pubblicazione: commit corrente pubblicato su GitHub `main`; deploy Vercel di
+  produzione verificato su `https://bmg-hub.vercel.app`.
+- Note: la rimozione riguarda soltanto la directory di BMG Hub e non esegue
+  cancellazioni su ClickUp. Federica e Daniele non sono stati rimossi
+  automaticamente: ora l'amministratore può scegliere dalla loro riga.
+
 ### 2026-09-22 — Flusso settimanale Smart Working semplificato
 
 - Richiesta: ripristinare il trascinamento degli smart e rendere chiaro il

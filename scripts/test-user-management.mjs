@@ -17,6 +17,7 @@ assert.match(htmlSource, /class="p-datatable-header user-directory-toolbar"/, "l
 assert.match(htmlSource, /id="userDirectorySearch"[^>]*type="search"/, "la tabella deve poter cercare nome ed email");
 assert.match(htmlSource, /id="userRoleFilter"/, "la tabella deve filtrare il ruolo");
 assert.match(htmlSource, /id="userStatusFilter"/, "la tabella deve filtrare lo stato");
+assert.match(htmlSource, /option value="removed">Rimossi dall'Hub/, "il filtro deve permettere di recuperare i membri rimossi dalla directory");
 assert.match(htmlSource, /id="userEditorOverlay"[^>]*data-close-user-editor/, "il drawer deve avere un overlay che lo chiude");
 assert.match(htmlSource, /id="userEditorPanel"[^>]*role="dialog"[^>]*aria-modal="true"/, "la modifica deve restare nel drawer modale");
 assert.doesNotMatch(htmlSource, /id="userCreateForm"/, "il drawer non deve contenere il form di creazione utenti");
@@ -64,6 +65,10 @@ assert.match(appSource, /apiFetch\("\/api\/clickup\/tasks"\)[\s\S]*state\.clicku
 assert.match(appSource, /sourceMembers[\s\S]*state\.clickupTasks[\s\S]*task\.assignees[\s\S]*pending_profile: true/, "gli assegnatari delle task devono completare la directory senza duplicati");
 assert.match(appSource, /pendingClickUpCount[\s\S]*Sono già visibili nell'elenco/, "i membri ClickUp in attesa devono essere spiegati senza sincronizzazioni automatiche");
 assert.match(appSource, /isPending \? "Da sincronizzare"[\s\S]*isPending \? "Accesso da creare"/, "le righe ClickUp senza profilo devono distinguere stato e permessi mancanti");
+assert.match(appSource, /data-remove-directory-user=/, "i membri ClickUp senza accesso Hub devono poter essere eliminati dalla directory");
+assert.match(appSource, /data-restore-directory-user=/, "i membri rimossi devono poter essere ripristinati");
+assert.match(appSource, /ClickUp, task e storico non verranno cancellati/, "la conferma deve chiarire che i dati ClickUp restano intatti");
+assert.match(appSource, /const excludedClickUpIds = new Set\([\s\S]*!excludedClickUpIds\.has\(memberId\)/, "i membri esclusi non devono riapparire dagli assegnatari delle task");
 assert.match(appSource, /data-delete-user=/, "ogni utente eliminabile deve avere il relativo comando");
 assert.match(appSource, /method: "DELETE"[\s\S]*?JSON\.stringify\(\{ id: profileId \}\)/, "la cancellazione deve passare dall'API utenti");
 assert.match(appSource, /non verra rimosso dal workspace ClickUp/, "la conferma deve spiegare che ClickUp resta intatto");
@@ -78,6 +83,11 @@ assert.match(apiSource, /ensureClickUpWorkspaceMember\(email\)/, "la creazione d
 assert.match(apiSource, /rollbackCreatedUser\(authUser\.id, profile\?\.id\)/, "un errore ClickUp deve annullare l'account interno");
 assert.match(apiSource, /profileId === session\.profile\.id/, "un amministratore non deve potersi eliminare da solo");
 assert.match(apiSource, /clickup_membership_preserved/, "la rimozione interna deve dichiarare che ClickUp viene conservato");
+assert.match(apiSource, /hub\.users\.directory_exclusions/, "le rimozioni dalla directory devono essere persistenti e condivise tra i dispositivi");
+assert.match(apiSource, /body\.action === "exclude_clickup_member"[\s\S]*excludeDirectoryMember/, "l'API deve rimuovere i membri ClickUp non ancora sincronizzati");
+assert.match(apiSource, /body\.action === "restore_clickup_member"[\s\S]*restoreDirectoryMember/, "l'API deve ripristinare i membri rimossi");
+assert.match(apiSource, /excludedClickUpIds[\s\S]*rimosso dalla directory Hub/, "la sincronizzazione ClickUp deve rispettare le esclusioni salvate");
+assert.match(apiSource, /deleteStaffUser[\s\S]*saveDirectoryExclusions[\s\S]*directory_hidden/, "eliminare un accesso Hub collegato deve impedire che riappaia come membro in attesa");
 assert.match(apiSource, /deactivateSmartWorkingEmployee\(profile\)/, "eliminare un account deve disattivare la persona nei turni");
 assert.match(apiSource, /syncSmartWorkingEmployee\(profiles\[0\]\)/, "creare un account deve aggiungere la persona nei turni");
 assert.match(apiSource, /const smartEmployee = await syncSmartWorkingEmployee\(profile\)/, "la creazione coordinata deve sincronizzare la persona nei turni");

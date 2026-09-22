@@ -5296,6 +5296,7 @@ body.user-editor-visible { overflow: hidden; }
 .user-role-tag.is-staff { background: rgba(47, 92, 120, .1); color: #2f5c78; }
 .user-status-tag.is-active { background: var(--green-tint); color: var(--green); }
 .user-status-tag.is-pending { background: var(--amber-tint); color: var(--amber); }
+.user-status-tag.is-removed { background: rgba(190, 55, 48, .1); color: var(--red); }
 .user-status-tag.is-inactive { background: rgba(114, 108, 98, .12); color: var(--muted); }
 .user-status-tag i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
 .user-directory-integrity { margin: 12px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
@@ -5311,10 +5312,13 @@ body.user-editor-visible { overflow: hidden; }
 .user-table-actions { width: 1%; text-align: right; }
 .user-table-action-group { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 .user-table-edit,
-.user-table-activity {
+.user-table-activity,
+.user-table-remove,
+.user-table-restore {
   display: inline-flex;
   min-height: 32px;
   align-items: center;
+  justify-content: center;
   gap: 6px;
   border: 1px solid var(--line-strong);
   border-radius: 7px;
@@ -5325,10 +5329,15 @@ body.user-editor-visible { overflow: hidden; }
   font-weight: 750;
 }
 .user-table-activity { border-color: var(--terra-line); background: var(--terra-tint); color: var(--terra-deep); }
+.user-table-remove { border-color: rgba(190, 55, 48, .28); background: rgba(190, 55, 48, .06); color: var(--red); }
+.user-table-restore { border-color: var(--green-line); background: var(--green-tint); color: var(--green); }
 .user-table-edit:hover,
-.user-table-activity:hover { border-color: var(--terracotta); background: var(--terracotta); color: #fff; }
+.user-table-activity:hover,
+.user-table-remove:hover { border-color: var(--terracotta); background: var(--terracotta); color: #fff; }
+.user-table-restore:hover { border-color: var(--green); background: var(--green); color: #fff; }
 .user-table-edit .lc,
-.user-table-activity .lc { width: 13px; height: 13px; }
+.user-table-activity .lc,
+.user-table-remove .lc { width: 13px; height: 13px; }
 .user-table-readonly { color: var(--muted); font-size: 9.5px; white-space: nowrap; }
 .user-editor-panel .p-button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; }
 .user-editor-panel .p-button-label { line-height: 1; }
@@ -8715,7 +8724,9 @@ body.chat-view-active #chatView {
   .user-table-actions { width: auto; text-align: left; }
   .user-table-action-group { display: grid; grid-template-columns: 1fr 1fr; width: 100%; }
   .user-table-edit,
-  .user-table-activity { width: 100%; justify-content: center; }
+  .user-table-activity,
+  .user-table-remove,
+  .user-table-restore { width: 100%; justify-content: center; }
   .user-editor-panel { width: 100%; border-width: 0; border-radius: 0; }
   .user-editor-head { padding: 14px; }
   .user-editor-form { padding: 0; }

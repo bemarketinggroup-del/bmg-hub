@@ -165,7 +165,13 @@ supabase/                     schema e migration
   `Da sincronizzare`, restano non modificabili e vengono creati o collegati
   soltanto dopo la conferma esplicita di `Sincronizza ClickUp`. Se la rubrica
   live ClickUp non è disponibile, il primo caricamento completa l'elenco con
-  gli assegnatari presenti nelle task già sincronizzate.
+  gli assegnatari presenti nelle task già sincronizzate. Gli amministratori
+  possono rimuovere dalla directory anche questi membri non ancora sincronizzati:
+  la scelta è persistente tra dispositivi e aggiornamenti, non cancella account,
+  task o storico ClickUp e impedisce che `Sincronizza ClickUp` li ricrei. Il
+  filtro `Rimossi dall'Hub` permette di recuperarli singolarmente. Anche
+  eliminare un accesso Hub già collegato salva la stessa esclusione, evitando
+  che il membro riappaia subito come `Da sincronizzare`.
 - Nel tab `Profilo` ogni account può avere più email di integrazione, marcate
   per `Calendar`, `ClickUp` o entrambi. L'email principale resta l'unica email
   di accesso; gli alias permettono di riconoscere lo stesso utente quando i due
