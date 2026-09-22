@@ -81,6 +81,8 @@ La descrizione viene modificata solo dopo click su `Applica proposta`.
 - Rate limit server-side su tabella `ai_rate_limits`.
 - Audit trail su `ai_task_audit_logs`.
 - I log salvano metadati minimi, non il contenuto completo delle task.
+- Gli errori del provider registrano soltanto stato, tipo, codice, parametro e
+  messaggio sanitizzato; eventuali token con prefisso `sk-` vengono oscurati.
 
 ## Test minimi
 

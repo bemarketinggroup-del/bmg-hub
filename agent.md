@@ -70,7 +70,9 @@ più recente alla più vecchia:
   parola distintiva e univoca del nome, come `Bellevue` per `Bellevue Syrene`,
   senza sovrascrivere una selezione manuale e senza scegliere nei casi ambigui.
   Gli alias cliente vengono letti anche dagli utenti staff e il riconoscimento
-  viene rieseguito dopo l'applicazione della proposta AI.
+  viene rieseguito dopo l'applicazione della proposta AI. Gli errori restituiti
+  dal provider AI sono ora classificati per l'utente e registrati con dettagli
+  tecnici sanitizzati, senza contenuto task o credenziali.
 - File: `public/app.js`, `lib/ai-task-assist.js`, `api/clickup-tasks.js`,
   `scripts/test-ai-task-assist.mjs`, `scripts/test-clickup-task-sync.mjs`,
   `docs/AI-TASK-ASSIST.md`, `docs/PROJECT-HANDOFF.md`, `agent.md`.
