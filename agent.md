@@ -59,6 +59,28 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-09-22 — Recupero degli utenti eliminati prima del registro esclusioni
+
+- Richiesta: eliminare dalle task anche Federica e Daniele, già cancellati
+  quando il registro condiviso degli utenti rimossi non era ancora attivo.
+- Modifiche: il filtro centrale ricostruisce ora le esclusioni storiche dalle
+  anagrafiche Smart Working disattivate e non più collegate a un profilo Hub
+  attivo. Il confronto usa email e nome oltre all'ID ClickUp, quindi le vecchie
+  cancellazioni spariscono da team, task e selettori senza toccare ClickUp. La
+  modifica di una task conserva anche questi assegnatari storici sul servizio
+  originale invece di rimuoverli implicitamente.
+- File: `lib/user-directory-exclusions.js`, `api/clickup-tasks.js`,
+  `public/app.js`, `scripts/test-user-management.mjs`,
+  `scripts/test-clickup-task-sync.mjs`, `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: controlli sintattici Node, test unitario della riconciliazione
+  storica con protezione dei profili ancora attivi, `npm run test:users`, `npm
+  run test:clickup-sync`, test permessi e suite completa; controllo reale in
+  produzione della pagina Task e del selettore assegnatari senza creare task.
+- Pubblicazione: commit corrente pubblicato su GitHub `main`; deploy Vercel di
+  produzione verificato su `https://bmg-hub.vercel.app`.
+- Note: le anagrafiche disattivate restano disponibili soltanto come storico
+  interno; account, assegnazioni e storico ClickUp non vengono cancellati.
+
 ### 2026-09-22 — Utenti eliminati esclusi da tutti i moduli Hub
 
 - Richiesta: impedire che utenti già eliminati, come Federica e Daniele,

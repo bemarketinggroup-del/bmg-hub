@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import {
+  inferInactiveDirectoryExclusions,
   taskWithoutDirectoryExclusions,
   visibleClickUpMembers
 } from "../lib/user-directory-exclusions.js";
@@ -75,7 +76,7 @@ assert.match(appSource, /isPending \? "Da sincronizzare"[\s\S]*isPending \? "Acc
 assert.match(appSource, /data-remove-directory-user=/, "i membri ClickUp senza accesso Hub devono poter essere eliminati dalla directory");
 assert.match(appSource, /data-restore-directory-user=/, "i membri rimossi devono poter essere ripristinati");
 assert.match(appSource, /ClickUp, task e storico non verranno cancellati/, "la conferma deve chiarire che i dati ClickUp restano intatti");
-assert.match(appSource, /const excludedClickUpIds = new Set\([\s\S]*!excludedClickUpIds\.has\(memberId\)/, "i membri esclusi non devono riapparire dagli assegnatari delle task");
+assert.match(appSource, /const excludedClickUpIds = new Set\([\s\S]*const excludedEmails = new Set\([\s\S]*const excludedNames = new Set\([\s\S]*!isExcludedMember\(member\)/, "i membri esclusi non devono riapparire dagli assegnatari delle task neppure quando manca il vecchio ID ClickUp");
 assert.match(appSource, /data-delete-user=/, "ogni utente eliminabile deve avere il relativo comando");
 assert.match(appSource, /method: "DELETE"[\s\S]*?JSON\.stringify\(\{ id: profileId \}\)/, "la cancellazione deve passare dall'API utenti");
 assert.match(appSource, /non verra rimosso dal workspace ClickUp/, "la conferma deve spiegare che ClickUp resta intatto");
@@ -91,6 +92,7 @@ assert.match(apiSource, /rollbackCreatedUser\(authUser\.id, profile\?\.id\)/, "u
 assert.match(apiSource, /profileId === session\.profile\.id/, "un amministratore non deve potersi eliminare da solo");
 assert.match(apiSource, /clickup_membership_preserved/, "la rimozione interna deve dichiarare che ClickUp viene conservato");
 assert.match(directoryExclusionSource, /hub\.users\.directory_exclusions/, "le rimozioni dalla directory devono essere persistenti e condivise tra i dispositivi");
+assert.match(directoryExclusionSource, /smart_work_employees\?select=full_name,email,is_active&is_active=eq\.false/, "gli account eliminati prima del registro esclusioni devono essere recuperati dall'anagrafica disattivata");
 assert.match(apiSource, /body\.action === "exclude_clickup_member"[\s\S]*excludeDirectoryMember/, "l'API deve rimuovere i membri ClickUp non ancora sincronizzati");
 assert.match(apiSource, /body\.action === "restore_clickup_member"[\s\S]*restoreDirectoryMember/, "l'API deve ripristinare i membri rimossi");
 assert.match(apiSource, /excludedClickUpIds[\s\S]*rimosso dalla directory Hub/, "la sincronizzazione ClickUp deve rispettare le esclusioni salvate");
@@ -123,6 +125,21 @@ assert.deepEqual(
   ], directoryExclusions).map((member) => member.id),
   ["11"],
   "un membro eliminato non deve rientrare dalla rubrica ClickUp"
+);
+const inferredLegacyExclusions = inferInactiveDirectoryExclusions(
+  [
+    { full_name: "Utente storico", email: "legacy@example.com", is_active: false },
+    { full_name: "Utente ancora attivo", email: "active@example.com", is_active: false }
+  ],
+  [{ full_name: "Utente ancora attivo", email: "active@example.com", clickup_user_id: "11" }]
+);
+assert.deepEqual(
+  visibleClickUpMembers([
+    { id: "33", name: "Utente storico", email: "legacy@example.com" },
+    { id: "11", name: "Utente ancora attivo", email: "active@example.com" }
+  ], inferredLegacyExclusions).map((member) => member.id),
+  ["11"],
+  "gli utenti eliminati prima delle esclusioni persistenti devono sparire senza nascondere un profilo ancora attivo"
 );
 assert.deepEqual(
   taskWithoutDirectoryExclusions({ assignees: [{ id: "22", name: "Utente eliminato" }] }, directoryExclusions).assignees,

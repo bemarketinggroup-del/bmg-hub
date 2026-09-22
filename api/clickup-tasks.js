@@ -5,6 +5,7 @@ import { isOperationalTeamTask } from "../lib/clickup-task-access.js";
 import { taskCompletionTimestamp } from "../lib/task-completion-retention.js";
 import {
   excludedClickUpIds,
+  isDirectoryExcluded,
   loadDirectoryExclusions,
   taskWithoutDirectoryExclusions
 } from "../lib/user-directory-exclusions.js";
@@ -364,9 +365,13 @@ async function updateTask(body, session, clientRows, exclusions) {
 
   const desiredAssignees = allowedAssigneeIds(body.assignees, exclusions);
   const excludedIds = excludedClickUpIds(exclusions);
-  const currentAssignees = (current?.assignees || []).map((item) => Number(item.id)).filter(Number.isFinite);
+  const currentAssigneeRows = current?.assignees || [];
+  const currentAssignees = currentAssigneeRows.map((item) => Number(item.id)).filter(Number.isFinite);
   const add = desiredAssignees.filter((id) => !currentAssignees.includes(id));
-  const rem = currentAssignees.filter((id) => !excludedIds.has(String(id)) && !desiredAssignees.includes(id));
+  const rem = currentAssigneeRows
+    .filter((item) => !excludedIds.has(String(item.id)) && !isDirectoryExcluded(item, exclusions))
+    .map((item) => Number(item.id))
+    .filter((id) => Number.isFinite(id) && !desiredAssignees.includes(id));
 
   const payload = {
     name: clean(body.name),

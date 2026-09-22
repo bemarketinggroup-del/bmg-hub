@@ -7744,9 +7744,26 @@ function userDirectoryProfiles() {
     ...userProfileEmailAliases(profile).map((item) => item.email)
   ]).filter(Boolean));
   const sourceMembers = new Map();
-  const excludedClickUpIds = new Set((userDirectoryState.diagnostics?.directory_exclusions || [])
+  const directoryExclusions = userDirectoryState.diagnostics?.directory_exclusions || [];
+  const excludedClickUpIds = new Set(directoryExclusions
     .map((item) => String(item.clickup_user_id || "").trim())
     .filter(Boolean));
+  const excludedEmails = new Set(directoryExclusions
+    .map((item) => String(item.email || "").trim().toLowerCase())
+    .filter(Boolean));
+  const excludedNames = new Set(directoryExclusions
+    .map((item) => normalizeIdentity(item.full_name || item.name))
+    .filter(Boolean));
+  const isExcludedMember = (member) => {
+    const memberId = String(member?.clickup_user_id || member?.id || "").trim();
+    const email = String(member?.email || "").trim().toLowerCase();
+    const name = normalizeIdentity(member?.full_name || member?.name || member?.username);
+    return Boolean(
+      (memberId && excludedClickUpIds.has(memberId))
+      || (email && excludedEmails.has(email))
+      || (name && excludedNames.has(name))
+    );
+  };
   const addSourceMember = (member) => {
     const memberId = String(member?.clickup_user_id || member?.id || "").trim();
     const email = String(member?.email || "").trim().toLowerCase();
@@ -7760,7 +7777,7 @@ function userDirectoryProfiles() {
     .filter((member) => {
       const memberId = String(member.clickup_user_id || member.id || "").trim();
       const email = String(member.email || "").trim().toLowerCase();
-      return memberId && !excludedClickUpIds.has(memberId) && !linkedClickUpIds.has(memberId) && (!email || !linkedEmails.has(email));
+      return memberId && !isExcludedMember(member) && !linkedClickUpIds.has(memberId) && (!email || !linkedEmails.has(email));
     })
     .map((member) => ({
       id: `clickup:${String(member.clickup_user_id || member.id)}`,

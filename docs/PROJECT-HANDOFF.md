@@ -175,8 +175,13 @@ supabase/                     schema e migration
   viene applicata centralmente alle API della rubrica ClickUp e delle task: un
   membro rimosso sparisce da tab personali, filtri, assegnatari mostrati e
   selettori di creazione/modifica in tutto l'Hub, anche dopo nuove
-  sincronizzazioni. Le assegnazioni e lo storico originali restano conservati
-  su ClickUp e tornano visibili nell'Hub soltanto con il ripristino esplicito.
+  sincronizzazioni. Per gli account eliminati prima dell'introduzione del
+  registro persistente, il backend recupera inoltre l'identità dall'anagrafica
+  Smart Working disattivata e la tratta come esclusa, purché non esista un
+  profilo Hub attivo con la stessa email o lo stesso nome. Le assegnazioni e lo
+  storico originali restano conservati su ClickUp; modificare una task non
+  rimuove accidentalmente neppure gli assegnatari storici riconosciuti per
+  email o nome.
 - Nel tab `Profilo` ogni account può avere più email di integrazione, marcate
   per `Calendar`, `ClickUp` o entrambi. L'email principale resta l'unica email
   di accesso; gli alias permettono di riconoscere lo stesso utente quando i due
