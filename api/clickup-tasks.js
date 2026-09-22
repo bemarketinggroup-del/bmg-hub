@@ -2,9 +2,11 @@ import crypto from "node:crypto";
 import { jsonHeaders, readJson, requireUser, supabaseFetch } from "./_auth.js";
 import { handleAiTaskAssist } from "../lib/ai-task-assist.js";
 import { isOperationalTeamTask } from "../lib/clickup-task-access.js";
+import { fetchClickUpMembers } from "../lib/clickup-members.js";
 import { taskCompletionTimestamp } from "../lib/task-completion-retention.js";
 import {
   excludedClickUpIds,
+  hydrateDirectoryExclusions,
   isDirectoryExcluded,
   loadDirectoryExclusions,
   taskWithoutDirectoryExclusions
@@ -292,6 +294,18 @@ function allowedAssigneeIds(value, exclusions) {
   return requested.filter((id) => !excludedIds.has(String(id)));
 }
 
+async function resolvedDirectoryExclusions() {
+  const [exclusionSource, memberSource] = await Promise.all([
+    loadDirectoryExclusions(),
+    fetchClickUpMembers()
+  ]);
+  if (!exclusionSource.ok) return exclusionSource;
+  return {
+    ...exclusionSource,
+    exclusions: hydrateDirectoryExclusions(exclusionSource.exclusions, memberSource.members)
+  };
+}
+
 async function createTask(body, session, clientRows, exclusions) {
   const listId = session.profile.role === "staff"
     ? CLICKUP_DEFAULT_TASK_LIST_ID
@@ -512,7 +526,7 @@ export default async function handler(request, response) {
     }
 
     if (request.method === "GET") {
-      const exclusionSource = await loadDirectoryExclusions();
+      const exclusionSource = await resolvedDirectoryExclusions();
       if (!exclusionSource.ok) return json(response, 502, { error: "Non riesco a verificare gli utenti rimossi dall'Hub" });
       const pulled = url.searchParams.get("sync") === "1" ? await syncFromClickUp() : null;
       if (pulled && pulled.status !== 200) return json(response, pulled.status, pulled.body);
@@ -520,7 +534,7 @@ export default async function handler(request, response) {
       return json(response, result.status, result.body);
     }
 
-    const exclusionSource = await loadDirectoryExclusions();
+    const exclusionSource = await resolvedDirectoryExclusions();
     if (!exclusionSource.ok) return json(response, 502, { error: "Non riesco a verificare gli utenti rimossi dall'Hub" });
     const clientRows = await clients();
     if (request.method === "POST") {

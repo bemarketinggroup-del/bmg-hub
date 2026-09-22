@@ -2,7 +2,11 @@ import { jsonHeaders, requireUser } from "./_auth.js";
 import { fetchClickUpMembers } from "../lib/clickup-members.js";
 import { profileMatchesClickUpMember } from "../lib/clickup-identity.js";
 import { canAccessModule } from "../lib/staff-permissions.js";
-import { loadDirectoryExclusions, visibleClickUpMembers } from "../lib/user-directory-exclusions.js";
+import {
+  hydrateDirectoryExclusions,
+  loadDirectoryExclusions,
+  visibleClickUpMembers
+} from "../lib/user-directory-exclusions.js";
 
 function headers() {
   return { ...jsonHeaders("GET,OPTIONS"), "Cache-Control": "no-store, max-age=0" };
@@ -36,7 +40,8 @@ export default async function handler(request, response) {
     response.end(JSON.stringify({ error: source.error }));
     return;
   }
-  let members = visibleClickUpMembers(source.members, exclusionSource.exclusions);
+  const exclusions = hydrateDirectoryExclusions(exclusionSource.exclusions, source.members);
+  let members = visibleClickUpMembers(source.members, exclusions);
   if (session.profile.role === "staff" && !canAccessModule(session.profile, "tasks")) {
     if (!session.profile.clickup_user_id) {
       response.writeHead(403, headers());

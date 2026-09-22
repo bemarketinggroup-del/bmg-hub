@@ -178,10 +178,12 @@ supabase/                     schema e migration
   sincronizzazioni. Per gli account eliminati prima dell'introduzione del
   registro persistente, il backend recupera inoltre l'identità dall'anagrafica
   Smart Working disattivata e la tratta come esclusa, purché non esista un
-  profilo Hub attivo con la stessa email o lo stesso nome. Le assegnazioni e lo
-  storico originali restano conservati su ClickUp; modificare una task non
-  rimuove accidentalmente neppure gli assegnatari storici riconosciuti per
-  email o nome.
+  profilo Hub attivo con la stessa email o lo stesso nome. Prima di filtrare le
+  task, questa identità storica viene riconciliata con l'ID della rubrica
+  ClickUp ufficiale: anche le vecchie task che conservano nome o email diversi
+  non possono quindi reintrodurre la persona. Le assegnazioni e lo storico
+  originali restano conservati su ClickUp; modificare una task non rimuove
+  accidentalmente gli assegnatari nascosti.
 - Nel tab `Profilo` ogni account può avere più email di integrazione, marcate
   per `Calendar`, `ClickUp` o entrambi. L'email principale resta l'unica email
   di accesso; gli alias permettono di riconoscere lo stesso utente quando i due

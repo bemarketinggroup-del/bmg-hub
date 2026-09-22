@@ -35,6 +35,7 @@ assert.match(api, /const assignees = allowedAssigneeIds\(body\.assignees, exclus
 assert.match(api, /const desiredAssignees = allowedAssigneeIds\(body\.assignees, exclusions\)/, "la modifica deve poter riassegnare la task ai colleghi attivi");
 assert.match(api, /taskWithoutDirectoryExclusions\(taskFromRow\(row\), exclusions\)/, "le risposte task devono nascondere centralmente gli utenti eliminati");
 assert.match(api, /!isDirectoryExcluded\(item, exclusions\)/, "la modifica task deve preservare su ClickUp anche gli utenti storici riconosciuti per email o nome");
+assert.match(api, /resolvedDirectoryExclusions\(\)[\s\S]*hydrateDirectoryExclusions\(exclusionSource\.exclusions, memberSource\.members\)/, "le task storiche devono filtrare gli eliminati usando l'ID ClickUp risolto dalla rubrica ufficiale");
 assert.match(api, /completed_at: taskCompletionTimestamp\(row\)/, "l'API deve esporre la data reale di completamento ClickUp");
 assert.match(teamApi, /canAccessModule\(session\.profile, "tasks"\)/, "chi ha accesso ai Task deve ricevere l'elenco completo del team");
 

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import {
+  hydrateDirectoryExclusions,
   inferInactiveDirectoryExclusions,
   taskWithoutDirectoryExclusions,
   visibleClickUpMembers
@@ -103,6 +104,7 @@ assert.match(apiSource, /const smartEmployee = await syncSmartWorkingEmployee\(p
 assert.match(apiSource, /smart_work_employees\?\$\{filter\}[\s\S]*?is_active: false/, "la disattivazione turni deve usare profilo o email quando disponibili");
 assert.match(apiSource, /!matchedEmployees && profile\.full_name[\s\S]*?smart_work_employees\?full_name=eq\./, "la disattivazione deve ripiegare sul nome per i record storici non collegati");
 assert.match(clickUpTeamApiSource, /loadDirectoryExclusions\(\)[\s\S]*visibleClickUpMembers/, "la rubrica task deve escludere centralmente i membri rimossi");
+assert.match(clickUpTeamApiSource, /hydrateDirectoryExclusions\(exclusionSource\.exclusions, source\.members\)/, "la rubrica deve risolvere le vecchie esclusioni sull'ID ClickUp ufficiale");
 assert.match(clickUpTasksApiSource, /savedTasks\(session, exclusions\)[\s\S]*taskWithoutDirectoryExclusions/, "le task lette dal backend non devono restituire assegnatari rimossi");
 assert.match(clickUpTasksApiSource, /excludedIds\.has\(String\(id\)\)[\s\S]*!desiredAssignees\.includes\(id\)/, "modificare una task non deve rimuovere da ClickUp gli assegnatari nascosti nell'Hub");
 assert.match(appSource, /loadUsersFromBackend\(\), loadClickUpTeam\(\), loadClickUpTasks\(\)/, "rimozione e ripristino devono aggiornare subito tutti i dati task nel browser");
@@ -132,6 +134,13 @@ const inferredLegacyExclusions = inferInactiveDirectoryExclusions(
     { full_name: "Utente ancora attivo", email: "active@example.com", is_active: false }
   ],
   [{ full_name: "Utente ancora attivo", email: "active@example.com", clickup_user_id: "11" }]
+);
+assert.equal(
+  hydrateDirectoryExclusions(inferredLegacyExclusions, [
+    { id: "33", name: "Utente storico", email: "legacy@example.com" }
+  ])[0].clickup_user_id,
+  "33",
+  "le esclusioni storiche devono essere completate con l'ID ClickUp prima di filtrare le task"
 );
 assert.deepEqual(
   visibleClickUpMembers([

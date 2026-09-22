@@ -10,6 +10,7 @@ import {
 } from "../lib/staff-email-identities.js";
 import { syncSmartWorkingEmployee } from "../lib/smart-working-employees.js";
 import {
+  hydrateDirectoryExclusions,
   loadDirectoryExclusions,
   normalizeDirectoryExclusion,
   saveDirectoryExclusions
@@ -186,7 +187,9 @@ export default async function handler(request, response) {
       auth_users: authSource?.ok ? authSource.users.length : 0,
       auth_without_profile: authSource?.ok ? authSource.users.filter((user) => !profileUserIds.has(String(user.id || ""))).length : 0,
       clickup_members: Array.isArray(clickUpSource?.members) ? clickUpSource.members : [],
-      directory_exclusions: exclusionSource?.ok ? exclusionSource.exclusions : []
+      directory_exclusions: exclusionSource?.ok
+        ? hydrateDirectoryExclusions(exclusionSource.exclusions, clickUpSource?.members)
+        : []
     } : null;
     response.writeHead(result.status, noStoreHeaders);
     response.end(result.ok

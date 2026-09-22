@@ -66,11 +66,12 @@ più recente alla più vecchia:
 - Modifiche: il filtro centrale ricostruisce ora le esclusioni storiche dalle
   anagrafiche Smart Working disattivate e non più collegate a un profilo Hub
   attivo. Il confronto usa email e nome oltre all'ID ClickUp, quindi le vecchie
-  cancellazioni spariscono da team, task e selettori senza toccare ClickUp. La
-  modifica di una task conserva anche questi assegnatari storici sul servizio
+  cancellazioni vengono prima collegate all'ID della rubrica ClickUp ufficiale
+  e spariscono anche dalle task che hanno conservato un nome/email storico
+  diverso. La modifica di una task conserva questi assegnatari sul servizio
   originale invece di rimuoverli implicitamente.
-- File: `lib/user-directory-exclusions.js`, `api/clickup-tasks.js`,
-  `public/app.js`, `scripts/test-user-management.mjs`,
+- File: `lib/user-directory-exclusions.js`, `api/clickup-team.js`,
+  `api/clickup-tasks.js`, `api/users.js`, `public/app.js`, `scripts/test-user-management.mjs`,
   `scripts/test-clickup-task-sync.mjs`, `docs/PROJECT-HANDOFF.md`, `agent.md`.
 - Verifiche: controlli sintattici Node, test unitario della riconciliazione
   storica con protezione dei profili ancora attivi, `npm run test:users`, `npm
