@@ -222,6 +222,13 @@ supabase/                     schema e migration
 - Nel calendario CRM gli eventi senza categoria o con il precedente colore
   Google grigio usano il rosso; i colori semantici delle categorie restano
   distinti.
+- Il calendario mostra direttamente, senza aprire la chat AI, il controllo
+  `Appuntamenti da seguire`: elenca i prossimi incontri cliente riconosciuti e
+  segnala quanti clienti attivi non hanno appuntamenti visibili nei 30 giorni
+  successivi. I nomi vengono collegati agli eventi anche tramite gli alias;
+  smart working e assenze non contano come appuntamenti. Un incontro nel
+  riepilogo apre il relativo dettaglio nel mese corretto. Il calcolo è
+  deterministico nel backend Calendar e non consuma crediti OpenAI.
 
 ### Home e area personale
 
@@ -548,10 +555,11 @@ supabase/                     schema e migration
 - Può ordinare priorità, individuare scadenze e sovrapposizioni e suggerire
   prossimi passi usando dati aggiornati dell'Hub. Le funzioni deterministiche,
   come la valutazione dei copy e della copertura PED, non consumano API.
-- Per ogni cliente accessibile collega gli eventi Calendar tramite nome e alias,
-  indica data e ora del prossimo appuntamento nei 30 giorni successivi e genera
-  un avviso esplicito quando non risultano appuntamenti visibili. Il controllo
-  usa la cache Calendar gia sincronizzata e non aggiunge chiamate a Google.
+- Se interrogata su un cliente, l'AI può ancora usare il riepilogo degli eventi
+  Calendar tramite nome e alias. Gli avvisi automatici sui prossimi
+  appuntamenti e sui clienti da pianificare appartengono però al modulo
+  Calendario e non richiedono l'apertura della chat. Questo controllo nativo è
+  deterministico e non consuma crediti OpenAI.
 - La prima versione è in sola lettura: non crea, modifica, pubblica o elimina
   dati e le scorciatoie proposte aprono soltanto la sezione pertinente.
 - Lo staff invia al modello soltanto task assegnate e appuntamenti ai quali è

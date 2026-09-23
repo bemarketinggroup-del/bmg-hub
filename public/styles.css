@@ -6801,6 +6801,57 @@ body.ai-assistant-open { overflow: hidden; }
   margin: 16px 28px 0; padding: 12px 14px; border: 1px solid var(--red-line); border-radius: var(--r-sm);
   background: var(--red-tint); color: var(--red); font-size: 13px; font-weight: 600;
 }
+.calendar-appointment-alerts {
+  display: grid; grid-template-columns: minmax(170px, .28fr) minmax(0, 1fr); gap: 18px;
+  padding: 14px 18px; border-bottom: 1px solid var(--line); background: linear-gradient(110deg, #fffaf6 0%, var(--surface) 58%);
+}
+.calendar-appointment-alerts[hidden] { display: none; }
+.calendar-appointment-alerts > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.calendar-appointment-alerts > header .eyebrow { display: block; margin-bottom: 4px; color: var(--terracotta); font-size: 9.5px; }
+.calendar-appointment-alerts > header h3 { margin: 0; color: var(--ink); font-size: 15px; line-height: 1.25; }
+.calendar-appointment-window {
+  display: inline-flex; align-items: center; min-height: 26px; border: 1px solid var(--line); border-radius: var(--pill);
+  background: rgba(255,255,255,.8); color: var(--muted); padding: 0 9px; font-size: 9.5px; font-weight: 700; white-space: nowrap;
+}
+.calendar-appointment-alerts-body { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(220px, .7fr); align-items: stretch; gap: 12px; min-width: 0; }
+.calendar-upcoming-appointments { min-width: 0; }
+.calendar-upcoming-appointments h4 { margin: 0 0 7px; color: var(--muted); font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase; }
+.calendar-upcoming-appointments > div { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 7px; }
+.calendar-appointment-item {
+  display: grid; min-width: 0; min-height: 72px; align-content: center; gap: 2px; border: 1px solid var(--line); border-radius: var(--r-sm);
+  background: var(--surface); color: var(--text); padding: 8px 10px; text-align: left; cursor: pointer; transition: border-color .15s ease, transform .15s ease, box-shadow .15s ease;
+}
+.calendar-appointment-item:hover { border-color: var(--terracotta); box-shadow: 0 6px 16px rgba(87,52,35,.08); transform: translateY(-1px); }
+.calendar-appointment-item.is-near { border-color: #efc7b6; background: #fff8f4; }
+.calendar-appointment-item:disabled { cursor: default; opacity: .8; }
+.calendar-appointment-item:disabled:hover { border-color: var(--line); box-shadow: none; transform: none; }
+.calendar-appointment-item strong,
+.calendar-appointment-item small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.calendar-appointment-item strong { color: var(--ink); font-size: 11.5px; }
+.calendar-appointment-item small { color: var(--muted); font-size: 9.5px; }
+.calendar-appointment-date { color: var(--terracotta); font-size: 9.5px; font-weight: 800; }
+.calendar-appointment-empty,
+.calendar-appointment-unavailable,
+.calendar-appointment-loading {
+  display: flex; align-items: center; min-height: 72px; margin: 0; border: 1px dashed var(--line-strong); border-radius: var(--r-sm);
+  background: var(--surface); color: var(--muted); padding: 10px 12px; font-size: 11px;
+}
+.calendar-appointment-loading { gap: 9px; grid-column: 1 / -1; }
+.calendar-appointment-loading .drive-folder-spinner { width: 15px; height: 15px; }
+.calendar-appointment-unavailable { grid-column: 1 / -1; }
+.calendar-missing-clients {
+  align-self: end; min-width: 0; border: 1px solid #f0cc9d; border-radius: var(--r-sm); background: #fff8eb; color: #76521d;
+}
+.calendar-missing-clients summary { display: grid; gap: 3px; min-height: 72px; align-content: center; padding: 10px 12px; cursor: pointer; list-style: none; }
+.calendar-missing-clients summary::-webkit-details-marker { display: none; }
+.calendar-missing-clients summary span { display: flex; align-items: baseline; gap: 5px; font-size: 11px; font-weight: 700; }
+.calendar-missing-clients summary strong { color: #9a5a00; font-size: 20px; line-height: 1; }
+.calendar-missing-clients summary small { color: #8e744d; font-size: 9.5px; }
+.calendar-missing-clients > div { display: flex; flex-wrap: wrap; gap: 5px; max-height: 104px; overflow-y: auto; border-top: 1px solid #f0d9b8; padding: 9px; overscroll-behavior: contain; }
+.calendar-missing-clients > div span { border: 1px solid #ecd2aa; border-radius: var(--pill); background: #fff; padding: 4px 7px; font-size: 9.5px; font-weight: 650; }
+.calendar-missing-clients.is-clear { display: grid; align-content: center; gap: 4px; min-height: 72px; border-color: #bdd8c6; background: #f1f8f3; color: #3f6f4c; padding: 10px 12px; }
+.calendar-missing-clients.is-clear strong { font-size: 12px; }
+.calendar-missing-clients.is-clear span { font-size: 9.5px; line-height: 1.4; }
 .google-calendar-legend {
   display: flex; align-items: center; flex-wrap: wrap; gap: 8px 18px; padding: 10px 28px;
   border-bottom: 1px solid var(--line); background: var(--surface); color: var(--muted); font-size: 11.5px;
@@ -6987,6 +7038,10 @@ body.ai-assistant-open { overflow: hidden; }
   .google-calendar-month-grid { grid-template-rows: repeat(6, minmax(96px, auto)); }
   .google-calendar-event-time { display: none; }
   .google-calendar-event { grid-template-columns: minmax(0, 1fr); }
+  .calendar-appointment-alerts { grid-template-columns: 1fr; gap: 10px; }
+  .calendar-appointment-alerts > header { align-items: center; }
+  .calendar-appointment-alerts-body { grid-template-columns: minmax(0, 1fr) 220px; }
+  .calendar-upcoming-appointments > div { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 720px) {
@@ -6999,6 +7054,12 @@ body.ai-assistant-open { overflow: hidden; }
   .google-calendar-navigation h3 { font-size: 15px; }
   .google-calendar-view-switch { margin-left: auto; }
   .google-calendar-legend { padding: 10px 14px; gap: 8px 12px; overflow-x: auto; flex-wrap: nowrap; }
+  .calendar-appointment-alerts { padding: 12px 14px; }
+  .calendar-appointment-alerts-body { grid-template-columns: 1fr; }
+  .calendar-upcoming-appointments > div { display: flex; overflow-x: auto; padding-bottom: 3px; scrollbar-width: none; }
+  .calendar-upcoming-appointments > div::-webkit-scrollbar { display: none; }
+  .calendar-appointment-item { min-width: 168px; flex: 0 0 168px; }
+  .calendar-missing-clients { align-self: stretch; }
   .google-calendar-grid { min-height: 520px; overflow-x: auto; }
   .google-calendar-weekdays, .google-calendar-month-grid { min-width: 770px; }
   .calendar-event-detail-shell { padding: 20px; }
@@ -7706,6 +7767,11 @@ body.ai-assistant-open { overflow: hidden; }
     color: #245b7a;
   }
   .google-calendar-legend { display: none; }
+  .calendar-appointment-alerts { gap: 9px; padding: 11px 10px; }
+  .calendar-appointment-alerts > header h3 { font-size: 14px; }
+  .calendar-appointment-window { min-height: 24px; padding: 0 8px; font-size: 9px; }
+  .calendar-appointment-item { min-width: 158px; flex-basis: 158px; min-height: 66px; }
+  .calendar-missing-clients summary { min-height: 62px; }
   .google-calendar-grid { width: 100%; min-height: 0; overflow: hidden; }
   .google-calendar-grid.is-week { overflow-x: auto; }
   .google-calendar-weekdays,

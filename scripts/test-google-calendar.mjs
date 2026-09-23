@@ -139,7 +139,10 @@ const htmlSource = await readFile(new URL("../public/index.html", import.meta.ur
 const appSource = await readFile(new URL("../public/app.js", import.meta.url), "utf8");
 const styleSource = await readFile(new URL("../public/styles.css", import.meta.url), "utf8");
 const calendarSource = await readFile(new URL("../lib/google-calendar.js", import.meta.url), "utf8");
+const clientAppointmentsSource = await readFile(new URL("../lib/client-appointments.js", import.meta.url), "utf8");
 assert.match(htmlSource, /id="googleCalendarMonthStrip"/, "il calendario mobile deve avere una navigazione rapida per mesi");
+assert.match(htmlSource, /id="calendarAppointmentAlerts"/, "il calendario deve avere un avviso nativo per gli appuntamenti cliente");
+assert.match(htmlSource, /id="calendarAppointmentAlertsBody"/, "il riepilogo appuntamenti deve aggiornarsi senza usare la chat");
 assert.match(htmlSource, /id="calendarEventMoreDetails"/, "luogo, invitati esterni e descrizione devono restare disponibili nei dettagli compatti");
 assert.match(htmlSource, /class="calendar-event-schedule full"/, "date, orari e durata devono essere raccolti in una fascia unica");
 assert.match(styleSource, /\.calendar-event-modal \{[\s\S]*?overflow: hidden/, "il dialogo evento non deve scorrere");
@@ -156,6 +159,7 @@ assert.match(appSource, /button\.addEventListener\("click", \(\) => \{[\s\S]*?se
 assert.match(appSource, /data-mobile-label="\$\{day\.charAt\(0\)\}"/, "i giorni della settimana devono avere etichette compatte su smartphone");
 assert.match(styleSource, /@media \(max-width: 980px\)[\s\S]*?\.google-calendar-weekdays,[\s\S]*?\.google-calendar-month-grid \{ width: 100%; min-width: 0; \}/, "la vista mensile mobile deve mostrare tutte le sette colonne senza scorrimento orizzontale");
 assert.match(styleSource, /\.google-calendar-month-grid \{ grid-template-rows: repeat\(6, minmax\(88px, auto\)\); \}/, "le settimane mobile devono essere compatte");
+assert.match(styleSource, /\.calendar-appointment-alerts-body \{ grid-template-columns: 1fr; \}/, "gli avvisi appuntamenti devono adattarsi allo smartphone");
 assert.match(styleSource, /\.google-calendar-day-events \{ grid-auto-rows: 19px; gap: 2px; \}/, "gli eventi mobile devono avere la densita del calendario Google");
 assert.match(calendarSource, /process\.env\.GOOGLE_CALENDAR_OAUTH_CLIENT_ID[\s\S]*process\.env\.GOOGLE_CALENDAR_OAUTH_CLIENT_SECRET[\s\S]*process\.env\.GOOGLE_CALENDAR_OAUTH_REFRESH_TOKEN/, "Calendar deve usare le tre credenziali OAuth dedicate");
 assert.doesNotMatch(calendarSource, /process\.env\.GOOGLE_CALENDAR_OAUTH_CLIENT_ID \|\| process\.env\.GOOGLE_DRIVE_OAUTH_CLIENT_ID/, "Calendar non deve ricadere sulle credenziali OAuth Drive");
@@ -170,6 +174,13 @@ assert.match(calendarSource, /CALENDAR_REQUEST_TIMEOUT_MS[\s\S]*AbortSignal\.tim
 assert.match(calendarSource, /code: googleErrorCode\(error\)[\s\S]*retryable: isRetryableGoogleError\(error\)/, "le risposte devono distinguere gli errori recuperabili");
 assert.match(appSource, /const hasCurrentRange = googleCalendarState\.loadedRange === rangeKey[\s\S]*if \(!hasCurrentRange\) \{[\s\S]*googleCalendarState\.events = \[\]/, "un errore di aggiornamento non deve svuotare un calendario gia caricato");
 assert.match(appSource, /\[429, 502, 503, 504\]\.includes\(response\.status\)[\s\S]*setTimeout\(resolve, 900\)/, "il browser deve ritentare una sincronizzazione temporaneamente fallita");
+assert.match(appSource, /appointment_insights: "1"/, "gli avvisi devono arrivare con il caricamento del calendario e non tramite chat AI");
+assert.match(appSource, /function renderCalendarAppointmentAlerts\(\)/, "il calendario deve renderizzare appuntamenti vicini e clienti da pianificare");
+assert.match(appSource, /data-calendar-insight-event/, "un prossimo appuntamento deve poter aprire il dettaglio calendario");
+assert.doesNotMatch(appSource, /\["Clienti senza appuntamenti"/, "il controllo appuntamenti non deve essere presentato come azione della chat");
+assert.match(calendarSource, /googleCalendarAppointmentOverview/, "il backend Calendar deve calcolare gli avvisi senza consumare crediti AI");
+assert.match(calendarSource, /appointment_overview/, "il riepilogo deve essere incluso nella risposta Calendar");
+assert.match(clientAppointmentsSource, /event_category/, "smart working e assenze classificati dal calendario non devono diventare appuntamenti cliente");
 assert.match(appSource, /8: "#D50000"[\s\S]*return categoryColors\[event\.event_category\] \|\| googleColors\[Number\(event\.color_id\)\] \|\| "#D50000"/, "gli eventi grigi o senza colore devono essere mostrati in rosso");
 
 console.log("Google Calendar payload tests passed.");

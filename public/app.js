@@ -115,7 +115,7 @@ const AI_CONTEXT_PRESETS = Object.freeze({
     prompts: [
       ["Controlla sovrapposizioni", "Controlla i prossimi eventi e segnala sovrapposizioni o giornate troppo piene."],
       ["Prepara la settimana", "Riassumi gli appuntamenti della settimana e suggerisci come prepararmi."],
-      ["Clienti senza appuntamenti", "Indica quali clienti non hanno appuntamenti visibili nei prossimi 30 giorni e quali hanno il prossimo incontro piu vicino."]
+      ["Prepara un appuntamento", "Per il prossimo appuntamento visibile, riassumi cosa conviene controllare e preparare prima dell'incontro."]
     ]
   },
   clients: {
@@ -385,6 +385,8 @@ let googleCalendarState = {
   anchor: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
   events: [],
   calendar: null,
+  appointmentOverview: null,
+  appointmentOverviewLoaded: false,
   loading: false,
   loadedRange: ""
 };
@@ -10339,7 +10341,8 @@ async function loadGoogleCalendar(options = {}) {
   try {
     const params = new URLSearchParams({
       time_min: calendarApiIso(range.start),
-      time_max: calendarApiIso(range.end)
+      time_max: calendarApiIso(range.end),
+      appointment_insights: "1"
     });
     let response = await apiFetch(`/api/google-calendar?${params}`);
     if (!response.ok && [429, 502, 503, 504].includes(response.status)) {
@@ -10350,6 +10353,8 @@ async function loadGoogleCalendar(options = {}) {
     if (!response.ok) throw new Error(data.error || "Google Calendar non disponibile");
     googleCalendarState.events = Array.isArray(data.events) ? data.events.filter((event) => event.status !== "cancelled") : [];
     googleCalendarState.calendar = data.calendar || null;
+    googleCalendarState.appointmentOverview = data.appointment_overview || null;
+    googleCalendarState.appointmentOverviewLoaded = true;
     googleCalendarState.loadedRange = rangeKey;
     calendarOnline = true;
     renderBackendStatus("", "calendar");
@@ -10360,6 +10365,8 @@ async function loadGoogleCalendar(options = {}) {
     if (!hasCurrentRange) {
       googleCalendarState.events = [];
       googleCalendarState.loadedRange = "";
+      googleCalendarState.appointmentOverview = null;
+      googleCalendarState.appointmentOverviewLoaded = false;
     }
     calendarOnline = false;
     renderBackendStatus(error.message, "calendar");
@@ -10485,6 +10492,66 @@ function calendarEventTime(event) {
   return Number.isNaN(date.valueOf()) ? "" : new Intl.DateTimeFormat("it-IT", { hour: "2-digit", minute: "2-digit" }).format(date);
 }
 
+function calendarAppointmentDateLabel(appointment, daysUntilNext) {
+  const date = new Date(appointment?.start_at || "");
+  if (Number.isNaN(date.valueOf())) return "Data da verificare";
+  const prefix = daysUntilNext === 0
+    ? "Oggi"
+    : daysUntilNext === 1
+      ? "Domani"
+      : capitalizeCalendarLabel(new Intl.DateTimeFormat("it-IT", { weekday: "short", day: "numeric", month: "short" }).format(date));
+  if (appointment?.all_day) return `${prefix} · Tutto il giorno`;
+  return `${prefix} · ${new Intl.DateTimeFormat("it-IT", { hour: "2-digit", minute: "2-digit" }).format(date)}`;
+}
+
+function renderCalendarAppointmentAlerts() {
+  const panel = document.getElementById("calendarAppointmentAlerts");
+  const body = document.getElementById("calendarAppointmentAlertsBody");
+  if (!panel || !body) return;
+  panel.classList.toggle("is-loading", googleCalendarState.loading && !googleCalendarState.appointmentOverviewLoaded);
+  if (googleCalendarState.loading && !googleCalendarState.appointmentOverviewLoaded) {
+    panel.hidden = false;
+    body.innerHTML = `<div class="calendar-appointment-loading"><span class="drive-folder-spinner" aria-hidden="true"></span><span>Controllo appuntamenti clienti…</span></div>`;
+    return;
+  }
+
+  const overview = googleCalendarState.appointmentOverview;
+  if (!overview) {
+    panel.hidden = false;
+    body.innerHTML = `<p class="calendar-appointment-unavailable">Il controllo appuntamenti non è disponibile. Premi <strong>Sincronizza</strong> per riprovare.</p>`;
+    return;
+  }
+
+  const upcoming = [...(overview.clients_with_upcoming_appointment || [])]
+    .filter((item) => item?.next_appointment)
+    .sort((left, right) => String(left.next_appointment.start_at).localeCompare(String(right.next_appointment.start_at)))
+    .slice(0, 4);
+  const missing = [...(overview.clients_without_upcoming_appointment || [])]
+    .sort((left, right) => String(left).localeCompare(String(right), "it"));
+  const upcomingMarkup = upcoming.length
+    ? upcoming.map((item) => {
+      const appointment = item.next_appointment;
+      const attributes = appointment.id
+        ? ` data-calendar-insight-event="${escapeHtml(appointment.id)}" data-calendar-insight-date="${escapeHtml(appointment.start_at)}"`
+        : "";
+      return `<button class="calendar-appointment-item${Number(item.days_until_next) <= 7 ? " is-near" : ""}" type="button"${attributes}${appointment.id ? "" : " disabled"}>
+        <span class="calendar-appointment-date">${escapeHtml(calendarAppointmentDateLabel(appointment, Number(item.days_until_next)))}</span>
+        <strong>${escapeHtml(item.client)}</strong>
+        <small>${escapeHtml(appointment.title || "Appuntamento cliente")}</small>
+      </button>`;
+    }).join("")
+    : `<p class="calendar-appointment-empty">Nessun appuntamento cliente riconosciuto nei prossimi 30 giorni.</p>`;
+  const missingMarkup = missing.length
+    ? `<details class="calendar-missing-clients">
+        <summary><span><strong>${missing.length}</strong> client${missing.length === 1 ? "e" : "i"} senza appuntamenti visibili</span><small>Da pianificare entro 30 giorni</small></summary>
+        <div>${missing.map((client) => `<span>${escapeHtml(client)}</span>`).join("")}</div>
+      </details>`
+    : `<div class="calendar-missing-clients is-clear"><strong>Tutti coperti</strong><span>Ogni cliente ha almeno un appuntamento visibile nei prossimi 30 giorni.</span></div>`;
+
+  panel.hidden = false;
+  body.innerHTML = `<div class="calendar-upcoming-appointments"><h4>Prossimi appuntamenti</h4><div>${upcomingMarkup}</div></div>${missingMarkup}`;
+}
+
 function calendarEventChip(event, detailed = false, options = {}) {
   const eventId = encodeURIComponent(event.id);
   const attendees = Array.isArray(event.attendees) ? event.attendees.length : 0;
@@ -10542,6 +10609,7 @@ function renderGoogleCalendar() {
     ? "Sincronizzazione in corso..."
     : `${googleCalendarState.events.length} event${googleCalendarState.events.length === 1 ? "o" : "i"}`;
   renderGoogleCalendarMonthStrip();
+  renderCalendarAppointmentAlerts();
 
   if (googleCalendarState.loading && !googleCalendarState.events.length) {
     grid.className = "google-calendar-grid is-loading";
@@ -13374,6 +13442,11 @@ document.getElementById("googleCalendarGrid").addEventListener("click", (event) 
   if (eventButton) return openGoogleCalendarEventDetails(decodeURIComponent(eventButton.dataset.calendarEvent));
   const dateButton = event.target.closest("[data-calendar-new-date], [data-calendar-date-more]");
   if (dateButton) return openGoogleCalendarEvent("", dateButton.dataset.calendarNewDate || dateButton.dataset.calendarDateMore);
+});
+document.getElementById("calendarAppointmentAlerts").addEventListener("click", (event) => {
+  const appointment = event.target.closest("[data-calendar-insight-event]");
+  if (!appointment) return;
+  void openCalendarNotification(appointment.dataset.calendarInsightEvent, appointment.dataset.calendarInsightDate);
 });
 document.getElementById("closeCalendarEventDetailButton").addEventListener("click", () => {
   document.getElementById("calendarEventDetailModal").close();

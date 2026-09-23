@@ -59,6 +59,33 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-09-23 — Avvisi appuntamenti direttamente nel Calendario
+
+- Richiesta: mostrare nel Calendario, e non nella chat AI, gli avvisi sui
+  prossimi appuntamenti e sui clienti che non hanno incontri programmati.
+- Modifiche: aggiunto nel modulo Calendario il pannello automatico
+  `Appuntamenti da seguire`, con i quattro incontri cliente più vicini e un
+  avviso espandibile per i clienti attivi senza appuntamenti visibili nei 30
+  giorni successivi. Il click su un incontro apre il dettaglio nel mese
+  corretto. Il backend collega clienti ed eventi tramite nomi e alias, esclude
+  smart working e assenze e condivide la stessa logica deterministica con
+  l'assistente. Il controllo viene caricato insieme al calendario e non
+  effettua chiamate OpenAI; dalla chat è stata rimossa la scorciatoia dedicata
+  ai clienti senza appuntamenti.
+- File: `lib/client-appointments.js`, `lib/ai-assistant.js`,
+  `lib/google-calendar.js`, `public/index.html`, `public/app.js`,
+  `public/styles.css`, `scripts/test-ai-task-assist.mjs`,
+  `scripts/test-google-calendar.mjs`, `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run test:google-calendar`, `npm run test:ai-task-assist`,
+  `npm run test:mobile-navigation`, `npm run test:primeng-components`,
+  `npm run check`, `npm run build`, `git diff --check`; controllo visivo e
+  funzionale desktop e smartphone in produzione.
+- Pubblicazione: commit corrente pubblicato su GitHub `main` e distribuito in
+  produzione su Vercel (`https://bmg-hub.vercel.app`).
+- Note: gli avvisi riportano appuntamenti *visibili* e riconoscibili dal nome o
+  da un alias del cliente; eventi con titoli non riconducibili a un cliente non
+  vengono associati automaticamente.
+
 ### 2026-09-23 — Riutilizzo dei contenuti già in attesa nel PED
 
 - Richiesta: permettere di selezionare e aggiungere nuovamente un contenuto
