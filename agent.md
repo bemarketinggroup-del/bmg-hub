@@ -59,6 +59,30 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-09-23 — Viewer media trasparente e apertura Drive PED ripristinata
+
+- Richiesta: eliminare il grande riquadro nero quando si aprono foto o video,
+  mostrando il media sopra una pagina appena oscurata e sfocata; correggere
+  inoltre il selettore PED che si apriva vuoto senza entrare nella cartella del
+  cliente.
+- Modifiche: il visualizzatore condiviso mostra ora foto e video direttamente
+  in primo piano su un dialogo trasparente, con backdrop tenue e sfocato,
+  immagine con ombra leggera e controlli flottanti; zoom, navigazione, player,
+  copertina Reel e tastiera restano invariati. Nel flusso PED è stata
+  ripristinata l'inizializzazione del formato prima del primo render, che
+  impediva alla chiamata Drive di partire e lasciava la griglia vuota. Gli
+  errori Drive mostrano ora anche un comando `Riprova` che forza una nuova
+  lettura senza cache.
+- File: `public/app.js`, `public/styles.css`,
+  `scripts/test-ped-carousel.mjs`, `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run test:ped-carousel`, `npm run check`, `git diff --check`;
+  controllo desktop e smartphone del viewer e del primo caricamento della
+  cartella cliente, con verifica media su Safari e Chrome.
+- Pubblicazione: commit corrente pubblicato su GitHub `main` e deploy Vercel di
+  produzione verificato su `https://bmg-hub.vercel.app`.
+- Note: nessun file Drive o contenuto PED viene modificato; il cambiamento del
+  visualizzatore è esclusivamente presentazionale.
+
 ### 2026-09-23 — Creazione PED in due passaggi con editor copy ampio
 
 - Richiesta: togliere il piccolo campo copy dal selettore Drive e far scegliere

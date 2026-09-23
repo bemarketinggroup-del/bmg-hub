@@ -5359,6 +5359,7 @@ function renderPedPickerFormat() {
 }
 
 function renderPedCarouselSelection() {
+  const type = pedContentType(pedPickerState.contentType);
   const addedCount = pedPickerState.selectedFiles.length;
   const existingCount = Number(pedPickerState.existingCount || 0);
   const totalCount = existingCount + addedCount;
@@ -5453,7 +5454,11 @@ async function loadPedPickerFolder(folderId = "", folderName = "", options = {})
   } catch (error) {
     if (loadId !== pedPickerFolderLoadId) return;
     hideDriveFolderLoading(grid);
-    grid.innerHTML = `<div class="ped-picker-error"><strong>Drive non disponibile</strong><span>${escapeHtml(error.message)}</span></div>`;
+    grid.innerHTML = `<div class="ped-picker-error">
+      <strong>Drive non disponibile</strong>
+      <span>${escapeHtml(error.message)}</span>
+      <button class="secondary-button" data-ped-picker-retry data-ped-picker-retry-folder="${escapeHtml(folderId)}" data-ped-picker-retry-name="${escapeHtml(folderName)}" data-ped-picker-retry-source="${escapeHtml(source)}" type="button">Riprova</button>
+    </div>`;
     return false;
   }
 }
@@ -12584,6 +12589,7 @@ document.body.addEventListener("click", (event) => {
   const pedViewerNext = event.target.closest("[data-ped-viewer-next]");
   const pedPickerType = event.target.closest("[data-ped-picker-type]");
   const pedPickerBreadcrumb = event.target.closest("[data-ped-picker-breadcrumb]");
+  const pedPickerRetry = event.target.closest("[data-ped-picker-retry]");
   const pedPickerClose = event.target.closest("[data-ped-picker-close]");
   const pedUsedToggle = event.target.closest("[data-ped-used-toggle]");
   const pedCreateFolder = event.target.closest("[data-ped-create-folder]");
@@ -12815,6 +12821,13 @@ document.body.addEventListener("click", (event) => {
   }
   if (pedPickerFile) {
     return togglePedCarouselFile(pedPickerFile.dataset.pedPickerFile);
+  }
+  if (pedPickerRetry) {
+    return loadPedPickerFolder(
+      pedPickerRetry.dataset.pedPickerRetryFolder || "",
+      pedPickerRetry.dataset.pedPickerRetryName || "",
+      { source: pedPickerRetry.dataset.pedPickerRetrySource || "", fresh: true }
+    );
   }
   if (pedCreateCarousel) return openPedCreateCaptionStep();
   if (pedPickerBreadcrumb) {

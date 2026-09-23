@@ -280,12 +280,17 @@ supabase/                     schema e migration
 - Visualizzatore grande con tastiera: spazio apre/chiude le foto e controlla
   play/pausa sui video; le frecce navigano.
 - Foto e video di Clienti, Drive, Grafiche, Revisioni, PED, Agenda e Chat
-  confluiscono nello stesso visualizzatore fullscreen scuro. La galleria
+  confluiscono nello stesso visualizzatore fullscreen. Foto e video appaiono
+  direttamente in primo piano, senza un grande pannello nero: la pagina
+  sottostante resta riconoscibile attraverso un backdrop leggermente scuro e
+  sfocato, mentre informazioni, zoom, navigazione e chiusura sono controlli
+  flottanti compatti. La galleria
   mantiene foto e video intercalati; le foto conservano zoom e trascinamento,
   mentre i video usano controlli BMG dedicati per play/pausa, timeline, audio e
   fullscreen, con fallback `webkitEnterFullscreen` per Safari/iPhone.
-- Il visualizzatore usa uno sfondo antracite caldo `#181614` e non ritaglia mai
-  foto o video. Il video occupa il riquadro con `object-fit: contain`; dopo la
+- Il visualizzatore non ritaglia mai foto o video. Il video occupa l'area utile
+  con `object-fit: contain`; soltanto il fullscreen nativo mantiene lo sfondo
+  antracite caldo `#181614`. Dopo la
   lettura dei metadati conserva il rapporto nativo e il primo fotogramma reale
   sostituisce l'eventuale poster orizzontale/croppato generato da Drive.
 - Nei video immagine e controlli occupano due righe separate; il buffering è un
@@ -351,6 +356,10 @@ supabase/                     schema e migration
   Carosello seguono lo stesso flusso; per le Storie il secondo passaggio mostra
   soltanto la conferma perché non prevedono copy. L'aggiunta di media a un
   contenuto esistente resta diretta e non modifica il copy già salvato.
+  Il formato viene inizializzato prima del primo render del selettore: la
+  cartella Drive principale del cliente viene quindi aperta automaticamente.
+  Un errore del servizio non lascia mai una griglia bianca, ma mostra causa e
+  comando `Riprova` con ricaricamento senza cache.
 - Quando si rendono visibili i file Drive già utilizzati, ogni anteprima conserva
   stabilmente il badge `Gia nel PED` sopra foto o video anche dopo il caricamento
   dell'immagine e gli aggiornamenti PrimeNG del DOM. Le eccezioni esplicite al

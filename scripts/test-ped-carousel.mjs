@@ -495,6 +495,9 @@ assert.match(styleSource, /\.p-button > \.ped-picker-used-badge \{ z-index: 7; \
 assert.match(htmlSource, /id="pedMediaViewerModal"/, "il selettore deve includere un visualizzatore grande dedicato");
 assert.match(htmlSource, /data-ped-viewer-zoom-in/, "il visualizzatore deve offrire controlli zoom espliciti");
 assert.match(appSource, /data-ped-media-viewer/, "ogni contenuto visualizzabile deve avere un comando separato dalla selezione");
+assert.match(appSource, /function renderPedCarouselSelection\(\) \{\s*const type = pedContentType\(pedPickerState\.contentType\);/, "il selettore deve inizializzare il formato prima di caricare la cartella Drive");
+assert.match(appSource, /data-ped-picker-retry[\s\S]*?>Riprova<\/button>/, "un errore Drive non deve lasciare il selettore vuoto ma offrire Riprova");
+assert.match(appSource, /if \(pedPickerRetry\) \{[\s\S]*?loadPedPickerFolder\([\s\S]*?fresh: true/, "Riprova deve ricaricare realmente la cartella Drive senza cache");
 assert.match(appSource, /class="ped-picker-media is-viewer" data-ped-media-viewer/, "il click sulla foto deve aprire il visualizzatore grande");
 assert.match(appSource, /<span>\$\{insertLabel\}<\/span>/, "il comando sotto la foto deve inserire il contenuto nel PED");
 assert.match(appSource, /const insertLabel = isCarouselSelection && selected[\s\S]*?"Rimuovi dal carosello"[\s\S]*?"Aggiungi di nuovo"[\s\S]*?"Inserisci nel PED"/, "il comando di inserimento deve essere esplicito anche quando il file viene riutilizzato");
@@ -525,9 +528,12 @@ assert.match(styleSource, /\.media-last-viewed-badge \{/, "l'ultima foto visuali
 assert.match(appSource, /event\.key === "ArrowLeft" \|\| event\.key === "ArrowRight"/, "il visualizzatore deve intercettare le frecce della tastiera");
 assert.match(appSource, /event\.key === " " && !event\.repeat/, "la barra spaziatrice deve aprire o chiudere le foto");
 assert.match(htmlSource, /Frecce ← → per navigare · Spazio per chiudere/, "il visualizzatore deve spiegare i comandi da tastiera");
-assert.match(styleSource, /\.modal\.ped-media-viewer-modal[\s\S]*?width: calc\(100vw - 20px\)/, "il visualizzatore deve occupare quasi tutta la larghezza desktop");
-assert.match(styleSource, /\.ped-media-viewer-shell[\s\S]*?height: calc\(100dvh - 20px\)/, "il visualizzatore deve usare quasi tutta l'altezza disponibile per le foto verticali");
+assert.match(styleSource, /\.modal\.ped-media-viewer-modal[\s\S]*?width: 100vw;[\s\S]*?background: transparent;/, "il visualizzatore deve lasciare visibile la pagina dietro al media");
+assert.match(styleSource, /\.modal\.ped-media-viewer-modal::backdrop \{[\s\S]*?background: rgba\(24, 22, 20, \.42\);[\s\S]*?backdrop-filter: blur\(12px\)/, "la pagina sottostante deve essere appena oscurata e sfocata");
+assert.match(styleSource, /\.ped-media-viewer-shell[\s\S]*?height: 100dvh;/, "il visualizzatore deve usare tutta l'altezza disponibile per le foto verticali");
+assert.match(styleSource, /\.ped-media-viewer-stage \{[\s\S]*?border: 0;[\s\S]*?background: transparent;/, "il media non deve essere racchiuso in un grande riquadro nero");
 assert.match(styleSource, /\.ped-media-viewer-media img[\s\S]*?object-fit: contain/, "la foto intera non deve essere ritagliata nel visualizzatore");
+assert.match(styleSource, /\.ped-media-viewer-media img[\s\S]*?border-radius: 12px;[\s\S]*?box-shadow:/, "la foto deve apparire direttamente in primo piano con una profondita leggera");
 assert.match(appSource, /function createModernVideoPlayer\(/, "foto e video devono usare un visualizzatore centrale condiviso");
 assert.match(appSource, /function preserveVideoAspectRatio\(video, player\)/, "il player deve leggere il rapporto nativo di ogni video");
 assert.match(appSource, /video\.style\.setProperty\("--media-native-ratio"/, "il rapporto nativo deve essere trasferito al layout del player");
