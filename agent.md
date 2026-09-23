@@ -83,9 +83,13 @@ più recente alla più vecchia:
   `npm run test:ped-carousel`, `npm run test:mobile-navigation`, `npm run
   test:primeng-components`, `npm run test:client-management`, `npm run
   test:connected-services`, `npm run build`, `git diff --check`; controllo
-  visivo desktop e smartphone da completare sulla build di produzione.
-- Pubblicazione: da completare nello stesso intervento con commit, push GitHub,
-  deploy Vercel e verifica dell'alias canonico.
+  visivo degli asset pubblicati a 1710×930 e 390×844: pagina, griglia e area
+  principale hanno altezza pari al viewport, senza scroll; su smartphone le tre
+  schede previste per pagina conservano appuntamento, consiglio e `Apri PED`.
+- Pubblicazione: commit applicativo `0cd67b0` pubblicato su GitHub `main`; deploy
+  Vercel di produzione `dpl_AspmDHkyGrhHEUHH9hf25BQnzpKj` completato e alias
+  canonico verificato su `https://bmg-hub.vercel.app`. L'endpoint protetto
+  risponde `401` senza sessione, come previsto.
 - Note: nessuna migrazione database; i dati Task e Calendario sono visibili
   soltanto a chi possiede i rispettivi permessi.
 
