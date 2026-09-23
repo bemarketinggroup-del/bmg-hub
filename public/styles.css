@@ -10374,3 +10374,323 @@ body.chat-view-active #chatView {
   .maintenance-notice-copy h2 { font-size: 22px; }
   .maintenance-notice-shell > .primary-button { grid-column: 1; justify-self: stretch; width: 100%; }
 }
+
+/* ============================================================
+   PED COPY EDITORS — finestra fissa, scorre soltanto il copy
+   ============================================================ */
+.ped-caption-modal,
+.ped-staging-editor-modal {
+  width: min(900px, calc(100vw - 28px));
+  height: min(920px, calc(100dvh - 28px));
+  max-height: calc(100dvh - 28px);
+  overflow: hidden;
+  overscroll-behavior: contain;
+}
+
+#pedCaptionForm,
+#pedStagingEditorForm {
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto auto auto minmax(100px, 1fr) auto auto auto;
+  overflow: hidden;
+  padding: 18px 20px 20px;
+}
+
+.ped-caption-modal .modal-head {
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+}
+
+.ped-caption-modal .ped-caption-day-items {
+  min-height: 0;
+  margin-top: 0;
+}
+
+.ped-caption-modal .ped-caption-settings,
+.ped-caption-modal .ped-caption-editor {
+  min-height: 0;
+  margin-top: 10px;
+}
+
+.ped-caption-modal .ped-caption-editor {
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
+.ped-caption-modal .ped-caption-editor-shell {
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+}
+
+.ped-caption-modal .ped-caption-rich-input {
+  min-height: 0;
+  max-height: none;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.ped-caption-modal .ped-copy-evaluation { margin-top: 8px; }
+.ped-caption-modal .form-message { margin-block: 4px 0; }
+.ped-caption-modal .ped-caption-actions {
+  margin-top: 10px;
+  padding-top: 10px;
+}
+
+@media (max-width: 680px) {
+  .ped-caption-modal,
+  .ped-staging-editor-modal {
+    width: calc(100vw - 16px);
+    max-width: calc(100vw - 16px);
+    height: calc(100dvh - 16px);
+    max-height: calc(100dvh - 16px);
+    overflow: hidden;
+  }
+
+  #pedCaptionForm,
+  #pedStagingEditorForm {
+    grid-template-rows: auto auto auto minmax(84px, 1fr) auto auto auto;
+    padding: 12px;
+  }
+
+  .ped-caption-modal .modal-head { margin-bottom: 8px; padding-bottom: 8px; }
+  .ped-caption-modal .modal-head h2 { font-size: 18px; }
+  .ped-caption-modal .ped-caption-day-items { gap: 6px; }
+  .ped-caption-modal .ped-caption-day-item { min-height: 48px; padding: 4px 6px; }
+  .ped-caption-modal .ped-caption-day-thumb { width: 38px; height: 38px; }
+  .ped-caption-modal .ped-caption-settings,
+  .ped-caption-modal .ped-caption-editor { margin-top: 7px; }
+  .ped-caption-modal .ped-caption-settings { gap: 7px; }
+  .ped-caption-modal .ped-caption-settings select,
+  .ped-caption-modal .ped-caption-preview-link,
+  .ped-caption-modal .ped-caption-add-link { min-height: 38px; }
+  .ped-caption-modal .ped-caption-toolbar { min-height: 38px; flex-wrap: nowrap; padding-block: 3px; }
+  .ped-caption-modal .ped-caption-rich-input {
+    min-height: 0;
+    max-height: none;
+    padding: 10px 12px;
+    font-size: 16px;
+    line-height: 1.5;
+  }
+  .ped-caption-modal .ped-copy-score { gap: 5px; padding: 8px 10px; }
+  .ped-caption-modal .ped-copy-criteria span { padding: 3px 6px; font-size: 8px; }
+  .ped-caption-modal .ped-copy-ai-row { grid-template-columns: auto minmax(0, 1fr); gap: 7px; padding-top: 6px; }
+  .ped-caption-modal .ped-copy-ai-row .text-button { min-height: 28px; }
+  .ped-caption-modal .ped-caption-actions { margin-top: 7px; padding-top: 7px; }
+}
+
+@media (max-height: 720px) {
+  .ped-caption-modal .ped-caption-day-items { display: none; }
+  .ped-caption-modal .ped-copy-score > p { display: none; }
+  .ped-caption-modal .ped-copy-score { gap: 4px; padding-block: 7px; }
+  .ped-caption-modal .ped-caption-actions button { min-height: 38px; }
+}
+
+/* Calendario e Task usano lo stesso contratto: il dialogo non scorre mai.
+   Solo testo e liste potenzialmente lunghe hanno uno scroll locale. */
+.fixed-workspace-modal {
+  max-height: calc(100dvh - 24px);
+  overflow: hidden;
+  overscroll-behavior: contain;
+}
+
+.calendar-event-modal.fixed-workspace-modal {
+  height: min(780px, calc(100dvh - 24px));
+}
+
+#calendarEventForm {
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  overflow: hidden;
+}
+
+.calendar-event-form-grid {
+  min-height: 0;
+  grid-template-rows: auto auto minmax(92px, 1fr) auto;
+  overflow: hidden;
+}
+
+.calendar-attendees-field {
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+}
+
+.calendar-team-attendees {
+  min-height: 0;
+  max-height: none;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.calendar-event-more textarea {
+  max-height: 84px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.calendar-event-detail-modal.fixed-workspace-modal {
+  height: min(720px, calc(100dvh - 24px));
+}
+
+.calendar-event-detail-shell {
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  overflow: hidden;
+}
+
+.calendar-event-detail-list {
+  min-height: 0;
+  overflow: hidden;
+}
+
+#calendarEventDetailAttendees {
+  max-height: 108px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+#calendarEventDetailDescription {
+  max-height: 150px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.task-compose-modal.fixed-workspace-modal {
+  height: min(860px, calc(100dvh - 24px));
+}
+
+#taskForm {
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  overflow: hidden;
+  padding: 20px 24px 22px;
+}
+
+.task-compose-grid {
+  min-height: 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: auto auto minmax(112px, 1fr) auto minmax(82px, .7fr);
+  gap: 10px 14px;
+  overflow: hidden;
+}
+
+.task-compose-grid .task-assignee-fieldset {
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  overflow: hidden;
+}
+
+.task-compose-grid .task-assignee-checklist {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  padding-right: 3px;
+}
+
+.task-compose-grid > label.full:last-child {
+  min-height: 0;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+}
+
+.task-compose-grid > label.full:last-child textarea {
+  min-height: 0;
+  height: 100%;
+  resize: none;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.task-compose-modal .ai-inline-actions { padding-top: 8px; }
+.task-compose-modal .modal-actions { margin-top: 8px; padding-top: 9px; }
+
+.task-detail-modal.fixed-workspace-modal {
+  height: min(650px, calc(100dvh - 24px));
+}
+
+.task-detail-shell {
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+  overflow: hidden;
+}
+
+.task-detail-modal .task-detail-section { margin-top: 12px; }
+.task-detail-modal .task-detail-description {
+  min-height: 0;
+  max-height: none;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.task-detail-modal .modal-actions { margin-top: 10px; padding-top: 10px; }
+
+@media (max-width: 800px) {
+  .fixed-workspace-modal { max-height: calc(100dvh - 12px); }
+  .calendar-event-modal.fixed-workspace-modal,
+  .calendar-event-detail-modal.fixed-workspace-modal {
+    height: calc(100dvh - 12px);
+  }
+  #calendarEventForm { max-height: none; padding: 12px; }
+  .calendar-event-form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: auto auto auto minmax(68px, 1fr) auto;
+    gap: 6px 8px;
+  }
+  .calendar-event-modal .calendar-team-attendees { max-height: none; }
+  .calendar-event-detail-shell { padding: 14px; }
+  .calendar-event-detail-actions { flex-direction: row; }
+  .calendar-event-detail-actions > * { width: auto; }
+}
+
+@media (max-width: 640px) {
+  .task-compose-modal.fixed-workspace-modal,
+  .task-detail-modal.fixed-workspace-modal {
+    width: calc(100vw - 12px);
+    max-width: calc(100vw - 12px);
+    height: calc(100dvh - 12px);
+    max-height: calc(100dvh - 12px);
+  }
+  #taskForm { max-height: none; padding: 12px; }
+  .task-compose-modal .modal-head { margin-bottom: 8px; padding-bottom: 8px; }
+  .task-compose-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: auto auto minmax(92px, 1fr) auto minmax(72px, .65fr);
+    gap: 7px 9px;
+  }
+  .task-compose-grid .task-assignee-checklist { grid-template-columns: 1fr; }
+  .task-compose-grid .task-assignee-fieldset > p { margin-bottom: 5px; }
+  .task-compose-grid .task-assignee-option { min-height: 50px; padding-block: 6px; }
+  .task-compose-modal .ai-inline-actions { padding-top: 6px; }
+  .task-compose-modal .modal-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .task-detail-shell { padding: 14px; }
+  .task-detail-modal .modal-actions { flex-direction: row; }
+}
+
+@media (max-height: 720px) {
+  .task-client-picker > small,
+  .task-assignee-fieldset > p,
+  .calendar-event-category-field small { display: none; }
+  .task-compose-grid { grid-template-rows: auto auto minmax(76px, 1fr) auto minmax(64px, .55fr); }
+  .calendar-event-more-grid { padding-block: 7px; }
+  .calendar-event-more textarea { max-height: 58px; }
+}

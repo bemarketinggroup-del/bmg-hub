@@ -143,6 +143,10 @@ assert.match(htmlSource, /id="googleCalendarMonthStrip"/, "il calendario mobile 
 assert.match(htmlSource, /id="calendarEventMoreDetails"/, "luogo, invitati esterni e descrizione devono restare disponibili nei dettagli compatti");
 assert.match(htmlSource, /class="calendar-event-schedule full"/, "date, orari e durata devono essere raccolti in una fascia unica");
 assert.match(styleSource, /\.calendar-event-modal \{[\s\S]*?overflow: hidden/, "il dialogo evento non deve scorrere");
+assert.match(htmlSource, /class="modal fixed-workspace-modal calendar-event-modal"/, "il calendario deve usare il contratto comune dei popup fissi");
+assert.match(styleSource, /#calendarEventForm \{[\s\S]*?grid-template-rows: auto minmax\(0, 1fr\) auto auto;[\s\S]*?overflow: hidden;/, "il form evento deve tenere testata e azioni sempre visibili");
+assert.match(styleSource, /\.calendar-team-attendees \{[\s\S]*?overflow-y: auto;[\s\S]*?overscroll-behavior: contain;/, "solo la lista lunga dei partecipanti puo scorrere");
+assert.match(styleSource, /#calendarEventDetailDescription \{[\s\S]*?overflow-y: auto;/, "nel dettaglio evento deve scorrere soltanto la descrizione lunga");
 assert.match(styleSource, /\.calendar-team-attendees \{[\s\S]*?repeat\(5/, "i partecipanti desktop devono occupare due righe compatte");
 assert.match(appSource, /moreDetails\.open = Boolean\(event && \(event\.location \|\| event\.description \|\| externalAttendees\.length\)\)/, "i dettagli esistenti devono aprirsi automaticamente in modifica");
 assert.match(appSource, /function renderGoogleCalendarMonthStrip\(\)/, "i mesi rapidi devono seguire il periodo selezionato");

@@ -59,6 +59,31 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-09-23 — Popup PED, Calendario e Task senza scroll esterno
+
+- Richiesta: impedire lo scorrimento delle finestre popup, inclusi PED,
+  Calendario e Task, mantenendo tutte le funzioni a colpo d'occhio e lasciando
+  scorrere soltanto testi o liste lunghe.
+- Modifiche: introdotto un contratto visuale comune per i popup operativi con
+  altezza vincolata al viewport e overflow esterno bloccato. Negli editor PED
+  restano fermi testata, contenuto, stato, valutazione e azioni e scorre solo il
+  copy. Creazione e dettaglio di eventi e task mantengono allo stesso modo
+  sempre visibili testata e pulsanti; soltanto descrizioni, partecipanti o
+  assegnatari hanno uno scroll interno. Le varianti smartphone compattano gli
+  stessi elementi senza riattivare lo scorrimento della finestra.
+- File: `public/index.html`, `public/styles.css`,
+  `scripts/test-ped-carousel.mjs`, `scripts/test-google-calendar.mjs`,
+  `scripts/test-ai-task-assist.mjs`, `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `node --check public/app.js`, `npm run test:ped-carousel`,
+  `npm run test:google-calendar`, `npm run test:ai-task-assist`,
+  `npm run test:mobile-navigation`, `npm run test:primeng-components`,
+  `npm run check`, `npm run build` e `git diff --check` completati con esito
+  positivo; controllo visivo desktop e smartphone completato sulla produzione.
+- Pubblicazione: commit corrente pubblicato su GitHub `main` e distribuito in
+  produzione su Vercel (`https://bmg-hub.vercel.app`).
+- Note: nessun contenuto PED o copy viene modificato; cambia soltanto il layout
+  delle finestre di editing.
+
 ### 2026-09-23 — AI contestuale e controllo qualità del PED
 
 - Richiesta: eliminare la pagina dedicata all'AI e integrare l'aiuto nei flussi

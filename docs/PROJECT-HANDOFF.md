@@ -436,6 +436,11 @@ supabase/                     schema e migration
   Solo il comando esplicito `Consiglio AI sul copy` effettua una chiamata API e
   restituisce un riscontro semantico sintetico; la digitazione e le barre non
   consumano budget.
+- Gli editor del copy, sia per i contenuti programmati sia per quelli in attesa,
+  restano interamente fissi nel viewport: testata, contenuto selezionato, stato,
+  comandi, valutazione e azioni di salvataggio sono sempre visibili. Soltanto il
+  testo del copy ha uno scorrimento verticale interno, anche su smartphone; il
+  popup e la pagina sottostante non scorrono.
 
 ### PED condiviso con il cliente
 
@@ -647,6 +652,12 @@ I pulsanti secondari e ghost usano un unico linguaggio CMS/PrimeNG: superficie
 leggera, bordo morbido, raggio da 10 px, icona e testo centrati, hover discreto e
 stato disabilitato esplicito. Non lasciare controlli operativi con l'aspetto
 rettangolare nativo del browser.
+
+I popup operativi non devono mai scorrere come finestre intere: testata,
+controlli principali e azioni restano fissi nel viewport. Quando il contenuto è
+lungo, lo scroll viene confinato esclusivamente all'area testuale, alla lista o
+alla griglia interessata. Questa regola vale in particolare per PED, Calendario
+e Task, sia su desktop sia su smartphone.
 
 1. Desktop: sidebar fissa; il burger menu non deve comparire.
 2. Smartphone: burger menu che apre una navigazione laterale.

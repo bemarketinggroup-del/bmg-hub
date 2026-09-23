@@ -398,8 +398,10 @@ assert.match(appSource, /data-ped-editor=/, "il clic su un contenuto del calenda
 assert.match(htmlSource, /contenteditable="true"/, "il copy deve usare una vera area rich text");
 assert.match(htmlSource, /name="viewport" content="width=device-width, initial-scale=1"/, "il layout mobile deve usare la larghezza reale del dispositivo");
 assert.match(styleSource, /\[contenteditable="true"\] \{\s*font-size: 16px !important;/, "Safari iOS non deve ingrandire la pagina quando il copy riceve il focus");
-assert.match(styleSource, /\.ped-caption-modal \{[\s\S]*?max-height: calc\(100dvh - 16px\);[\s\S]*?overflow-x: hidden;/, "il pannello copy deve restare nel viewport dinamico senza ritagli orizzontali");
-assert.match(styleSource, /\.ped-caption-rich-input \{[\s\S]*?max-height: 48dvh;[\s\S]*?font-size: 16px;/, "l'editor mobile deve adattarsi alla tastiera senza causare lo zoom automatico");
+assert.match(styleSource, /\.ped-caption-modal,\s*\.ped-staging-editor-modal \{[\s\S]*?height: min\(920px, calc\(100dvh - 28px\)\);[\s\S]*?overflow: hidden;/, "gli editor copy devono restare fissi nel viewport senza scroll del popup");
+assert.match(styleSource, /#pedCaptionForm,\s*#pedStagingEditorForm \{[\s\S]*?grid-template-rows: auto auto auto minmax\(100px, 1fr\) auto auto auto;[\s\S]*?overflow: hidden;/, "testata, controlli, valutazione e azioni devono restare nella finestra fissa");
+assert.match(styleSource, /\.ped-caption-modal \.ped-caption-rich-input \{[\s\S]*?min-height: 0;[\s\S]*?max-height: none;[\s\S]*?overflow-y: auto;[\s\S]*?overscroll-behavior: contain;/, "soltanto il testo del copy deve scorrere dentro il popup");
+assert.match(styleSource, /@media \(max-width: 680px\) \{[\s\S]*?height: calc\(100dvh - 16px\);[\s\S]*?#pedCaptionForm,[\s\S]*?minmax\(84px, 1fr\)[\s\S]*?font-size: 16px;/, "su smartphone il popup deve restare fisso e l'editor deve evitare lo zoom automatico");
 assert.match(htmlSource, /data-ped-caption-command="bold"/, "l'editor deve offrire il grassetto");
 assert.match(htmlSource, /data-ped-caption-command="italic"/, "l'editor deve offrire il corsivo");
 assert.match(htmlSource, /data-ped-caption-command="strikeThrough"/, "l'editor deve offrire il barrato");
