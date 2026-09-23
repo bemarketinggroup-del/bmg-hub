@@ -104,6 +104,7 @@ create table if not exists public.staff_action_logs (
   method text,
   entity_type text,
   entity_id text,
+  client_id uuid references public.clients(id) on delete set null,
   context_label text,
   created_at timestamptz not null default now()
 );
@@ -116,6 +117,10 @@ on public.staff_activity_daily (profile_id, activity_date desc);
 
 create index if not exists staff_action_logs_profile_time_idx
 on public.staff_action_logs (profile_id, created_at desc);
+
+create index if not exists staff_action_logs_profile_client_time_idx
+on public.staff_action_logs (profile_id, client_id, created_at desc)
+where client_id is not null;
 
 create or replace function public.record_staff_activity(
   p_user_id uuid,

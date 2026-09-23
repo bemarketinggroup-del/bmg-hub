@@ -827,6 +827,7 @@ function recordAuditAction(endpoint, method = "VIEW", moduleKey = activeModuleKe
     action_key: metadata.action_key || (method === "VIEW" ? "view_module" : ""),
     entity_type: metadata.entity_type,
     entity_id: metadata.entity_id,
+    client_id: metadata.client_id,
     context_label: metadata.context_label
   }).catch(() => null);
 }
@@ -876,6 +877,7 @@ function pedAuditMetadata(body = {}, requestUrl = null, actionKey = "") {
   return {
     entity_type: actionKey === "view_ped" ? "ped" : "ped_content",
     entity_id: String(itemId || clientId),
+    client_id: clientId || null,
     context_label: context.filter(Boolean).join(" · ")
   };
 }
@@ -955,6 +957,7 @@ function auditMetadata(url, method, options = {}) {
     action_key: actionKey,
     entity_type: pedMetadata?.entity_type || entityType,
     entity_id: pedMetadata?.entity_id || String(entityId || ""),
+    client_id: pedMetadata?.client_id || null,
     context_label: pedMetadata?.context_label || ""
   };
 }
@@ -977,6 +980,7 @@ function auditPedView() {
     action_key: "view_ped",
     entity_type: "ped",
     entity_id: String(client.id),
+    client_id: String(client.id),
     context_label: `${client.name} · PED ${formatPedAuditMonth()}`
   });
 }

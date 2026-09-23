@@ -106,6 +106,7 @@ const ACTION_LABELS = Object.freeze({
   schedule_ped_content: "Ha programmato un contenuto nel PED",
   remove_ped_content: "Ha rimosso un contenuto dal PED",
   remove_ped_staging: "Ha rimosso un contenuto in attesa dal PED",
+  move_ped_to_staging: "Ha spostato un contenuto del PED tra quelli in attesa",
   create_calendar_event: "Ha creato un evento in Google Calendar",
   update_calendar_event: "Ha modificato un evento in Google Calendar",
   delete_calendar_event: "Ha eliminato un evento da Google Calendar",
@@ -215,8 +216,14 @@ function auditAction(body, requestedModule) {
     method,
     entity_type: safeAuditValue(body.entity_type, 40),
     entity_id: safeAuditValue(body.entity_id, 120),
+    client_id: moduleKey === "ped" ? safeUuid(body.client_id) : null,
     context_label: safeAuditText(body.context_label, 300)
   };
+}
+
+function safeUuid(value) {
+  const normalized = String(value || "").trim().toLowerCase();
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(normalized) ? normalized : null;
 }
 
 function safeAuditValue(value, maxLength) {

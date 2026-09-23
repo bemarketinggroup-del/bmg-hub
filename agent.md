@@ -59,6 +59,33 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-09-23 — Clienti appresi automaticamente dalle modifiche PED
+
+- Richiesta: fare in modo che l'AI riconosca automaticamente i clienti seguiti
+  da ciascun social media manager in base a chi crea o modifica il relativo PED,
+  mostrando poi a quella persona le analisi pertinenti.
+- Modifiche: ogni operazione effettiva sul PED registra ora anche l'identificativo
+  esatto del cliente. Il nuovo motore di affinità considera creazioni, modifiche,
+  riordini, spostamenti e programmazioni degli ultimi 180 giorni, attribuendo più
+  peso al lavoro recente ed escludendo le semplici aperture. Il brief operativo e
+  l'assistente contestuale ricevono solo la salute dei clienti appresi per lo
+  staff; il cliente aperto resta sempre analizzabile e l'amministratore conserva
+  la visione globale. La migration recupera inoltre le associazioni dallo storico
+  PED esistente, senza cancellare dati o richiedere ulteriori chiamate OpenAI.
+- File: `api/me.js`, `lib/ai-assistant.js`, `lib/client-affinity.js`,
+  `public/app.js`, `supabase/schema.sql`,
+  `supabase/migrations/20260923190000_staff_action_client_affinity.sql`,
+  `package.json`, `scripts/test-client-affinity.mjs`,
+  `scripts/test-access-logs.mjs`, `scripts/test-ai-task-assist.mjs`,
+  `scripts/test-operational-brief.mjs`, `agent.md`.
+- Verifiche: `npm run check`, `npm run test:client-affinity`,
+  `npm run test:access-logs`, `npm run test:ai-task-assist`,
+  `npm run test:operational-brief`, `npm run test:client-health`,
+  `npm run build`, `git diff --check` e verifica dell'endpoint in produzione.
+- Pubblicazione: GitHub `main`, migration Supabase e Vercel produzione.
+- Note: l'associazione è un ambito operativo osservato, non un vincolo formale;
+  una semplice visita al PED non modifica i clienti pertinenti dell'utente.
+
 ### 2026-09-23 — Ruoli professionali e revisioni riservate ai grafici
 
 - Richiesta: mostrare il popup delle revisioni grafiche soltanto ai grafici,

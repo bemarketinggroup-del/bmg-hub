@@ -30,6 +30,7 @@
     "test:primeng-components": "node scripts/test-primeng-components.mjs",
     "test:maintenance-notice": "node scripts/test-maintenance-notice.mjs",
     "test:client-health": "node scripts/test-client-health.mjs",
+    "test:client-affinity": "node scripts/test-client-affinity.mjs",
     "test:operational-brief": "node scripts/test-operational-brief.mjs"
   },
   "devDependencies": {

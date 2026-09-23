@@ -51,6 +51,8 @@ assert.match(assistant, /max_output_tokens: 420/, "la sintesi deve usare un outp
 assert.match(assistant, /store: false/, "il provider non deve conservare il brief");
 assert.match(assistant, /deterministicOperationalBrief/, "senza API deve esistere un fallback gratuito");
 assert.match(assistant, /buildClientHealthSummaries/, "il brief deve includere la salute clienti per i ruoli autorizzati");
+assert.match(assistant, /selectRelevantClientHealth/, "il brief deve limitare le analisi ai clienti appresi dal lavoro PED dello staff");
+assert.match(assistant, /client_analysis_scope/, "il contesto deve rendere trasparente l'origine della personalizzazione cliente");
 assert.match(assistant, /professional_role_label/, "il contesto AI deve includere il ruolo professionale leggibile");
 assert.match(assistant, /team_roles: teamRoleRows\.map/, "l'AI deve conoscere i ruoli professionali del team senza dedurli dai nomi");
 assert.match(html, /id="operationalBriefToast"/, "il brief deve essere un popup integrato nell'Hub");

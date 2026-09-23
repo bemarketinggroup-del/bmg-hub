@@ -13,6 +13,7 @@ const frontend = readFileSync("public/app.js", "utf8");
 const baseMigration = readFileSync("supabase/20260720120000_staff_access_logs.sql", "utf8");
 const activityMigration = readFileSync("supabase/20260720160000_staff_activity_audit.sql", "utf8");
 const actionContextMigration = readFileSync("supabase/migrations/20260804230500_staff_action_context.sql", "utf8");
+const clientAffinityMigration = readFileSync("supabase/migrations/20260923190000_staff_action_client_affinity.sql", "utf8");
 const vercel = readFileSync("vercel.json", "utf8");
 const accessLogBlock = endpoint.slice(
   endpoint.indexOf("async function recordAccess"),
@@ -29,6 +30,7 @@ assert.match(endpoint, /safeAuditValue/);
 assert.match(endpoint, /safeAuditText/);
 assert.match(endpoint, /view_ped: "Ha aperto un PED"/);
 assert.match(endpoint, /context_label: safeAuditText\(body\.context_label, 300\)/);
+assert.match(endpoint, /client_id: moduleKey === "ped" \? safeUuid\(body\.client_id\) : null/);
 assert.doesNotMatch(accessLogBlock, /password|user-agent|x-forwarded-for/i);
 assert.match(users, /last_access_at/);
 assert.match(users, /activity_profile_id/);
@@ -43,6 +45,7 @@ assert.match(frontend, /auditMetadata/);
 assert.match(frontend, /function pedAuditMetadata/);
 assert.match(frontend, /function auditPedView/);
 assert.match(frontend, /context_label: metadata\.context_label/);
+assert.match(frontend, /client_id: metadata\.client_id/);
 assert.match(frontend, /user-action-context/);
 assert.match(frontend, /visibilitychange/);
 assert.match(frontend, /30000/);
@@ -57,6 +60,9 @@ assert.match(activityMigration, /record_staff_activity/);
 assert.match(activityMigration, /Europe\/Rome/);
 assert.match(activityMigration, /least\(45/);
 assert.match(actionContextMigration, /add column if not exists context_label text/);
+assert.match(clientAffinityMigration, /add column if not exists client_id uuid references public\.clients\(id\)/);
+assert.match(clientAffinityMigration, /staff_action_logs_profile_client_time_idx/);
+assert.match(clientAffinityMigration, /update public\.staff_action_logs/, "lo storico PED gia presente deve essere recuperato senza perdere il lavoro degli utenti");
 assert.match(vercel, /\/api\/access-logs/);
 
 console.log("Access log checks passed.");
