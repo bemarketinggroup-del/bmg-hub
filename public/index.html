@@ -1438,10 +1438,7 @@
           <button data-ped-picker-type="reel" type="button">Reel</button>
           <button data-ped-picker-type="carousel" type="button">Carosello</button>
         </div>
-        <label class="ped-picker-caption-field" id="pedPickerCaptionField" for="pedPickerCaption">
-          <span><strong id="pedPickerCaptionLabel">Copy Instagram</strong><small id="pedPickerCaptionHint">Facoltativo, potrai modificarlo anche in seguito.</small></span>
-          <textarea id="pedPickerCaption" maxlength="10000" rows="1" placeholder="Scrivi copy, hashtag e call to action..."></textarea>
-        </label>
+        <p class="ped-picker-step-hint"><strong>1. Scegli i contenuti</strong><span>Il copy si inserisce nel passaggio successivo, in una finestra più ampia.</span></p>
       </div>
       <div class="ped-picker-browser-bar">
         <nav class="ped-picker-breadcrumbs" id="pedPickerBreadcrumbs" aria-label="Percorso Google Drive"></nav>
@@ -1465,13 +1462,51 @@
       </div>
       <div class="ped-picker-grid" id="pedPickerGrid"></div>
       <footer class="ped-picker-footer">
-        <div class="ped-carousel-selection is-hidden" id="pedCarouselSelection">
-          <span><strong id="pedCarouselSelectionCount">0 contenuti selezionati</strong><small>Seleziona da 2 a 20 file nell'ordine desiderato: il numero 1 sara la copertina mostrata nel feed.</small></span>
-          <button class="primary-button" id="pedCreateCarouselButton" data-ped-create-carousel type="button" disabled>Crea carosello</button>
+        <div class="ped-carousel-selection" id="pedCarouselSelection">
+          <span><strong id="pedCarouselSelectionCount">Nessun contenuto selezionato</strong><small id="pedPickerSelectionHint">Seleziona una foto, un video oppure più file per creare un carosello.</small></span>
+          <button class="primary-button" id="pedCreateCarouselButton" data-ped-create-carousel type="button" disabled>Continua con il copy</button>
         </div>
         <p class="form-message" id="pedPickerMessage" role="status"></p>
       </footer>
     </div>
+  </dialog>
+
+  <dialog class="modal fixed-workspace-modal ped-caption-modal ped-create-caption-modal" id="pedCreateCaptionModal">
+    <form id="pedCreateCaptionForm">
+      <div class="modal-head">
+        <div>
+          <p class="eyebrow" id="pedCreateCaptionEyebrow">Nuovo contenuto PED</p>
+          <h2 id="pedCreateCaptionTitle">Inserisci il copy</h2>
+          <span id="pedCreateCaptionMeta">Contenuti selezionati dal Drive</span>
+        </div>
+        <button class="icon-button" value="cancel" type="submit" formnovalidate title="Chiudi" aria-label="Chiudi"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+      </div>
+      <div class="ped-create-caption-selection" id="pedCreateCaptionSelection" aria-label="Contenuti selezionati"></div>
+      <div class="ped-caption-editor" id="pedCreateCaptionEditorBlock">
+        <span>Copy Instagram</span>
+        <div class="ped-caption-editor-shell">
+          <div class="ped-caption-toolbar" id="pedCreateCaptionToolbar" role="toolbar" aria-label="Formattazione copy">
+            <button type="button" data-ped-create-caption-command="bold" title="Grassetto" aria-label="Grassetto"><strong>B</strong></button>
+            <button type="button" data-ped-create-caption-command="italic" title="Corsivo" aria-label="Corsivo"><em>I</em></button>
+            <button type="button" data-ped-create-caption-command="strikeThrough" title="Barrato" aria-label="Barrato"><s>S</s></button>
+            <label class="ped-caption-color" title="Colore testo">
+              <span class="sr-only">Colore testo</span>
+              <input id="pedCreateCaptionColor" type="color" value="#1b1916" aria-label="Colore testo">
+            </label>
+            <button type="button" data-ped-create-caption-command="removeFormat" title="Rimuovi formattazione" aria-label="Rimuovi formattazione">Aa</button>
+          </div>
+          <div id="pedCreateCaptionText" class="ped-caption-rich-input" contenteditable="true" role="textbox" aria-multiline="true" data-placeholder="Scrivi il copy Instagram, gli hashtag e le eventuali call to action..."></div>
+        </div>
+        <small><span id="pedCreateCaptionCount">0</span>/10000 caratteri</small>
+      </div>
+      <section class="ped-copy-evaluation" id="pedCreateCaptionEvaluation" aria-label="Valutazione del copy" aria-live="polite"></section>
+      <p class="ped-caption-story-note" id="pedCreateCaptionStoryNote" hidden>Le stories non prevedono copy. Il contenuto verrà inserito direttamente nel PED.</p>
+      <p class="form-message" id="pedCreateCaptionMessage" role="status"></p>
+      <div class="modal-actions ped-caption-actions">
+        <button class="ghost-button" id="pedCreateCaptionBackButton" type="button">Indietro ai contenuti</button>
+        <button class="primary-button" id="pedCreateCaptionSaveButton" type="submit">Inserisci nel PED</button>
+      </div>
+    </form>
   </dialog>
 
   <dialog class="modal ped-media-viewer-modal" id="pedMediaViewerModal" aria-labelledby="pedMediaViewerTitle">

@@ -342,8 +342,15 @@ supabase/                     schema e migration
   e download del percorso completo usano la stessa identita; i percorsi cliente
   esistenti continuano a usare l'account di servizio condiviso.
 - Il selettore Drive ricorda l'ultima cartella visitata per cliente.
-- Foto/video si aprono cliccando l'anteprima; il comando principale inserisce il
-  contenuto nel PED.
+- Foto/video si aprono cliccando l'anteprima. La creazione usa due passaggi
+  distinti: nel primo si scelgono uno o più media e il footer mantiene visibili
+  selezione, ordine e formato rilevato; `Continua con il copy` apre poi un
+  editor ampio dedicato, con riepilogo dei file, formattazione, valutazione e
+  conferma finale. Nessun contenuto viene salvato prima del secondo passaggio.
+  `Indietro ai contenuti` conserva selezione e bozza del copy. Post, Reel e
+  Carosello seguono lo stesso flusso; per le Storie il secondo passaggio mostra
+  soltanto la conferma perché non prevedono copy. L'aggiunta di media a un
+  contenuto esistente resta diretta e non modifica il copy già salvato.
 - Quando si rendono visibili i file Drive già utilizzati, ogni anteprima conserva
   stabilmente il badge `Gia nel PED` sopra foto o video anche dopo il caricamento
   dell'immagine e gli aggiornamenti PrimeNG del DOM. Le eccezioni esplicite al
@@ -463,18 +470,18 @@ supabase/                     schema e migration
   copy assegna un punteggio e una barra `Scarso / Decente / Buono / Ottimo`
   controllando sviluppo del messaggio, apertura, struttura, chiusura/call to
   action e almeno cinque hashtag; la valutazione si aggiorna mentre si scrive
-  sia sui contenuti programmati sia su quelli in attesa. Il riepilogo del
+  durante la creazione, sui contenuti programmati e su quelli in attesa. Il riepilogo del
   cliente valuta inoltre la copertura futura rispetto a 30 giorni, la cadenza
   rispetto all'obiettivo di un contenuto ogni due giorni e la qualità media dei
   copy, indicando quanti giorni mancano all'ultima uscita pianificata.
   Solo il comando esplicito `Consiglio AI sul copy` effettua una chiamata API e
   restituisce un riscontro semantico sintetico; la digitazione e le barre non
   consumano budget.
-- Gli editor del copy, sia per i contenuti programmati sia per quelli in attesa,
-  restano interamente fissi nel viewport: testata, contenuto selezionato, stato,
-  comandi, valutazione e azioni di salvataggio sono sempre visibili. Soltanto il
-  testo del copy ha uno scorrimento verticale interno, anche su smartphone; il
-  popup e la pagina sottostante non scorrono.
+- Gli editor del copy, durante la creazione, per i contenuti programmati e per
+  quelli in attesa, restano interamente fissi nel viewport: testata, contenuto
+  selezionato, stato, comandi, valutazione e azioni di salvataggio sono sempre
+  visibili. Soltanto il testo del copy ha uno scorrimento verticale interno,
+  anche su smartphone; il popup e la pagina sottostante non scorrono.
 - L'incolla negli editor PED usa il testo del clipboard come fonte per spazi e
   a capo, invece dei paragrafi HTML generati da ChatGPT. Righe consecutive e
   righe vuote intenzionali conservano quindi la stessa distanza su Chrome e

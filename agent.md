@@ -59,6 +59,31 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-09-23 — Creazione PED in due passaggi con editor copy ampio
+
+- Richiesta: togliere il piccolo campo copy dal selettore Drive e far scegliere
+  prima i contenuti, mostrando solo dopo una finestra comoda per scrivere il
+  copy.
+- Modifiche: il selettore PED ora mantiene foto e video selezionati senza
+  salvarli subito, mostra un riepilogo fisso e determina automaticamente Post,
+  Reel o Carosello. Il comando `Continua con il copy` apre un secondo popup
+  dedicato, ampio e fisso, con riepilogo dei media, editor rich text,
+  valutazione del copy, consiglio AI, contatore e conferma finale. Il comando
+  `Indietro ai contenuti` conserva selezione e bozza; chiudendo prima della
+  conferma non viene creato alcun contenuto parziale. Le Storie usano lo stesso
+  passaggio di conferma senza mostrare un campo copy, mentre l'aggiunta di media
+  a contenuti esistenti resta diretta e conserva il testo gia salvato.
+- File: `public/index.html`, `public/app.js`, `public/styles.css`,
+  `scripts/test-ped-carousel.mjs`, `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run check`, `npm run test:ped-carousel`, `npm run
+  test:mobile-navigation`, `npm run test:primeng-components`, `npm run
+  test:permissions`, `npm run build`, `git diff --check`; controllati struttura
+  fissa del popup, scroll confinato al testo, layout desktop e smartphone e
+  normalizzazione dell'incolla compatibile con Chrome e Safari.
+- Pubblicazione: commit corrente pubblicato su GitHub `main` e deploy Vercel di
+  produzione verificato su `https://bmg-hub.vercel.app`.
+- Note: nessuna modifica allo schema dati o ai file originali su Google Drive.
+
 ### 2026-09-23 — Trascinamento dal calendario ai Contenuti in attesa
 
 - Richiesta: consentire di spostare un contenuto PED gia programmato nella

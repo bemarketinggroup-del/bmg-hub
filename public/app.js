@@ -328,6 +328,7 @@ let pedPickerState = {
   uploadEnabled: false,
   contentType: "post",
   caption: "",
+  captionHtml: "",
   selectedFiles: [],
   showUsed: false,
   appendGroupId: "",
@@ -3921,7 +3922,8 @@ function pedCopyEvaluationMarkup(value, { compact = false } = {}) {
 
 async function requestPedCopyAdvice(button) {
   const stagingOpen = Boolean(document.getElementById("pedStagingEditorModal")?.open);
-  const copy = stagingOpen ? pedStagingPlainText() : pedCaptionPlainText();
+  const createOpen = Boolean(document.getElementById("pedCreateCaptionModal")?.open);
+  const copy = stagingOpen ? pedStagingPlainText() : createOpen ? pedCreateCaptionPlainText() : pedCaptionPlainText();
   const feedback = button.closest(".ped-copy-score")?.querySelector(".ped-copy-ai-advice");
   if (!copy) {
     if (feedback) feedback.textContent = "Scrivi prima il copy.";
@@ -5285,6 +5287,7 @@ async function openPedDrivePicker(date = "", { appendItem = null, stagingAppendI
     uploadEnabled: false,
     contentType: appendMode ? "carousel" : "post",
     caption: appendMode ? String(appendTarget.caption || "") : "",
+    captionHtml: appendMode ? String(appendTarget.caption_html || "") : "",
     selectedFiles: [],
     showUsed: false,
     appendGroupId: appendMode ? String(appendTarget.id) : "",
@@ -5304,7 +5307,6 @@ async function openPedDrivePicker(date = "", { appendItem = null, stagingAppendI
       ? `${client.name} · resteranno in attesa finché non li trascini nel calendario`
       : `${client.name} · una foto diventa Post, un video diventa Reel`;
   document.getElementById("pedPickerMessage").textContent = "";
-  document.getElementById("pedPickerCaption").value = pedPickerState.caption;
   const pickerModal = document.getElementById("pedDrivePickerModal");
   document.body.classList.add("ped-picker-dialog-visible");
   if (!pickerModal.open) pickerModal.showModal();
@@ -5348,19 +5350,11 @@ function renderPedPickerFormat() {
     button.setAttribute("aria-pressed", String(active));
     button.disabled = Boolean(pedPickerState.appendGroupId);
   });
-  const captionField = document.getElementById("pedPickerCaptionField");
-  const captionInput = document.getElementById("pedPickerCaption");
   const isStory = type === "story";
-  captionField.classList.toggle("is-hidden", isStory || Boolean(pedPickerState.appendGroupId));
   if (isStory) {
     pedPickerState.caption = "";
-    captionInput.value = "";
+    if (pedPickerState.selectedFiles.length > 1) pedPickerState.selectedFiles = pedPickerState.selectedFiles.slice(0, 1);
   }
-  document.getElementById("pedPickerCaptionLabel").textContent = type === "carousel" ? "Copy unico del carosello" : "Copy Instagram";
-  document.getElementById("pedPickerCaptionHint").textContent = type === "carousel"
-    ? "Un solo copy condiviso da tutti i contenuti selezionati."
-    : "Facoltativo, potrai modificarlo anche in seguito.";
-  document.getElementById("pedCarouselSelection").classList.toggle("is-hidden", type !== "carousel");
   renderPedCarouselSelection();
 }
 
@@ -5371,19 +5365,33 @@ function renderPedCarouselSelection() {
   const appendMode = Boolean(pedPickerState.appendGroupId);
   const stagedAgainCount = pedPickerState.selectedFiles.filter(isPedDriveFileStaged).length;
   const countLabel = document.getElementById("pedCarouselSelectionCount");
+  const hint = document.getElementById("pedPickerSelectionHint");
   const button = document.getElementById("pedCreateCarouselButton");
-  if (!countLabel || !button) return;
+  if (!countLabel || !hint || !button) return;
   countLabel.textContent = appendMode
     ? addedCount
       ? `${existingCount} gia presenti + ${addedCount} ${addedCount === 1 ? "nuovo contenuto" : "nuovi contenuti"} · totale ${totalCount}/20`
       : `${existingCount} contenuti gia presenti · seleziona i nuovi file da aggiungere`
     : addedCount
-      ? `${addedCount} ${addedCount === 1 ? "contenuto selezionato" : "contenuti selezionati"} · la foto 1 sara la copertina`
-      : "0 contenuti selezionati";
-  button.disabled = appendMode ? addedCount < 1 || totalCount > 20 : addedCount < 2 || addedCount > 20;
+      ? `${addedCount} ${addedCount === 1 ? "contenuto selezionato" : "contenuti selezionati"}`
+      : "Nessun contenuto selezionato";
+  hint.textContent = appendMode
+    ? "I nuovi file verranno aggiunti in coda conservando copy e ordine esistenti."
+    : type === "story"
+      ? "La storia non richiede copy: nel prossimo passaggio potrai confermarla."
+      : type === "carousel"
+        ? "Il numero 1 sarà la copertina; nel prossimo passaggio avrai tutto lo spazio per il copy."
+        : "Nel prossimo passaggio avrai una finestra ampia dedicata al copy.";
+  button.disabled = appendMode
+    ? addedCount < 1 || totalCount > 20
+    : addedCount < 1 || addedCount > 20 || (type === "carousel" && addedCount < 2);
   button.textContent = appendMode
     ? addedCount ? `Aggiungi al carosello (${addedCount})` : "Aggiungi al carosello"
-    : addedCount >= 2 ? `Crea carosello (${addedCount})` : "Crea carosello";
+    : type === "story"
+      ? "Continua"
+      : addedCount > 1
+        ? `Continua con il copy (${addedCount})`
+        : "Continua con il copy";
   setPedPickerMessage(stagedAgainCount
     ? `Avviso: ${stagedAgainCount} ${stagedAgainCount === 1 ? "contenuto selezionato e gia presente" : "contenuti selezionati sono gia presenti"} tra quelli in attesa. Puoi ${stagedAgainCount === 1 ? "aggiungerlo" : "aggiungerli"} comunque.`
     : "", stagedAgainCount ? "warning" : "");
@@ -6189,18 +6197,133 @@ function togglePedCarouselFile(fileId) {
       return;
     }
     const file = pedPickerState.files.find((item) => String(item.id) === String(fileId));
-    if (file) pedPickerState.selectedFiles.push({ ...file, drive_source: pedPickerState.source });
+    if (file) {
+      if (pedContentType(pedPickerState.contentType) === "story") pedPickerState.selectedFiles = [];
+      pedPickerState.selectedFiles.push({ ...file, drive_source: pedPickerState.source });
+    }
   }
+  if (!pedPickerState.appendGroupId && pedContentType(pedPickerState.contentType) !== "story") {
+    if (pedPickerState.selectedFiles.length > 1) pedPickerState.contentType = "carousel";
+    else if (pedPickerState.selectedFiles.length === 1) pedPickerState.contentType = automaticPedPickerType(pedPickerState.selectedFiles[0]);
+  }
+  renderPedPickerFormat();
   renderPedPicker();
-  renderPedCarouselSelection();
 }
 
 function automaticPedPickerType(file) {
   return String(file?.mime_type || "").toLowerCase().startsWith("video/") ? "reel" : "post";
 }
 
-async function attachPedDriveFiles(fileIds) {
-  const message = document.getElementById("pedPickerMessage");
+function pedCreateCaptionPlainText() {
+  return String(document.getElementById("pedCreateCaptionText")?.innerText || "").replace(/\r/g, "").trim();
+}
+
+function updatePedCreateCaptionCount() {
+  const count = pedCreateCaptionPlainText().length;
+  document.getElementById("pedCreateCaptionCount").textContent = String(count);
+  document.getElementById("pedCreateCaptionSaveButton").disabled = count > 10000;
+  const evaluation = document.getElementById("pedCreateCaptionEvaluation");
+  if (evaluation && !evaluation.hidden) evaluation.innerHTML = pedCopyEvaluationMarkup(pedCreateCaptionPlainText());
+}
+
+function renderPedCreateCaptionSelection() {
+  const container = document.getElementById("pedCreateCaptionSelection");
+  const files = pedPickerState.selectedFiles;
+  const visible = files.slice(0, 4);
+  const names = files.slice(0, 3).map((file) => file.name || "Contenuto");
+  container.innerHTML = `<div class="ped-create-caption-stack" aria-hidden="true">${visible.map((file, index) => {
+    const mime = String(file.mime_type || "");
+    const preview = file.thumbnail_url || (mime.startsWith("image/") ? file.content_url : "");
+    return `<span class="ped-create-caption-thumb">${preview
+        ? `<img src="${escapeHtml(preview)}" alt="" loading="eager" decoding="async">`
+        : driveFileIcon({ is_folder: false, mime_type: mime })}<b>${index + 1}</b></span>`;
+  }).join("")}${files.length > visible.length ? `<b class="ped-create-caption-more">+${files.length - visible.length}</b>` : ""}</div>
+    <span class="ped-create-caption-summary-copy"><strong>${files.length} ${files.length === 1 ? "contenuto selezionato" : "contenuti selezionati"}</strong><small>${escapeHtml(names.join(" · "))}${files.length > names.length ? ` · altri ${files.length - names.length}` : ""}${files.length > 1 ? " · Il numero 1 è la copertina" : ""}</small></span>`;
+}
+
+function openPedCreateCaptionStep() {
+  const appendMode = Boolean(pedPickerState.appendGroupId);
+  const fileIds = pedPickerState.selectedFiles.map((file) => file.id);
+  if (appendMode) return attachPedDriveFiles(fileIds);
+  const format = pedContentType(pedPickerState.contentType);
+  if (!fileIds.length) {
+    setPedPickerMessage("Seleziona almeno un contenuto.", "error");
+    return;
+  }
+  if (format === "carousel" && fileIds.length < 2) {
+    setPedPickerMessage("Seleziona almeno due contenuti per creare il carosello.", "error");
+    return;
+  }
+  const client = state.clients.find((item) => String(item.id) === String(selectedPedClientId));
+  const typeMeta = pedTypeMeta(format);
+  const stagingMode = pedPickerState.destination === "staging";
+  const editor = document.getElementById("pedCreateCaptionText");
+  const isStory = format === "story";
+  editor.innerHTML = isStory ? "" : pedPickerState.captionHtml || pedPlainCaptionHtml(pedPickerState.caption || "");
+  editor.contentEditable = isStory ? "false" : "true";
+  document.getElementById("pedCreateCaptionEyebrow").textContent = stagingMode
+    ? "Contenuti in attesa · Passaggio 2 di 2"
+    : `Programmazione · ${pedCaptionDateLabel(pedPickerState.date)} · Passaggio 2 di 2`;
+  document.getElementById("pedCreateCaptionTitle").textContent = isStory ? "Conferma la storia" : "Inserisci il copy";
+  document.getElementById("pedCreateCaptionMeta").textContent = `${client?.name || "Cliente"} · ${typeMeta.label} · ${fileIds.length} ${fileIds.length === 1 ? "contenuto" : "contenuti"}`;
+  document.getElementById("pedCreateCaptionEditorBlock").hidden = isStory;
+  document.getElementById("pedCreateCaptionEvaluation").hidden = isStory;
+  document.getElementById("pedCreateCaptionStoryNote").hidden = !isStory;
+  document.getElementById("pedCreateCaptionMessage").textContent = "";
+  document.getElementById("pedCreateCaptionSaveButton").textContent = stagingMode ? "Aggiungi in attesa" : "Inserisci nel PED";
+  renderPedCreateCaptionSelection();
+  updatePedCreateCaptionCount();
+  const pickerModal = document.getElementById("pedDrivePickerModal");
+  if (pickerModal.open) pickerModal.close();
+  const modal = document.getElementById("pedCreateCaptionModal");
+  if (!modal.open) modal.showModal();
+  if (!isStory) requestAnimationFrame(() => editor.focus());
+}
+
+function returnToPedPickerFromCaption() {
+  const editor = document.getElementById("pedCreateCaptionText");
+  pedPickerState.caption = pedContentType(pedPickerState.contentType) === "story" ? "" : pedCreateCaptionPlainText();
+  pedPickerState.captionHtml = pedPickerState.caption ? editor.innerHTML.trim() : "";
+  const modal = document.getElementById("pedCreateCaptionModal");
+  if (modal.open) modal.close();
+  document.body.classList.add("ped-picker-dialog-visible");
+  const pickerModal = document.getElementById("pedDrivePickerModal");
+  if (!pickerModal.open) pickerModal.showModal();
+  renderPedPickerFormat();
+  renderPedPicker();
+}
+
+async function submitPedCreateCaption(event) {
+  event.preventDefault();
+  if (event.submitter?.value === "cancel") {
+    document.getElementById("pedCreateCaptionModal").close();
+    return;
+  }
+  const format = pedContentType(pedPickerState.contentType);
+  const editor = document.getElementById("pedCreateCaptionText");
+  const caption = format === "story" ? "" : pedCreateCaptionPlainText();
+  if (caption.length > 10000) {
+    document.getElementById("pedCreateCaptionMessage").textContent = "Il copy non può superare 10000 caratteri.";
+    return;
+  }
+  const saveButton = document.getElementById("pedCreateCaptionSaveButton");
+  if (saveButton.disabled) return;
+  saveButton.disabled = true;
+  pedPickerState.caption = caption;
+  pedPickerState.captionHtml = format === "story" ? "" : editor.innerHTML.trim();
+  try {
+    await attachPedDriveFiles(pedPickerState.selectedFiles.map((file) => file.id), {
+      caption,
+      captionHtml: format === "story" ? null : pedPickerState.captionHtml,
+      messageTargetId: "pedCreateCaptionMessage"
+    });
+  } finally {
+    saveButton.disabled = false;
+  }
+}
+
+async function attachPedDriveFiles(fileIds, { caption = pedPickerState.caption, captionHtml = null, messageTargetId = "pedPickerMessage" } = {}) {
+  const message = document.getElementById(messageTargetId);
   const format = pedContentType(pedPickerState.contentType);
   const appendMode = Boolean(pedPickerState.appendGroupId);
   const stagingMode = pedPickerState.destination === "staging";
@@ -6237,14 +6360,18 @@ async function attachPedDriveFiles(fileIds) {
             drive_file_id: fileIds[0],
             drive_file_ids: fileIds,
             content_type: format,
-            caption: format === "story" ? "" : document.getElementById("pedPickerCaption").value,
+            caption: format === "story" ? "" : caption,
+            caption_html: format === "story" ? null : captionHtml,
             staging: stagingMode,
             drive_source: driveSource
           })
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || "Impossibile collegare il contenuto");
-    document.getElementById("pedDrivePickerModal").close();
+    const pickerModal = document.getElementById("pedDrivePickerModal");
+    const createCaptionModal = document.getElementById("pedCreateCaptionModal");
+    if (pickerModal.open) pickerModal.close();
+    if (createCaptionModal.open) createCaptionModal.close();
     const updatedGroupId = appendMode ? String(data.item?.id || pedPickerState.appendGroupId) : "";
     await loadPedCalendar();
     if (updatedGroupId) {
@@ -6252,7 +6379,11 @@ async function attachPedDriveFiles(fileIds) {
       else openPedCaptionModal(updatedGroupId);
     }
   } catch (error) {
-    setPedPickerMessage(error.message, "error");
+    if (messageTargetId === "pedPickerMessage") setPedPickerMessage(error.message, "error");
+    else {
+      message.textContent = error.message;
+      message.classList.add("is-error");
+    }
   }
 }
 
@@ -12625,9 +12756,10 @@ document.body.addEventListener("click", (event) => {
   if (pedCarouselDownload) return downloadPedCarousel(pedCarouselDownload.dataset.pedCarouselDownload, pedCarouselDownload);
   if (pedSingleDownload) return downloadPedSingleMedia(pedSingleDownload.dataset.pedSingleDownload, pedSingleDownload);
   if (pedPickerType) {
-    pedPickerState.caption = document.getElementById("pedPickerCaption").value;
     pedPickerState.contentType = pedContentType(pedPickerType.dataset.pedPickerType);
-    if (pedPickerState.contentType !== "carousel") pedPickerState.selectedFiles = [];
+    if (pedPickerState.contentType === "story" && pedPickerState.selectedFiles.length > 1) {
+      pedPickerState.selectedFiles = pedPickerState.selectedFiles.slice(0, 1);
+    }
     renderPedPickerFormat();
     return renderPedPicker();
   }
@@ -12682,17 +12814,9 @@ document.body.addEventListener("click", (event) => {
     );
   }
   if (pedPickerFile) {
-    if (pedContentType(pedPickerState.contentType) === "carousel") {
-      return togglePedCarouselFile(pedPickerFile.dataset.pedPickerFile);
-    }
-    const file = pedPickerState.files.find((item) => String(item.id) === String(pedPickerFile.dataset.pedPickerFile));
-    if (pedContentType(pedPickerState.contentType) !== "story") {
-      pedPickerState.contentType = automaticPedPickerType(file);
-      renderPedPickerFormat();
-    }
-    return attachPedDriveFile(pedPickerFile.dataset.pedPickerFile);
+    return togglePedCarouselFile(pedPickerFile.dataset.pedPickerFile);
   }
-  if (pedCreateCarousel) return attachPedDriveFiles(pedPickerState.selectedFiles.map((file) => file.id));
+  if (pedCreateCarousel) return openPedCreateCaptionStep();
   if (pedPickerBreadcrumb) {
     const index = Number(pedPickerBreadcrumb.dataset.pedPickerBreadcrumb);
     const target = pedPickerState.path[index];
@@ -13445,12 +13569,29 @@ document.getElementById("pedShareButton").addEventListener("click", openPedShare
 document.getElementById("pedShareCreateButton").addEventListener("click", createPedShareLink);
 document.getElementById("pedShareCopyButton").addEventListener("click", copyPedShareLink);
 document.getElementById("pedShareDisableButton").addEventListener("click", disablePedShareLink);
+document.getElementById("pedCreateCaptionForm").addEventListener("submit", submitPedCreateCaption);
+document.getElementById("pedCreateCaptionBackButton").addEventListener("click", returnToPedPickerFromCaption);
+document.getElementById("pedCreateCaptionText").addEventListener("input", updatePedCreateCaptionCount);
 document.getElementById("pedCaptionForm").addEventListener("submit", savePedCaption);
 document.getElementById("pedCaptionText").addEventListener("input", updatePedCaptionCount);
 document.getElementById("pedStagingEditorForm").addEventListener("submit", savePedStagingCaption);
 document.getElementById("pedStagingText").addEventListener("input", updatePedStagingEditorCount);
-["pedCaptionText", "pedStagingText"].forEach((id) => {
+["pedCreateCaptionText", "pedCaptionText", "pedStagingText"].forEach((id) => {
   document.getElementById(id).addEventListener("paste", handlePedEditorPaste);
+});
+document.getElementById("pedCreateCaptionToolbar").addEventListener("click", (event) => {
+  const button = event.target.closest("[data-ped-create-caption-command]");
+  if (!button) return;
+  const editor = document.getElementById("pedCreateCaptionText");
+  editor.focus();
+  document.execCommand(button.dataset.pedCreateCaptionCommand, false, null);
+  updatePedCreateCaptionCount();
+});
+document.getElementById("pedCreateCaptionColor").addEventListener("input", (event) => {
+  const editor = document.getElementById("pedCreateCaptionText");
+  editor.focus();
+  document.execCommand("foreColor", false, event.target.value);
+  updatePedCreateCaptionCount();
 });
 document.getElementById("pedStagingCopyButton").addEventListener("click", copyPedStagingCaption);
 document.getElementById("pedStagingToolbar").addEventListener("click", (event) => {
