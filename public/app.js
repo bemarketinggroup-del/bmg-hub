@@ -115,7 +115,7 @@ const AI_CONTEXT_PRESETS = Object.freeze({
     prompts: [
       ["Controlla sovrapposizioni", "Controlla i prossimi eventi e segnala sovrapposizioni o giornate troppo piene."],
       ["Prepara la settimana", "Riassumi gli appuntamenti della settimana e suggerisci come prepararmi."],
-      ["Collega task ed eventi", "Dimmi quali task dovrei completare prima dei prossimi appuntamenti."]
+      ["Clienti senza appuntamenti", "Indica quali clienti non hanno appuntamenti visibili nei prossimi 30 giorni e quali hanno il prossimo incontro piu vicino."]
     ]
   },
   clients: {
@@ -124,7 +124,7 @@ const AI_CONTEXT_PRESETS = Object.freeze({
     placeholder: "Chiedi cosa è urgente per questo cliente…",
     prompts: [
       ["Attività del cliente", "Riassumi le attività attive del cliente che sto visualizzando e ordinale per urgenza."],
-      ["Cosa manca?", "Controlla se per questo cliente ci sono task senza scadenza o informazioni da chiarire."],
+      ["Cosa manca?", "Controlla task senza scadenza o informazioni da chiarire e dimmi quando e il prossimo appuntamento del cliente; se non ce ne sono nei prossimi 30 giorni, avvisami."],
       ["Prossimi passi", "Suggerisci i prossimi tre passi operativi per il cliente aperto."]
     ]
   },
@@ -133,7 +133,7 @@ const AI_CONTEXT_PRESETS = Object.freeze({
     title: "Supporto alla pianificazione",
     placeholder: "Chiedi aiuto sulle attività del cliente selezionato…",
     prompts: [
-      ["Priorità del cliente", "In base a task ed eventi, quali contenuti o attività del cliente selezionato hanno priorità?"],
+      ["Priorità del cliente", "In base a task ed eventi, quali contenuti o attività del cliente selezionato hanno priorità? Indica anche il prossimo appuntamento o avvisami se manca nei prossimi 30 giorni."],
       ["Controlla le scadenze", "Controlla le prossime scadenze del cliente selezionato che possono influire sul PED."],
       ["Prossimi passi", "Suggerisci tre prossimi passi organizzativi per il cliente selezionato."]
     ]

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { deterministicClientMatch } from "../lib/ai-task-assist.js";
+import { buildClientAppointmentOverview } from "../lib/ai-assistant.js";
 
 const api = readFileSync("lib/ai-task-assist.js", "utf8");
 const assistant = readFileSync("lib/ai-assistant.js", "utf8");
@@ -63,6 +64,10 @@ assert.match(assistant, /taskBelongsToProfile/);
 assert.match(assistant, /eventBelongsToProfile/);
 assert.match(assistant, /SCHERMATA CORRENTE/, "l'assistente deve ricevere il contesto della schermata attiva");
 assert.match(assistant, /selected_client/, "il contesto deve includere il cliente selezionato quando presente");
+assert.match(assistant, /client_appointments/, "l'assistente deve ricevere il riepilogo degli appuntamenti per cliente");
+assert.match(assistant, /Nessun appuntamento visibile nei prossimi/, "l'assenza di appuntamenti deve produrre un avviso esplicito");
+assert.match(assistant, /client_aliases/, "gli appuntamenti devono riconoscere anche gli alias cliente");
+assert.match(app, /Clienti senza appuntamenti/, "il calendario deve offrire il controllo contestuale dei clienti senza appuntamenti");
 assert.match(budget, /DEFAULT_MONTHLY_BUDGET_USD = 30/);
 assert.match(budget, /DEFAULT_MONTHLY_WARNING_USD = 20/);
 assert.match(budget, /spent \+ config\.requestReserveUsd > config\.monthlyBudgetUsd/);
@@ -102,5 +107,26 @@ assert.equal(deterministicClientMatch({ name: "Shooting Grand Hotel La Favorita"
 assert.equal(deterministicClientMatch({ name: "Creativita adv Artema Matera", description: "", tags: [] }, clients).client_id, "client-2");
 assert.equal(deterministicClientMatch({ name: "Nuove grafiche zest", description: "", tags: [] }, clients).action, "suggest");
 assert.equal(deterministicClientMatch({ name: "", description: "Grafica storia Bellevue Capodanno", tags: [] }, clients).client_id, "client-5");
+
+const appointmentOverview = buildClientAppointmentOverview({
+  clients: [
+    { id: "client-1", name: "Bellevue Syrene" },
+    { id: "client-2", name: "Vetera" },
+    { id: "client-3", name: "Artema" }
+  ],
+  aliases: [{ client_id: "client-3", alias: "Artema Matera" }],
+  events: [
+    { title: "Call Bellevue", description: "Allineamento piano editoriale", start_at: "2026-09-28T08:00:00.000Z", end_at: "2026-09-28T09:00:00.000Z", event_type: "client_appointment" },
+    { title: "Riunione Artema Matera", start_at: "2026-10-02T10:00:00.000Z", end_at: "2026-10-02T11:00:00.000Z", event_type: "client_appointment" },
+    { title: "Vetera SMART", start_at: "2026-09-27T10:00:00.000Z", end_at: "2026-09-27T11:00:00.000Z", event_type: "smart_working" }
+  ],
+  focusedClientName: "Vetera",
+  now: new Date("2026-09-23T08:00:00.000Z"),
+  windowDays: 30
+});
+assert.equal(appointmentOverview.clients_with_upcoming_appointment.length, 2, "nome e alias devono collegare gli appuntamenti ai clienti");
+assert.deepEqual(appointmentOverview.clients_without_upcoming_appointment, ["Vetera"], "smart working non deve essere scambiato per appuntamento cliente");
+assert.equal(appointmentOverview.focused_client?.warning, "Nessun appuntamento visibile nei prossimi 30 giorni");
+assert.equal(appointmentOverview.clients_with_upcoming_appointment[0]?.next_appointment?.start_at, "2026-09-28T08:00:00.000Z");
 
 console.log("AI task assist checks passed");

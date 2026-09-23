@@ -59,6 +59,32 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-09-23 — Appuntamenti cliente nell'AI contestuale
+
+- Richiesta: estendere l'analisi dell'AI agli appuntamenti Calendar dei clienti,
+  indicando quando è previsto il prossimo incontro e avvisando quando non ce ne
+  sono di prossimi.
+- Modifiche: l'assistente collega in modo deterministico gli eventi Calendar ai
+  clienti tramite nome, parti distintive e alias; per ogni cliente calcola gli
+  appuntamenti visibili nei 30 giorni successivi, data e ora del prossimo
+  incontro e un avviso esplicito quando manca. Il cliente aperto in Clienti o
+  PED riceve sempre il riepilogo dedicato. Ferie e smart working sono esclusi;
+  lo staff continua a usare soltanto gli eventi ai quali è invitato. Le
+  richieste rapide di Calendario, Clienti e PED espongono il nuovo controllo.
+  L'analisi usa la cache Calendar già sincronizzata e non genera chiamate
+  aggiuntive a Google né costi AI automatici.
+- File: `lib/ai-assistant.js`, `public/app.js`,
+  `scripts/test-ai-task-assist.mjs`, `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `node --check lib/ai-assistant.js`, `node --check public/app.js`,
+  `npm run test:ai-task-assist`, `npm run test:google-calendar`, `npm run
+  test:permissions`, `npm run check`, `npm run build`, `git diff --check` e
+  controllo visivo desktop e smartphone dell'assistente contestuale.
+- Pubblicazione: commit corrente pubblicato su GitHub `main` e distribuito in
+  produzione su Vercel (`https://bmg-hub.vercel.app`).
+- Note: per gli utenti staff l'avviso specifica correttamente che non risultano
+  appuntamenti *visibili*, perché gli eventi riservati ad altri utenti non
+  vengono mai inclusi nel contesto.
+
 ### 2026-09-23 — Popup PED, Calendario e Task senza scroll esterno
 
 - Richiesta: impedire lo scorrimento delle finestre popup, inclusi PED,

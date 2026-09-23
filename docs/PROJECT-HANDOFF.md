@@ -543,11 +543,17 @@ supabase/                     schema e migration
 - Può ordinare priorità, individuare scadenze e sovrapposizioni e suggerire
   prossimi passi usando dati aggiornati dell'Hub. Le funzioni deterministiche,
   come la valutazione dei copy e della copertura PED, non consumano API.
+- Per ogni cliente accessibile collega gli eventi Calendar tramite nome e alias,
+  indica data e ora del prossimo appuntamento nei 30 giorni successivi e genera
+  un avviso esplicito quando non risultano appuntamenti visibili. Il controllo
+  usa la cache Calendar gia sincronizzata e non aggiunge chiamate a Google.
 - La prima versione è in sola lettura: non crea, modifica, pubblica o elimina
   dati e le scorciatoie proposte aprono soltanto la sezione pertinente.
 - Lo staff invia al modello soltanto task assegnate e appuntamenti ai quali è
   invitato; l'admin può ottenere un quadro generale. I clienti vengono inclusi
   nel contesto solo per i profili che possono accedere al modulo Clienti.
+  Di conseguenza, per lo staff l'assenza viene sempre descritta come assenza di
+  appuntamenti visibili, senza esporre eventi riservati ad altri utenti.
 - La conversazione resta nella sessione del browser; OpenAI Responses API usa
   `store: false`, output limitato e `gpt-6-luna` come modello economico
   predefinito.
