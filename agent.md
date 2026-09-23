@@ -59,6 +59,22 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-09-23 — Hotfix pagina bianca dopo il rilascio AI
+
+- Richiesta: ripristinare l'apertura dell'Hub, che in Safari mostrava una pagina
+  bianca subito dopo il deploy dell'assistente AI.
+- Modifiche: gli event listener della nuova vista AI ora verificano l'esistenza
+  degli elementi prima di registrarli. In questo modo un browser che conserva
+  temporaneamente il precedente HTML ma riceve il nuovo JavaScript non
+  interrompe più l'intero avvio dell'applicazione.
+- File: `public/app.js`, `scripts/test-ai-task-assist.mjs`, `agent.md`.
+- Verifiche: errore di produzione individuato nella console browser; `npm run
+  test:ai-task-assist`, `npm run check`, `npm run build`, `git diff --check`;
+  verifica finale in Safari e sulla produzione.
+- Pubblicazione: commit corrente pubblicato su GitHub `main`; deploy Vercel di
+  produzione verificato su `https://bmg-hub.vercel.app`.
+- Note: nessun dato, task, cliente o contenuto è stato modificato o perso.
+
 ### 2026-09-23 — Assistente AI operativo con budget mensile protetto
 
 - Richiesta: integrare maggiormente l'AI nell'Hub per aiutare a svolgere e

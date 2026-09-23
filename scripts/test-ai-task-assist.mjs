@@ -63,6 +63,7 @@ assert.match(html, /aiAssistantBudget/);
 assert.match(html, /aiAssistantForm/);
 assert.match(app, /function sendAiAssistantMessage/);
 assert.match(app, /function renderAiAssistantBudget/);
+assert.match(app, /getElementById\("aiAssistantView"\)\?\.addEventListener/, "l'avvio deve tollerare HTML e JavaScript temporaneamente disallineati nella cache");
 assert.match(env, /OPENAI_ASSISTANT_MODEL=gpt-6-luna/);
 assert.match(env, /OPENAI_MONTHLY_BUDGET_USD=30/);
 assert.match(env, /OPENAI_MONTHLY_WARNING_USD=20/);

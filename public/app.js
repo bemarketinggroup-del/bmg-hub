@@ -11802,24 +11802,24 @@ document.getElementById("navList").addEventListener("click", (event) => {
   const button = event.target.closest("[data-view]");
   if (button) setView(button.dataset.view);
 });
-document.getElementById("aiAssistantForm").addEventListener("submit", (event) => {
+document.getElementById("aiAssistantForm")?.addEventListener("submit", (event) => {
   event.preventDefault();
   void sendAiAssistantMessage();
 });
-document.getElementById("aiAssistantClear").addEventListener("click", () => {
+document.getElementById("aiAssistantClear")?.addEventListener("click", () => {
   aiAssistantState.messages = [];
   sessionStorage.removeItem(AI_ASSISTANT_HISTORY_KEY);
   document.getElementById("aiAssistantFeedback").textContent = "";
   renderAiAssistant();
   document.getElementById("aiAssistantInput").focus();
 });
-document.getElementById("aiAssistantView").addEventListener("click", (event) => {
+document.getElementById("aiAssistantView")?.addEventListener("click", (event) => {
   const prompt = event.target.closest("[data-ai-assistant-prompt]");
   if (prompt) return void sendAiAssistantMessage(prompt.dataset.aiAssistantPrompt);
   const destination = event.target.closest("[data-ai-destination]");
   if (destination) setView(destination.dataset.aiDestination);
 });
-document.getElementById("aiAssistantInput").addEventListener("keydown", (event) => {
+document.getElementById("aiAssistantInput")?.addEventListener("keydown", (event) => {
   if (event.key !== "Enter" || event.shiftKey || event.isComposing) return;
   event.preventDefault();
   event.currentTarget.form?.requestSubmit();
