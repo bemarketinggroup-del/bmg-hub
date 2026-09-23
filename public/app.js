@@ -5,6 +5,7 @@ const LAST_VIEW_KEY = "bmg-hub-last-view-v1";
 const WORKSPACE_CONTEXT_KEY = "bmg-hub-workspace-context-v1";
 const MAINTENANCE_ACK_KEY = "bmg-hub-maintenance-ack-v1";
 const AI_ASSISTANT_HISTORY_KEY = "bmg-hub-ai-assistant-history-v1";
+const OPERATIONAL_BRIEF_INTERVAL_MS = 60 * 1000;
 const MAINTENANCE_NOTICE_INTERVAL_MS = 20 * 1000;
 const DEFAULT_MAINTENANCE_MESSAGE = "Stiamo apportando delle modifiche al gestionale. Non effettuare operazioni finché questo avviso non viene disattivato.";
 const ALL_TEAM_TASKS_ID = "__all";
@@ -433,6 +434,14 @@ let aiAssistantState = {
   enabled: false,
   loading: false,
   loaded: false
+};
+let operationalBriefState = {
+  payload: null,
+  slotKey: "",
+  loading: false,
+  pending: false,
+  hideTimer: null,
+  timer: null
 };
 let graphicReviewToastTimer = null;
 let graphicReviewToastHideTimer = null;
@@ -1264,11 +1273,13 @@ async function logout() {
   }
   stopActivityTracker();
   stopPersonalAreaUpdates();
+  stopOperationalBriefUpdates();
   stopTeamChatUpdates();
   stopServiceHealthUpdates();
   stopMaintenanceNoticeUpdates();
   stopSmartWorkingUpdates();
   setAiAssistantOpen(false);
+  setOperationalBriefOpen(false);
   closeGraphicReviewToast({ clearQueue: true });
   const maintenanceDialog = document.getElementById("maintenanceNoticeDialog");
   if (maintenanceDialog?.open) maintenanceDialog.close();
@@ -1277,6 +1288,7 @@ async function logout() {
   renderMaintenanceNotice();
   personalAreaState = { team: [], tasks: [], events: [], notifications: [], loading: false, loaded: false, error: "" };
   aiAssistantState = { messages: [], budget: null, enabled: false, loading: false, loaded: false };
+  operationalBriefState = { payload: null, slotKey: "", loading: false, pending: false, hideTimer: null, timer: null };
   sessionStorage.removeItem(AI_ASSISTANT_HISTORY_KEY);
   teamChatState = {
     profile: null,
@@ -10213,6 +10225,139 @@ async function loadAiAssistantStatus() {
   renderAiAssistantBudget();
 }
 
+function romeOperationalBriefSlot(value = new Date()) {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.valueOf())) return null;
+  const parts = Object.fromEntries(new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/Rome",
+    weekday: "short",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    hourCycle: "h23"
+  }).formatToParts(date).map((part) => [part.type, part.value]));
+  if (["Sat", "Sun"].includes(parts.weekday)) return null;
+  const hour = Number(parts.hour);
+  if (hour < 10 || hour >= 18) return null;
+  const slot = hour < 14 ? "morning" : "afternoon";
+  return { date: `${parts.year}-${parts.month}-${parts.day}`, slot, key: `${parts.year}-${parts.month}-${parts.day}.${slot}` };
+}
+
+function operationalBriefSeenKey(slotKey) {
+  return `bmg.operational-brief.seen.${String(currentProfile?.id || "anonymous")}.${slotKey}`;
+}
+
+function operationalBriefWasSeen(slotKey) {
+  try {
+    return localStorage.getItem(operationalBriefSeenKey(slotKey)) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function rememberOperationalBrief(slotKey) {
+  if (!slotKey) return;
+  try {
+    localStorage.setItem(operationalBriefSeenKey(slotKey), "1");
+  } catch {
+    // Il brief resta disponibile anche quando lo storage del browser è bloccato.
+  }
+}
+
+function setOperationalBriefOpen(open) {
+  const toast = document.getElementById("operationalBriefToast");
+  const toggle = document.getElementById("aiAssistantToggle");
+  if (!toast) return;
+  const shouldOpen = Boolean(open);
+  window.clearTimeout(operationalBriefState.hideTimer);
+  if (shouldOpen) toast.classList.remove("is-hidden");
+  requestAnimationFrame(() => toast.classList.toggle("is-visible", shouldOpen));
+  toggle?.setAttribute("aria-expanded", String(shouldOpen));
+  if (!shouldOpen) operationalBriefState.hideTimer = window.setTimeout(() => toast.classList.add("is-hidden"), 230);
+}
+
+function operationalBriefDestinationLabel(destination) {
+  return {
+    personal: "Le mie task",
+    team: "Task team",
+    calendar: "Calendario",
+    clients: "Clienti",
+    "client-health": "Salute clienti",
+    ped: "Apri PED",
+    "graphics-reviews": "Revisioni"
+  }[destination] || "Apri";
+}
+
+function renderOperationalBrief(payload) {
+  const title = document.getElementById("operationalBriefTitle");
+  const summary = document.getElementById("operationalBriefSummary");
+  const list = document.getElementById("operationalBriefList");
+  const source = document.getElementById("operationalBriefSource");
+  if (!title || !summary || !list || !source) return;
+  title.textContent = payload?.title || "Le tue priorità";
+  summary.textContent = payload?.summary || "Nessuna urgenza rilevata in questo momento.";
+  const items = Array.isArray(payload?.items) ? payload.items.slice(0, 4) : [];
+  list.innerHTML = items.length ? items.map((item) => {
+    const destination = String(item.destination || "none");
+    const button = destination !== "none" && canAccessView(destination)
+      ? `<button type="button" data-operational-brief-destination="${escapeHtml(destination)}">${escapeHtml(operationalBriefDestinationLabel(destination))}</button>`
+      : "";
+    return `<article class="operational-brief-item is-${escapeHtml(item.tone || "info")}">
+      <div><strong>${escapeHtml(item.title || "Promemoria")}</strong><span>${escapeHtml(item.detail || "")}</span></div>
+      ${button}
+    </article>`;
+  }).join("") : `<div class="operational-brief-empty">Tutto sotto controllo: non risultano urgenze personali in questo momento.</div>`;
+  source.textContent = payload?.ai_generated
+    ? "Sintesi AI personalizzata · dati dell’Hub"
+    : "Analisi automatica · nessun costo API";
+}
+
+async function loadOperationalBrief({ manual = false } = {}) {
+  if (!currentProfile || operationalBriefState.loading) return;
+  const workSlot = romeOperationalBriefSlot();
+  if (!manual && (!workSlot || operationalBriefWasSeen(workSlot.key))) return;
+  if (manual && operationalBriefState.payload) {
+    renderOperationalBrief(operationalBriefState.payload);
+    setOperationalBriefOpen(true);
+    return;
+  }
+  operationalBriefState.loading = true;
+  try {
+    const response = await apiFetch("/api/ai/assistant", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mode: "operational_brief" })
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.error || "Brief operativo non disponibile");
+    operationalBriefState.payload = payload;
+    operationalBriefState.slotKey = workSlot?.key || "manual";
+    if (!manual && workSlot) rememberOperationalBrief(workSlot.key);
+    renderOperationalBrief(payload);
+    if (activeGraphicReviewToast && !manual) operationalBriefState.pending = true;
+    else setOperationalBriefOpen(true);
+  } catch (error) {
+    if (manual) showToast(error.message || "Brief operativo non disponibile", { tone: "warning" });
+  } finally {
+    operationalBriefState.loading = false;
+  }
+}
+
+function startOperationalBriefUpdates() {
+  window.clearInterval(operationalBriefState.timer);
+  operationalBriefState.timer = window.setInterval(() => {
+    if (document.visibilityState === "visible" && currentProfile) void loadOperationalBrief();
+  }, OPERATIONAL_BRIEF_INTERVAL_MS);
+}
+
+function stopOperationalBriefUpdates() {
+  window.clearInterval(operationalBriefState.timer);
+  window.clearTimeout(operationalBriefState.hideTimer);
+  operationalBriefState.timer = null;
+  operationalBriefState.hideTimer = null;
+}
+
 async function sendAiAssistantMessage(message) {
   const input = document.getElementById("aiAssistantInput");
   const send = document.getElementById("aiAssistantSend");
@@ -11672,6 +11817,11 @@ function closeGraphicReviewToast({ clearQueue = false } = {}) {
   graphicReviewToastHideTimer = window.setTimeout(() => {
     toast?.classList.add("is-hidden");
     if (graphicReviewToastQueue.length) showNextGraphicReviewToast();
+    else if (operationalBriefState.pending && operationalBriefState.payload) {
+      operationalBriefState.pending = false;
+      renderOperationalBrief(operationalBriefState.payload);
+      setOperationalBriefOpen(true);
+    }
   }, 220);
 }
 
@@ -12776,7 +12926,7 @@ document.getElementById("aiAssistantPanel")?.addEventListener("click", (event) =
   }
 });
 document.getElementById("aiAssistantToggle")?.addEventListener("click", () => {
-  setAiAssistantOpen(document.getElementById("aiAssistantPanel")?.getAttribute("aria-hidden") === "true");
+  void loadOperationalBrief({ manual: true });
 });
 document.getElementById("aiAssistantClose")?.addEventListener("click", () => setAiAssistantOpen(false, { restoreFocus: true }));
 document.getElementById("aiAssistantBackdrop")?.addEventListener("click", () => setAiAssistantOpen(false, { restoreFocus: true }));
@@ -12789,6 +12939,17 @@ document.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && document.getElementById("aiAssistantPanel")?.classList.contains("is-open")) {
     setAiAssistantOpen(false, { restoreFocus: true });
   }
+  if (event.key === "Escape" && document.getElementById("operationalBriefToast")?.classList.contains("is-visible")) {
+    setOperationalBriefOpen(false);
+  }
+});
+document.getElementById("operationalBriefToast")?.addEventListener("click", (event) => {
+  const close = event.target.closest("[data-close-operational-brief]");
+  if (close) return setOperationalBriefOpen(false);
+  const destination = event.target.closest("[data-operational-brief-destination]");
+  if (!destination) return;
+  setOperationalBriefOpen(false);
+  setView(destination.dataset.operationalBriefDestination);
 });
 document.getElementById("mobileNavToggle").addEventListener("click", () => setMobileNavOpen(true));
 document.getElementById("mobileNavBackdrop").addEventListener("click", () => setMobileNavOpen(false, { restoreFocus: true }));
@@ -14438,6 +14599,8 @@ async function bootApp() {
     const failed = results.find((result) => result.status === "rejected");
     if (failed) renderBackendStatus(failed.reason?.message || "Alcuni dati non sono ancora disponibili");
     startPersonalAreaUpdates();
+    startOperationalBriefUpdates();
+    void loadOperationalBrief();
     startServiceHealthUpdates();
     startMaintenanceNoticeUpdates();
     startSmartWorkingUpdates();
@@ -14465,6 +14628,7 @@ document.addEventListener("visibilitychange", () => {
   } else {
     void sendActivityEvent("resume");
     void loadPersonalArea({ quiet: true });
+    void loadOperationalBrief();
     void loadServiceHealth({ quiet: true });
     void loadMaintenanceNotice({ quiet: true });
     if (document.querySelector("[data-view-panel='chat'].is-active")) void loadTeamChat({ quiet: true });

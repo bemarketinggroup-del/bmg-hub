@@ -605,11 +605,25 @@ supabase/                     schema e migration
 
 ### Assistente AI operativo
 
-- L'AI non ha una pagina dedicata nella sidebar. È integrata nella topbar come
-  aiuto contestuale e si apre in un pannello sovrapposto senza abbandonare il
-  modulo corrente. Titolo, richieste rapide e contesto cambiano tra Home, area
-  personale, task, calendario, clienti, PED e revisioni grafiche; cliente o
-  membro selezionato vengono indicati al backend quando pertinenti.
+- L'AI non ha una pagina dedicata nella sidebar. Il richiamo `Brief AI` nella
+  topbar apre un piccolo popup operativo sovrapposto alla schermata corrente,
+  non una chat da avviare manualmente.
+- Il brief compare automaticamente al primo accesso utile e durante una
+  sessione lunga in due sole finestre, mattina e pomeriggio, esclusivamente dal
+  lunedì al venerdì tra le 10:00 e le 18:00 nel fuso `Europe/Rome`. Una chiave
+  locale per utente, data e fascia impedisce che il popup e la chiamata AI si
+  ripetano dopo un refresh o in una nuova scheda.
+- I promemoria sono personali: usano soltanto task assegnate, eventi ai quali lo
+  staff è invitato e notifiche non chiuse. Smart working, shooting, task
+  scadute o di giornata e revisioni grafiche hanno precedenza. Chi ha il modulo
+  PED vede anche le criticità della Salute clienti; l'amministratore può avere
+  il quadro complessivo.
+- Il controllo deterministico prepara sempre il brief e funziona anche senza
+  OpenAI o a budget esaurito. Quando ci sono priorità e il budget lo consente,
+  `gpt-6-luna` produce soltanto una breve riscrittura dei fatti già selezionati,
+  con massimo quattro elementi, reasoning basso, `store: false` e output
+  limitato a 420 token. In questo modo il consumo automatico è al massimo due
+  brevi sintesi per utente al giorno lavorativo.
 - Può ordinare priorità, individuare scadenze e sovrapposizioni e suggerire
   prossimi passi usando dati aggiornati dell'Hub. Le funzioni deterministiche,
   come la valutazione dei copy e della copertura PED, non consumano API.
@@ -625,9 +639,8 @@ supabase/                     schema e migration
   nel contesto solo per i profili che possono accedere al modulo Clienti.
   Di conseguenza, per lo staff l'assenza viene sempre descritta come assenza di
   appuntamenti visibili, senza esporre eventi riservati ad altri utenti.
-- La conversazione resta nella sessione del browser; OpenAI Responses API usa
-  `store: false`, output limitato e `gpt-6-luna` come modello economico
-  predefinito.
+- Il precedente pannello conversazionale resta nel codice per compatibilità,
+  ma il flusso visibile e consigliato è il brief automatico e contestuale.
 - Tutte le funzioni AI condividono un contatore costi server-side: avviso a 20
   USD, tetto a 30 USD mensili e riserva massima per richiesta. Il backend blocca
   nuove chiamate prima di oltrepassare il budget e il pannello mostra spesa e

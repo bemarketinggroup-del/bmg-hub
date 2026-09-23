@@ -29,7 +29,8 @@
     "test:session-persistence": "node scripts/test-session-persistence.mjs",
     "test:primeng-components": "node scripts/test-primeng-components.mjs",
     "test:maintenance-notice": "node scripts/test-maintenance-notice.mjs",
-    "test:client-health": "node scripts/test-client-health.mjs"
+    "test:client-health": "node scripts/test-client-health.mjs",
+    "test:operational-brief": "node scripts/test-operational-brief.mjs"
   },
   "devDependencies": {
     "esbuild": "^0.25.12"

@@ -59,6 +59,36 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-09-23 — Brief AI personale nelle ore di ufficio
+
+- Richiesta: integrare nell'Hub un aiuto proattivo e poco costoso che, dal
+  lunedì al venerdì tra le 10:00 e le 18:00, compaia all'accesso o durante la
+  sessione e ricordi a ogni persona task, smart working, shooting e attività
+  importanti.
+- Modifiche: il pulsante AI della topbar apre ora un popup operativo compatto
+  invece della chat. Il sistema genera al massimo un brief nella fascia
+  10:00–13:59 e uno nella fascia 14:00–17:59, con memoria locale per evitare
+  duplicati dopo refresh. La selezione delle priorità è sempre disponibile
+  senza costo API e rispetta ruolo e permessi; una breve sintesi `gpt-6-luna`
+  viene richiesta solo se esistono elementi utili e il budget mensile lo
+  consente. Il brief include task assegnate, eventi personali, smart working,
+  shooting, revisioni e, per chi vede il PED, criticità della Salute clienti.
+  Il fallback gratuito resta attivo senza chiave, credito o disponibilità del
+  provider; il popup non si sovrappone al banner di revisione grafica.
+- File: `lib/operational-brief.js`, `lib/ai-assistant.js`,
+  `public/index.html`, `public/app.js`, `public/styles.css`,
+  `scripts/test-operational-brief.mjs`, `package.json`,
+  `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run check`, `npm run test:operational-brief`, `npm run
+  test:ai-task-assist`, `npm run test:personal-area`, test calendario, smart
+  working, navigazione mobile, componenti PrimeNG, build, `git diff --check` e
+  controllo visivo desktop/smartphone.
+- Pubblicazione: modifica inclusa nel commit corrente, da pubblicare su GitHub
+  `main` e distribuire su Vercel produzione con verifica dell'alias
+  `https://bmg-hub.vercel.app`.
+- Note: nessuna migration richiesta; resta attivo il tetto mensile OpenAI di 30
+  USD già configurato.
+
 ### 2026-09-23 — Wallboard Salute clienti a rotazione
 
 - Richiesta: trasformare `Salute clienti` in un'unica schermata autonoma da

@@ -189,6 +189,27 @@
       </button>
     </aside>
 
+    <aside class="operational-brief-toast is-hidden" id="operationalBriefToast" role="status" aria-live="polite" aria-atomic="true">
+      <header class="operational-brief-head">
+        <span class="operational-brief-mark" aria-hidden="true">
+          <svg class="lc" viewBox="0 0 24 24"><path d="M12 3a4 4 0 0 0-4 4v1a4 4 0 0 0-3 3.87V15a4 4 0 0 0 4 4h1l2 2 2-2h1a4 4 0 0 0 4-4v-3.13A4 4 0 0 0 16 8V7a4 4 0 0 0-4-4Z"/><path d="M9 12h.01M15 12h.01M9.5 15.5h5"/></svg>
+        </span>
+        <div>
+          <small>Brief operativo · 10:00–18:00</small>
+          <strong id="operationalBriefTitle">Le tue priorità</strong>
+          <span id="operationalBriefSummary">Controllo task, smart working e shooting in corso…</span>
+        </div>
+        <button class="operational-brief-close" data-close-operational-brief type="button" aria-label="Chiudi brief operativo">
+          <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </header>
+      <div class="operational-brief-list" id="operationalBriefList"></div>
+      <footer class="operational-brief-foot">
+        <span id="operationalBriefSource">Analisi rapida dei dati dell’Hub</span>
+        <button type="button" data-close-operational-brief>Ho capito</button>
+      </footer>
+    </aside>
+
     <main class="main">
       <header class="topbar">
         <div class="topbar-heading">
@@ -204,9 +225,9 @@
           <input id="globalSearchInput" type="search" placeholder="Cerca clienti, task, eventi…" autocomplete="off" aria-label="Ricerca globale">
           <div class="global-search-results is-hidden" id="globalSearchResults" role="listbox"></div>
         </div>
-        <button class="ai-context-toggle" id="aiAssistantToggle" type="button" aria-controls="aiAssistantPanel" aria-expanded="false">
+        <button class="ai-context-toggle" id="aiAssistantToggle" type="button" aria-controls="operationalBriefToast" aria-expanded="false">
           <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a4 4 0 0 0-4 4v1a4 4 0 0 0-3 3.87V15a4 4 0 0 0 4 4h1l2 2 2-2h1a4 4 0 0 0 4-4v-3.13A4 4 0 0 0 16 8V7a4 4 0 0 0-4-4Z"/><path d="M9 12h.01M15 12h.01M9.5 15.5h5"/></svg>
-          <span><strong>AI</strong><small>Aiutami</small></span>
+          <span><strong>Brief AI</strong><small>Priorità</small></span>
         </button>
       </header>
 
