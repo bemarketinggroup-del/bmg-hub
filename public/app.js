@@ -373,6 +373,7 @@ let editingPedStagingId = "";
 let pedDraggedItemId = "";
 let pedDraggedStagingId = "";
 let pedDragTarget = null;
+let pedStagingDropTarget = null;
 let pedDragSuppressClickUntil = 0;
 let pedInstagramOrderEditing = false;
 let pedInstagramDraftOrder = [];
@@ -4748,7 +4749,7 @@ function pedItemMarkup(item) {
   const typeLabel = files.length > 1 ? `${files.length} file` : isVideo ? "Video" : isImage ? "Immagine" : mime === "application/pdf" ? "PDF" : "File";
   const publishing = pedPublishingStatusMeta(item.publishing_status);
 
-  return `<article class="ped-content-card ped-type-${format.type}${files.length > 1 ? " is-carousel" : ""}" data-ped-content="${escapeHtml(item.id)}" data-ped-publishing-tone="${escapeHtml(publishing.value)}" draggable="true" aria-grabbed="false" tabindex="0" title="${escapeHtml(publishing.label)} · trascina su un altro giorno per riprogrammare">
+  return `<article class="ped-content-card ped-type-${format.type}${files.length > 1 ? " is-carousel" : ""}" data-ped-content="${escapeHtml(item.id)}" data-ped-publishing-tone="${escapeHtml(publishing.value)}" draggable="true" aria-grabbed="false" tabindex="0" title="${escapeHtml(publishing.label)} · trascina su un altro giorno o nei Contenuti in attesa">
     <button class="ped-content-main" data-ped-editor="${escapeHtml(item.id)}" type="button" title="Apri contenuti e copy del giorno">
       <span class="ped-content-thumb">${media}${pedTypeIconMarkup(format.type)}${files.length > 1 ? `<b class="ped-carousel-count">${files.length}</b>` : ""}</span>
       <span class="ped-content-copy"><strong>${escapeHtml(title)}</strong><small><span class="ped-type-dot" aria-hidden="true"></span>${format.label} · ${typeLabel}${format.type !== "story" && item.caption ? " · Copy pronto" : ""}</small></span>
@@ -6440,18 +6441,31 @@ function setPedDragTarget(day) {
   pedDragTarget?.classList.add("is-ped-drop-target");
 }
 
+function setPedStagingDropTarget(zone) {
+  if (pedStagingDropTarget === zone) return;
+  pedStagingDropTarget?.classList.remove("is-ped-drop-target");
+  pedStagingDropTarget = zone || null;
+  pedStagingDropTarget?.classList.add("is-ped-drop-target");
+}
+
 function pedDayAtPoint(x, y) {
   const day = document.elementFromPoint(x, y)?.closest?.(".ped-day[data-ped-day]");
   return day && !day.classList.contains("is-outside") ? day : null;
 }
 
+function pedStagingDropZoneAtPoint(x, y) {
+  return document.elementFromPoint(x, y)?.closest?.("[data-ped-staging-dropzone]") || null;
+}
+
 function clearPedDragVisuals() {
   setPedDragTarget(null);
+  setPedStagingDropTarget(null);
   document.querySelectorAll(".ped-content-card.is-ped-dragging, .ped-staging-card.is-ped-dragging").forEach((card) => {
     card.classList.remove("is-ped-dragging");
     card.setAttribute("aria-grabbed", "false");
   });
   document.querySelectorAll(".ped-day.is-ped-drop-ready").forEach((day) => day.classList.remove("is-ped-drop-ready"));
+  document.querySelectorAll("[data-ped-staging-dropzone].is-ped-drop-ready").forEach((zone) => zone.classList.remove("is-ped-drop-ready"));
 }
 
 function resetPedPointerDrag() {
@@ -6472,7 +6486,10 @@ function beginPedPointerDrag() {
   pedDraggedItemId = "";
   pedDraggedStagingId = "";
   if (pedPointerDrag.itemId.startsWith("staging:")) pedDraggedStagingId = pedPointerDrag.itemId.slice(8);
-  else pedDraggedItemId = pedPointerDrag.itemId;
+  else {
+    pedDraggedItemId = pedPointerDrag.itemId;
+    document.querySelector("[data-ped-staging-dropzone]")?.classList.add("is-ped-drop-ready");
+  }
   pedPointerDrag.card.classList.add("is-ped-dragging");
   pedPointerDrag.card.setAttribute("aria-grabbed", "true");
   document.querySelectorAll(".ped-day:not(.is-outside)").forEach((day) => day.classList.add("is-ped-drop-ready"));
@@ -12824,6 +12841,7 @@ document.body.addEventListener("dragstart", (event) => {
   card.classList.add("is-ped-dragging");
   card.setAttribute("aria-grabbed", "true");
   document.querySelectorAll(".ped-day:not(.is-outside)").forEach((day) => day.classList.add("is-ped-drop-ready"));
+  document.querySelector("[data-ped-staging-dropzone]")?.classList.add("is-ped-drop-ready");
   event.dataTransfer.effectAllowed = "move";
   event.dataTransfer.setData("application/x-bmg-ped-item", pedDraggedItemId);
   event.dataTransfer.setData("text/plain", pedDraggedItemId);
@@ -12851,6 +12869,15 @@ document.body.addEventListener("dragover", (event) => {
     return;
   }
   if ((!pedDraggedItemId && !pedDraggedStagingId) || isDriveFileDrag(event)) return;
+  const stagingZone = pedDraggedItemId ? event.target.closest?.("[data-ped-staging-dropzone]") : null;
+  if (stagingZone) {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+    setPedDragTarget(null);
+    setPedStagingDropTarget(stagingZone);
+    return;
+  }
+  setPedStagingDropTarget(null);
   const day = event.target.closest?.(".ped-day[data-ped-day]");
   if (!day || day.classList.contains("is-outside")) {
     setPedDragTarget(null);
@@ -12865,6 +12892,9 @@ document.body.addEventListener("dragleave", (event) => {
   if (smartDraggedAssignmentId) {
     if (smartDragTarget && !smartDragTarget.contains(event.relatedTarget)) setSmartDragTarget(null);
     return;
+  }
+  if (pedDraggedItemId && pedStagingDropTarget && !pedStagingDropTarget.contains(event.relatedTarget)) {
+    setPedStagingDropTarget(null);
   }
   if ((!pedDraggedItemId && !pedDraggedStagingId) || !pedDragTarget || pedDragTarget.contains(event.relatedTarget)) return;
   setPedDragTarget(null);
@@ -12895,6 +12925,17 @@ document.body.addEventListener("drop", (event) => {
     return;
   }
   if ((!pedDraggedItemId && !pedDraggedStagingId) || isDriveFileDrag(event)) return;
+  const stagingZone = pedDraggedItemId ? event.target.closest?.("[data-ped-staging-dropzone]") : null;
+  if (stagingZone) {
+    event.preventDefault();
+    const itemId = pedDraggedItemId;
+    pedDragSuppressClickUntil = Date.now() + 500;
+    pedDraggedItemId = "";
+    pedDraggedStagingId = "";
+    clearPedDragVisuals();
+    movePedItemToStaging(itemId);
+    return;
+  }
   const day = event.target.closest?.(".ped-day[data-ped-day]");
   if (!day || day.classList.contains("is-outside")) return;
   event.preventDefault();
@@ -12943,21 +12984,29 @@ document.body.addEventListener("pointermove", (event) => {
   }
   event.preventDefault();
   positionPedPointerGhost(event.clientX, event.clientY);
-  setPedDragTarget(pedDayAtPoint(event.clientX, event.clientY));
+  const stagingZone = pedPointerDrag.itemId.startsWith("staging:")
+    ? null
+    : pedStagingDropZoneAtPoint(event.clientX, event.clientY);
+  setPedStagingDropTarget(stagingZone);
+  setPedDragTarget(stagingZone ? null : pedDayAtPoint(event.clientX, event.clientY));
 });
 
 document.body.addEventListener("pointerup", (event) => {
   if (pedPointerDrag.pointerId !== event.pointerId) return;
   const active = pedPointerDrag.active;
   const itemId = pedPointerDrag.itemId;
-  const day = active ? pedDayAtPoint(event.clientX, event.clientY) : null;
+  const stagingZone = active && !itemId.startsWith("staging:")
+    ? pedStagingDropZoneAtPoint(event.clientX, event.clientY)
+    : null;
+  const day = active && !stagingZone ? pedDayAtPoint(event.clientX, event.clientY) : null;
   resetPedPointerDrag();
   pedDraggedItemId = "";
   pedDraggedStagingId = "";
   if (!active) return;
   event.preventDefault();
   pedDragSuppressClickUntil = Date.now() + 650;
-  if (day) applyPedDrop(itemId, day.dataset.pedDay);
+  if (stagingZone) movePedItemToStaging(itemId);
+  else if (day) applyPedDrop(itemId, day.dataset.pedDay);
 });
 
 document.body.addEventListener("pointercancel", (event) => {

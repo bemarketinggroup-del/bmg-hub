@@ -277,6 +277,11 @@ assert.match(moveStagingMigration, /cover_frame_seconds/, "lo spostamento deve c
 assert.match(moveStagingMigration, /case when p_apply_edits and item\.content_type <> 'story' then p_caption/, "la transazione deve incorporare il copy modificato nel popup");
 assert.match(appSource, /window\.setTimeout\(beginPedPointerDrag, 340\)/, "il trascinamento touch deve partire con una pressione prolungata");
 assert.match(styleSource, /\.ped-day\.is-ped-drop-target/, "il giorno di destinazione deve avere un feedback visivo");
+assert.match(htmlSource, /class="ped-staging" data-ped-staging-dropzone/, "i Contenuti in attesa devono essere una destinazione di trascinamento");
+assert.match(appSource, /function pedStagingDropZoneAtPoint\(x, y\)/, "il trascinamento touch deve riconoscere la zona Contenuti in attesa");
+assert.match(appSource, /const stagingZone = pedDraggedItemId \? event\.target\.closest\?\.\("\[data-ped-staging-dropzone\]"\) : null;[\s\S]*?movePedItemToStaging\(itemId\)/, "il rilascio desktop nei Contenuti in attesa deve usare lo spostamento atomico esistente");
+assert.match(appSource, /if \(stagingZone\) movePedItemToStaging\(itemId\);[\s\S]*?else if \(day\) applyPedDrop/, "anche il rilascio touch deve spostare il contenuto in attesa");
+assert.match(styleSource, /\.ped-staging\.is-ped-drop-target::after[\s\S]*?Rilascia qui/, "la zona di rilascio deve avere un feedback visivo esplicito");
 assert.match(styleSource, /\.ped-client-search \{ width: calc\(100% - 20px\); min-height: 38px; margin: 8px 10px 0;/, "su mobile ricerca e selezione cliente devono occupare meno altezza");
 assert.match(styleSource, /\.ped-client-tab \{ min-height: 32px; gap: 6px;/, "le tab cliente mobile devono restare compatte e selezionabili");
 assert.match(styleSource, /\.ped-calendar-toolbar \{[\s\S]*?grid-template-columns: 34px minmax\(0, 1fr\) 34px;[\s\S]*?padding: 6px 10px 7px;/, "la navigazione del mese mobile deve usare una testata compatta");

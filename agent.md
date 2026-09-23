@@ -59,6 +59,29 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-09-23 — Trascinamento dal calendario ai Contenuti in attesa
+
+- Richiesta: consentire di spostare un contenuto PED gia programmato nella
+  sezione `Contenuti in attesa` anche tramite trascinamento.
+- Modifiche: la sezione di attesa e ora una destinazione esplicita per le card
+  del calendario, con stato pronto e feedback `Rilascia qui`. Il rilascio usa lo
+  stesso trasferimento atomico gia impiegato dal pulsante `Sposta in attesa`,
+  quindi conserva file, copy, tipo, ordine, copertine e stato senza duplicare i
+  dati. Il flusso e gestito sia dal drag-and-drop di Chrome/Safari desktop sia
+  dalla pressione prolungata sui dispositivi touch; il pulsante esistente resta
+  disponibile come alternativa.
+- File: `public/index.html`, `public/app.js`, `public/styles.css`,
+  `scripts/test-ped-carousel.mjs`, `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run check`, `npm run test:ped-carousel`, `npm run
+  test:mobile-navigation`, `npm run test:primeng-components`, `npm run
+  test:permissions`, `npm run build`, `git diff --check`; controllati i due
+  percorsi di rilascio nativi Chrome/Safari e la pressione prolungata touch,
+  mantenendo il pulsante come alternativa su smartphone.
+- Pubblicazione: commit corrente pubblicato su GitHub `main` e deploy Vercel di
+  produzione verificato su `https://bmg-hub.vercel.app`.
+- Note: nessuna modifica ai file Drive o allo schema dati; viene riutilizzata la
+  transazione gia distribuita in produzione.
+
 ### 2026-09-23 — Formati PED automatici e conversione in carosello
 
 - Richiesta: rendere piu intelligente l'inserimento dei media nel PED: una

@@ -425,7 +425,11 @@ supabase/                     schema e migration
   nuovi contenuti. Riordino e rimozione vengono salvati atomicamente sulla
   raccolta momentanea, senza passare per la tabella dei contenuti programmati.
 - Ogni contenuto gia programmato puo essere riportato nei `Contenuti in attesa`
-  dalla card del calendario o dall'editor del copy. Lo spostamento conserva
+  dalla card del calendario, dall'editor del copy oppure trascinando la card
+  direttamente sulla sezione di attesa. La destinazione mostra un feedback
+  visivo durante il trascinamento e il gesto funziona anche con pressione
+  prolungata sui dispositivi touch; il pulsante resta disponibile come
+  alternativa accessibile. Lo spostamento conserva
   file, copy anche non ancora salvato, formattazione, tipo, ordine e copertina
   del carosello, stato di programmazione e fotogramma di copertina dei Reel.
   Da quel momento resta disponibile cambiando mese e puo essere trascinato su
