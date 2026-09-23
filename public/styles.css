@@ -5484,6 +5484,12 @@ body.user-editor-visible { overflow: hidden; }
 .p-tag { display: inline-flex; min-height: 24px; align-items: center; gap: 6px; border-radius: 999px; padding: 3px 8px; font-size: 9px; font-weight: 800; white-space: nowrap; }
 .user-role-tag.is-admin { background: var(--terra-tint); color: var(--terra-deep); }
 .user-role-tag.is-staff { background: rgba(47, 92, 120, .1); color: #2f5c78; }
+.user-role-stack { display: grid; justify-items: start; gap: 5px; }
+.user-professional-role-tag { background: rgba(46, 97, 66, .1); color: var(--green); }
+.user-professional-role-tag.is-unspecified { background: var(--surface-soft); color: var(--muted); }
+.user-professional-role-tag.is-graphic_designer { background: rgba(118, 74, 188, .13); color: #7045a8; }
+.user-professional-role-tag.is-social_media_manager { background: rgba(216, 94, 41, .13); color: var(--terra-deep); }
+.user-professional-role-tag.is-videomaker { background: rgba(34, 91, 126, .13); color: #225b7e; }
 .user-status-tag.is-active { background: var(--green-tint); color: var(--green); }
 .user-status-tag.is-pending { background: var(--amber-tint); color: var(--amber); }
 .user-status-tag.is-removed { background: rgba(190, 55, 48, .1); color: var(--red); }
@@ -5576,6 +5582,8 @@ body.user-editor-visible { overflow: hidden; }
 .user-editor-account .user-identity span { display: block; max-width: 230px; }
 .user-editor-panel .user-access-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .user-name-format-note { grid-column: 1 / -1; margin: -4px 0 0; color: var(--muted); font-size: 10px; line-height: 1.45; }
+.user-professional-role-note { grid-column: 1 / -1; margin: -8px 0 0; color: var(--muted); font-size: 10px; line-height: 1.45; }
+[data-user-professional-custom][hidden] { display: none !important; }
 .user-editor-panel .user-permission-section { grid-template-columns: 1fr; gap: 12px; padding-top: 14px; }
 .user-editor-panel .user-permission-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .user-editor-panel .user-access-actions {

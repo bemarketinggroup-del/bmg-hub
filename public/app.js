@@ -8587,6 +8587,29 @@ function userPermissionCount(profile) {
   return MODULE_DEFINITIONS.filter(({ key }) => profile.module_permissions?.[key]).length;
 }
 
+const USER_PROFESSIONAL_ROLES = [
+  { value: "unspecified", label: "Non impostato" },
+  { value: "graphic_designer", label: "Grafico" },
+  { value: "social_media_manager", label: "Social media manager" },
+  { value: "videomaker", label: "Videomaker" },
+  { value: "custom", label: "Personalizzato" }
+];
+
+function userProfessionalRoleLabel(profile) {
+  const role = String(profile?.professional_role || "unspecified");
+  if (role === "custom") return String(profile?.professional_role_label || "Ruolo personalizzato").trim();
+  return USER_PROFESSIONAL_ROLES.find((item) => item.value === role)?.label || "Non impostato";
+}
+
+function userProfessionalRoleOptions(profile) {
+  const selected = String(profile?.professional_role || "unspecified");
+  return USER_PROFESSIONAL_ROLES.map((item) => `<option value="${item.value}" ${item.value === selected ? "selected" : ""}>${item.label}</option>`).join("");
+}
+
+function isCurrentUserGraphicDesigner() {
+  return String(currentProfile?.professional_role || "unspecified") === "graphic_designer";
+}
+
 function userDirectoryProfiles() {
   const profiles = [...(state.staffProfiles || [])];
   const linkedClickUpIds = new Set(profiles.map((profile) => String(profile.clickup_user_id || "")).filter(Boolean));
@@ -8673,7 +8696,7 @@ function renderUserTableRow(profile, canManage) {
         <div><strong>${escapeHtml(label)}</strong><span>${escapeHtml(profile.email || "Email non disponibile")}</span></div>
       </div>
     </td>
-    <td data-label="Ruolo"><span class="p-tag user-role-tag is-${profile.role === "admin" ? "admin" : "staff"}">${profile.role === "admin" ? "Amministratore" : "Staff"}</span></td>
+    <td data-label="Ruolo"><div class="user-role-stack"><span class="p-tag user-role-tag is-${profile.role === "admin" ? "admin" : "staff"}">${profile.role === "admin" ? "Amministratore" : "Staff"}</span><span class="p-tag user-professional-role-tag is-${escapeHtml(profile.professional_role || "unspecified")}">${escapeHtml(userProfessionalRoleLabel(profile))}</span></div></td>
     <td data-label="Stato"><span class="p-tag user-status-tag ${isExcluded ? "is-removed" : isPending ? "is-pending" : isActive ? "is-active" : "is-inactive"}"><i aria-hidden="true"></i>${isExcluded ? "Rimosso dall'Hub" : isPending ? "Da sincronizzare" : isActive ? "Attivo" : "Disattivato"}</span></td>
     <td data-label="ClickUp"><span class="user-table-link ${profile.clickup_user_id ? "is-linked" : "is-unlinked"}">${isExcluded ? "Conservato" : profile.clickup_user_id ? "Collegato" : profile.role === "admin" ? "Non richiesto" : "Da collegare"}</span></td>
     <td data-label="Permessi"><strong class="user-permission-count">${isExcluded ? "Nessun accesso" : isPending ? "Accesso da creare" : profile.role === "admin" ? "Completi" : `${permissionCount} moduli`}</strong></td>
@@ -8787,7 +8810,7 @@ function renderUserEditPanel(profile) {
             <label>Cognome
               <input class="p-inputtext" data-user-last-name value="${escapeHtml(lastName)}" placeholder="Cognome" autocomplete="family-name" required>
             </label>
-            <label>Ruolo
+            <label>Accesso Hub
               <select class="p-select" data-user-role>
                 <option value="admin" ${profile.role === "admin" ? "selected" : ""}>Amministratore</option>
                 <option value="staff" ${profile.role === "staff" ? "selected" : ""}>Staff</option>
@@ -8798,7 +8821,16 @@ function renderUserEditPanel(profile) {
                 ${clickUpMemberOptions(profile.clickup_user_id, profile.id, profile.role === "admin")}
               </select>
             </label>
+            <label>Ruolo professionale
+              <select class="p-select" data-user-professional-role>
+                ${userProfessionalRoleOptions(profile)}
+              </select>
+            </label>
+            <label data-user-professional-custom ${profile.professional_role === "custom" ? "" : "hidden"}>Ruolo personalizzato
+              <input class="p-inputtext" data-user-professional-role-label value="${escapeHtml(profile.professional_role_label || "")}" placeholder="Es. Account manager" maxlength="80">
+            </label>
             <p class="user-name-format-note">Il nome verrà mostrato sempre nel formato Nome Cognome.</p>
+            <p class="user-professional-role-note">Il ruolo professionale guida i suggerimenti AI e le notifiche operative. Le revisioni grafiche vengono inviate esclusivamente agli utenti impostati come Grafico.</p>
           </div>
           <section class="user-email-section p-panel" aria-labelledby="userEmailSectionTitle">
             <div class="user-email-section-head">
@@ -9134,12 +9166,23 @@ async function saveUserProfile(row) {
     alert("Inserisci nome e cognome.");
     return;
   }
+  const professionalRole = row.querySelector("[data-user-professional-role]")?.value || "unspecified";
+  const professionalRoleLabel = String(row.querySelector("[data-user-professional-role-label]")?.value || "").trim();
+  if (professionalRole === "custom" && !professionalRoleLabel) {
+    const customRoleInput = row.querySelector("[data-user-professional-role-label]");
+    customRoleInput?.focus();
+    customRoleInput?.reportValidity();
+    alert("Inserisci il ruolo professionale personalizzato.");
+    return;
+  }
   const payload = {
     id,
     email: profile.email,
     email_aliases: collectUserEmailAliases(row),
     full_name: formatStaffFullName(`${firstNameValue} ${lastNameValue}`),
     role: row.querySelector("[data-user-role]").value,
+    professional_role: professionalRole,
+    professional_role_label: professionalRole === "custom" ? professionalRoleLabel : null,
     clickup_user_id: row.querySelector("[data-user-clickup]").value,
     active: row.querySelector("[data-user-active]").checked,
     module_permissions: Object.fromEntries(MODULE_DEFINITIONS.map(({ key }) => [
@@ -11771,7 +11814,7 @@ function rememberSeenGraphicReviewToasts(seen) {
 }
 
 function queueGraphicReviewToasts(notifications, { onlyLatest = false } = {}) {
-  if (!currentProfile || !canAccessModule("graphics")) return;
+  if (!currentProfile || !canAccessModule("graphics") || !isCurrentUserGraphicDesigner()) return;
   const seen = readSeenGraphicReviewToasts();
   const incoming = (Array.isArray(notifications) ? notifications : [])
     .filter((item) => item?.source_type === "graphic_review" && item.id && item.source_id && !seen.has(String(item.id)))
@@ -13345,6 +13388,20 @@ document.body.addEventListener("change", (event) => {
       input.disabled = userRole.value === "admin";
       if (userRole.value === "admin") input.checked = true;
     });
+    return;
+  }
+  const professionalRole = event.target.closest("[data-user-professional-role]");
+  if (professionalRole) {
+    const row = professionalRole.closest("[data-user-id]");
+    const customField = row?.querySelector("[data-user-professional-custom]");
+    const customInput = row?.querySelector("[data-user-professional-role-label]");
+    const custom = professionalRole.value === "custom";
+    if (customField) customField.hidden = !custom;
+    if (customInput) {
+      customInput.required = custom;
+      if (!custom) customInput.value = "";
+      else customInput.focus();
+    }
     return;
   }
   const pedType = event.target.closest("[data-ped-type-change]");

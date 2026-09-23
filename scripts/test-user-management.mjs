@@ -8,7 +8,7 @@ import {
 } from "../lib/user-directory-exclusions.js";
 import { isCompleteStaffName, normalizeStaffFullName, staffNameParts } from "../lib/staff-names.js";
 
-const [apiSource, clickUpSource, smartEmployeeSource, directoryExclusionSource, clickUpTeamApiSource, clickUpTasksApiSource, appSource, htmlSource, styleSource, schemaSource, migrationSource] = await Promise.all([
+const [apiSource, clickUpSource, smartEmployeeSource, directoryExclusionSource, clickUpTeamApiSource, clickUpTasksApiSource, appSource, htmlSource, styleSource, schemaSource, migrationSource, professionalRoleMigrationSource] = await Promise.all([
   readFile(new URL("../api/users.js", import.meta.url), "utf8"),
   readFile(new URL("../lib/clickup-members.js", import.meta.url), "utf8"),
   readFile(new URL("../lib/smart-working-employees.js", import.meta.url), "utf8"),
@@ -19,7 +19,8 @@ const [apiSource, clickUpSource, smartEmployeeSource, directoryExclusionSource, 
   readFile(new URL("../public/index.html", import.meta.url), "utf8"),
   readFile(new URL("../public/styles.css", import.meta.url), "utf8"),
   readFile(new URL("../supabase/schema.sql", import.meta.url), "utf8"),
-  readFile(new URL("../supabase/migrations/20260805103000_staff_email_aliases.sql", import.meta.url), "utf8")
+  readFile(new URL("../supabase/migrations/20260805103000_staff_email_aliases.sql", import.meta.url), "utf8"),
+  readFile(new URL("../supabase/migrations/20260923182000_staff_professional_roles.sql", import.meta.url), "utf8")
 ]);
 
 assert.doesNotMatch(htmlSource, /id="userNewButton"/, "la directory non deve offrire il comando Nuovo utente");
@@ -49,6 +50,10 @@ assert.match(appSource, /class="p-tabs user-editor-tabs"/, "l'editor deve usare 
 assert.doesNotMatch(appSource, /data-user-editor-tab="activity"|id="userEditorActivityPanel"/, "il registro attività non deve più essere dentro il pannello di modifica");
 assert.match(appSource, /data-user-editor-tab="profile"[^>]*aria-selected="true"/, "Profilo deve essere la prima tab attiva dell'editor");
 assert.match(appSource, /class="p-toggleswitch"[\s\S]*data-user-first-name[\s\S]*data-user-last-name[\s\S]*class="p-select" data-user-role/, "profilo e stato devono usare i controlli PrimeNG e separare nome e cognome");
+assert.match(appSource, /USER_PROFESSIONAL_ROLES[\s\S]*Grafico[\s\S]*Social media manager[\s\S]*Videomaker[\s\S]*Personalizzato/, "l'admin deve poter assegnare un ruolo professionale predefinito o personalizzato");
+assert.match(appSource, /<select class="p-select" data-user-professional-role>/, "il ruolo professionale deve essere modificabile nel profilo utente");
+assert.match(appSource, /professional_role: professionalRole[\s\S]*professional_role_label:/, "il salvataggio deve inviare il ruolo professionale");
+assert.match(appSource, /Le revisioni grafiche vengono inviate esclusivamente agli utenti impostati come Grafico/, "l'editor deve spiegare l'effetto del ruolo sulle notifiche");
 assert.match(appSource, /Email integrazioni[\s\S]*data-user-email-input[\s\S]*data-user-email-service[\s\S]*data-add-user-email/, "il profilo deve permettere di aggiungere email per Calendar e ClickUp");
 assert.match(appSource, /email_aliases: collectUserEmailAliases\(row\)/, "il salvataggio utente deve inviare tutte le email collegate");
 assert.match(appSource, /preferredUserProfileEmail\(member, "calendar"\)/, "gli inviti Calendar devono usare l'email Calendar preferita");
@@ -91,6 +96,8 @@ assert.match(apiSource, /include_diagnostics[\s\S]*listAuthUsers\(\)[\s\S]*fetch
 assert.match(apiSource, /body\.action === "create_workspace_user"/, "l'API deve gestire la creazione coordinata");
 assert.match(apiSource, /isCompleteStaffName\(payloadInput\.full_name\)[\s\S]*Inserisci nome e cognome/, "l'API deve rifiutare la creazione di profili senza nome e cognome");
 assert.match(apiSource, /isCompleteStaffName\(payload\.full_name\)[\s\S]*Inserisci nome e cognome/, "l'API deve rifiutare l'aggiornamento di profili senza nome e cognome");
+assert.match(apiSource, /normalizeProfessionalRole\(body\.professional_role\)/, "l'API deve normalizzare il ruolo professionale");
+assert.match(apiSource, /dismissIrrelevantGraphicReviewNotifications/, "cambiando ruolo devono essere chiuse le vecchie notifiche grafiche non pertinenti");
 assert.match(apiSource, /ensureClickUpWorkspaceMember\(email\)/, "la creazione deve aggiungere o invitare l'utente su ClickUp");
 assert.match(apiSource, /rollbackCreatedUser\(authUser\.id, profile\?\.id\)/, "un errore ClickUp deve annullare l'account interno");
 assert.match(apiSource, /profileId === session\.profile\.id/, "un amministratore non deve potersi eliminare da solo");
@@ -121,6 +128,8 @@ assert.match(smartEmployeeSource, /moveEmployeeReferences\("smart_work_assignmen
 assert.match(smartEmployeeSource, /smart_work_employees\?id=eq\.[\s\S]*?method: "DELETE"/, "la vecchia anagrafica deve essere eliminata solo dopo il trasferimento dei riferimenti");
 assert.match(schemaSource, /email_aliases jsonb not null default '\[\]'::jsonb/, "lo schema deve conservare le email integrazione sul profilo staff");
 assert.match(migrationSource, /add column if not exists email_aliases jsonb/, "la migration deve aggiungere la colonna in modo idempotente");
+assert.match(schemaSource, /professional_role text not null default 'unspecified'/, "lo schema deve conservare il ruolo professionale");
+assert.match(professionalRoleMigrationSource, /add column if not exists professional_role text/, "la migration deve aggiungere il ruolo professionale in modo idempotente");
 
 const directoryExclusions = [{ clickup_user_id: "22", full_name: "Utente eliminato", email: "removed@example.com" }];
 assert.deepEqual(

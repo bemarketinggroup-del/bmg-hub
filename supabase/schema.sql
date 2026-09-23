@@ -50,6 +50,9 @@ create table if not exists public.staff_profiles (
   full_name text,
   role text not null default 'staff'
     check (role in ('admin', 'staff')),
+  professional_role text not null default 'unspecified'
+    check (professional_role in ('unspecified', 'graphic_designer', 'social_media_manager', 'videomaker', 'custom')),
+  professional_role_label text,
   clickup_user_id text,
   active boolean not null default true,
   module_permissions jsonb not null default '{"tasks":true,"ped":true,"clients":true,"calendar":true,"chat":true,"graphics":false,"site_backend":false,"users":false,"smart_working":true,"settings":false}'::jsonb

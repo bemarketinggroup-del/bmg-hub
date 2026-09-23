@@ -59,6 +59,41 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-09-23 — Ruoli professionali e revisioni riservate ai grafici
+
+- Richiesta: mostrare il popup delle revisioni grafiche soltanto ai grafici,
+  assegnare inizialmente questo ruolo a Francesco Gaglione e permettere agli
+  amministratori di impostare per ogni utente Grafico, Social media manager,
+  Videomaker o un ruolo personalizzato, utilizzabile anche dall'AI.
+- Modifiche: separato il ruolo di accesso Hub (`admin`/`staff`) dal ruolo
+  professionale. L'editor Utenti espone i preset richiesti e il campo
+  personalizzato, mentre la directory mostra entrambi i ruoli. Le nuove
+  revisioni vengono notificate soltanto ai profili attivi impostati come
+  `Grafico`; frontend, Mia area e brief operativo filtrano anche eventuali
+  notifiche pregresse fuori ruolo. Cambiando ruolo vengono chiuse le vecchie
+  notifiche grafiche non pertinenti. Il contesto AI include il ruolo della
+  persona corrente e l'anagrafica professionale del team, senza dedurre
+  competenze dai nomi. La migration assegna `Grafico` a Francesco Gaglione.
+- File: `api/users.js`, `lib/professional-roles.js`,
+  `lib/graphic-reviews.js`, `lib/personal-area.js`,
+  `lib/operational-brief.js`, `lib/ai-assistant.js`, `public/app.js`,
+  `public/styles.css`, `supabase/schema.sql`,
+  `supabase/migrations/20260923182000_staff_professional_roles.sql`,
+  `scripts/test-user-management.mjs`, `scripts/test-graphic-reviews.mjs`,
+  `scripts/test-personal-area.mjs`, `scripts/test-operational-brief.mjs`,
+  `agent.md`.
+- Verifiche: migration Supabase applicata e riletta sulla produzione;
+  `npm run check`, test Utenti, Revisioni grafiche, Mia area, Brief operativo,
+  AI task assist, permessi, navigazione mobile e componenti PrimeNG; build e
+  `git diff --check`.
+- Pubblicazione: migration `20260923182000` già applicata a Supabase
+  produzione; modifica inclusa nel commit corrente, da pubblicare su GitHub
+  `main` e distribuire su Vercel produzione con verifica finale di
+  `https://bmg-hub.vercel.app`.
+- Note: i ruoli professionali degli altri utenti restano `Non impostato` finché
+  un amministratore non li assegna; i ruoli personalizzati guidano l'AI ma non
+  ricevono automaticamente revisioni grafiche.
+
 ### 2026-09-23 — Brief AI personale nelle ore di ufficio
 
 - Richiesta: integrare nell'Hub un aiuto proattivo e poco costoso che, dal

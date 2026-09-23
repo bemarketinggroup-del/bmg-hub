@@ -13,7 +13,7 @@ assert.equal(romeWorkSlot(new Date("2026-09-21T16:00:00.000Z")), null, "dalle 18
 assert.equal(romeWorkSlot(new Date("2026-09-20T09:00:00.000Z")), null, "nel weekend non devono apparire brief automatici");
 
 const context = {
-  user: { name: "Marta Cervice", role: "staff" },
+  user: { name: "Marta Cervice", role: "staff", professional_role: "graphic_designer", professional_role_label: "Grafico" },
   tasks: [
     { title: "Chiudere copy Vetera", client: "Vetera", due_at: "2026-09-22T16:00:00.000Z" }
   ],
@@ -34,6 +34,10 @@ assert.ok(candidates.some((item) => /smart working/i.test(item.title)), "il brie
 assert.ok(candidates.some((item) => /shooting/i.test(item.title)), "il brief deve ricordare gli shooting personali");
 assert.ok(candidates.some((item) => /task scaduta/i.test(item.title)), "il brief deve evidenziare le task scadute");
 assert.ok(candidates.some((item) => item.destination === "graphics-reviews"), "il brief deve includere le revisioni grafiche del ruolo");
+assert.ok(!buildOperationalBriefCandidates({
+  context: { ...context, user: { ...context.user, professional_role: "social_media_manager" } },
+  now
+}).some((item) => item.destination === "graphics-reviews"), "il brief delle social media manager non deve includere revisioni grafiche");
 assert.ok(candidates.some((item) => item.destination === "client-health"), "chi vede il PED deve ricevere le criticità cliente");
 assert.equal(deterministicOperationalBrief({ context, now }).items.length, 4, "il popup deve restare compatto");
 
@@ -47,6 +51,8 @@ assert.match(assistant, /max_output_tokens: 420/, "la sintesi deve usare un outp
 assert.match(assistant, /store: false/, "il provider non deve conservare il brief");
 assert.match(assistant, /deterministicOperationalBrief/, "senza API deve esistere un fallback gratuito");
 assert.match(assistant, /buildClientHealthSummaries/, "il brief deve includere la salute clienti per i ruoli autorizzati");
+assert.match(assistant, /professional_role_label/, "il contesto AI deve includere il ruolo professionale leggibile");
+assert.match(assistant, /team_roles: teamRoleRows\.map/, "l'AI deve conoscere i ruoli professionali del team senza dedurli dai nomi");
 assert.match(html, /id="operationalBriefToast"/, "il brief deve essere un popup integrato nell'Hub");
 assert.match(html, /Brief operativo · 10:00–18:00/, "l'orario operativo deve essere chiaro");
 assert.match(html, /<strong>Brief AI<\/strong><small>Priorità<\/small>/, "il richiamo non deve sembrare una chat separata");

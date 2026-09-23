@@ -11,6 +11,11 @@ import {
 import { syncSmartWorkingEmployee } from "../lib/smart-working-employees.js";
 import { isCompleteStaffName, normalizeStaffFullName } from "../lib/staff-names.js";
 import {
+  isGraphicDesigner,
+  normalizeProfessionalRole,
+  normalizeProfessionalRoleLabel
+} from "../lib/professional-roles.js";
+import {
   hydrateDirectoryExclusions,
   loadDirectoryExclusions,
   normalizeDirectoryExclusion,
@@ -105,13 +110,36 @@ async function restoreDirectoryMember(response, session, body) {
 
 function userPayload(body) {
   const role = body.role === "admin" ? "admin" : "staff";
-  return {
+  const payload = {
     full_name: normalizeStaffFullName(body.full_name) || null,
     role,
     clickup_user_id: String(body.clickup_user_id || "").trim() || null,
     active: body.active !== false,
     module_permissions: normalizeModulePermissions(body.module_permissions, role)
   };
+  if (Object.prototype.hasOwnProperty.call(body, "professional_role") || Object.prototype.hasOwnProperty.call(body, "professional_role_label")) {
+    payload.professional_role = normalizeProfessionalRole(body.professional_role);
+    payload.professional_role_label = normalizeProfessionalRoleLabel(body.professional_role_label, payload.professional_role);
+  }
+  return payload;
+}
+
+function validateProfessionalRole(payload) {
+  if (payload.professional_role === "custom" && !payload.professional_role_label) {
+    return "Inserisci il ruolo professionale personalizzato";
+  }
+  return "";
+}
+
+async function dismissIrrelevantGraphicReviewNotifications(profile) {
+  if (!profile?.id || isGraphicDesigner(profile)) return;
+  await supabaseFetch(
+    `/staff_notifications?profile_id=eq.${encodeURIComponent(profile.id)}&source_type=eq.graphic_review&dismissed_at=is.null`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({ dismissed_at: new Date().toISOString() })
+    }
+  );
 }
 
 async function validateStaffEmailAliases(value, primaryEmail, currentProfileId = "", preserveWhenMissing = false) {
@@ -224,6 +252,12 @@ export default async function handler(request, response) {
     }
 
     const payloadInput = userPayload(body);
+    const professionalRoleError = validateProfessionalRole(payloadInput);
+    if (professionalRoleError) {
+      response.writeHead(400, headers);
+      response.end(JSON.stringify({ error: professionalRoleError }));
+      return;
+    }
     if (!isCompleteStaffName(payloadInput.full_name)) {
       response.writeHead(400, headers);
       response.end(JSON.stringify({ error: "Inserisci nome e cognome" }));
@@ -321,6 +355,12 @@ export default async function handler(request, response) {
     }
 
     const payload = userPayload(body);
+    const professionalRoleError = validateProfessionalRole(payload);
+    if (professionalRoleError) {
+      response.writeHead(400, headers);
+      response.end(JSON.stringify({ error: professionalRoleError }));
+      return;
+    }
     if (!isCompleteStaffName(payload.full_name)) {
       response.writeHead(400, headers);
       response.end(JSON.stringify({ error: "Inserisci nome e cognome" }));
@@ -359,6 +399,7 @@ export default async function handler(request, response) {
     });
     const profiles = result.ok ? await result.json().catch(() => []) : [];
     if (result.ok && profiles[0]) {
+      await dismissIrrelevantGraphicReviewNotifications(profiles[0]).catch(() => {});
       const smartEmployee = await syncSmartWorkingEmployee(profiles[0]);
       if (!smartEmployee.ok) {
         response.writeHead(502, headers);

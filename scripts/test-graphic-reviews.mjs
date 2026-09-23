@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { normalizeReviewFiles } from "../lib/graphic-reviews.js";
+import { isGraphicDesigner, professionalRoleLabel } from "../lib/professional-roles.js";
 
 const normalized = normalizeReviewFiles([
   { id: " drive-file-1 ", name: " Scatto finale.jpg ", mime_type: "image/jpeg" }
@@ -18,6 +19,9 @@ assert.throws(
   ], 1),
   /massimo 1/
 );
+assert.equal(isGraphicDesigner({ professional_role: "graphic_designer" }), true);
+assert.equal(isGraphicDesigner({ professional_role: "social_media_manager" }), false);
+assert.equal(professionalRoleLabel({ professional_role: "custom", professional_role_label: "Account manager" }), "Account manager");
 
 const [
   apiSource,
@@ -28,7 +32,8 @@ const [
   styleSource,
   migrationSource,
   schemaSource,
-  vercelSource
+  vercelSource,
+  professionalRoleMigrationSource
 ] = await Promise.all([
   readFile(new URL("../api/graphic-reviews.js", import.meta.url), "utf8"),
   readFile(new URL("../lib/client-drive-api.js", import.meta.url), "utf8"),
@@ -38,7 +43,8 @@ const [
   readFile(new URL("../public/styles.css", import.meta.url), "utf8"),
   readFile(new URL("../supabase/migrations/20260729123000_graphic_reviews.sql", import.meta.url), "utf8"),
   readFile(new URL("../supabase/schema.sql", import.meta.url), "utf8"),
-  readFile(new URL("../vercel.json", import.meta.url), "utf8")
+  readFile(new URL("../vercel.json", import.meta.url), "utf8"),
+  readFile(new URL("../supabase/migrations/20260923182000_staff_professional_roles.sql", import.meta.url), "utf8")
 ]);
 
 assert.match(apiSource, /handleGraphicReviews/);
@@ -93,7 +99,9 @@ assert.match(appSource, /Salva versione in Foto/, "le versioni modificate devono
 assert.match(appSource, /"graphics-reviews": "graphics"/, "la pagina revisioni deve conservare il permesso Grafiche");
 assert.match(appSource, /function setGraphicsNavExpanded\(expanded\)/, "il sottomenu deve avere uno stato accessibile centralizzato");
 assert.match(appSource, /setView\("graphics-reviews"\)/, "le notifiche devono aprire direttamente la pagina revisioni");
-assert.match(appSource, /function queueGraphicReviewToasts\([\s\S]*canAccessModule\("graphics"\)[\s\S]*source_type === "graphic_review"/, "il banner deve essere riservato alle notifiche dei grafici");
+assert.match(appSource, /function queueGraphicReviewToasts\([\s\S]*canAccessModule\("graphics"\)[\s\S]*isCurrentUserGraphicDesigner\(\)[\s\S]*source_type === "graphic_review"/, "il banner deve essere riservato al ruolo professionale Grafico");
+assert.match(professionalRoleMigrationSource, /francesco gaglione[\s\S]*graphic_designer|graphic_designer[\s\S]*francesco gaglione/i, "Francesco Gaglione deve essere inizializzato come grafico");
+assert.match(professionalRoleMigrationSource, /professional_role[\s\S]*social_media_manager[\s\S]*videomaker[\s\S]*custom/, "la migration deve supportare i ruoli professionali richiesti");
 assert.match(appSource, /sessionStorage\.setItem\(graphicReviewToastStorageKey\(\)/, "il banner non deve ripetersi a ogni aggiornamento");
 assert.match(appSource, /function closeGraphicReviewToast\([\s\S]*clearQueue/, "il banner deve potersi chiudere senza eliminare la notifica");
 assert.match(appSource, /function logout\([\s\S]*closeGraphicReviewToast\(\{ clearQueue: true \}\)/, "il banner deve essere ripulito al logout");
