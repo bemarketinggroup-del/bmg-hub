@@ -412,7 +412,10 @@ let clientHealthState = {
   query: "",
   filter: "all",
   page: 0,
-  pageSize: 0
+  pageSize: 0,
+  rotationPaused: false,
+  rotationTimer: null,
+  rotationEveryMs: 12000
 };
 let personalAreaState = {
   team: [],
@@ -1425,6 +1428,7 @@ function setView(view) {
     settings: "Configurazione"
   };
   if (!Object.hasOwn(titles, view) || !canAccessView(view)) view = "dashboard";
+  if (view !== "client-health") stopClientHealthRotation();
   setNotificationPanelOpen(false);
   rememberLastView(view);
   setMobileNavOpen(false);
@@ -4044,10 +4048,53 @@ function renderPedHealth() {
 }
 
 function clientHealthPageSize() {
-  if (window.innerWidth <= 640) return 3;
-  if (window.innerWidth <= 980) return 6;
-  if (window.innerWidth >= 1600) return 12;
-  return 9;
+  if (window.innerWidth <= 640) return 2;
+  if (window.innerWidth <= 980) return 4;
+  if (window.innerWidth >= 1500) return 8;
+  return 6;
+}
+
+function stopClientHealthRotation() {
+  if (clientHealthState.rotationTimer) window.clearTimeout(clientHealthState.rotationTimer);
+  clientHealthState.rotationTimer = null;
+  document.getElementById("clientHealthRotationProgress")?.classList.remove("is-running");
+}
+
+function restartClientHealthProgress() {
+  const progress = document.getElementById("clientHealthRotationProgress");
+  if (!progress) return;
+  progress.classList.remove("is-running");
+  progress.style.animationDuration = `${clientHealthState.rotationEveryMs}ms`;
+  void progress.offsetWidth;
+  if (!clientHealthState.rotationPaused) progress.classList.add("is-running");
+}
+
+function restartClientHealthRotation() {
+  stopClientHealthRotation();
+  if (!document.body.classList.contains("client-health-view-active") || clientHealthState.rotationPaused || document.hidden) return;
+  const clients = clientHealthFilteredClients();
+  if (clients.length <= clientHealthState.pageSize) return;
+  restartClientHealthProgress();
+  clientHealthState.rotationTimer = window.setTimeout(rotateClientHealth, clientHealthState.rotationEveryMs);
+}
+
+function rotateClientHealth() {
+  const grid = document.getElementById("clientHealthGrid");
+  const clients = clientHealthFilteredClients();
+  const groups = Math.max(1, Math.ceil(clients.length / Math.max(1, clientHealthState.pageSize)));
+  if (!grid || groups <= 1) return restartClientHealthRotation();
+  grid.classList.add("is-switching");
+  window.setTimeout(() => {
+    clientHealthState.page = (clientHealthState.page + 1) % groups;
+    renderClientHealth({ restartRotation: false });
+    grid.classList.remove("is-switching");
+    restartClientHealthRotation();
+  }, 360);
+}
+
+function setClientHealthRotationPaused(paused) {
+  clientHealthState.rotationPaused = Boolean(paused);
+  renderClientHealth();
 }
 
 async function loadClientHealth({ fresh = false } = {}) {
@@ -4121,7 +4168,7 @@ function clientHealthMetric(label, value, score) {
   </div>`;
 }
 
-function clientHealthCardMarkup(item) {
+function clientHealthCardMarkup(item, index = 0) {
   const overall = item.overall || pedPlanQuality(Number(item.overall_score) || 0);
   const appointment = clientHealthAppointment(item);
   const cadence = item.average_gap === null ? "Da costruire" : `Ogni ${String(item.average_gap).replace(".", ",")} gg`;
@@ -4131,7 +4178,7 @@ function clientHealthCardMarkup(item) {
   const appointmentCommand = appointment.eventId
     ? ` data-client-health-appointment="${escapeHtml(appointment.eventId)}" data-client-health-appointment-date="${escapeHtml(appointment.eventDate)}"`
     : "";
-  return `<article class="client-health-card is-${escapeHtml(overall.tone)}">
+  return `<article class="client-health-card is-${escapeHtml(overall.tone)}" style="--card-index:${index}">
     <header>
       <div><span class="client-health-card-dot" aria-hidden="true"></span><strong>${escapeHtml(item.client_name)}</strong></div>
       <span class="client-health-score">${escapeHtml(overall.label)} · ${Number(item.overall_score) || 0}/100</span>
@@ -4158,11 +4205,13 @@ function clientHealthCardMarkup(item) {
   </article>`;
 }
 
-function renderClientHealth() {
+function renderClientHealth({ restartRotation = true } = {}) {
   const grid = document.getElementById("clientHealthGrid");
   const summary = document.getElementById("clientHealthSummary");
-  const pageLabel = document.getElementById("clientHealthPageLabel");
-  if (!grid || !summary || !pageLabel) return;
+  const visibleLabel = document.getElementById("clientHealthVisibleLabel");
+  const rotationLabel = document.getElementById("clientHealthRotationLabel");
+  const rotationToggle = document.getElementById("clientHealthRotationToggle");
+  if (!grid || !summary || !visibleLabel || !rotationLabel || !rotationToggle) return;
   const totals = clientHealthState.summary || {};
   summary.innerHTML = `
     <span><small>Clienti</small><strong>${Number(totals.total) || 0}</strong></span>
@@ -4174,7 +4223,10 @@ function renderClientHealth() {
   const clients = clientHealthFilteredClients();
   const pages = Math.max(1, Math.ceil(clients.length / pageSize));
   clientHealthState.page = Math.min(clientHealthState.page, pages - 1);
-  const visible = clients.slice(clientHealthState.page * pageSize, (clientHealthState.page + 1) * pageSize);
+  const start = clientHealthState.page * pageSize;
+  const visible = clients.length <= pageSize
+    ? clients
+    : Array.from({ length: pageSize }, (_, index) => clients[(start + index) % clients.length]);
   if (clientHealthState.loading && !clientHealthState.loaded) {
     grid.innerHTML = `<div class="client-health-empty"><span class="drive-folder-spinner" aria-hidden="true"></span><strong>Analizzo tutti i clienti…</strong></div>`;
   } else if (clientHealthState.error && !clientHealthState.loaded) {
@@ -4182,12 +4234,20 @@ function renderClientHealth() {
   } else if (!visible.length) {
     grid.innerHTML = `<div class="client-health-empty"><strong>Nessun cliente in questo filtro</strong><span>Modifica la ricerca o seleziona un altro stato.</span></div>`;
   } else {
-    grid.innerHTML = visible.map(clientHealthCardMarkup).join("");
+    grid.innerHTML = visible.map((item, index) => clientHealthCardMarkup(item, index)).join("");
   }
-  pageLabel.textContent = `${clients.length} ${clients.length === 1 ? "cliente" : "clienti"} · Pagina ${clientHealthState.page + 1} di ${pages}`;
-  document.getElementById("clientHealthPrevious").disabled = clientHealthState.page <= 0;
-  document.getElementById("clientHealthNext").disabled = clientHealthState.page >= pages - 1;
+  const rotating = clients.length > pageSize;
+  visibleLabel.textContent = rotating
+    ? `${visible.length} clienti visibili · ${clients.length} totali`
+    : `${clients.length} ${clients.length === 1 ? "cliente monitorato" : "clienti monitorati"}`;
+  rotationLabel.textContent = rotating
+    ? clientHealthState.rotationPaused ? "Rotazione in pausa" : "Cambio automatico ogni 12 secondi"
+    : "Tutti i clienti sono visibili";
+  rotationToggle.hidden = !rotating;
+  rotationToggle.querySelector("span").textContent = clientHealthState.rotationPaused ? "Riprendi" : "Pausa";
+  rotationToggle.classList.toggle("is-paused", clientHealthState.rotationPaused);
   document.getElementById("clientHealthRefresh").disabled = clientHealthState.loading;
+  if (restartRotation) restartClientHealthRotation();
 }
 
 function openClientHealthPed(clientId) {
@@ -12665,19 +12725,34 @@ document.getElementById("clientHealthRefresh")?.addEventListener("click", () => 
   void loadClientHealth({ fresh: true });
   if (canAccessModule("calendar")) void loadGoogleCalendar({ fresh: true });
 });
-document.getElementById("clientHealthPrevious")?.addEventListener("click", () => {
-  clientHealthState.page = Math.max(0, clientHealthState.page - 1);
-  renderClientHealth();
+document.getElementById("clientHealthRotationToggle")?.addEventListener("click", () => {
+  setClientHealthRotationPaused(!clientHealthState.rotationPaused);
 });
-document.getElementById("clientHealthNext")?.addEventListener("click", () => {
-  clientHealthState.page += 1;
-  renderClientHealth();
+document.getElementById("clientHealthFullscreen")?.addEventListener("click", async () => {
+  try {
+    if (document.fullscreenElement) await document.exitFullscreen?.();
+    else await document.documentElement.requestFullscreen?.();
+  } catch {
+    showToast("Il browser non consente lo schermo intero", { tone: "warning" });
+  }
+});
+document.getElementById("clientHealthExit")?.addEventListener("click", async () => {
+  if (document.fullscreenElement) await document.exitFullscreen?.().catch(() => {});
+  setView("dashboard");
 });
 window.addEventListener("resize", () => {
   const nextSize = clientHealthPageSize();
   if (nextSize === clientHealthState.pageSize) return;
   clientHealthState.page = 0;
   renderClientHealth();
+});
+document.addEventListener("fullscreenchange", () => {
+  const label = document.querySelector("#clientHealthFullscreen span");
+  if (label) label.textContent = document.fullscreenElement ? "Esci da schermo intero" : "Schermo intero";
+});
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) stopClientHealthRotation();
+  else restartClientHealthRotation();
 });
 document.getElementById("aiAssistantForm")?.addEventListener("submit", (event) => {
   event.preventDefault();

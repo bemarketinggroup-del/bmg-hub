@@ -59,6 +59,31 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-09-23 — Wallboard Salute clienti a rotazione
+
+- Richiesta: trasformare `Salute clienti` in un'unica schermata autonoma da
+  proiettare in ufficio, senza tre pagine, con alternanza animata dei clienti e
+  colori molto più netti per capire lo stato a colpo d'occhio.
+- Modifiche: la vista ora occupa l'intero monitor e nasconde menu laterale e
+  testata dell'Hub. Le schede sono organizzate in gruppi responsive che ruotano
+  automaticamente ogni 12 secondi con dissolvenza, sfocatura e ingresso
+  progressivo; non esiste più la paginazione. Aggiunti indicatore temporale,
+  pausa/ripresa, aggiornamento, fullscreen del browser e uscita dedicata. Le
+  quattro fasce `Scarso`, `Decente`, `Buono` e `Ottimo` usano rispettivamente
+  rosso, giallo, verde e azzurro saturi su bordo, punteggio, indicatori e azioni.
+  Su monitor ampi si vedono otto clienti per rotazione, sei su desktop, quattro
+  su tablet e due su smartphone, sempre senza scroll.
+- File: `public/index.html`, `public/app.js`, `public/styles.css`,
+  `scripts/test-client-health.mjs`, `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run check`, `npm run test:client-health`, `npm run
+  test:mobile-navigation`, `npm run test:primeng-components`, `npm run build`,
+  `git diff --check`; verifica visiva desktop e smartphone del wallboard fisso,
+  delle transizioni e della leggibilità cromatica.
+- Pubblicazione: modifica inclusa nel commit corrente, pubblicata su GitHub
+  `main` e distribuita su Vercel produzione con verifica dell'alias
+  `https://bmg-hub.vercel.app`.
+- Note: nessuna.
+
 ### 2026-09-23 — Pagina unica Salute clienti
 
 - Richiesta: creare una pagina dedicata alla salute di tutti i clienti con gli

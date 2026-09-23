@@ -47,12 +47,19 @@ const [html, app, styles, localServer, endpoint] = await Promise.all([
   readFile(new URL("../api/ped-health.js", import.meta.url), "utf8")
 ]);
 assert.match(html, /data-view="client-health"[\s\S]*Salute clienti/, "la pagina deve essere raggiungibile dalla navigazione");
-assert.match(html, /id="clientHealthGrid"[\s\S]*id="clientHealthPrevious"[\s\S]*id="clientHealthNext"/, "la pagina deve usare paginazione senza scroll");
+assert.match(html, /id="clientHealthFullscreen"[\s\S]*id="clientHealthExit"/, "il wallboard deve avere schermo intero e uscita dedicata");
+assert.match(html, /id="clientHealthGrid"[\s\S]*id="clientHealthRotationProgress"[\s\S]*id="clientHealthRotationToggle"/, "i clienti devono alternarsi senza paginazione manuale");
+assert.doesNotMatch(html, /id="clientHealthPrevious"|id="clientHealthNext"|Pagina 1 di 1/, "il wallboard non deve mostrare pagine");
 assert.match(app, /"client-health": "ped"/, "la pagina deve rispettare il permesso PED");
 assert.match(app, /classList\.toggle\("client-health-view-active"/, "la pagina deve attivare il layout fisso");
+assert.match(app, /rotationEveryMs:\s*12000[\s\S]*function rotateClientHealth/, "le schede devono ruotare automaticamente ogni 12 secondi");
+assert.match(app, /requestFullscreen[\s\S]*exitFullscreen/, "la pagina deve supportare la proiezione a schermo intero");
 assert.match(app, /clientHealthAppointment[\s\S]*clients_without_upcoming_appointment/, "la salute deve integrare gli appuntamenti del calendario");
 assert.match(styles, /body\.client-health-view-active \{ overflow: hidden; \}/, "la vista non deve scorrere");
 assert.match(styles, /\.client-health-grid[\s\S]*overflow: hidden/, "la griglia non deve introdurre scroll interno");
+assert.match(styles, /client-health-view-active \.sidebar\.p-sidebar[\s\S]*display: none !important/, "il wallboard deve nascondere la navigazione ordinaria");
+assert.match(styles, /\.client-health-grid\.is-switching[\s\S]*@keyframes clientHealthCardIn/, "il cambio clienti deve usare una transizione");
+assert.match(styles, /--health-color: #ff3b30[\s\S]*--health-color: #ffb800[\s\S]*--health-color: #20c769[\s\S]*--health-color: #00a8e8/, "le fasce salute devono avere colori pop distinti");
 assert.match(localServer, /\/api\/ped-health/, "l'endpoint deve funzionare anche nel server locale");
 assert.match(endpoint, /client-health\.js/, "Vercel deve esporre l'endpoint salute clienti");
 

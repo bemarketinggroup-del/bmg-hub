@@ -511,15 +511,27 @@
       <section class="view client-health-view" id="clientHealthView" data-view-panel="client-health">
         <section class="panel client-health-workspace" aria-labelledby="clientHealthTitle">
           <header class="client-health-head">
-            <div>
-              <span class="client-health-eyebrow">Controllo automatico</span>
-              <h2 id="clientHealthTitle">Salute clienti</h2>
-              <p>PED, copy, attività e appuntamenti in un unico controllo.</p>
+            <div class="client-health-brand">
+              <span class="client-health-brand-mark" aria-hidden="true">bmg</span>
+              <div>
+                <span class="client-health-eyebrow">BMG live control</span>
+                <h2 id="clientHealthTitle">Salute clienti</h2>
+                <p>PED, copy, attività e appuntamenti sotto controllo.</p>
+              </div>
             </div>
-            <button class="ghost-button" id="clientHealthRefresh" type="button">
-              <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8.1 8.1 0 0 0-15.5-2M4 4v5h5"/><path d="M4 13a8.1 8.1 0 0 0 15.5 2M20 20v-5h-5"/></svg>
-              Aggiorna
-            </button>
+            <div class="client-health-head-actions">
+              <button class="ghost-button" id="clientHealthRefresh" type="button">
+                <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8.1 8.1 0 0 0-15.5-2M4 4v5h5"/><path d="M4 13a8.1 8.1 0 0 0 15.5 2M20 20v-5h-5"/></svg>
+                Aggiorna
+              </button>
+              <button class="ghost-button" id="clientHealthFullscreen" type="button">
+                <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5"/></svg>
+                <span>Schermo intero</span>
+              </button>
+              <button class="icon-button client-health-exit" id="clientHealthExit" type="button" aria-label="Esci da Salute clienti">
+                <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="m18 6-12 12M6 6l12 12"/></svg>
+              </button>
+            </div>
           </header>
           <div class="client-health-summary" id="clientHealthSummary" aria-label="Riepilogo salute clienti"></div>
           <div class="client-health-toolbar">
@@ -535,12 +547,17 @@
             </select>
           </div>
           <div class="client-health-grid" id="clientHealthGrid" aria-live="polite"></div>
-          <footer class="client-health-pagination">
-            <span id="clientHealthPageLabel">Pagina 1 di 1</span>
-            <div>
-              <button class="icon-button" id="clientHealthPrevious" type="button" aria-label="Pagina precedente"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
-              <button class="icon-button" id="clientHealthNext" type="button" aria-label="Pagina successiva"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>
+          <footer class="client-health-rotation" aria-live="polite">
+            <div class="client-health-rotation-copy">
+              <span class="client-health-live-dot" aria-hidden="true"></span>
+              <strong id="clientHealthRotationLabel">Cambio automatico</strong>
+              <span id="clientHealthVisibleLabel"></span>
             </div>
+            <div class="client-health-rotation-track" aria-hidden="true"><i id="clientHealthRotationProgress"></i></div>
+            <button class="ghost-button" id="clientHealthRotationToggle" type="button">
+              <svg class="lc client-health-pause-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5v14M15 5v14"/></svg>
+              <span>Pausa</span>
+            </button>
           </footer>
         </section>
       </section>

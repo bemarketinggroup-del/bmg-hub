@@ -489,8 +489,13 @@ supabase/                     schema e migration
 - La navigazione PED include anche la pagina dedicata `Salute clienti`, che
   riusa gli stessi criteri di copertura, frequenza e qualità copy per tutti i
   clienti attivi senza rimuovere il riepilogo dai singoli PED. La pagina resta
-  fissa nel viewport e non genera scroll: mostra una griglia compatta paginata,
-  adattata a desktop, tablet e smartphone, con ricerca e filtri per priorità.
+  fissa nel viewport e non genera scroll. È un wallboard autonomo pensato anche
+  per il monitor dell'ufficio: nasconde sidebar e topbar, offre il fullscreen del
+  browser e alterna automaticamente ogni 12 secondi i gruppi di clienti con una
+  transizione, senza mostrare pagine. La rotazione può essere sospesa e ripresa;
+  ricerca e filtri per priorità restano disponibili. Le fasce di salute usano
+  colori saturi e distinti (rosso, giallo, verde, azzurro), applicati a scheda,
+  punteggio e barre per rendere lo stato immediatamente riconoscibile.
   Ogni scheda aggiunge contenuti futuri, contenuti in attesa, ultima uscita,
   task attive/scadute (solo a chi ha il permesso Task), collegamento Drive,
   prossimo appuntamento nei 30 giorni (solo a chi ha il permesso Calendario) e
