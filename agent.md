@@ -59,6 +59,35 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-09-23 — Spostamento dei contenuti PED tra mesi tramite attesa
+
+- Richiesta: permettere di spostare un contenuto da un mese PED a un altro
+  riportandolo prima nei `Contenuti in attesa`, da cui il team puo assegnarlo a
+  qualunque nuova data.
+- Modifiche: aggiunto `Sposta in attesa` sia sulle card del calendario sia
+  nell'editor del copy, disponibile anche su smartphone. Il passaggio conserva
+  file, copy e formattazione, modifiche dell'editor non ancora salvate, stato di
+  programmazione, ordine e copertina dei caroselli e fotogramma dei Reel. Lo
+  spostamento in attesa e la successiva programmazione usano due funzioni SQL
+  atomiche, evitando stati parziali, duplicati o perdita di contenuti in caso di
+  errore. Prima del passaggio viene ricordato che un'eventuale programmazione
+  esterna gia eseguita su Meta o telefono non viene annullata automaticamente.
+- File: `lib/ped.js`, `public/app.js`, `public/index.html`,
+  `public/styles.css`, `scripts/test-ped-carousel.mjs`, `supabase/schema.sql`,
+  `supabase/migrations/20260923150500_ped_move_between_calendar_and_staging.sql`,
+  `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `node --check public/app.js`, `node --check lib/ped.js`, `npm run
+  test:ped-carousel`, `npm run test:mobile-navigation`, `npm run
+  test:primeng-components`, `npm run test:permissions`, `npm run check`, `npm
+  run build`, `git diff --check`; migrazione Supabase verificata in dry-run,
+  applicata e ricontrollata come aggiornata; controllo visuale desktop e
+  smartphone, Chrome e Safari.
+- Pubblicazione: migrazione Supabase applicata; commit corrente pubblicato su
+  GitHub `main` e deploy Vercel di produzione verificato su
+  `https://bmg-hub.vercel.app`.
+- Note: lo spostamento non modifica ne cancella eventuali programmazioni gia
+  create sulle piattaforme esterne Meta o sul telefono.
+
 ### 2026-09-23 — Spaziatura fedele dei copy incollati da ChatGPT
 
 - Richiesta: conservare nell'editor PED gli stessi spazi e la stessa

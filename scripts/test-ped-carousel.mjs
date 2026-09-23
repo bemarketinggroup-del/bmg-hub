@@ -71,6 +71,7 @@ const richCaptionMigration = await readFile(new URL("../supabase/20260718_ped_ri
 const carouselEditorMigration = await readFile(new URL("../supabase/migrations/20260729170000_ped_carousel_editor.sql", import.meta.url), "utf8");
 const stagingCarouselEditorMigration = await readFile(new URL("../supabase/migrations/20260910032000_ped_staging_carousel_editor.sql", import.meta.url), "utf8");
 const stagingDuplicateMigration = await readFile(new URL("../supabase/migrations/20260923133000_ped_staging_allow_duplicate_drive_files.sql", import.meta.url), "utf8");
+const moveStagingMigration = await readFile(new URL("../supabase/migrations/20260923150500_ped_move_between_calendar_and_staging.sql", import.meta.url), "utf8");
 const shareTokenMigration = await readFile(new URL("../supabase/migrations/20260805181000_ped_share_recoverable_token.sql", import.meta.url), "utf8");
 const parallelLegacyShareMigration = await readFile(new URL("../supabase/migrations/20260805183000_ped_share_parallel_legacy.sql", import.meta.url), "utf8");
 const reelCoverMigration = await readFile(new URL("../supabase/migrations/20260902135000_ped_reel_cover_frame.sql", import.meta.url), "utf8");
@@ -256,6 +257,18 @@ assert.doesNotMatch(appSource, /ped-agenda-empty">Nessun contenuto programmato/,
 assert.match(appSource, /draggable="true" aria-grabbed="false"/, "le card PED devono essere trascinabili");
 assert.match(appSource, /movePedItemToDate\(itemId, targetDate\)/, "il rilascio deve aggiornare la data del contenuto");
 assert.match(appSource, /body: JSON\.stringify\(\{ id, scheduled_date: scheduledDate \}\)/, "la nuova data deve essere salvata tramite API");
+assert.match(htmlSource, /id="pedCaptionToStagingButton"[\s\S]*?Sposta in attesa/, "l'editor PED deve offrire il passaggio ai Contenuti in attesa");
+assert.match(appSource, /data-ped-to-staging="\$\{escapeHtml\(item\.id\)\}"/, "anche la card del calendario deve offrire lo spostamento in attesa");
+assert.match(appSource, /function movePedItemToStaging\(id\)[\s\S]*?move_to_staging_id: itemId/, "il frontend deve inviare lo spostamento al backend");
+assert.match(appSource, /movesOpenEditor[\s\S]*?apply_edits: true[\s\S]*?caption_html:[\s\S]*?publishing_status:/, "lo spostamento dal popup deve conservare anche le modifiche non ancora salvate");
+assert.match(pedSource, /body\.move_to_staging_id !== undefined[\s\S]*?\/rpc\/move_ped_item_to_staging/, "l'API deve spostare i contenuti programmati tramite transazione database");
+assert.match(pedSource, /body\.staging_id !== undefined[\s\S]*?\/rpc\/move_ped_staging_to_date/, "anche la riprogrammazione dallo staging deve essere atomica");
+assert.match(moveStagingMigration, /create or replace function public\.move_ped_item_to_staging/, "la migration deve definire il passaggio atomico verso lo staging");
+assert.match(moveStagingMigration, /create or replace function public\.move_ped_staging_to_date/, "la migration deve definire il passaggio atomico verso una nuova data");
+assert.match(moveStagingMigration, /insert into public\.ped_staging_items[\s\S]*?delete from public\.ped_items/, "il trasferimento verso lo staging deve avvenire nella stessa transazione");
+assert.match(moveStagingMigration, /insert into public\.ped_items[\s\S]*?delete from public\.ped_staging_items/, "la riprogrammazione deve avvenire nella stessa transazione");
+assert.match(moveStagingMigration, /cover_frame_seconds/, "lo spostamento deve conservare anche la copertina scelta per i Reel");
+assert.match(moveStagingMigration, /case when p_apply_edits and item\.content_type <> 'story' then p_caption/, "la transazione deve incorporare il copy modificato nel popup");
 assert.match(appSource, /window\.setTimeout\(beginPedPointerDrag, 340\)/, "il trascinamento touch deve partire con una pressione prolungata");
 assert.match(styleSource, /\.ped-day\.is-ped-drop-target/, "il giorno di destinazione deve avere un feedback visivo");
 assert.match(styleSource, /\.ped-client-search \{ width: calc\(100% - 20px\); min-height: 38px; margin: 8px 10px 0;/, "su mobile ricerca e selezione cliente devono occupare meno altezza");

@@ -812,7 +812,7 @@ function formatPedAuditDate(value) {
 }
 
 function pedAuditMetadata(body = {}, requestUrl = null, actionKey = "") {
-  const itemId = body.id || body.staging_id || body.staging_append_id || body.staging_carousel_id || requestUrl?.searchParams.get("id") || requestUrl?.searchParams.get("staging_id") || "";
+  const itemId = body.id || body.move_to_staging_id || body.staging_id || body.staging_append_id || body.staging_carousel_id || requestUrl?.searchParams.get("id") || requestUrl?.searchParams.get("staging_id") || "";
   const item = itemId
     ? pedStateItem(itemId) || (state.pedStagingItems || []).find((entry) => String(entry.id) === String(itemId))
     : null;
@@ -847,6 +847,7 @@ function pedAuditMetadata(body = {}, requestUrl = null, actionKey = "") {
 function pedAuditActionKey(method, body, requestUrl) {
   if (method === "POST") return body.staging === true ? "create_ped_staging" : "create_ped_content";
   if (method === "DELETE") return requestUrl.searchParams.get("staging_id") ? "remove_ped_staging" : "remove_ped_content";
+  if (body.move_to_staging_id) return "move_ped_to_staging";
   if (body.staging_id && body.scheduled_date) return "schedule_ped_content";
   if (body.note_date) return "update_ped_note";
   if (Array.isArray(body.instagram_order)) return "reorder_ped";
@@ -4752,9 +4753,14 @@ function pedItemMarkup(item) {
       <span class="ped-content-thumb">${media}${pedTypeIconMarkup(format.type)}${files.length > 1 ? `<b class="ped-carousel-count">${files.length}</b>` : ""}</span>
       <span class="ped-content-copy"><strong>${escapeHtml(title)}</strong><small><span class="ped-type-dot" aria-hidden="true"></span>${format.label} · ${typeLabel}${format.type !== "story" && item.caption ? " · Copy pronto" : ""}</small></span>
     </button>
-    <button class="ped-content-remove" data-ped-remove="${escapeHtml(item.id)}" type="button" title="Rimuovi dal PED" aria-label="Rimuovi ${escapeHtml(title)} dal PED">
-      <svg class="lc" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
-    </button>
+    <span class="ped-content-actions">
+      <button class="ped-content-to-staging" data-ped-to-staging="${escapeHtml(item.id)}" type="button" title="Sposta nei Contenuti in attesa" aria-label="Sposta ${escapeHtml(title)} nei Contenuti in attesa">
+        <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v5H4z"/><path d="M6 9v11h12V9"/><path d="M12 12v5M9.5 14.5 12 17l2.5-2.5"/></svg>
+      </button>
+      <button class="ped-content-remove" data-ped-remove="${escapeHtml(item.id)}" type="button" title="Rimuovi dal PED" aria-label="Rimuovi ${escapeHtml(title)} dal PED">
+        <svg class="lc" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </span>
     <div class="ped-hover-preview" aria-hidden="true">${hoverMedia}<span><b>${format.label}</b>${escapeHtml(title)}</span></div>
   </article>`;
 }
@@ -6580,6 +6586,7 @@ function selectPedCaptionItem(id, { focus = false } = {}) {
   document.getElementById("pedCaptionStoryNote").hidden = !isStory;
   document.getElementById("pedCaptionCopyButton").hidden = isStory;
   document.getElementById("pedCaptionPublishingStatus").value = pedPublishingStatus(item.publishing_status);
+  document.getElementById("pedCaptionToStagingButton").dataset.pedToStaging = String(item.id);
   const addLink = document.getElementById("pedCaptionAddLink");
   const itemFiles = pedItemFiles(item);
   const canAppend = Boolean(item.is_group && pedContentType(item.content_type) === "carousel");
@@ -6689,6 +6696,61 @@ async function removePedItem(id) {
     return;
   }
   await loadPedCalendar();
+}
+
+async function movePedItemToStaging(id) {
+  const itemId = String(id || "");
+  const item = pedStateItem(itemId);
+  if (!item || pedMoveRequests.has(`to-staging:${itemId}`)) return;
+  const captionModal = document.getElementById("pedCaptionModal");
+  const movesOpenEditor = Boolean(captionModal?.open && String(editingPedCaptionId) === itemId);
+  const isStory = pedContentType(item.content_type) === "story";
+  const requestBody = { move_to_staging_id: itemId };
+  if (movesOpenEditor) {
+    const caption = isStory ? null : pedCaptionPlainText();
+    if (String(caption || "").length > 10000) {
+      document.getElementById("pedCaptionMessage").textContent = "Il copy non puo superare 10000 caratteri.";
+      return;
+    }
+    Object.assign(requestBody, {
+      apply_edits: true,
+      caption,
+      caption_html: isStory ? null : document.getElementById("pedCaptionText").innerHTML.trim(),
+      publishing_status: pedPublishingStatus(document.getElementById("pedCaptionPublishingStatus").value)
+    });
+  }
+  const subject = item.is_group ? `il carosello “${pedItemTitle(item)}”` : `“${pedItemTitle(item)}”`;
+  const effectivePublishingStatus = movesOpenEditor
+    ? pedPublishingStatus(requestBody.publishing_status)
+    : pedPublishingStatus(item.publishing_status);
+  const externalWarning = effectivePublishingStatus === "ped_only"
+    ? ""
+    : "\n\nAttenzione: l'eventuale programmazione gia effettuata su Meta o telefono non viene annullata automaticamente.";
+  if (!confirm(`Spostare ${subject} nei Contenuti in attesa?\n\nFile, copy, ordine del carosello e stato resteranno intatti.${externalWarning}`)) return;
+
+  pedMoveRequests.add(`to-staging:${itemId}`);
+  const buttons = document.querySelectorAll(`[data-ped-to-staging="${CSS.escape(itemId)}"]`);
+  buttons.forEach((button) => { button.disabled = true; });
+  showPedMoveNotice("Spostamento nei Contenuti in attesa...", "pending");
+  try {
+    const response = await apiFetch("/api/ped", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(requestBody)
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "Impossibile spostare il contenuto tra quelli in attesa");
+    if (movesOpenEditor) {
+      captionModal.close();
+    }
+    await loadPedCalendar();
+    showPedMoveNotice("Contenuto spostato. Ora puoi aprire qualsiasi mese e riprogrammarlo.", "success");
+  } catch (error) {
+    showPedMoveNotice(error.message || "Spostamento non riuscito", "error");
+  } finally {
+    pedMoveRequests.delete(`to-staging:${itemId}`);
+    buttons.forEach((button) => { button.disabled = false; });
+  }
 }
 
 function driveMediaViewerGallery(fileId, fileName, mimeType, sourceUrl) {
@@ -12355,6 +12417,7 @@ document.body.addEventListener("click", (event) => {
   const pedDay = event.target.closest(".ped-day[data-ped-day]");
   const pedInstagramOrderItem = event.target.closest("[data-ped-instagram-item]");
   const pedRemove = event.target.closest("[data-ped-remove]");
+  const pedToStaging = event.target.closest("[data-ped-to-staging]");
   const pedPickerFolder = event.target.closest("[data-ped-picker-folder]");
   const pedPickerLibrary = event.target.closest("[data-ped-picker-library]");
   const pedPickerFile = event.target.closest("[data-ped-picker-file]");
@@ -12519,6 +12582,7 @@ document.body.addEventListener("click", (event) => {
   }
   if (pedStagingOpen) return openPedStagingEditor(pedStagingOpen.dataset.pedStagingOpen);
   if (pedAdd) return openPedDrivePicker(pedAdd.dataset.pedAdd);
+  if (pedToStaging) return movePedItemToStaging(pedToStaging.dataset.pedToStaging);
   if (pedRemove) return removePedItem(pedRemove.dataset.pedRemove);
   if (pedEditor) return openPedCaptionModal(pedEditor.dataset.pedEditor);
   if (pedCaptionSelect) return selectPedCaptionItem(pedCaptionSelect.dataset.pedCaptionSelect, { focus: true });
@@ -12739,7 +12803,7 @@ document.body.addEventListener("dragstart", (event) => {
     return;
   }
   const card = event.target.closest?.("[data-ped-content]");
-  if (!card || event.target.closest("[data-ped-remove]")) return;
+  if (!card || event.target.closest("[data-ped-remove], [data-ped-to-staging]")) return;
   pedDraggedStagingId = "";
   pedDraggedItemId = String(card.dataset.pedContent || "");
   if (!pedDraggedItemId) return;
@@ -12843,7 +12907,7 @@ document.body.addEventListener("dragend", () => {
 document.body.addEventListener("pointerdown", (event) => {
   if (event.pointerType === "mouse" || event.button !== 0) return;
   const card = event.target.closest?.("[data-ped-content], [data-ped-staging]");
-  if (!card || event.target.closest("[data-ped-remove], [data-ped-staging-remove], .ped-staging-edit")) return;
+  if (!card || event.target.closest("[data-ped-remove], [data-ped-to-staging], [data-ped-staging-remove], .ped-staging-edit")) return;
   resetPedPointerDrag();
   pedPointerDrag.pointerId = event.pointerId;
   pedPointerDrag.card = card;

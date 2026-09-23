@@ -416,6 +416,16 @@ supabase/                     schema e migration
   possono essere riordinati, rimossi senza cancellarli da Drive e integrati con
   nuovi contenuti. Riordino e rimozione vengono salvati atomicamente sulla
   raccolta momentanea, senza passare per la tabella dei contenuti programmati.
+- Ogni contenuto gia programmato puo essere riportato nei `Contenuti in attesa`
+  dalla card del calendario o dall'editor del copy. Lo spostamento conserva
+  file, copy anche non ancora salvato, formattazione, tipo, ordine e copertina
+  del carosello, stato di programmazione e fotogramma di copertina dei Reel.
+  Da quel momento resta disponibile cambiando mese e puo essere trascinato su
+  qualsiasi nuova data. Entrambi i passaggi, PED verso attesa e attesa verso
+  PED, sono transazioni database atomiche: un errore non lascia duplicati e non
+  perde il contenuto. L'eventuale uscita gia programmata esternamente su Meta o
+  telefono non viene cancellata automaticamente e l'interfaccia lo segnala
+  prima dello spostamento.
 - L'agenda apre di default sulle uscite da oggi in poi e carica tutti i
   contenuti futuri fino in fondo nella pagina, senza una finestra con scroll
   interno. Se il PED contiene uscite passate, il comando `Carica precedenti`
