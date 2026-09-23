@@ -643,14 +643,15 @@ create table if not exists public.ped_staging_items (
     check (publishing_status in ('ped_only', 'meta', 'phone')),
   created_by uuid references public.staff_profiles(id) on delete set null,
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
-  unique (client_id, drive_file_id)
+  updated_at timestamptz not null default now()
 );
 
 create index if not exists ped_day_notes_client_date_idx
   on public.ped_day_notes(client_id, note_date);
 create index if not exists ped_staging_items_client_position_idx
   on public.ped_staging_items(client_id, position, created_at);
+create index if not exists ped_staging_items_client_drive_file_idx
+  on public.ped_staging_items(client_id, drive_file_id);
 create index if not exists ped_staging_items_group_idx
   on public.ped_staging_items(content_group_id, group_position)
   where content_group_id is not null;

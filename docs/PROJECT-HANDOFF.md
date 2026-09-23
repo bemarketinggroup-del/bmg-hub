@@ -343,6 +343,11 @@ supabase/                     schema e migration
   layer generico `p-button` mantengono assoluti badge, numero carosello, play
   video e zoom: non rimuoverle, perché l'adapter riesegue l'enhancement ogni 1,2
   secondi.
+- Un file già presente nei contenuti in attesa resta selezionabile e può essere
+  aggiunto nuovamente, anche dentro un altro carosello. Il selettore lo segnala
+  con il badge `Gia in attesa`, il comando `Aggiungi di nuovo` e un avviso nel
+  riepilogo del carosello, senza bloccare il salvataggio. Il vincolo anti-duplicato
+  sullo stesso giorno del calendario PED resta invece invariato.
 - Il visualizzatore usa la massima area utile, `object-fit: contain`, zoom e
   navigazione da tastiera.
 - Il player video non usa i controlli nativi del browser: il dock condiviso
@@ -742,6 +747,7 @@ supabase/migrations/20260805103000_staff_email_aliases.sql
 supabase/migrations/20260805181000_ped_share_recoverable_token.sql
 supabase/migrations/20260805183000_ped_share_parallel_legacy.sql
 supabase/migrations/20260910032000_ped_staging_carousel_editor.sql
+supabase/migrations/20260923133000_ped_staging_allow_duplicate_drive_files.sql
 ```
 
 Non modificare retroattivamente migration già applicate in produzione. Creare

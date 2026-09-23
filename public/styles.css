@@ -4020,6 +4020,7 @@ body.ped-picker-dialog-visible { overflow: hidden; overscroll-behavior: none; }
   visibility: visible !important;
   pointer-events: none;
 }
+.ped-picker-used-badge.is-staged { background: rgba(179, 103, 25, .9); }
 .ped-picker-preview-kind {
   position: absolute;
   right: 10px;
@@ -4060,6 +4061,7 @@ body.ped-picker-dialog-visible { overflow: hidden; overscroll-behavior: none; }
 .ped-carousel-selection .primary-button { flex: 0 0 auto; background: #4d795f; }
 .ped-carousel-selection .primary-button:hover { background: #3d654d; }
 .ped-picker-footer .form-message { min-height: 0; margin: 7px 2px 0; font-size: 11px; }
+.ped-picker-footer .form-message.is-warning { color: #9a5b17; }
 .ped-picker-footer .form-message:empty { display: none; }
 .ped-picker-loading, .ped-picker-error, .ped-picker-empty { grid-column: 1 / -1; min-height: 220px; display: flex; align-items: center; justify-content: center; gap: 10px; color: var(--muted); }
 .ped-picker-error { flex-direction: column; color: var(--red); }

@@ -70,6 +70,7 @@ const publishingStatusMigration = await readFile(new URL("../supabase/20260718_p
 const richCaptionMigration = await readFile(new URL("../supabase/20260718_ped_rich_caption.sql", import.meta.url), "utf8");
 const carouselEditorMigration = await readFile(new URL("../supabase/migrations/20260729170000_ped_carousel_editor.sql", import.meta.url), "utf8");
 const stagingCarouselEditorMigration = await readFile(new URL("../supabase/migrations/20260910032000_ped_staging_carousel_editor.sql", import.meta.url), "utf8");
+const stagingDuplicateMigration = await readFile(new URL("../supabase/migrations/20260923133000_ped_staging_allow_duplicate_drive_files.sql", import.meta.url), "utf8");
 const shareTokenMigration = await readFile(new URL("../supabase/migrations/20260805181000_ped_share_recoverable_token.sql", import.meta.url), "utf8");
 const parallelLegacyShareMigration = await readFile(new URL("../supabase/migrations/20260805183000_ped_share_parallel_legacy.sql", import.meta.url), "utf8");
 const reelCoverMigration = await readFile(new URL("../supabase/migrations/20260902135000_ped_reel_cover_frame.sql", import.meta.url), "utf8");
@@ -413,12 +414,19 @@ assert.equal(sanitizeCaptionHtml('<font color="#C95B32">BMG</font><span style="c
 assert.equal(sanitizeCaptionHtml('<span style="color:rgb(999, 0, 0)">No</span>'), '<span>No</span>');
 assert.equal(sanitizeCaptionHtml('<img src=x onerror=alert(1)><em>Test</em>'), '<em>Test</em>');
 assert.match(pedSource, /used_file_ids:/, "l'API PED deve restituire tutti i file gia usati dal cliente");
+assert.match(pedSource, /staging_file_ids:/, "l'API PED deve distinguere i file gia presenti tra quelli in attesa");
 assert.match(pedSource, /resolveClientDriveLibraries\(client\.name, listDriveFolder, clientConnectionSettings\(client\.notes\)\)/, "il PED deve accettare file dalle raccolte grafiche e video collegate manualmente al cliente");
 assert.match(pedSource, /const rootIds = \[clientRootId, \.\.\.libraryRoots\.map/, "la validazione deve includere le cartelle autorizzate del cliente");
 assert.match(pedSource, /if \(driveSource === "all"\) \{[\s\S]*?driveMetadataWithWriteAccess\("root"\)/, "la radice OAuth completa deve essere autorizzata soltanto quando il selettore la dichiara");
 assert.match(pedSource, /isInsideDriveRootWithWriteAccess\(fileId, authorization\.fullDriveRootId/, "ogni file esterno al cliente deve restare dentro la radice Drive completa");
 assert.match(appSource, /let pedUsedFileIds = new Set\(\)/, "il PED deve mantenere l'indice dei file gia usati");
 assert.match(appSource, /pedUsedFileIds\.has\(String\(file\.id\)\)/, "il selettore deve riconoscere i file Drive gia usati");
+assert.match(appSource, /pedStagingFileIds\.has\(String\(file\.id\)\)/, "il selettore deve riconoscere i file gia presenti tra quelli in attesa");
+assert.match(appSource, /Gia in attesa/, "il selettore deve avvisare senza nascondere che il file e gia in attesa");
+assert.match(appSource, /Aggiungi di nuovo/, "un file gia in attesa deve avere un comando esplicito per riutilizzarlo");
+assert.match(appSource, /Puoi .*aggiunger/, "l'avviso del carosello deve chiarire che il duplicato resta consentito");
+assert.match(stagingDuplicateMigration, /drop constraint if exists ped_staging_items_client_id_drive_file_id_key/, "la migration deve rimuovere il blocco univoco dai contenuti in attesa");
+assert.match(stagingDuplicateMigration, /create index if not exists ped_staging_items_client_drive_file_idx/, "la ricerca dei file in attesa deve conservare un indice non univoco");
 assert.match(appSource, /pedPickerState\.showUsed/, "il filtro dei contenuti gia usati deve essere reversibile");
 assert.match(appSource, /function isPedSpreadsheetFile\(file\)/, "il selettore deve riconoscere e nascondere i fogli di calcolo");
 assert.match(appSource, /!isPedSpreadsheetFile\(file\)/, "i fogli di calcolo non devono essere selezionabili come contenuti PED");
@@ -447,7 +455,7 @@ assert.match(htmlSource, /data-ped-viewer-zoom-in/, "il visualizzatore deve offr
 assert.match(appSource, /data-ped-media-viewer/, "ogni contenuto visualizzabile deve avere un comando separato dalla selezione");
 assert.match(appSource, /class="ped-picker-media is-viewer" data-ped-media-viewer/, "il click sulla foto deve aprire il visualizzatore grande");
 assert.match(appSource, /<span>\$\{insertLabel\}<\/span>/, "il comando sotto la foto deve inserire il contenuto nel PED");
-assert.match(appSource, /const insertLabel = isCarouselSelection && selected \? "Rimuovi dal carosello" : "Inserisci nel PED"/, "il comando di inserimento deve essere esplicito");
+assert.match(appSource, /const insertLabel = isCarouselSelection && selected[\s\S]*?"Rimuovi dal carosello"[\s\S]*?"Aggiungi di nuovo"[\s\S]*?"Inserisci nel PED"/, "il comando di inserimento deve essere esplicito anche quando il file viene riutilizzato");
 assert.doesNotMatch(appSource, /<span>Visualizza grande<\/span>/, "il vecchio comando separato Visualizza grande non deve comparire");
 assert.match(appSource, /const viewerSource = !file\.is_folder && previewType \? file\.content_url/, "il visualizzatore deve caricare il file originale e non la miniatura");
 assert.match(appSource, /function preloadPedMediaImage\(source, \{ highPriority = false \} = \{\}\)/, "le foto originali devono essere precaricate senza bloccare il selettore");

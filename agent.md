@@ -59,6 +59,33 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-09-23 — Riutilizzo dei contenuti già in attesa nel PED
+
+- Richiesta: permettere di selezionare e aggiungere nuovamente un contenuto
+  Drive già presente tra quelli in attesa, mantenendo un avviso ma senza
+  bloccare l'operazione.
+- Modifiche: rimosso esclusivamente il vincolo univoco sui file dei contenuti
+  in attesa, conservando un indice non univoco e il vincolo anti-duplicato sullo
+  stesso giorno del calendario PED. L'API ora distingue i file presenti nello
+  staging dagli altri già usati; il selettore mostra `Gia in attesa`, propone
+  `Aggiungi di nuovo` e, nei caroselli, visualizza un avviso non bloccante prima
+  del salvataggio. Lo stesso file può così comparire più volte tra i contenuti
+  momentanei o in caroselli diversi.
+- File: `lib/ped.js`, `public/app.js`, `public/styles.css`,
+  `supabase/schema.sql`,
+  `supabase/migrations/20260923133000_ped_staging_allow_duplicate_drive_files.sql`,
+  `scripts/test-ped-carousel.mjs`, `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run test:ped-carousel`, `npm run check`, `npm run build`,
+  `git diff --check`; migration Supabase verificata in dry-run, applicata e
+  ricontrollata con database remoto aggiornato; controllo responsive desktop e
+  smartphone del selettore PED e verifica produzione.
+- Pubblicazione: migration Supabase applicata; commit corrente pubblicato su
+  GitHub `main` e distribuito in produzione su Vercel
+  (`https://bmg-hub.vercel.app`).
+- Note: i duplicati restano vietati quando lo stesso file viene inserito due
+  volte nello stesso giorno del calendario PED; la nuova eccezione riguarda
+  soltanto l'area dei contenuti in attesa.
+
 ### 2026-09-23 — Appuntamenti cliente nell'AI contestuale
 
 - Richiesta: estendere l'analisi dell'AI agli appuntamenti Calendar dei clienti,
