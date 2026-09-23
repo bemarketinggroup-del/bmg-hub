@@ -59,6 +59,10 @@
           <span class="icon"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></span>
           <span>La mia area</span>
         </button>
+        <button class="p-ripple nav-item" data-view="assistant" type="button">
+          <span class="icon"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a4 4 0 0 0-4 4v1a4 4 0 0 0-3 3.87V15a4 4 0 0 0 4 4h1l2 2 2-2h1a4 4 0 0 0 4-4v-3.13A4 4 0 0 0 16 8V7a4 4 0 0 0-4-4Z"/><path d="M9 12h.01M15 12h.01M9.5 15.5h5"/></svg></span>
+          <span>Assistente AI</span>
+        </button>
         <button class="p-ripple nav-item" data-view="chat" data-module="chat" type="button">
           <span class="icon"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/><path d="M8 9h8M8 13h5"/></svg></span>
           <span>Chat</span>
@@ -557,6 +561,47 @@
             <div class="personal-list" id="personalEventList"></div>
           </section>
         </div>
+      </section>
+
+      <section class="view" id="assistantView" data-view-panel="assistant">
+        <section class="ai-assistant-shell">
+          <header class="ai-assistant-hero">
+            <div class="ai-assistant-hero-icon" aria-hidden="true">
+              <svg class="lc" viewBox="0 0 24 24"><path d="M12 3a4 4 0 0 0-4 4v1a4 4 0 0 0-3 3.87V15a4 4 0 0 0 4 4h1l2 2 2-2h1a4 4 0 0 0 4-4v-3.13A4 4 0 0 0 16 8V7a4 4 0 0 0-4-4Z"/><path d="M9 12h.01M15 12h.01M9.5 15.5h5"/></svg>
+            </div>
+            <div>
+              <p class="eyebrow">Assistente operativo BMG</p>
+              <h2>Chiedi priorità, controlli e prossimi passi</h2>
+              <p>Legge soltanto i dati dell’Hub che puoi vedere. Non modifica né pubblica nulla senza una funzione dedicata.</p>
+            </div>
+            <div class="ai-assistant-budget" id="aiAssistantBudget" aria-live="polite">
+              <span>Budget mensile</span>
+              <strong>Controllo in corso…</strong>
+              <div><i style="width:0%"></i></div>
+              <small>Limite protetto dal server</small>
+            </div>
+          </header>
+
+          <div class="ai-assistant-prompts" aria-label="Richieste rapide">
+            <button type="button" data-ai-assistant-prompt="Cosa devo fare oggi? Ordina le attività per urgenza e dimmi da dove iniziare.">Cosa devo fare oggi?</button>
+            <button type="button" data-ai-assistant-prompt="Quali attività richiedono attenzione adesso? Evidenzia ritardi, scadenze vicine e dati mancanti.">Cosa richiede attenzione?</button>
+            <button type="button" data-ai-assistant-prompt="Aiutami a organizzare la settimana in base alle task e agli eventi presenti nell'Hub.">Organizza la settimana</button>
+            <button type="button" data-ai-assistant-prompt="Controlla le mie attività e suggerisci tre prossimi passi concreti.">Suggerisci i prossimi passi</button>
+          </div>
+
+          <section class="panel ai-assistant-conversation" aria-label="Conversazione con l'assistente">
+            <div class="ai-assistant-messages" id="aiAssistantMessages" aria-live="polite"></div>
+            <form class="ai-assistant-composer" id="aiAssistantForm">
+              <label class="sr-only" for="aiAssistantInput">Scrivi una richiesta</label>
+              <textarea id="aiAssistantInput" rows="2" maxlength="1600" placeholder="Es. Quali scadenze devo gestire prima di venerdì?"></textarea>
+              <div class="ai-assistant-composer-actions">
+                <button class="text-button" id="aiAssistantClear" type="button">Nuova conversazione</button>
+                <button class="primary-button" id="aiAssistantSend" type="submit">Chiedi all’AI</button>
+              </div>
+            </form>
+            <p class="ai-assistant-feedback" id="aiAssistantFeedback" role="status"></p>
+          </section>
+        </section>
       </section>
 
       <section class="view" id="chatView" data-view-panel="chat">

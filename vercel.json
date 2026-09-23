@@ -11,6 +11,7 @@
     { "source": "/api/clickup/tasks", "destination": "/api/clickup-tasks" },
     { "source": "/api/clickup/webhook", "destination": "/api/clickup-tasks" },
     { "source": "/api/ai/task-assist", "destination": "/api/clickup-tasks" },
+    { "source": "/api/ai/assistant", "destination": "/api/ai-assistant" },
     { "source": "/ped-share", "destination": "/ped-share.html" }
   ],
   "headers": [

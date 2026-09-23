@@ -4,6 +4,7 @@ const PED_PICKER_LOCATIONS_KEY = "bmg-hub-ped-picker-locations-v1";
 const LAST_VIEW_KEY = "bmg-hub-last-view-v1";
 const WORKSPACE_CONTEXT_KEY = "bmg-hub-workspace-context-v1";
 const MAINTENANCE_ACK_KEY = "bmg-hub-maintenance-ack-v1";
+const AI_ASSISTANT_HISTORY_KEY = "bmg-hub-ai-assistant-history-v1";
 const MAINTENANCE_NOTICE_INTERVAL_MS = 20 * 1000;
 const DEFAULT_MAINTENANCE_MESSAGE = "Stiamo apportando delle modifiche al gestionale. Non effettuare operazioni finché questo avviso non viene disattivato.";
 const ALL_TEAM_TASKS_ID = "__all";
@@ -324,6 +325,13 @@ let personalAreaState = {
   error: ""
 };
 let personalAreaTimer = null;
+let aiAssistantState = {
+  messages: [],
+  budget: null,
+  enabled: false,
+  loading: false,
+  loaded: false
+};
 let graphicReviewToastTimer = null;
 let graphicReviewToastHideTimer = null;
 let graphicReviewToastQueue = [];
@@ -1164,6 +1172,8 @@ async function logout() {
   currentProfile = null;
   renderMaintenanceNotice();
   personalAreaState = { team: [], tasks: [], events: [], notifications: [], loading: false, loaded: false, error: "" };
+  aiAssistantState = { messages: [], budget: null, enabled: false, loading: false, loaded: false };
+  sessionStorage.removeItem(AI_ASSISTANT_HISTORY_KEY);
   teamChatState = {
     profile: null,
     team: [],
@@ -1299,6 +1309,7 @@ function setView(view) {
   const titles = {
     dashboard: "Home",
     personal: "La mia area",
+    assistant: "Assistente AI",
     chat: "Chat",
     graphics: "Archivio grafiche",
     "graphics-reviews": "Revisioni grafiche",
@@ -1340,6 +1351,7 @@ function setView(view) {
   }
   if (isGraphicsView) loadGraphicReviews();
   if (view === "personal") loadPersonalArea();
+  if (view === "assistant") loadAiAssistantStatus();
   if (view === "chat") {
     loadTeamChat();
     startTeamChatUpdates();
@@ -9277,6 +9289,124 @@ function applyAiDescription() {
   document.getElementById("aiDescriptionModal").close();
 }
 
+function restoreAiAssistantHistory() {
+  if (aiAssistantState.messages.length) return;
+  try {
+    const parsed = JSON.parse(sessionStorage.getItem(AI_ASSISTANT_HISTORY_KEY) || "[]");
+    if (Array.isArray(parsed)) aiAssistantState.messages = parsed.slice(-12);
+  } catch {
+    aiAssistantState.messages = [];
+  }
+}
+
+function saveAiAssistantHistory() {
+  try {
+    sessionStorage.setItem(AI_ASSISTANT_HISTORY_KEY, JSON.stringify(aiAssistantState.messages.slice(-12)));
+  } catch {
+    // La conversazione resta utilizzabile anche senza sessionStorage.
+  }
+}
+
+function renderAiAssistantBudget() {
+  const target = document.getElementById("aiAssistantBudget");
+  if (!target) return;
+  const budget = aiAssistantState.budget;
+  if (!budget) {
+    target.innerHTML = `<span>Budget mensile</span><strong>Controllo in corso…</strong><div><i style="width:0%"></i></div><small>Limite protetto dal server</small>`;
+    return;
+  }
+  const used = Math.min(100, Math.max(0, Number(budget.spent_usd || 0) / Math.max(1, Number(budget.budget_usd || 30)) * 100));
+  const stateClass = budget.blocked ? "is-blocked" : budget.warning ? "is-warning" : "";
+  target.className = `ai-assistant-budget ${stateClass}`.trim();
+  target.innerHTML = `
+    <span>Budget mensile protetto</span>
+    <strong>$${Number(budget.spent_usd || 0).toFixed(2)} / $${Number(budget.budget_usd || 30).toFixed(0)}</strong>
+    <div><i style="width:${used.toFixed(1)}%"></i></div>
+    <small>${budget.blocked ? "Limite raggiunto: nuove richieste bloccate" : budget.warning ? `Soglia di avviso $${Number(budget.warning_usd || 20).toFixed(0)} superata` : `Restano circa $${Number(budget.remaining_usd || 0).toFixed(2)}`}</small>
+  `;
+}
+
+function aiAssistantInitials(value) {
+  return String(value || "Tu").split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase() || "").join("") || "TU";
+}
+
+function renderAiAssistant() {
+  restoreAiAssistantHistory();
+  renderAiAssistantBudget();
+  const target = document.getElementById("aiAssistantMessages");
+  if (!target) return;
+  if (!aiAssistantState.messages.length) {
+    target.innerHTML = `<article class="ai-assistant-empty"><span aria-hidden="true">AI</span><div><strong>Come posso aiutarti?</strong><p>Posso ordinare le priorità, controllare scadenze e sovrapposizioni, oppure suggerire i prossimi passi usando i dati aggiornati dell’Hub.</p></div></article>`;
+    return;
+  }
+  target.innerHTML = aiAssistantState.messages.map((message) => {
+    const suggestions = message.role === "assistant" && Array.isArray(message.suggestions)
+      ? `<div class="ai-assistant-actions">${message.suggestions.map((suggestion) => suggestion.destination && suggestion.destination !== "none"
+        ? `<button type="button" data-ai-destination="${escapeHtml(suggestion.destination)}"><strong>${escapeHtml(suggestion.label)}</strong><span>${escapeHtml(suggestion.reason)}</span></button>`
+        : `<span><strong>${escapeHtml(suggestion.label)}</strong><small>${escapeHtml(suggestion.reason)}</small></span>`).join("")}</div>`
+      : "";
+    return `<article class="ai-assistant-message is-${message.role === "assistant" ? "assistant" : "user"}">
+      <span>${message.role === "assistant" ? "AI" : escapeHtml(aiAssistantInitials(currentProfile?.full_name || "Tu"))}</span>
+      <div><small>${message.role === "assistant" ? "Assistente BMG" : "Tu"}</small><p>${escapeHtml(message.content)}</p>${suggestions}</div>
+    </article>`;
+  }).join("");
+  target.scrollTop = target.scrollHeight;
+}
+
+async function loadAiAssistantStatus() {
+  restoreAiAssistantHistory();
+  renderAiAssistant();
+  try {
+    const response = await apiFetch("/api/ai/assistant");
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "Stato AI non disponibile");
+    aiAssistantState.budget = data.budget || null;
+    aiAssistantState.enabled = data.enabled === true;
+    aiAssistantState.loaded = true;
+    const feedback = document.getElementById("aiAssistantFeedback");
+    if (feedback && !aiAssistantState.enabled) feedback.textContent = "L’assistente è pronto nell’Hub, ma la chiave API deve essere ricaricata o configurata dall’amministratore.";
+  } catch (error) {
+    const feedback = document.getElementById("aiAssistantFeedback");
+    if (feedback) feedback.textContent = error.message;
+  }
+  renderAiAssistantBudget();
+}
+
+async function sendAiAssistantMessage(message) {
+  const input = document.getElementById("aiAssistantInput");
+  const send = document.getElementById("aiAssistantSend");
+  const feedback = document.getElementById("aiAssistantFeedback");
+  const value = String(message || input?.value || "").trim();
+  if (!value || aiAssistantState.loading) return;
+  const history = aiAssistantState.messages.slice(-6).map((entry) => ({ role: entry.role, content: entry.content }));
+  aiAssistantState.messages.push({ role: "user", content: value });
+  saveAiAssistantHistory();
+  renderAiAssistant();
+  if (input) input.value = "";
+  if (feedback) feedback.textContent = "";
+  aiAssistantState.loading = true;
+  if (send) { send.disabled = true; send.textContent = "Sto analizzando…"; }
+  try {
+    const response = await apiFetch("/api/ai/assistant", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: value, history })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "Assistente AI non disponibile");
+    aiAssistantState.messages.push({ role: "assistant", content: data.answer || "Non ho trovato una risposta utile.", suggestions: data.suggestions || [] });
+    aiAssistantState.budget = data.budget || aiAssistantState.budget;
+    saveAiAssistantHistory();
+  } catch (error) {
+    if (feedback) feedback.textContent = error.message;
+  } finally {
+    aiAssistantState.loading = false;
+    if (send) { send.disabled = false; send.textContent = "Chiedi all’AI"; }
+    renderAiAssistant();
+    input?.focus();
+  }
+}
+
 function findTask(taskId) {
   return state.clickupTasks.find((item) => String(item.clickup_task_id || item.id) === String(taskId)) || null;
 }
@@ -11654,6 +11784,7 @@ function renderAll() {
   renderPed();
   renderGoogleCalendar();
   renderPersonalArea();
+  renderAiAssistant();
   renderNotifications();
   renderGraphicsDriveClients();
   renderTeamChat();
@@ -11670,6 +11801,28 @@ document.getElementById("navList").addEventListener("click", (event) => {
   }
   const button = event.target.closest("[data-view]");
   if (button) setView(button.dataset.view);
+});
+document.getElementById("aiAssistantForm").addEventListener("submit", (event) => {
+  event.preventDefault();
+  void sendAiAssistantMessage();
+});
+document.getElementById("aiAssistantClear").addEventListener("click", () => {
+  aiAssistantState.messages = [];
+  sessionStorage.removeItem(AI_ASSISTANT_HISTORY_KEY);
+  document.getElementById("aiAssistantFeedback").textContent = "";
+  renderAiAssistant();
+  document.getElementById("aiAssistantInput").focus();
+});
+document.getElementById("aiAssistantView").addEventListener("click", (event) => {
+  const prompt = event.target.closest("[data-ai-assistant-prompt]");
+  if (prompt) return void sendAiAssistantMessage(prompt.dataset.aiAssistantPrompt);
+  const destination = event.target.closest("[data-ai-destination]");
+  if (destination) setView(destination.dataset.aiDestination);
+});
+document.getElementById("aiAssistantInput").addEventListener("keydown", (event) => {
+  if (event.key !== "Enter" || event.shiftKey || event.isComposing) return;
+  event.preventDefault();
+  event.currentTarget.form?.requestSubmit();
 });
 document.getElementById("mobileNavToggle").addEventListener("click", () => setMobileNavOpen(true));
 document.getElementById("mobileNavBackdrop").addEventListener("click", () => setMobileNavOpen(false, { restoreFocus: true }));

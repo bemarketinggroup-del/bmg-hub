@@ -1,6 +1,6 @@
 # BMG Hub — contesto per una nuova chat
 
-Ultimo aggiornamento: 22 settembre 2026
+Ultimo aggiornamento: 23 settembre 2026
 Repository locale: `/Users/davidedeluca/Desktop/bmg-hub`  
 Branch di produzione: `main`  
 Ultimo commit applicativo precedente all'ottimizzazione: `435d236`
@@ -517,6 +517,24 @@ supabase/                     schema e migration
   `La mia area`, Home e notifiche considerano soltanto le task attive.
 - Nessun pulsante operativo deve portare l'utente fuori dal gestionale.
 
+### Assistente AI operativo
+
+- La voce `Assistente AI` è disponibile nel gruppo Workspace a tutti gli utenti
+  autenticati. Può ordinare priorità, individuare scadenze e sovrapposizioni e
+  suggerire prossimi passi usando dati aggiornati dell'Hub.
+- La prima versione è in sola lettura: non crea, modifica, pubblica o elimina
+  dati e le scorciatoie proposte aprono soltanto la sezione pertinente.
+- Lo staff invia al modello soltanto task assegnate e appuntamenti ai quali è
+  invitato; l'admin può ottenere un quadro generale. I clienti vengono inclusi
+  nel contesto solo per i profili che possono accedere al modulo Clienti.
+- La conversazione resta nella sessione del browser; OpenAI Responses API usa
+  `store: false`, output limitato e `gpt-6-luna` come modello economico
+  predefinito.
+- Tutte le funzioni AI condividono un contatore costi server-side: avviso a 20
+  USD, tetto a 30 USD mensili e riserva massima per richiesta. Il backend blocca
+  nuove chiamate prima di oltrepassare il budget e il pannello mostra spesa e
+  residuo stimati.
+
 ### Google Drive
 
 - Le letture usano l'account di servizio; upload, creazione cartelle e modifiche
@@ -658,6 +676,10 @@ GOOGLE_CALENDAR_OAUTH_REFRESH_TOKEN
 
 OPENAI_API_KEY
 OPENAI_MODEL
+OPENAI_ASSISTANT_MODEL
+OPENAI_MONTHLY_BUDGET_USD
+OPENAI_MONTHLY_WARNING_USD
+OPENAI_MAX_COST_PER_REQUEST_USD
 ALLOWED_ORIGIN
 ```
 

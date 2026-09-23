@@ -1,6 +1,6 @@
 # BMG Hub — memoria operativa degli interventi
 
-Ultimo aggiornamento: 22 settembre 2026
+Ultimo aggiornamento: 23 settembre 2026
 
 ## Scopo del file
 
@@ -58,6 +58,34 @@ più recente alla più vecchia:
 ```
 
 ## Registro modifiche
+
+### 2026-09-23 — Assistente AI operativo con budget mensile protetto
+
+- Richiesta: integrare maggiormente l'AI nell'Hub per aiutare a svolgere e
+  organizzare le attività, mantenendo la spesa entro 20/30 al mese.
+- Modifiche: aggiunta la sezione globale `Assistente AI`, accessibile a tutti
+  gli utenti autenticati, con richieste rapide, conversazione di sessione,
+  consigli operativi e scorciatoie verso i moduli pertinenti. Il backend usa
+  contesto Hub filtrato per utente e permessi, resta in sola lettura e invia le
+  richieste con `store: false` al modello economico `gpt-6-luna`. Introdotto un
+  controllo costi condiviso con le funzioni AI esistenti: stima dai token,
+  avviso a 20 USD, tetto server-side a 30 USD mensili, riserva per richiesta e
+  rate limit. La UI mostra spesa e residuo senza esporre chiavi o contenuti nei
+  log.
+- File: `.env.example`, `api/ai-assistant.js`, `lib/ai-assistant.js`,
+  `lib/ai-budget.js`, `lib/ai-task-assist.js`, `public/index.html`,
+  `public/app.js`, `public/styles.css`, `scripts/local-server.mjs`,
+  `scripts/test-ai-task-assist.mjs`, `vercel.json`,
+  `docs/AI-TASK-ASSIST.md`, `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: controlli sintattici Node, `npm run test:ai-task-assist`, `npm run
+  test:permissions`, `npm run test:mobile-navigation`, `npm run
+  test:personal-area`, `npm run test:primeng-components`, `npm run check`, `npm
+  run build`, `git diff --check`; controllo visuale desktop e smartphone.
+- Pubblicazione: commit corrente pubblicato su GitHub `main`; deploy Vercel di
+  produzione verificato su `https://bmg-hub.vercel.app`.
+- Note: l'account API OpenAI del gestionale deve essere ricaricato prima che le
+  risposte possano essere generate; il limite applicativo non sostituisce
+  l'eventuale tetto di spesa configurato anche nella console OpenAI.
 
 ### 2026-09-22 — Profilo compatto della sidebar ridisegnato
 

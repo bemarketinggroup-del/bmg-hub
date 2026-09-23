@@ -3,6 +3,8 @@ import { readFileSync } from "node:fs";
 import { deterministicClientMatch } from "../lib/ai-task-assist.js";
 
 const api = readFileSync("lib/ai-task-assist.js", "utf8");
+const assistant = readFileSync("lib/ai-assistant.js", "utf8");
+const budget = readFileSync("lib/ai-budget.js", "utf8");
 const clickupApi = readFileSync("api/clickup-tasks.js", "utf8");
 const app = readFileSync("public/app.js", "utf8");
 const html = readFileSync("public/index.html", "utf8");
@@ -13,6 +15,7 @@ const vercel = readFileSync("vercel.json", "utf8");
 assert.match(api, /OPENAI_API_KEY/);
 assert.match(api, /OPENAI_MODEL/);
 assert.match(api, /https:\/\/api\.openai\.com\/v1\/responses/);
+assert.match(api, /store: false/, "le richieste AI delle task non devono essere conservate dal provider");
 assert.match(api, /json_schema/);
 assert.match(api, /safeProviderError/, "gli errori OpenAI devono essere diagnosticabili senza esporre chiavi");
 assert.match(api, /OpenAI task assist request failed/, "gli errori del provider devono lasciare un log tecnico sicuro");
@@ -43,7 +46,26 @@ assert.match(migration, /ai_rate_limits/);
 assert.match(env, /OPENAI_API_KEY=/);
 assert.match(env, /OPENAI_MODEL=/);
 assert.match(vercel, /\/api\/ai\/task-assist/);
+assert.match(vercel, /\/api\/ai\/assistant/);
 assert.match(clickupApi, /handleAiTaskAssist/);
+assert.match(assistant, /OPENAI_ASSISTANT_MODEL \|\| "gpt-6-luna"/);
+assert.match(assistant, /store: false/);
+assert.match(assistant, /reasoning: \{ effort: "low" \}/);
+assert.match(assistant, /mode: "read_only"/);
+assert.match(assistant, /ai_assistant_chat/);
+assert.match(assistant, /taskBelongsToProfile/);
+assert.match(assistant, /eventBelongsToProfile/);
+assert.match(budget, /DEFAULT_MONTHLY_BUDGET_USD = 30/);
+assert.match(budget, /DEFAULT_MONTHLY_WARNING_USD = 20/);
+assert.match(budget, /spent \+ config\.requestReserveUsd > config\.monthlyBudgetUsd/);
+assert.match(html, /data-view="assistant"/);
+assert.match(html, /aiAssistantBudget/);
+assert.match(html, /aiAssistantForm/);
+assert.match(app, /function sendAiAssistantMessage/);
+assert.match(app, /function renderAiAssistantBudget/);
+assert.match(env, /OPENAI_ASSISTANT_MODEL=gpt-6-luna/);
+assert.match(env, /OPENAI_MONTHLY_BUDGET_USD=30/);
+assert.match(env, /OPENAI_MONTHLY_WARNING_USD=20/);
 
 const clients = [
   { id: "client-1", name: "Grand Hotel La Favorita", aliases: [] },

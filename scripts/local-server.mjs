@@ -18,6 +18,7 @@ const { handlePedShareAdmin, handlePublicPed } = await import("../lib/ped-share.
 const { default: handleClientsSyncClickUp } = await import("../api/clients-sync-clickup.js");
 const { default: handleClickUpTeam } = await import("../api/clickup-team.js");
 const { default: handleClickUpTasks } = await import("../api/clickup-tasks.js");
+const { default: handleAiAssistant } = await import("../api/ai-assistant.js");
 const { handleSiteMedia } = await import("../lib/site-media.js");
 const { default: handleMeApi } = await import("../api/me.js");
 const { default: handleUsersApi } = await import("../api/users.js");
@@ -119,8 +120,13 @@ createServer(async (request, response) => {
       return;
     }
 
-    if (url.pathname === "/api/clickup/tasks" || url.pathname === "/api/clickup/webhook") {
+    if (url.pathname === "/api/clickup/tasks" || url.pathname === "/api/clickup/webhook" || url.pathname === "/api/ai/task-assist") {
       await handleClickUpTasks(request, response);
+      return;
+    }
+
+    if (url.pathname === "/api/ai/assistant") {
+      await handleAiAssistant(request, response);
       return;
     }
 
