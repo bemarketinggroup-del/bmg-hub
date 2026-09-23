@@ -453,6 +453,11 @@ supabase/                     schema e migration
   comandi, valutazione e azioni di salvataggio sono sempre visibili. Soltanto il
   testo del copy ha uno scorrimento verticale interno, anche su smartphone; il
   popup e la pagina sottostante non scorrono.
+- L'incolla negli editor PED usa il testo del clipboard come fonte per spazi e
+  a capo, invece dei paragrafi HTML generati da ChatGPT. Righe consecutive e
+  righe vuote intenzionali conservano quindi la stessa distanza su Chrome e
+  Safari; i vecchi copy che contengono ancora tag `p` o `div` vengono mostrati
+  senza i margini verticali predefiniti del browser.
 
 ### PED condiviso con il cliente
 

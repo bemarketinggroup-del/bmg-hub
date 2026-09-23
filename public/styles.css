@@ -4356,9 +4356,12 @@ body.ped-picker-dialog-visible { overflow: hidden; overscroll-behavior: none; }
   color: var(--ink);
   padding: 14px;
   font-size: 13px;
-  line-height: 1.65;
+  line-height: 1.5;
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
+.ped-caption-rich-input p,
+.ped-caption-rich-input div { margin: 0; }
 .ped-caption-rich-input:empty::before { color: var(--subtle); content: attr(data-placeholder); pointer-events: none; }
 .ped-caption-editor small { justify-self: end; color: var(--muted); font-size: 10px; }
 .ped-caption-story-note { margin: 16px 0 0; border: 1px solid var(--line); border-radius: 7px; background: var(--surface-soft); color: var(--muted); padding: 14px; font-size: 12px; line-height: 1.5; }

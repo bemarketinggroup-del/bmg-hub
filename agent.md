@@ -59,6 +59,29 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-09-23 — Spaziatura fedele dei copy incollati da ChatGPT
+
+- Richiesta: conservare nell'editor PED gli stessi spazi e la stessa
+  formattazione delle righe quando un copy viene copiato da ChatGPT, evitando
+  distanze verticali maggiorate.
+- Modifiche: i due editor dei copy, programmati e in attesa, intercettano ora
+  l'incolla e usano il testo del clipboard come fonte degli a capo reali,
+  ignorando i paragrafi HTML e i relativi margini aggiunti da ChatGPT. Sono
+  preservate le righe vuote intenzionali e uniformati gli a capo di Windows,
+  Chrome e Safari. I vecchi copy con tag `p` o `div` vengono inoltre mostrati
+  senza margini browser e con interlinea coerente.
+- File: `public/app.js`, `public/styles.css`,
+  `scripts/test-ped-carousel.mjs`, `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run test:ped-carousel`, `npm run
+  test:mobile-navigation`, `npm run test:primeng-components`, `npm run check`,
+  `npm run build`, `git diff --check`; controllo visuale e funzionale desktop e
+  smartphone, Chrome e Safari.
+- Pubblicazione: commit corrente pubblicato su GitHub `main`; deploy Vercel di
+  produzione verificato su `https://bmg-hub.vercel.app`.
+- Note: nessun contenuto PED esistente viene riscritto automaticamente; la
+  normalizzazione si applica ai nuovi incolla e alla sola resa visuale dei copy
+  storici.
+
 ### 2026-09-23 — Avvisi appuntamenti direttamente nel Calendario
 
 - Richiesta: mostrare nel Calendario, e non nella chat AI, gli avvisi sui

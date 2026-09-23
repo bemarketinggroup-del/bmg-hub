@@ -6489,6 +6489,58 @@ function pedPlainCaptionHtml(value) {
   return escapeHtml(String(value || "")).replace(/\n/g, "<br>");
 }
 
+function pedClipboardText(value) {
+  return String(value || "")
+    .replace(/\r\n?/g, "\n")
+    .replace(/[\u2028\u2029]/g, "\n");
+}
+
+function insertPedClipboardText(editor, value) {
+  const text = pedClipboardText(value);
+  editor.focus();
+  try {
+    if (document.execCommand("insertHTML", false, pedPlainCaptionHtml(text))) {
+      editor.dispatchEvent(new Event("input", { bubbles: true }));
+      return;
+    }
+  } catch {}
+
+  const selection = window.getSelection();
+  if (!selection) return;
+  const range = selection.rangeCount ? selection.getRangeAt(0) : document.createRange();
+  if (!selection.rangeCount || (range.commonAncestorContainer !== editor && !editor.contains(range.commonAncestorContainer))) {
+    range.selectNodeContents(editor);
+    range.collapse(false);
+  }
+  range.deleteContents();
+  const fragment = document.createDocumentFragment();
+  let finalNode = null;
+  text.split("\n").forEach((line, index) => {
+    if (index) {
+      finalNode = document.createElement("br");
+      fragment.append(finalNode);
+    }
+    if (line) {
+      finalNode = document.createTextNode(line);
+      fragment.append(finalNode);
+    }
+  });
+  if (!finalNode) return;
+  range.insertNode(fragment);
+  range.setStartAfter(finalNode);
+  range.collapse(true);
+  selection.removeAllRanges();
+  selection.addRange(range);
+  editor.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
+function handlePedEditorPaste(event) {
+  const text = event.clipboardData?.getData("text/plain");
+  if (typeof text !== "string" || !text) return;
+  event.preventDefault();
+  insertPedClipboardText(event.currentTarget, text);
+}
+
 function pedCaptionDateLabel(value) {
   const [year, month, day] = String(value || "").split("-").map(Number);
   return year && month && day
@@ -13270,6 +13322,9 @@ document.getElementById("pedCaptionForm").addEventListener("submit", savePedCapt
 document.getElementById("pedCaptionText").addEventListener("input", updatePedCaptionCount);
 document.getElementById("pedStagingEditorForm").addEventListener("submit", savePedStagingCaption);
 document.getElementById("pedStagingText").addEventListener("input", updatePedStagingEditorCount);
+["pedCaptionText", "pedStagingText"].forEach((id) => {
+  document.getElementById(id).addEventListener("paste", handlePedEditorPaste);
+});
 document.getElementById("pedStagingCopyButton").addEventListener("click", copyPedStagingCaption);
 document.getElementById("pedStagingToolbar").addEventListener("click", (event) => {
   const button = event.target.closest("[data-ped-staging-command]");

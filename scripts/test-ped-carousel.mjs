@@ -397,6 +397,11 @@ assert.match(styleSource, /\.ped-agenda-format select \{[\s\S]*?min-height: 44px
 assert.match(styleSource, /\.ped-agenda-publishing select \{[\s\S]*?min-height: 44px;[\s\S]*?appearance: none;[\s\S]*?text-align-last: center;/, "lo stato PED deve apparire come un vero pulsante con testo centrato");
 assert.match(appSource, /data-ped-editor=/, "il clic su un contenuto del calendario deve aprire il pannello editoriale");
 assert.match(htmlSource, /contenteditable="true"/, "il copy deve usare una vera area rich text");
+assert.match(appSource, /function handlePedEditorPaste\(event\)[\s\S]*?clipboardData\?\.getData\("text\/plain"\)[\s\S]*?event\.preventDefault\(\)[\s\S]*?insertPedClipboardText\(event\.currentTarget, text\)/, "l'incolla del copy deve usare gli a capo reali del clipboard invece dei paragrafi HTML di ChatGPT");
+assert.match(appSource, /\["pedCaptionText", "pedStagingText"\]\.forEach[\s\S]*?addEventListener\("paste", handlePedEditorPaste\)/, "la normalizzazione dell'incolla deve valere per contenuti programmati e in attesa");
+assert.match(appSource, /function pedClipboardText\(value\)[\s\S]*?replace\(\/\\r\\n\?\/g, "\\n"\)[\s\S]*?replace\(\/\[\\u2028\\u2029\]\/g, "\\n"\)/, "gli a capo di Windows, Safari e Chrome devono essere uniformati senza comprimere le righe vuote");
+assert.match(styleSource, /\.ped-caption-rich-input p,\s*\.ped-caption-rich-input div \{ margin: 0; \}/, "i paragrafi rich text gia salvati non devono aggiungere margini verticali del browser");
+assert.match(styleSource, /\.ped-caption-rich-input \{[\s\S]*?line-height: 1\.5;[\s\S]*?white-space: pre-wrap;/, "l'editor deve usare la stessa interlinea compatta su desktop e smartphone");
 assert.match(htmlSource, /name="viewport" content="width=device-width, initial-scale=1"/, "il layout mobile deve usare la larghezza reale del dispositivo");
 assert.match(styleSource, /\[contenteditable="true"\] \{\s*font-size: 16px !important;/, "Safari iOS non deve ingrandire la pagina quando il copy riceve il focus");
 assert.match(styleSource, /\.ped-caption-modal,\s*\.ped-staging-editor-modal \{[\s\S]*?height: min\(920px, calc\(100dvh - 28px\)\);[\s\S]*?overflow: hidden;/, "gli editor copy devono restare fissi nel viewport senza scroll del popup");
