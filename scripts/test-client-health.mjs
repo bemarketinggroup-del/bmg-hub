@@ -1,0 +1,59 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import { buildClientHealthSummaries, pedCopyScore } from "../lib/client-health.js";
+
+const goodCopy = `Scopri una nuova esperienza da vivere insieme!\n\nUn racconto completo, curato e pensato per farti conoscere ogni dettaglio del nostro progetto.\n\nPrenota ora e scrivici per saperne di più. #uno #due #tre #quattro #cinque`;
+assert.ok(pedCopyScore(goodCopy) >= 85, "un copy completo deve ottenere una valutazione alta");
+assert.ok(pedCopyScore("Testo breve") < 40, "un copy incompleto deve essere segnalato");
+
+const clients = [
+  { id: "a", name: "Cliente Attivo", status: "attivo", drive_url: "https://drive.google.com/folder/a" },
+  { id: "b", name: "Cliente Critico", status: "onboarding", drive_url: "" },
+  { id: "c", name: "Cliente Archiviato", status: "archiviato", drive_url: "https://drive.google.com/folder/c" }
+];
+const pedItems = [
+  { id: "a1", client_id: "a", scheduled_date: "2026-09-25", content_type: "carousel", content_group_id: "group-a", caption: goodCopy, publishing_status: "meta" },
+  { id: "a2", client_id: "a", scheduled_date: "2026-09-25", content_type: "carousel", content_group_id: "group-a", caption: goodCopy, publishing_status: "meta" },
+  { id: "a3", client_id: "a", scheduled_date: "2026-09-27", content_type: "post", caption: goodCopy, publishing_status: "phone" },
+  { id: "a4", client_id: "a", scheduled_date: "2026-09-26", content_type: "story", caption: "", publishing_status: "ped_only" },
+  { id: "b1", client_id: "b", scheduled_date: "2026-09-24", content_type: "post", caption: "Testo breve", publishing_status: "ped_only" }
+];
+const summaries = buildClientHealthSummaries({
+  clients,
+  pedItems,
+  stagingItems: [{ id: "waiting", client_id: "b", content_type: "post", caption: "" }],
+  tasks: [
+    { clickup_task_id: "late", client_id: "b", status: "to do", due_date_ms: 1 },
+    { clickup_task_id: "done", client_id: "b", status: "complete", due_date_ms: 1 }
+  ],
+  today: "2026-09-23"
+});
+
+assert.equal(summaries.length, 2, "i clienti archiviati non devono comparire");
+const active = summaries.find((item) => item.client_id === "a");
+const critical = summaries.find((item) => item.client_id === "b");
+assert.equal(active.future_items, 2, "un carosello deve contare come un contenuto, non come singoli file");
+assert.equal(active.future_stories, 1, "le storie devono essere contate a parte");
+assert.equal(active.average_gap, 2, "la frequenza deve essere calcolata sulle date di pubblicazione");
+assert.equal(critical.staging_items, 1, "i contenuti in attesa devono essere mostrati");
+assert.equal(critical.overdue_tasks, 1, "le task completate non devono contare tra le scadute");
+assert.match(critical.recommendation, /Drive/, "il Drive mancante deve avere priorità nel consiglio");
+
+const [html, app, styles, localServer, endpoint] = await Promise.all([
+  readFile(new URL("../public/index.html", import.meta.url), "utf8"),
+  readFile(new URL("../public/app.js", import.meta.url), "utf8"),
+  readFile(new URL("../public/styles.css", import.meta.url), "utf8"),
+  readFile(new URL("./local-server.mjs", import.meta.url), "utf8"),
+  readFile(new URL("../api/ped-health.js", import.meta.url), "utf8")
+]);
+assert.match(html, /data-view="client-health"[\s\S]*Salute clienti/, "la pagina deve essere raggiungibile dalla navigazione");
+assert.match(html, /id="clientHealthGrid"[\s\S]*id="clientHealthPrevious"[\s\S]*id="clientHealthNext"/, "la pagina deve usare paginazione senza scroll");
+assert.match(app, /"client-health": "ped"/, "la pagina deve rispettare il permesso PED");
+assert.match(app, /classList\.toggle\("client-health-view-active"/, "la pagina deve attivare il layout fisso");
+assert.match(app, /clientHealthAppointment[\s\S]*clients_without_upcoming_appointment/, "la salute deve integrare gli appuntamenti del calendario");
+assert.match(styles, /body\.client-health-view-active \{ overflow: hidden; \}/, "la vista non deve scorrere");
+assert.match(styles, /\.client-health-grid[\s\S]*overflow: hidden/, "la griglia non deve introdurre scroll interno");
+assert.match(localServer, /\/api\/ped-health/, "l'endpoint deve funzionare anche nel server locale");
+assert.match(endpoint, /client-health\.js/, "Vercel deve esporre l'endpoint salute clienti");
+
+console.log("Client health tests passed");

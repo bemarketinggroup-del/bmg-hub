@@ -67,6 +67,7 @@ const VIEW_MODULES = Object.freeze({
   content: "site_backend",
   clients: "clients",
   ped: "ped",
+  "client-health": "ped",
   calendar: "calendar",
   chat: "chat",
   graphics: "graphics",
@@ -136,6 +137,16 @@ const AI_CONTEXT_PRESETS = Object.freeze({
       ["Priorità del cliente", "In base a task ed eventi, quali contenuti o attività del cliente selezionato hanno priorità? Indica anche il prossimo appuntamento o avvisami se manca nei prossimi 30 giorni."],
       ["Controlla le scadenze", "Controlla le prossime scadenze del cliente selezionato che possono influire sul PED."],
       ["Prossimi passi", "Suggerisci tre prossimi passi organizzativi per il cliente selezionato."]
+    ]
+  },
+  "client-health": {
+    label: "Salute clienti",
+    title: "Dove serve intervenire?",
+    placeholder: "Chiedi aiuto sulle priorità dei clienti…",
+    prompts: [
+      ["Clienti prioritari", "In base ai dati disponibili, indicami quali clienti richiedono attenzione per primi e perché."],
+      ["Piano della settimana", "Prepara un piano sintetico per migliorare PED, copy e appuntamenti dei clienti più critici."],
+      ["Cosa manca?", "Segnala copertura insufficiente, copy incompleti, task scadute e clienti senza prossimi appuntamenti."]
     ]
   },
   "graphics-reviews": {
@@ -391,6 +402,17 @@ let googleCalendarState = {
   appointmentOverviewLoaded: false,
   loading: false,
   loadedRange: ""
+};
+let clientHealthState = {
+  clients: [],
+  summary: { total: 0, attention: 0, healthy: 0, average_score: 0 },
+  loading: false,
+  loaded: false,
+  error: "",
+  query: "",
+  filter: "all",
+  page: 0,
+  pageSize: 0
 };
 let personalAreaState = {
   team: [],
@@ -1394,6 +1416,7 @@ function setView(view) {
     content: "Backend sito",
     clients: "Clienti",
     ped: "PED",
+    "client-health": "Salute clienti",
     calendar: "Calendario",
     team: "Task del team",
     smart: "Turni / Smart Working",
@@ -1406,6 +1429,7 @@ function setView(view) {
   rememberLastView(view);
   setMobileNavOpen(false);
   document.body.classList.toggle("chat-view-active", view === "chat");
+  document.body.classList.toggle("client-health-view-active", view === "client-health");
   document.querySelectorAll(".nav-item").forEach((item) => item.classList.toggle("is-active", item.dataset.view === view));
   const isGraphicsView = view === "graphics" || view === "graphics-reviews";
   document.getElementById("graphicsNavToggle")?.classList.toggle("is-active", isGraphicsView);
@@ -1418,6 +1442,10 @@ function setView(view) {
     auditPedView();
     loadPedCalendar();
   } else auditModuleView(isGraphicsView ? "graphics" : view);
+  if (view === "client-health") {
+    void loadClientHealth();
+    if (canAccessModule("calendar")) void loadGoogleCalendar();
+  }
   if (view === "calendar") loadGoogleCalendar();
   if (view === "content" && contentOnline === null) loadContentFromBackend();
   if (view === "users") void loadUsersFromBackend();
@@ -4013,6 +4041,164 @@ function renderPedHealth() {
       <article class="is-${copy.tone}"><span>Qualità copy</span><strong>${copy.label} · ${copyScore}/100</strong><div><i style="width:${copyScore}%"></i></div><small>${incompleteCopies ? `${incompleteCopies} ${incompleteCopies === 1 ? "copy da completare" : "copy da completare"}` : futureItems.length ? "Tutti i copy futuri sono completi" : "Aggiungi i primi copy"}.</small></article>
     </div>
     <small class="ped-health-note">Valutazione immediata senza consumo API: considera durata del piano, cadenza, apertura, struttura, chiusura e almeno 5 hashtag.</small>`;
+}
+
+function clientHealthPageSize() {
+  if (window.innerWidth <= 640) return 3;
+  if (window.innerWidth <= 980) return 6;
+  if (window.innerWidth >= 1600) return 12;
+  return 9;
+}
+
+async function loadClientHealth({ fresh = false } = {}) {
+  if (!canAccessModule("ped") || clientHealthState.loading) return;
+  if (clientHealthState.loaded && !fresh) {
+    renderClientHealth();
+    return;
+  }
+  clientHealthState.loading = true;
+  clientHealthState.error = "";
+  renderClientHealth();
+  try {
+    const response = await apiFetch(`/api/ped-health${fresh ? `?fresh=${Date.now()}` : ""}`);
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "Salute clienti non disponibile");
+    clientHealthState.clients = Array.isArray(data.clients) ? data.clients : [];
+    clientHealthState.summary = data.summary || { total: 0, attention: 0, healthy: 0, average_score: 0 };
+    clientHealthState.loaded = true;
+    clientHealthState.page = 0;
+  } catch (error) {
+    clientHealthState.error = error.message;
+  } finally {
+    clientHealthState.loading = false;
+    renderClientHealth();
+  }
+}
+
+function clientHealthAppointment(item) {
+  if (!canAccessModule("calendar")) return { state: "unavailable", label: "Calendario non abilitato" };
+  if (googleCalendarState.loading && !googleCalendarState.appointmentOverviewLoaded) return { state: "loading", label: "Controllo appuntamento…" };
+  const overview = googleCalendarState.appointmentOverview;
+  if (!overview) return { state: "unavailable", label: "Appuntamenti da aggiornare" };
+  const clientName = normalizeIdentity(item.client_name);
+  const upcoming = (overview.clients_with_upcoming_appointment || []).find((entry) => normalizeIdentity(entry.client) === clientName);
+  if (upcoming?.next_appointment) {
+    return {
+      state: Number(upcoming.days_until_next) <= 7 ? "near" : "scheduled",
+      label: calendarAppointmentDateLabel(upcoming.next_appointment, Number(upcoming.days_until_next)),
+      eventId: upcoming.next_appointment.id || "",
+      eventDate: upcoming.next_appointment.start_at || ""
+    };
+  }
+  const missing = (overview.clients_without_upcoming_appointment || []).some((name) => normalizeIdentity(name) === clientName);
+  return missing
+    ? { state: "missing", label: "Nessun appuntamento nei prossimi 30 giorni" }
+    : { state: "unavailable", label: "Appuntamento non riconosciuto" };
+}
+
+function clientHealthDateLabel(value) {
+  if (!value) return "—";
+  const date = new Date(`${value}T12:00:00`);
+  return Number.isNaN(date.valueOf()) ? "—" : new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "short" }).format(date);
+}
+
+function clientHealthFilteredClients() {
+  const query = normalizeIdentity(clientHealthState.query);
+  return clientHealthState.clients.filter((item) => {
+    if (query && !normalizeIdentity(item.client_name).includes(query)) return false;
+    if (clientHealthState.filter === "attention") return Number(item.overall_score) < 40;
+    if (clientHealthState.filter === "good") return Number(item.overall_score) >= 65 && Number(item.overall_score) < 85;
+    if (clientHealthState.filter === "excellent") return Number(item.overall_score) >= 85;
+    return true;
+  });
+}
+
+function clientHealthMetric(label, value, score) {
+  const quality = pedPlanQuality(Number(score) || 0);
+  return `<div class="client-health-metric is-${quality.tone}">
+    <span><small>${escapeHtml(label)}</small><strong>${escapeHtml(value)}</strong></span>
+    <i aria-hidden="true"><b style="width:${Math.max(0, Math.min(100, Number(score) || 0))}%"></b></i>
+  </div>`;
+}
+
+function clientHealthCardMarkup(item) {
+  const overall = item.overall || pedPlanQuality(Number(item.overall_score) || 0);
+  const appointment = clientHealthAppointment(item);
+  const cadence = item.average_gap === null ? "Da costruire" : `Ogni ${String(item.average_gap).replace(".", ",")} gg`;
+  const recommendation = appointment.state === "missing" && Number(item.overall_score) >= 40
+    ? "Pianifica un appuntamento nei prossimi 30 giorni."
+    : item.recommendation;
+  const appointmentCommand = appointment.eventId
+    ? ` data-client-health-appointment="${escapeHtml(appointment.eventId)}" data-client-health-appointment-date="${escapeHtml(appointment.eventDate)}"`
+    : "";
+  return `<article class="client-health-card is-${escapeHtml(overall.tone)}">
+    <header>
+      <div><span class="client-health-card-dot" aria-hidden="true"></span><strong>${escapeHtml(item.client_name)}</strong></div>
+      <span class="client-health-score">${escapeHtml(overall.label)} · ${Number(item.overall_score) || 0}/100</span>
+    </header>
+    <div class="client-health-metrics">
+      ${clientHealthMetric("Copertura", `${Number(item.coverage_days) || 0} giorni`, item.coverage_score)}
+      ${clientHealthMetric("Frequenza", cadence, item.cadence_score)}
+      ${clientHealthMetric("Copy", `${Number(item.copy_score) || 0}/100`, item.copy_score)}
+    </div>
+    <div class="client-health-facts">
+      <span><strong>${Number(item.future_items) || 0}</strong> futuri</span>
+      <span><strong>${Number(item.staging_items) || 0}</strong> in attesa</span>
+      <span class="${Number(item.overdue_tasks) ? "is-warning" : ""}">${item.tasks_available === false ? "Task non abilitate" : `<strong>${Number(item.active_tasks) || 0}</strong> task${Number(item.overdue_tasks) ? ` · ${Number(item.overdue_tasks)} scad.` : ""}`}</span>
+      <span><strong>${clientHealthDateLabel(item.last_scheduled_date)}</strong> ultima uscita</span>
+    </div>
+    <button class="client-health-appointment is-${escapeHtml(appointment.state)}" type="button"${appointmentCommand}${appointment.eventId ? "" : " disabled"}>
+      <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/></svg>
+      <span>${escapeHtml(appointment.label)}</span>
+    </button>
+    <div class="client-health-card-foot">
+      <p title="${escapeHtml(recommendation)}">${escapeHtml(recommendation)}</p>
+      <button class="text-button" data-client-health-open-ped="${escapeHtml(item.client_id)}" type="button">Apri PED</button>
+    </div>
+  </article>`;
+}
+
+function renderClientHealth() {
+  const grid = document.getElementById("clientHealthGrid");
+  const summary = document.getElementById("clientHealthSummary");
+  const pageLabel = document.getElementById("clientHealthPageLabel");
+  if (!grid || !summary || !pageLabel) return;
+  const totals = clientHealthState.summary || {};
+  summary.innerHTML = `
+    <span><small>Clienti</small><strong>${Number(totals.total) || 0}</strong></span>
+    <span class="is-warning"><small>Da intervenire</small><strong>${Number(totals.attention) || 0}</strong></span>
+    <span class="is-good"><small>In salute</small><strong>${Number(totals.healthy) || 0}</strong></span>
+    <span><small>Media</small><strong>${Number(totals.average_score) || 0}/100</strong></span>`;
+  const pageSize = clientHealthPageSize();
+  clientHealthState.pageSize = pageSize;
+  const clients = clientHealthFilteredClients();
+  const pages = Math.max(1, Math.ceil(clients.length / pageSize));
+  clientHealthState.page = Math.min(clientHealthState.page, pages - 1);
+  const visible = clients.slice(clientHealthState.page * pageSize, (clientHealthState.page + 1) * pageSize);
+  if (clientHealthState.loading && !clientHealthState.loaded) {
+    grid.innerHTML = `<div class="client-health-empty"><span class="drive-folder-spinner" aria-hidden="true"></span><strong>Analizzo tutti i clienti…</strong></div>`;
+  } else if (clientHealthState.error && !clientHealthState.loaded) {
+    grid.innerHTML = `<div class="client-health-empty is-error"><strong>${escapeHtml(clientHealthState.error)}</strong><button class="text-button" data-client-health-retry type="button">Riprova</button></div>`;
+  } else if (!visible.length) {
+    grid.innerHTML = `<div class="client-health-empty"><strong>Nessun cliente in questo filtro</strong><span>Modifica la ricerca o seleziona un altro stato.</span></div>`;
+  } else {
+    grid.innerHTML = visible.map(clientHealthCardMarkup).join("");
+  }
+  pageLabel.textContent = `${clients.length} ${clients.length === 1 ? "cliente" : "clienti"} · Pagina ${clientHealthState.page + 1} di ${pages}`;
+  document.getElementById("clientHealthPrevious").disabled = clientHealthState.page <= 0;
+  document.getElementById("clientHealthNext").disabled = clientHealthState.page >= pages - 1;
+  document.getElementById("clientHealthRefresh").disabled = clientHealthState.loading;
+}
+
+function openClientHealthPed(clientId) {
+  if (!state.clients.some((client) => String(client.id) === String(clientId))) return;
+  selectedPedClientId = String(clientId);
+  selectedPedMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+  state.pedItems = [];
+  state.pedAgendaItems = [];
+  state.pedDayNotes = [];
+  state.pedStagingItems = [];
+  setView("ped");
 }
 
 function pedFutureItems() {
@@ -10647,6 +10833,7 @@ async function loadGoogleCalendar(options = {}) {
   } finally {
     googleCalendarState.loading = false;
     renderGoogleCalendar();
+    renderClientHealth();
   }
 }
 
@@ -12443,6 +12630,7 @@ function renderAll() {
   renderContent();
   renderClients();
   renderPed();
+  renderClientHealth();
   renderGoogleCalendar();
   renderPersonalArea();
   renderAiAssistant();
@@ -12462,6 +12650,34 @@ document.getElementById("navList").addEventListener("click", (event) => {
   }
   const button = event.target.closest("[data-view]");
   if (button) setView(button.dataset.view);
+});
+document.getElementById("clientHealthSearch")?.addEventListener("input", (event) => {
+  clientHealthState.query = event.currentTarget.value || "";
+  clientHealthState.page = 0;
+  renderClientHealth();
+});
+document.getElementById("clientHealthFilter")?.addEventListener("change", (event) => {
+  clientHealthState.filter = event.currentTarget.value || "all";
+  clientHealthState.page = 0;
+  renderClientHealth();
+});
+document.getElementById("clientHealthRefresh")?.addEventListener("click", () => {
+  void loadClientHealth({ fresh: true });
+  if (canAccessModule("calendar")) void loadGoogleCalendar({ fresh: true });
+});
+document.getElementById("clientHealthPrevious")?.addEventListener("click", () => {
+  clientHealthState.page = Math.max(0, clientHealthState.page - 1);
+  renderClientHealth();
+});
+document.getElementById("clientHealthNext")?.addEventListener("click", () => {
+  clientHealthState.page += 1;
+  renderClientHealth();
+});
+window.addEventListener("resize", () => {
+  const nextSize = clientHealthPageSize();
+  if (nextSize === clientHealthState.pageSize) return;
+  clientHealthState.page = 0;
+  renderClientHealth();
 });
 document.getElementById("aiAssistantForm")?.addEventListener("submit", (event) => {
   event.preventDefault();
@@ -12505,6 +12721,15 @@ mobileNavigationMedia.addEventListener?.("change", syncMobileNavigation);
 syncMobileNavigation();
 
 document.body.addEventListener("click", (event) => {
+  const clientHealthPed = event.target.closest("[data-client-health-open-ped]");
+  const clientHealthAppointmentButton = event.target.closest("[data-client-health-appointment]");
+  const clientHealthRetry = event.target.closest("[data-client-health-retry]");
+  if (clientHealthPed) return openClientHealthPed(clientHealthPed.dataset.clientHealthOpenPed);
+  if (clientHealthAppointmentButton) return openCalendarNotification(
+    clientHealthAppointmentButton.dataset.clientHealthAppointment,
+    clientHealthAppointmentButton.dataset.clientHealthAppointmentDate
+  );
+  if (clientHealthRetry) return loadClientHealth({ fresh: true });
   const pedCopyAiReview = event.target.closest("[data-ped-copy-ai-review]");
   if (pedCopyAiReview) {
     void requestPedCopyAdvice(pedCopyAiReview);

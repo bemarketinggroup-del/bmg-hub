@@ -59,6 +59,36 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-09-23 — Pagina unica Salute clienti
+
+- Richiesta: creare una pagina dedicata alla salute di tutti i clienti con gli
+  indicatori già presenti nel singolo PED, mantenendo i dati anche nella loro
+  posizione attuale, senza scorrimento della pagina e con qualche indicatore
+  operativo aggiuntivo.
+- Modifiche: aggiunta alla navigazione PED la vista fissa `Salute clienti`, con
+  griglia paginata e responsive, ricerca, filtri, riepilogo complessivo e schede
+  ordinate per criticità. Ogni cliente riporta punteggio globale, copertura,
+  frequenza, qualità copy, contenuti futuri/in attesa, ultima uscita, task
+  attive/scadute secondo permessi, stato appuntamento nei prossimi 30 giorni e
+  un consiglio operativo senza consumo API. `Apri PED` seleziona direttamente
+  il cliente; gli appuntamenti riconosciuti aprono il dettaglio interno del
+  calendario. Il pannello salute già presente nel singolo PED è rimasto
+  invariato.
+- File: `api/ped-health.js`, `lib/client-health.js`, `public/index.html`,
+  `public/app.js`, `public/styles.css`, `scripts/local-server.mjs`,
+  `scripts/test-client-health.mjs`, `package.json`,
+  `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run check`, `npm run test:client-health`,
+  `npm run test:permissions`, `npm run test:google-calendar`,
+  `npm run test:ped-carousel`, `npm run test:mobile-navigation`, `npm run
+  test:primeng-components`, `npm run test:client-management`, `npm run
+  test:connected-services`, `npm run build`, `git diff --check`; controllo
+  visivo desktop e smartphone da completare sulla build di produzione.
+- Pubblicazione: da completare nello stesso intervento con commit, push GitHub,
+  deploy Vercel e verifica dell'alias canonico.
+- Note: nessuna migrazione database; i dati Task e Calendario sono visibili
+  soltanto a chi possiede i rispettivi permessi.
+
 ### 2026-09-23 — Viewer media trasparente e apertura Drive PED ripristinata
 
 - Richiesta: eliminare il grande riquadro nero quando si aprono foto o video,

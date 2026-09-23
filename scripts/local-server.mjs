@@ -14,6 +14,7 @@ const { handleTeamChat } = await import("../lib/team-chat.js");
 const { default: handleClients } = await import("../api/clients.js");
 const { default: handleClientDrive } = await import("../lib/client-drive-api.js");
 const { default: handlePed } = await import("../lib/ped.js");
+const { default: handleClientHealth } = await import("../lib/client-health.js");
 const { handlePedShareAdmin, handlePublicPed } = await import("../lib/ped-share.js");
 const { default: handleClientsSyncClickUp } = await import("../api/clients-sync-clickup.js");
 const { default: handleClickUpTeam } = await import("../api/clickup-team.js");
@@ -97,6 +98,11 @@ createServer(async (request, response) => {
 
     if (url.pathname === "/api/ped") {
       await handlePed(request, response);
+      return;
+    }
+
+    if (url.pathname === "/api/ped-health") {
+      await handleClientHealth(request, response);
       return;
     }
 

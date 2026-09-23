@@ -89,6 +89,10 @@
           <span class="icon"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></svg></span>
           <span>PED</span>
         </button>
+        <button class="p-ripple nav-item" data-view="client-health" data-module="ped" type="button">
+          <span class="icon"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8Z"/><path d="M7.5 12h2l1.2-2.4 2.2 5 1.2-2.6h2.4"/></svg></span>
+          <span>Salute clienti</span>
+        </button>
         <div class="sidebar-nav-branch" id="graphicsNavBranch" data-module="graphics">
           <button class="p-ripple nav-item nav-item-parent" id="graphicsNavToggle" data-module="graphics" type="button" aria-expanded="false" aria-controls="graphicsSubnav">
             <span class="icon"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h16"/><path d="m14 4 6 6L9 21H3v-6Z"/><path d="m12 6 6 6"/><path d="M15 3h6v6"/></svg></span>
@@ -501,6 +505,43 @@
             </div>
             <div class="ped-agenda-list" id="pedAgendaList" aria-live="polite"></div>
           </section>
+        </section>
+      </section>
+
+      <section class="view client-health-view" id="clientHealthView" data-view-panel="client-health">
+        <section class="panel client-health-workspace" aria-labelledby="clientHealthTitle">
+          <header class="client-health-head">
+            <div>
+              <span class="client-health-eyebrow">Controllo automatico</span>
+              <h2 id="clientHealthTitle">Salute clienti</h2>
+              <p>PED, copy, attività e appuntamenti in un unico controllo.</p>
+            </div>
+            <button class="ghost-button" id="clientHealthRefresh" type="button">
+              <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8.1 8.1 0 0 0-15.5-2M4 4v5h5"/><path d="M4 13a8.1 8.1 0 0 0 15.5 2M20 20v-5h-5"/></svg>
+              Aggiorna
+            </button>
+          </header>
+          <div class="client-health-summary" id="clientHealthSummary" aria-label="Riepilogo salute clienti"></div>
+          <div class="client-health-toolbar">
+            <label class="search client-health-search">
+              <span><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></span>
+              <input id="clientHealthSearch" type="search" placeholder="Cerca cliente" autocomplete="off">
+            </label>
+            <select id="clientHealthFilter" aria-label="Filtra per stato di salute">
+              <option value="all">Tutti i clienti</option>
+              <option value="attention">Da intervenire</option>
+              <option value="good">Buoni</option>
+              <option value="excellent">Ottimi</option>
+            </select>
+          </div>
+          <div class="client-health-grid" id="clientHealthGrid" aria-live="polite"></div>
+          <footer class="client-health-pagination">
+            <span id="clientHealthPageLabel">Pagina 1 di 1</span>
+            <div>
+              <button class="icon-button" id="clientHealthPrevious" type="button" aria-label="Pagina precedente"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
+              <button class="icon-button" id="clientHealthNext" type="button" aria-label="Pagina successiva"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>
+            </div>
+          </footer>
         </section>
       </section>
 

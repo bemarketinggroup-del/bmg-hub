@@ -486,6 +486,16 @@ supabase/                     schema e migration
   Solo il comando esplicito `Consiglio AI sul copy` effettua una chiamata API e
   restituisce un riscontro semantico sintetico; la digitazione e le barre non
   consumano budget.
+- La navigazione PED include anche la pagina dedicata `Salute clienti`, che
+  riusa gli stessi criteri di copertura, frequenza e qualità copy per tutti i
+  clienti attivi senza rimuovere il riepilogo dai singoli PED. La pagina resta
+  fissa nel viewport e non genera scroll: mostra una griglia compatta paginata,
+  adattata a desktop, tablet e smartphone, con ricerca e filtri per priorità.
+  Ogni scheda aggiunge contenuti futuri, contenuti in attesa, ultima uscita,
+  task attive/scadute (solo a chi ha il permesso Task), collegamento Drive,
+  prossimo appuntamento nei 30 giorni (solo a chi ha il permesso Calendario) e
+  un consiglio operativo deterministico. Tutti questi controlli sono calcolati
+  senza consumo OpenAI; `Apri PED` porta direttamente al cliente selezionato.
 - Gli editor del copy, durante la creazione, per i contenuti programmati e per
   quelli in attesa, restano interamente fissi nel viewport: testata, contenuto
   selezionato, stato, comandi, valutazione e azioni di salvataggio sono sempre
@@ -849,6 +859,7 @@ npm run test:graphic-reviews
 npm run test:session-persistence
 npm run test:primeng-components
 npm run test:maintenance-notice
+npm run test:client-health
 ```
 
 Alcuni test interagiscono con servizi reali: leggerli prima di eseguirli e non
