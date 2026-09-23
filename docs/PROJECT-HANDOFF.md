@@ -425,6 +425,17 @@ supabase/                     schema e migration
   ricarica quel preciso frame dal video anche dopo refresh, senza creare copie
   o immagini aggiuntive su Google Drive. Il comando resta interamente visibile
   anche nella testata smartphone.
+- Il PED mostra un controllo qualità automatico e senza consumo API. Per ogni
+  copy assegna un punteggio e una barra `Scarso / Decente / Buono / Ottimo`
+  controllando sviluppo del messaggio, apertura, struttura, chiusura/call to
+  action e almeno cinque hashtag; la valutazione si aggiorna mentre si scrive
+  sia sui contenuti programmati sia su quelli in attesa. Il riepilogo del
+  cliente valuta inoltre la copertura futura rispetto a 30 giorni, la cadenza
+  rispetto all'obiettivo di un contenuto ogni due giorni e la qualità media dei
+  copy, indicando quanti giorni mancano all'ultima uscita pianificata.
+  Solo il comando esplicito `Consiglio AI sul copy` effettua una chiamata API e
+  restituisce un riscontro semantico sintetico; la digitazione e le barre non
+  consumano budget.
 
 ### PED condiviso con il cliente
 
@@ -519,9 +530,14 @@ supabase/                     schema e migration
 
 ### Assistente AI operativo
 
-- La voce `Assistente AI` è disponibile nel gruppo Workspace a tutti gli utenti
-  autenticati. Può ordinare priorità, individuare scadenze e sovrapposizioni e
-  suggerire prossimi passi usando dati aggiornati dell'Hub.
+- L'AI non ha una pagina dedicata nella sidebar. È integrata nella topbar come
+  aiuto contestuale e si apre in un pannello sovrapposto senza abbandonare il
+  modulo corrente. Titolo, richieste rapide e contesto cambiano tra Home, area
+  personale, task, calendario, clienti, PED e revisioni grafiche; cliente o
+  membro selezionato vengono indicati al backend quando pertinenti.
+- Può ordinare priorità, individuare scadenze e sovrapposizioni e suggerire
+  prossimi passi usando dati aggiornati dell'Hub. Le funzioni deterministiche,
+  come la valutazione dei copy e della copertura PED, non consumano API.
 - La prima versione è in sola lettura: non crea, modifica, pubblica o elimina
   dati e le scorciatoie proposte aprono soltanto la sezione pertinente.
 - Lo staff invia al modello soltanto task assegnate e appuntamenti ai quali è

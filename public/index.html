@@ -59,10 +59,6 @@
           <span class="icon"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></span>
           <span>La mia area</span>
         </button>
-        <button class="p-ripple nav-item" data-view="assistant" type="button">
-          <span class="icon"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a4 4 0 0 0-4 4v1a4 4 0 0 0-3 3.87V15a4 4 0 0 0 4 4h1l2 2 2-2h1a4 4 0 0 0 4-4v-3.13A4 4 0 0 0 16 8V7a4 4 0 0 0-4-4Z"/><path d="M9 12h.01M15 12h.01M9.5 15.5h5"/></svg></span>
-          <span>Assistente AI</span>
-        </button>
         <button class="p-ripple nav-item" data-view="chat" data-module="chat" type="button">
           <span class="icon"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/><path d="M8 9h8M8 13h5"/></svg></span>
           <span>Chat</span>
@@ -204,7 +200,45 @@
           <input id="globalSearchInput" type="search" placeholder="Cerca clienti, task, eventi…" autocomplete="off" aria-label="Ricerca globale">
           <div class="global-search-results is-hidden" id="globalSearchResults" role="listbox"></div>
         </div>
+        <button class="ai-context-toggle" id="aiAssistantToggle" type="button" aria-controls="aiAssistantPanel" aria-expanded="false">
+          <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a4 4 0 0 0-4 4v1a4 4 0 0 0-3 3.87V15a4 4 0 0 0 4 4h1l2 2 2-2h1a4 4 0 0 0 4-4v-3.13A4 4 0 0 0 16 8V7a4 4 0 0 0-4-4Z"/><path d="M9 12h.01M15 12h.01M9.5 15.5h5"/></svg>
+          <span><strong>AI</strong><small>Aiutami</small></span>
+        </button>
       </header>
+
+      <div class="ai-context-backdrop" id="aiAssistantBackdrop" aria-hidden="true"></div>
+      <aside class="ai-context-panel" id="aiAssistantPanel" role="dialog" aria-modal="true" aria-labelledby="aiAssistantTitle" aria-hidden="true" inert>
+        <header class="ai-context-head">
+          <div class="ai-context-brand" aria-hidden="true">
+            <svg class="lc" viewBox="0 0 24 24"><path d="M12 3a4 4 0 0 0-4 4v1a4 4 0 0 0-3 3.87V15a4 4 0 0 0 4 4h1l2 2 2-2h1a4 4 0 0 0 4-4v-3.13A4 4 0 0 0 16 8V7a4 4 0 0 0-4-4Z"/><path d="M9 12h.01M15 12h.01M9.5 15.5h5"/></svg>
+          </div>
+          <div>
+            <span id="aiAssistantContextLabel">Aiuto contestuale</span>
+            <h2 id="aiAssistantTitle">Come posso aiutarti qui?</h2>
+          </div>
+          <button class="icon-button" id="aiAssistantClose" type="button" aria-label="Chiudi assistente AI">
+            <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+          </button>
+        </header>
+
+        <div class="ai-assistant-prompts" id="aiAssistantPrompts" aria-label="Suggerimenti per questa schermata"></div>
+        <div class="ai-assistant-messages" id="aiAssistantMessages" aria-live="polite"></div>
+        <form class="ai-assistant-composer" id="aiAssistantForm">
+          <label class="sr-only" for="aiAssistantInput">Scrivi una richiesta</label>
+          <textarea id="aiAssistantInput" rows="2" maxlength="1600" placeholder="Chiedi aiuto sulla schermata che stai usando…"></textarea>
+          <div class="ai-assistant-composer-actions">
+            <button class="text-button" id="aiAssistantClear" type="button">Nuova conversazione</button>
+            <button class="primary-button" id="aiAssistantSend" type="submit">Chiedi all’AI</button>
+          </div>
+        </form>
+        <div class="ai-context-footer">
+          <p class="ai-assistant-feedback" id="aiAssistantFeedback" role="status"></p>
+          <div class="ai-assistant-budget" id="aiAssistantBudget" aria-live="polite">
+            <span>Budget mensile</span><strong>Controllo…</strong>
+          </div>
+          <small>L’AI suggerisce: le modifiche restano sempre sotto il tuo controllo.</small>
+        </div>
+      </aside>
 
       <aside class="maintenance-banner is-hidden" id="maintenanceBanner" role="status" aria-live="polite">
         <span class="maintenance-banner-icon" aria-hidden="true"><svg class="lc" viewBox="0 0 24 24"><path d="M10.3 2.9 1.8 17a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 2.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg></span>
@@ -407,6 +441,8 @@
             <nav class="ped-client-tabs" id="pedClientTabs" aria-label="Calendari PED per cliente"></nav>
           </div>
 
+          <section class="ped-health-panel" id="pedHealthPanel" aria-label="Valutazione automatica del piano editoriale" aria-live="polite"></section>
+
           <div class="ped-calendar-toolbar">
             <button class="icon-button" id="pedPreviousMonth" type="button" title="Mese precedente" aria-label="Mese precedente"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
             <h3 id="pedMonthLabel">Mese</h3>
@@ -561,47 +597,6 @@
             <div class="personal-list" id="personalEventList"></div>
           </section>
         </div>
-      </section>
-
-      <section class="view" id="assistantView" data-view-panel="assistant">
-        <section class="ai-assistant-shell">
-          <header class="ai-assistant-hero">
-            <div class="ai-assistant-hero-icon" aria-hidden="true">
-              <svg class="lc" viewBox="0 0 24 24"><path d="M12 3a4 4 0 0 0-4 4v1a4 4 0 0 0-3 3.87V15a4 4 0 0 0 4 4h1l2 2 2-2h1a4 4 0 0 0 4-4v-3.13A4 4 0 0 0 16 8V7a4 4 0 0 0-4-4Z"/><path d="M9 12h.01M15 12h.01M9.5 15.5h5"/></svg>
-            </div>
-            <div>
-              <p class="eyebrow">Assistente operativo BMG</p>
-              <h2>Chiedi priorità, controlli e prossimi passi</h2>
-              <p>Legge soltanto i dati dell’Hub che puoi vedere. Non modifica né pubblica nulla senza una funzione dedicata.</p>
-            </div>
-            <div class="ai-assistant-budget" id="aiAssistantBudget" aria-live="polite">
-              <span>Budget mensile</span>
-              <strong>Controllo in corso…</strong>
-              <div><i style="width:0%"></i></div>
-              <small>Limite protetto dal server</small>
-            </div>
-          </header>
-
-          <div class="ai-assistant-prompts" aria-label="Richieste rapide">
-            <button type="button" data-ai-assistant-prompt="Cosa devo fare oggi? Ordina le attività per urgenza e dimmi da dove iniziare.">Cosa devo fare oggi?</button>
-            <button type="button" data-ai-assistant-prompt="Quali attività richiedono attenzione adesso? Evidenzia ritardi, scadenze vicine e dati mancanti.">Cosa richiede attenzione?</button>
-            <button type="button" data-ai-assistant-prompt="Aiutami a organizzare la settimana in base alle task e agli eventi presenti nell'Hub.">Organizza la settimana</button>
-            <button type="button" data-ai-assistant-prompt="Controlla le mie attività e suggerisci tre prossimi passi concreti.">Suggerisci i prossimi passi</button>
-          </div>
-
-          <section class="panel ai-assistant-conversation" aria-label="Conversazione con l'assistente">
-            <div class="ai-assistant-messages" id="aiAssistantMessages" aria-live="polite"></div>
-            <form class="ai-assistant-composer" id="aiAssistantForm">
-              <label class="sr-only" for="aiAssistantInput">Scrivi una richiesta</label>
-              <textarea id="aiAssistantInput" rows="2" maxlength="1600" placeholder="Es. Quali scadenze devo gestire prima di venerdì?"></textarea>
-              <div class="ai-assistant-composer-actions">
-                <button class="text-button" id="aiAssistantClear" type="button">Nuova conversazione</button>
-                <button class="primary-button" id="aiAssistantSend" type="submit">Chiedi all’AI</button>
-              </div>
-            </form>
-            <p class="ai-assistant-feedback" id="aiAssistantFeedback" role="status"></p>
-          </section>
-        </section>
       </section>
 
       <section class="view" id="chatView" data-view-panel="chat">
@@ -1542,6 +1537,7 @@
         </div>
         <small><span id="pedCaptionCount">0</span>/10000 caratteri</small>
       </div>
+      <section class="ped-copy-evaluation" id="pedCaptionEvaluation" aria-label="Valutazione del copy" aria-live="polite"></section>
       <p class="ped-caption-story-note" id="pedCaptionStoryNote" hidden>Le stories non prevedono copy. Puoi comunque controllare il contenuto e aggiornare lo stato di programmazione.</p>
       <p class="form-message" id="pedCaptionMessage" role="status"></p>
       <div class="modal-actions ped-caption-actions">
@@ -1593,6 +1589,7 @@
         </div>
         <small><span id="pedStagingEditorCount">0</span>/10000 caratteri</small>
       </div>
+      <section class="ped-copy-evaluation" id="pedStagingEvaluation" aria-label="Valutazione del copy" aria-live="polite"></section>
       <p class="ped-caption-story-note" id="pedStagingEditorStoryNote" hidden>Le stories non prevedono copy. Puoi comunque controllare il contenuto e aggiornare lo stato di programmazione.</p>
       <p class="form-message" id="pedStagingEditorMessage" role="status"></p>
       <div class="modal-actions ped-caption-actions">

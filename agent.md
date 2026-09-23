@@ -59,6 +59,36 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-09-23 — AI contestuale e controllo qualità del PED
+
+- Richiesta: eliminare la pagina dedicata all'AI e integrare l'aiuto nei flussi
+  dell'Hub; nel PED valutare la completezza dei copy, la presenza di almeno
+  cinque hashtag e di una chiusura convincente, oltre a controllare quantità,
+  cadenza e durata della programmazione.
+- Modifiche: rimossa la voce e la vista autonoma `Assistente AI`; l'assistente
+  ora si apre dalla topbar in un drawer contestuale che conserva la schermata
+  corrente e propone domande diverse per Home, area personale, task,
+  calendario, clienti, PED e revisioni. Il backend riceve soltanto il contesto
+  operativo selezionato insieme ai dati già filtrati per permesso. Nel PED è
+  stato aggiunto un controllo locale senza costo API: ogni copy riceve una
+  barra `Scarso / Decente / Buono / Ottimo` basata su sviluppo, apertura,
+  struttura, call to action e cinque hashtag; il riepilogo cliente misura anche
+  copertura fino a 30 giorni, frequenza rispetto a un'uscita ogni due giorni e
+  qualità media dei copy. Un comando facoltativo `Consiglio AI sul copy`
+  richiede una lettura semantica soltanto quando l'utente lo preme, evitando
+  chiamate a ogni modifica del testo.
+- File: `public/index.html`, `public/app.js`, `public/styles.css`,
+  `lib/ai-assistant.js`, `scripts/test-ai-task-assist.mjs`,
+  `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `node --check public/app.js`, `node --check
+  lib/ai-assistant.js`, `npm run test:ai-task-assist`, `npm run check`, `npm run
+  build`, `git diff --check`; controllo visivo desktop e smartphone del PED e
+  del drawer contestuale.
+- Pubblicazione: commit corrente pubblicato su GitHub `main`; deploy Vercel di
+  produzione verificato su `https://bmg-hub.vercel.app`.
+- Note: le valutazioni PED sono deterministiche e immediate, quindi non
+  incidono sul budget OpenAI mensile.
+
 ### 2026-09-23 — Hotfix pagina bianca dopo il rilascio AI
 
 - Richiesta: ripristinare l'apertura dell'Hub, che in Safari mostrava una pagina

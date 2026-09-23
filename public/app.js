@@ -77,6 +77,78 @@ const VIEW_MODULES = Object.freeze({
   users: "users",
   settings: "settings"
 });
+const AI_CONTEXT_PRESETS = Object.freeze({
+  dashboard: {
+    label: "Home",
+    title: "Da dove conviene iniziare?",
+    placeholder: "Chiedi priorità, urgenze o prossimi passi…",
+    prompts: [
+      ["Cosa faccio oggi?", "Ordina le mie attività di oggi per urgenza e dimmi da dove iniziare."],
+      ["Cosa richiede attenzione?", "Evidenzia ritardi, scadenze vicine e informazioni mancanti."],
+      ["Organizza la settimana", "Aiutami a organizzare la settimana usando task ed eventi dell’Hub."]
+    ]
+  },
+  personal: {
+    label: "La mia area",
+    title: "Organizziamo il tuo lavoro",
+    placeholder: "Chiedi aiuto sulle tue task e sui tuoi eventi…",
+    prompts: [
+      ["Ordina le mie task", "Ordina le mie task attive per urgenza, impatto e scadenza."],
+      ["Pianifica la giornata", "Prepara un piano concreto per la mia giornata in base a task ed eventi."],
+      ["Trova i blocchi", "Quali attività rischiano di bloccarsi e cosa dovrei chiarire?"]
+    ]
+  },
+  team: {
+    label: "Task del team",
+    title: "Controlliamo carico e priorità",
+    placeholder: "Chiedi aiuto sulle task visibili…",
+    prompts: [
+      ["Trova le urgenze", "Analizza le task e mostrami le urgenze reali con il prossimo passo consigliato."],
+      ["Task da chiarire", "Individua task senza cliente, scadenza o indicazioni sufficienti."],
+      ["Bilancia il lavoro", "Controlla il carico del team e segnala possibili criticità."]
+    ]
+  },
+  calendar: {
+    label: "Calendario",
+    title: "Prepariamo agenda e appuntamenti",
+    placeholder: "Chiedi aiuto su scadenze e appuntamenti…",
+    prompts: [
+      ["Controlla sovrapposizioni", "Controlla i prossimi eventi e segnala sovrapposizioni o giornate troppo piene."],
+      ["Prepara la settimana", "Riassumi gli appuntamenti della settimana e suggerisci come prepararmi."],
+      ["Collega task ed eventi", "Dimmi quali task dovrei completare prima dei prossimi appuntamenti."]
+    ]
+  },
+  clients: {
+    label: "Clienti",
+    title: "Aiuto sul cliente aperto",
+    placeholder: "Chiedi cosa è urgente per questo cliente…",
+    prompts: [
+      ["Attività del cliente", "Riassumi le attività attive del cliente che sto visualizzando e ordinale per urgenza."],
+      ["Cosa manca?", "Controlla se per questo cliente ci sono task senza scadenza o informazioni da chiarire."],
+      ["Prossimi passi", "Suggerisci i prossimi tre passi operativi per il cliente aperto."]
+    ]
+  },
+  ped: {
+    label: "PED",
+    title: "Supporto alla pianificazione",
+    placeholder: "Chiedi aiuto sulle attività del cliente selezionato…",
+    prompts: [
+      ["Priorità del cliente", "In base a task ed eventi, quali contenuti o attività del cliente selezionato hanno priorità?"],
+      ["Controlla le scadenze", "Controlla le prossime scadenze del cliente selezionato che possono influire sul PED."],
+      ["Prossimi passi", "Suggerisci tre prossimi passi organizzativi per il cliente selezionato."]
+    ]
+  },
+  "graphics-reviews": {
+    label: "Revisioni grafiche",
+    title: "Mettiamo in ordine le revisioni",
+    placeholder: "Chiedi come organizzare le revisioni…",
+    prompts: [
+      ["Ordina le priorità", "Suggerisci come ordinare le revisioni in base a task, clienti e scadenze."],
+      ["Cosa è urgente?", "Quali clienti o consegne grafiche richiedono attenzione per prime?"],
+      ["Piano di lavoro", "Prepara un piano sintetico per gestire le revisioni aperte."]
+    ]
+  }
+});
 const seed = {
   content: [
     {
@@ -1165,6 +1237,7 @@ async function logout() {
   stopServiceHealthUpdates();
   stopMaintenanceNoticeUpdates();
   stopSmartWorkingUpdates();
+  setAiAssistantOpen(false);
   closeGraphicReviewToast({ clearQueue: true });
   const maintenanceDialog = document.getElementById("maintenanceNoticeDialog");
   if (maintenanceDialog?.open) maintenanceDialog.close();
@@ -1279,7 +1352,7 @@ function consumeRecoverySessionFromUrl() {
 function loadLastView() {
   try {
     const storedView = localStorage.getItem(LAST_VIEW_KEY) || "dashboard";
-    return storedView === "settings" ? "dashboard" : storedView;
+    return ["settings", "assistant"].includes(storedView) ? "dashboard" : storedView;
   } catch {
     return "dashboard";
   }
@@ -1309,7 +1382,6 @@ function setView(view) {
   const titles = {
     dashboard: "Home",
     personal: "La mia area",
-    assistant: "Assistente AI",
     chat: "Chat",
     graphics: "Archivio grafiche",
     "graphics-reviews": "Revisioni grafiche",
@@ -1334,6 +1406,7 @@ function setView(view) {
   setGraphicsNavExpanded(isGraphicsView);
   document.querySelectorAll("[data-view-panel]").forEach((panel) => panel.classList.toggle("is-active", panel.dataset.viewPanel === view));
   document.getElementById("viewTitle").textContent = titles[view];
+  renderAiAssistantContext();
   if (view === "ped") {
     ensurePedClientSelection();
     auditPedView();
@@ -1351,7 +1424,6 @@ function setView(view) {
   }
   if (isGraphicsView) loadGraphicReviews();
   if (view === "personal") loadPersonalArea();
-  if (view === "assistant") loadAiAssistantStatus();
   if (view === "chat") {
     loadTeamChat();
     startTeamChatUpdates();
@@ -3761,6 +3833,7 @@ function ensurePedClientSelection() {
 function renderPed() {
   ensurePedClientSelection();
   renderPedClientTabs();
+  renderPedHealth();
   renderPedCalendar();
   renderPedStaging();
   renderPedInstagramPreviewAction();
@@ -3789,6 +3862,149 @@ function pedAllItems() {
     itemsById.set(id, item);
   }
   return [...itemsById.values()];
+}
+
+function pedCopyEvaluation(value) {
+  const text = String(value || "").replace(/\s+/g, " ").trim();
+  const words = text ? text.split(/\s+/).filter(Boolean) : [];
+  const hashtags = [...text.matchAll(/(^|\s)#[\p{L}\p{N}_]+/gu)].length;
+  const sentences = text.split(/[.!?]+(?:\s|$)/).map((part) => part.trim()).filter((part) => part.length > 12).length;
+  const lines = String(value || "").split(/\n+/).map((part) => part.trim()).filter(Boolean);
+  const ending = text.slice(-320);
+  const hasCallToAction = /\b(scopri|prenota|scriv(?:i|ici)|contatt(?:a|aci)|visita|clicca|salva|condividi|commenta|seguici|link in bio|ti aspettiamo|chiamaci|inviaci|faccelo sapere|dimmi|dicci|prova|acquista|ordina)\b/i.test(ending);
+  const opening = lines[0] || text.slice(0, 180);
+  const hasHook = opening.length >= 20 && !opening.startsWith("#") && (/[!?]/.test(opening) || words.length >= 8);
+  const hasStructure = sentences >= 2 || lines.length >= 3;
+  const lengthScore = words.length >= 32 ? 25 : words.length >= 20 ? 20 : words.length >= 10 ? 12 : words.length ? 5 : 0;
+  const hashtagScore = Math.min(25, hashtags * 5);
+  const score = Math.min(100, lengthScore + hashtagScore + (hasCallToAction ? 20 : 0) + (hasStructure ? 15 : 0) + (hasHook ? 15 : 0));
+  const quality = score >= 85
+    ? { label: "Ottimo", tone: "excellent" }
+    : score >= 65
+      ? { label: "Buono", tone: "good" }
+      : score >= 40
+        ? { label: "Decente", tone: "fair" }
+        : { label: "Scarso", tone: "poor" };
+  const feedback = [];
+  if (!text) feedback.push("Scrivi il messaggio principale");
+  else if (words.length < 20) feedback.push("Sviluppa meglio il messaggio");
+  if (!hasHook) feedback.push("Apri con una frase più forte");
+  if (!hasStructure) feedback.push("Dividi il copy in parti leggibili");
+  if (!hasCallToAction) feedback.push("Chiudi con una call to action");
+  if (hashtags < 5) feedback.push(`Aggiungi ${5 - hashtags} ${5 - hashtags === 1 ? "hashtag" : "hashtag"}`);
+  return { score, ...quality, words: words.length, hashtags, hasCallToAction, hasStructure, hasHook, feedback };
+}
+
+function pedCopyEvaluationMarkup(value, { compact = false } = {}) {
+  const evaluation = pedCopyEvaluation(value);
+  const criteria = [
+    [evaluation.words >= 20, `${evaluation.words} parole`],
+    [evaluation.hasHook, "Apertura"],
+    [evaluation.hasStructure, "Struttura"],
+    [evaluation.hasCallToAction, "Chiusura / CTA"],
+    [evaluation.hashtags >= 5, `${evaluation.hashtags}/5 hashtag`]
+  ];
+  return `<div class="ped-copy-score is-${evaluation.tone}${compact ? " is-compact" : ""}" title="${escapeHtml(evaluation.feedback[0] || "Copy completo e convincente")}">
+    <div class="ped-copy-score-head"><strong>${evaluation.label}</strong><span>${evaluation.score}/100</span></div>
+    <div class="ped-copy-score-bar" aria-hidden="true"><i style="width:${evaluation.score}%"></i></div>
+    ${compact ? "" : `<div class="ped-copy-criteria">${criteria.map(([ok, label]) => `<span class="${ok ? "is-ok" : "is-missing"}">${ok ? "✓" : "·"} ${escapeHtml(label)}</span>`).join("")}</div>
+      <p>${escapeHtml(evaluation.feedback.slice(0, 3).join(" · ") || "Copy completo: apertura, sviluppo, chiusura e hashtag sono presenti.")}</p>
+      <div class="ped-copy-ai-row"><button class="text-button" data-ped-copy-ai-review type="button">Consiglio AI sul copy</button><small class="ped-copy-ai-advice" aria-live="polite"></small></div>`}
+  </div>`;
+}
+
+async function requestPedCopyAdvice(button) {
+  const stagingOpen = Boolean(document.getElementById("pedStagingEditorModal")?.open);
+  const copy = stagingOpen ? pedStagingPlainText() : pedCaptionPlainText();
+  const feedback = button.closest(".ped-copy-score")?.querySelector(".ped-copy-ai-advice");
+  if (!copy) {
+    if (feedback) feedback.textContent = "Scrivi prima il copy.";
+    return;
+  }
+  button.disabled = true;
+  button.textContent = "Analizzo…";
+  if (feedback) feedback.textContent = "";
+  const evaluation = pedCopyEvaluation(copy);
+  try {
+    const response = await apiFetch("/api/ai/assistant", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        message: `Valuta questo copy Instagram in modo molto sintetico. Dimmi una cosa che funziona e le due modifiche più importanti per renderlo più convincente, senza riscriverlo interamente. Controlla anche chiusura e hashtag. Punteggio automatico attuale: ${evaluation.score}/100.\n\nCOPY:\n${copy.slice(0, 1200)}`,
+        history: [],
+        surface: "ped",
+        surface_context: aiAssistantSurfaceContext()
+      })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "Consiglio AI non disponibile");
+    if (feedback) feedback.textContent = data.answer || "Nessun consiglio disponibile.";
+    aiAssistantState.budget = data.budget || aiAssistantState.budget;
+    renderAiAssistantBudget();
+  } catch (error) {
+    if (feedback) feedback.textContent = error.message;
+  } finally {
+    button.disabled = false;
+    button.textContent = "Consiglio AI sul copy";
+  }
+}
+
+function pedPlanQuality(score) {
+  return score >= 85
+    ? { label: "Ottimo", tone: "excellent" }
+    : score >= 65
+      ? { label: "Buono", tone: "good" }
+      : score >= 40
+        ? { label: "Decente", tone: "fair" }
+        : { label: "Scarso", tone: "poor" };
+}
+
+function renderPedHealth() {
+  const target = document.getElementById("pedHealthPanel");
+  if (!target) return;
+  const client = selectedPedClient();
+  if (!client) {
+    target.innerHTML = "";
+    target.classList.add("is-hidden");
+    return;
+  }
+  target.classList.remove("is-hidden");
+  const todayKey = localDateKey(new Date());
+  const futureItems = pedAllItems()
+    .filter((item) => String(item.scheduled_date || "") >= todayKey)
+    .filter((item) => pedContentType(item.content_type) !== "story")
+    .sort((left, right) => String(left.scheduled_date).localeCompare(String(right.scheduled_date)));
+  const dates = [...new Set(futureItems.map((item) => String(item.scheduled_date || "")).filter(Boolean))].sort();
+  const today = new Date(`${todayKey}T12:00:00`);
+  const lastDate = dates.length ? new Date(`${dates[dates.length - 1]}T12:00:00`) : today;
+  const coverageDays = dates.length ? Math.max(0, Math.round((lastDate - today) / 86400000)) : 0;
+  const gaps = dates.slice(1).map((date, index) => (
+    new Date(`${date}T12:00:00`) - new Date(`${dates[index]}T12:00:00`)
+  ) / 86400000);
+  const averageGap = gaps.length ? gaps.reduce((total, gap) => total + gap, 0) / gaps.length : null;
+  const coverageScore = Math.min(100, Math.round(coverageDays / 30 * 100));
+  const cadenceScore = !futureItems.length ? 0 : averageGap === null ? 35 : averageGap <= 2.2 ? 100 : averageGap <= 3 ? 72 : averageGap <= 4 ? 48 : 24;
+  const copyScores = futureItems.map((item) => pedCopyEvaluation(item.caption).score);
+  const copyScore = copyScores.length ? Math.round(copyScores.reduce((total, score) => total + score, 0) / copyScores.length) : 0;
+  const incompleteCopies = copyScores.filter((score) => score < 65).length;
+  const overallScore = Math.round(coverageScore * .4 + cadenceScore * .35 + copyScore * .25);
+  const overall = pedPlanQuality(overallScore);
+  const coverage = pedPlanQuality(coverageScore);
+  const cadence = pedPlanQuality(cadenceScore);
+  const copy = pedPlanQuality(copyScore);
+  const lastDateLabel = dates.length
+    ? new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "short" }).format(lastDate)
+    : "nessuna uscita";
+  target.innerHTML = `<div class="ped-health-head">
+      <div><span>Controllo automatico</span><strong>Salute del PED · ${escapeHtml(client.name)}</strong></div>
+      <span class="ped-health-overall is-${overall.tone}">${overall.label} · ${overallScore}/100</span>
+    </div>
+    <div class="ped-health-grid">
+      <article class="is-${coverage.tone}"><span>Copertura</span><strong>${coverageDays} giorni</strong><div><i style="width:${coverageScore}%"></i></div><small>Ultima uscita ${dates.length ? `il ${escapeHtml(lastDateLabel)}` : "non programmata"}; obiettivo almeno 30 giorni.</small></article>
+      <article class="is-${cadence.tone}"><span>Frequenza</span><strong>${averageGap === null ? "Da costruire" : `Ogni ${averageGap.toFixed(1).replace(".", ",")} giorni`}</strong><div><i style="width:${cadenceScore}%"></i></div><small>${futureItems.length} ${futureItems.length === 1 ? "contenuto" : "contenuti"} futuri; obiettivo un’uscita ogni 2 giorni.</small></article>
+      <article class="is-${copy.tone}"><span>Qualità copy</span><strong>${copy.label} · ${copyScore}/100</strong><div><i style="width:${copyScore}%"></i></div><small>${incompleteCopies ? `${incompleteCopies} ${incompleteCopies === 1 ? "copy da completare" : "copy da completare"}` : futureItems.length ? "Tutti i copy futuri sono completi" : "Aggiungi i primi copy"}.</small></article>
+    </div>
+    <small class="ped-health-note">Valutazione immediata senza consumo API: considera durata del piano, cadenza, apertura, struttura, chiusura e almeno 5 hashtag.</small>`;
 }
 
 function pedFutureItems() {
@@ -4365,6 +4581,8 @@ function updatePedStagingEditorCount() {
   const count = pedStagingPlainText().length;
   document.getElementById("pedStagingEditorCount").textContent = String(count);
   document.getElementById("pedStagingEditorSaveButton").disabled = count > 10000;
+  const evaluation = document.getElementById("pedStagingEvaluation");
+  if (evaluation && !evaluation.hidden) evaluation.innerHTML = pedCopyEvaluationMarkup(pedStagingPlainText());
 }
 
 function syncPedStagingEditorMedia(item) {
@@ -4396,6 +4614,7 @@ function openPedStagingEditor(id) {
   editor.innerHTML = item.caption_html || pedPlainCaptionHtml(item.caption || "");
   editor.contentEditable = isStory ? "false" : "true";
   document.getElementById("pedStagingEditorBlock").hidden = isStory;
+  document.getElementById("pedStagingEvaluation").hidden = isStory;
   document.getElementById("pedStagingEditorStoryNote").hidden = !isStory;
   document.getElementById("pedStagingCopyButton").hidden = isStory;
   document.getElementById("pedStagingPublishingStatus").value = pedPublishingStatus(item.publishing_status);
@@ -4620,6 +4839,7 @@ function pedAgendaItemMarkup(item) {
       <strong>${escapeHtml(title)}</strong>
       <span><i class="ped-type-dot" aria-hidden="true"></i>${files.length > 1 ? `${format.description} · ${files.length} contenuti` : format.description}</span>
       ${format.type === "story" ? `<p class="is-empty">Le stories non prevedono copy</p>` : item.caption ? `<p title="${escapeHtml(item.caption)}">${escapeHtml(item.caption)}</p>` : `<p class="is-empty">Copy Instagram da inserire</p>`}
+      ${format.type === "story" ? "" : pedCopyEvaluationMarkup(item.caption, { compact: true })}
     </div>
     <label class="ped-agenda-format">
       <span class="sr-only">Formato di ${escapeHtml(title)}</span>
@@ -6276,6 +6496,7 @@ function selectPedCaptionItem(id, { focus = false } = {}) {
   editor.innerHTML = item.caption_html || pedPlainCaptionHtml(item.caption || "");
   editor.contentEditable = isStory ? "false" : "true";
   document.getElementById("pedCaptionEditorBlock").hidden = isStory;
+  document.getElementById("pedCaptionEvaluation").hidden = isStory;
   document.getElementById("pedCaptionStoryNote").hidden = !isStory;
   document.getElementById("pedCaptionCopyButton").hidden = isStory;
   document.getElementById("pedCaptionPublishingStatus").value = pedPublishingStatus(item.publishing_status);
@@ -6309,6 +6530,8 @@ function updatePedCaptionCount() {
   const count = pedCaptionPlainText().length;
   document.getElementById("pedCaptionCount").textContent = String(count);
   document.getElementById("pedCaptionSaveButton").disabled = count > 10000;
+  const evaluation = document.getElementById("pedCaptionEvaluation");
+  if (evaluation && !evaluation.hidden) evaluation.innerHTML = pedCopyEvaluationMarkup(pedCaptionPlainText());
 }
 
 async function copyPedCaption() {
@@ -9307,6 +9530,75 @@ function saveAiAssistantHistory() {
   }
 }
 
+function currentAiAssistantSurface() {
+  return document.querySelector("[data-view-panel].is-active")?.dataset.viewPanel || "dashboard";
+}
+
+function aiAssistantSurfaceContext() {
+  const surface = currentAiAssistantSurface();
+  const client = state.clients.find((item) => String(item.id) === String(selectedClientId));
+  const pedClient = state.clients.find((item) => String(item.id) === String(selectedPedClientId));
+  const teamMember = typeof selectedTeamMember === "function" ? selectedTeamMember() : null;
+  return {
+    surface,
+    section: document.getElementById("viewTitle")?.textContent || "Home",
+    selected_client: surface === "clients" ? String(client?.name || "") : "",
+    ped_client: surface === "ped" ? String(pedClient?.name || "") : "",
+    ped_month: surface === "ped" ? pedMonthKey() : "",
+    team_member: surface === "team" ? String(teamMember?.username || teamMember?.name || teamMember?.full_name || "") : "",
+    calendar_mode: surface === "calendar" ? String(googleCalendarState.mode || "") : ""
+  };
+}
+
+function currentAiAssistantPreset() {
+  const surface = currentAiAssistantSurface();
+  return AI_CONTEXT_PRESETS[surface] || {
+    label: document.getElementById("viewTitle")?.textContent || "BMG Hub",
+    title: "Come posso aiutarti qui?",
+    placeholder: "Chiedi priorità, controlli o prossimi passi…",
+    prompts: AI_CONTEXT_PRESETS.dashboard.prompts
+  };
+}
+
+function renderAiAssistantContext() {
+  const preset = currentAiAssistantPreset();
+  const context = aiAssistantSurfaceContext();
+  const focus = context.selected_client || context.ped_client || context.team_member;
+  const label = document.getElementById("aiAssistantContextLabel");
+  const title = document.getElementById("aiAssistantTitle");
+  const input = document.getElementById("aiAssistantInput");
+  const prompts = document.getElementById("aiAssistantPrompts");
+  if (label) label.textContent = focus ? `${preset.label} · ${focus}` : preset.label;
+  if (title) title.textContent = preset.title;
+  if (input) input.placeholder = preset.placeholder;
+  if (prompts) {
+    prompts.innerHTML = preset.prompts.map(([promptLabel, prompt]) => `<button type="button" data-ai-assistant-prompt="${escapeHtml(prompt)}">${escapeHtml(promptLabel)}</button>`).join("");
+  }
+}
+
+function setAiAssistantOpen(open, { restoreFocus = false } = {}) {
+  const panel = document.getElementById("aiAssistantPanel");
+  const backdrop = document.getElementById("aiAssistantBackdrop");
+  const toggle = document.getElementById("aiAssistantToggle");
+  if (!panel || !backdrop || !toggle) return;
+  const shouldOpen = Boolean(open);
+  panel.classList.toggle("is-open", shouldOpen);
+  backdrop.classList.toggle("is-open", shouldOpen);
+  panel.setAttribute("aria-hidden", shouldOpen ? "false" : "true");
+  backdrop.setAttribute("aria-hidden", shouldOpen ? "false" : "true");
+  toggle.setAttribute("aria-expanded", String(shouldOpen));
+  panel.inert = !shouldOpen;
+  document.body.classList.toggle("ai-assistant-open", shouldOpen);
+  if (shouldOpen) {
+    renderAiAssistantContext();
+    renderAiAssistant();
+    if (!aiAssistantState.loaded) void loadAiAssistantStatus();
+    requestAnimationFrame(() => document.getElementById("aiAssistantInput")?.focus());
+  } else if (restoreFocus) {
+    toggle.focus();
+  }
+}
+
 function renderAiAssistantBudget() {
   const target = document.getElementById("aiAssistantBudget");
   if (!target) return;
@@ -9332,11 +9624,13 @@ function aiAssistantInitials(value) {
 
 function renderAiAssistant() {
   restoreAiAssistantHistory();
+  renderAiAssistantContext();
   renderAiAssistantBudget();
   const target = document.getElementById("aiAssistantMessages");
   if (!target) return;
   if (!aiAssistantState.messages.length) {
-    target.innerHTML = `<article class="ai-assistant-empty"><span aria-hidden="true">AI</span><div><strong>Come posso aiutarti?</strong><p>Posso ordinare le priorità, controllare scadenze e sovrapposizioni, oppure suggerire i prossimi passi usando i dati aggiornati dell’Hub.</p></div></article>`;
+    const preset = currentAiAssistantPreset();
+    target.innerHTML = `<article class="ai-assistant-empty"><span aria-hidden="true">AI</span><div><strong>${escapeHtml(preset.title)}</strong><p>Uso task, scadenze ed eventi che puoi vedere per darti un aiuto concreto in questa schermata.</p></div></article>`;
     return;
   }
   target.innerHTML = aiAssistantState.messages.map((message) => {
@@ -9390,7 +9684,7 @@ async function sendAiAssistantMessage(message) {
     const response = await apiFetch("/api/ai/assistant", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: value, history })
+      body: JSON.stringify({ message: value, history, surface: currentAiAssistantSurface(), surface_context: aiAssistantSurfaceContext() })
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || "Assistente AI non disponibile");
@@ -11809,20 +12103,34 @@ document.getElementById("aiAssistantForm")?.addEventListener("submit", (event) =
 document.getElementById("aiAssistantClear")?.addEventListener("click", () => {
   aiAssistantState.messages = [];
   sessionStorage.removeItem(AI_ASSISTANT_HISTORY_KEY);
-  document.getElementById("aiAssistantFeedback").textContent = "";
+  const feedback = document.getElementById("aiAssistantFeedback");
+  if (feedback) feedback.textContent = "";
   renderAiAssistant();
-  document.getElementById("aiAssistantInput").focus();
+  document.getElementById("aiAssistantInput")?.focus();
 });
-document.getElementById("aiAssistantView")?.addEventListener("click", (event) => {
+document.getElementById("aiAssistantPanel")?.addEventListener("click", (event) => {
   const prompt = event.target.closest("[data-ai-assistant-prompt]");
   if (prompt) return void sendAiAssistantMessage(prompt.dataset.aiAssistantPrompt);
   const destination = event.target.closest("[data-ai-destination]");
-  if (destination) setView(destination.dataset.aiDestination);
+  if (destination) {
+    setAiAssistantOpen(false);
+    setView(destination.dataset.aiDestination);
+  }
 });
+document.getElementById("aiAssistantToggle")?.addEventListener("click", () => {
+  setAiAssistantOpen(document.getElementById("aiAssistantPanel")?.getAttribute("aria-hidden") === "true");
+});
+document.getElementById("aiAssistantClose")?.addEventListener("click", () => setAiAssistantOpen(false, { restoreFocus: true }));
+document.getElementById("aiAssistantBackdrop")?.addEventListener("click", () => setAiAssistantOpen(false, { restoreFocus: true }));
 document.getElementById("aiAssistantInput")?.addEventListener("keydown", (event) => {
   if (event.key !== "Enter" || event.shiftKey || event.isComposing) return;
   event.preventDefault();
   event.currentTarget.form?.requestSubmit();
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && document.getElementById("aiAssistantPanel")?.classList.contains("is-open")) {
+    setAiAssistantOpen(false, { restoreFocus: true });
+  }
 });
 document.getElementById("mobileNavToggle").addEventListener("click", () => setMobileNavOpen(true));
 document.getElementById("mobileNavBackdrop").addEventListener("click", () => setMobileNavOpen(false, { restoreFocus: true }));
@@ -11830,6 +12138,11 @@ mobileNavigationMedia.addEventListener?.("change", syncMobileNavigation);
 syncMobileNavigation();
 
 document.body.addEventListener("click", (event) => {
+  const pedCopyAiReview = event.target.closest("[data-ped-copy-ai-review]");
+  if (pedCopyAiReview) {
+    void requestPedCopyAdvice(pedCopyAiReview);
+    return;
+  }
   const usersRetry = event.target.closest("[data-users-retry]");
   if (usersRetry) {
     void loadUsersFromBackend();
