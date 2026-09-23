@@ -367,6 +367,14 @@ supabase/                     schema e migration
   altezza dei comandi quando appare o scompare.
 - I caroselli supportano fino a 20 elementi, numero d'ordine visibile, riordino
   drag-and-drop, eliminazione e aggiunta di altri elementi in un secondo momento.
+- Anche un Post o un Reel gia inserito, programmato o ancora in attesa, mostra
+  `Aggiungi contenuti`: scegliendo almeno un altro file viene trasformato
+  atomicamente in carosello, conservando il contenuto originale come prima
+  posizione, copy, formattazione, data, stato e ordine nel feed. Se il
+  salvataggio dei nuovi file fallisce, il contenuto originale non viene
+  modificato. In fase di creazione il formato singolo viene riconosciuto dal
+  media reale: una foto diventa Post e un video diventa Reel; due o piu file
+  diventano Carosello. La scelta esplicita `Storia` resta separata.
 - Il primo elemento del carosello è la copertina usata nel feed Instagram.
 - Il download del carosello non crea ZIP: scarica i singoli file in coda e
   antepone `01`, `02`, ... `20` ai nomi in base all'ordine del multipost.
@@ -771,6 +779,8 @@ supabase/migrations/20260805181000_ped_share_recoverable_token.sql
 supabase/migrations/20260805183000_ped_share_parallel_legacy.sql
 supabase/migrations/20260910032000_ped_staging_carousel_editor.sql
 supabase/migrations/20260923133000_ped_staging_allow_duplicate_drive_files.sql
+supabase/migrations/20260923150500_ped_move_between_calendar_and_staging.sql
+supabase/migrations/20260923154500_ped_smart_media_append.sql
 ```
 
 Non modificare retroattivamente migration già applicate in produzione. Creare

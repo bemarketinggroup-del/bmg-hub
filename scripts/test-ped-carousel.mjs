@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { groupPedItems, isPedSpreadsheetFile, sanitizeCaptionHtml } from "../lib/ped.js";
+import { automaticPedContentType, groupPedItems, isPedSpreadsheetFile, sanitizeCaptionHtml } from "../lib/ped.js";
 import { decryptPedShareToken, encryptPedShareToken } from "../lib/ped-share.js";
 
 await import("../public/ped-gallery-metadata.js");
@@ -54,6 +54,11 @@ assert.equal(singles.find((item) => item.content_type === "post").caption, "Copy
 assert.equal(singles.find((item) => item.content_type === "reel").caption, "Copy reel");
 assert.equal(singles.find((item) => item.content_type === "reel").cover_frame_seconds, 3.275, "il Reel deve conservare il fotogramma scelto");
 assert.equal(singles.find((item) => item.content_type === "story").caption, null, "le stories non devono avere copy");
+assert.equal(automaticPedContentType("post", [{ mimeType: "image/jpeg" }]), "post", "una sola foto deve diventare automaticamente un Post");
+assert.equal(automaticPedContentType("post", [{ mimeType: "video/mp4" }]), "reel", "un solo video deve diventare automaticamente un Reel");
+assert.equal(automaticPedContentType("reel", [{ mimeType: "image/png" }]), "post", "una sola immagine non deve restare impostata come Reel");
+assert.equal(automaticPedContentType("post", [{ mimeType: "image/jpeg" }, { mimeType: "video/mp4" }]), "carousel", "piu contenuti devono diventare automaticamente un carosello");
+assert.equal(automaticPedContentType("story", [{ mimeType: "video/mp4" }]), "story", "la scelta esplicita Storia deve essere rispettata");
 
 const appSource = await readFile(new URL("../public/app.js", import.meta.url), "utf8");
 const styleSource = await readFile(new URL("../public/styles.css", import.meta.url), "utf8");
@@ -72,6 +77,7 @@ const carouselEditorMigration = await readFile(new URL("../supabase/migrations/2
 const stagingCarouselEditorMigration = await readFile(new URL("../supabase/migrations/20260910032000_ped_staging_carousel_editor.sql", import.meta.url), "utf8");
 const stagingDuplicateMigration = await readFile(new URL("../supabase/migrations/20260923133000_ped_staging_allow_duplicate_drive_files.sql", import.meta.url), "utf8");
 const moveStagingMigration = await readFile(new URL("../supabase/migrations/20260923150500_ped_move_between_calendar_and_staging.sql", import.meta.url), "utf8");
+const smartMediaAppendMigration = await readFile(new URL("../supabase/migrations/20260923154500_ped_smart_media_append.sql", import.meta.url), "utf8");
 const shareTokenMigration = await readFile(new URL("../supabase/migrations/20260805181000_ped_share_recoverable_token.sql", import.meta.url), "utf8");
 const parallelLegacyShareMigration = await readFile(new URL("../supabase/migrations/20260805183000_ped_share_parallel_legacy.sql", import.meta.url), "utf8");
 const reelCoverMigration = await readFile(new URL("../supabase/migrations/20260902135000_ped_reel_cover_frame.sql", import.meta.url), "utf8");
@@ -317,8 +323,16 @@ assert.match(htmlSource, /data-ped-caption-add/, "il pannello editoriale deve pe
 assert.match(appSource, /append_drive_file_ids: fileIds/, "il selettore deve accodare i nuovi file al carosello esistente");
 assert.match(appSource, /existingCount \+ addedCount/, "il selettore deve rispettare il limite considerando i contenuti gia presenti");
 assert.match(pedSource, /Array\.isArray\(body\.append_drive_file_ids\)/, "l'API PED deve gestire l'aggiunta successiva di file al carosello");
-assert.match(pedSource, /group_position: nextPosition \+ index/, "i nuovi contenuti devono essere aggiunti in coda all'ordine esistente");
 assert.match(pedSource, /targetRows\.length \+ fileIds\.length > MAX_CAROUSEL_FILES/, "il limite di 20 contenuti deve valere anche sugli aggiornamenti");
+assert.match(appSource, /const canAppend = pedContentType\(item\.content_type\) !== "story"/, "anche Post e Reel devono offrire Aggiungi contenuti");
+assert.match(appSource, /function automaticPedPickerType\(file\)/, "il selettore deve riconoscere automaticamente foto e video");
+assert.match(pedSource, /automaticPedContentType\(requestedFormat, metadataList\)/, "il backend deve confermare il formato in base ai media reali");
+assert.match(pedSource, /\/rpc\/append_ped_item_media/, "la conversione del contenuto programmato deve essere atomica");
+assert.match(pedSource, /\/rpc\/append_ped_staging_item_media/, "la conversione del contenuto in attesa deve essere atomica");
+assert.match(smartMediaAppendMigration, /set content_type = 'carousel',\s*content_group_id = target_group_id/, "il post o Reel originale deve diventare membro del nuovo carosello");
+assert.match(smartMediaAppendMigration, /existing_count \+ entry\.position::integer - 1/, "i nuovi media devono essere aggiunti dopo quelli esistenti");
+assert.match(smartMediaAppendMigration, /base_item\.caption,\s*base_item\.caption_html/, "copy e formattazione devono essere conservati durante la conversione");
+assert.match(smartMediaAppendMigration, /cover_frame_seconds = null/, "convertendo un Reel in carosello il fotogramma dedicato non deve restare attivo");
 assert.match(appSource, /class="ped-agenda-preview" data-ped-caption-preview="\$\{escapeHtml\(item\.id\)\}"/, "la miniatura dell'agenda deve aprire il contenuto completo, inclusi i caroselli");
 assert.match(appSource, /className = "ped-carousel-editor-track"/, "il visualizzatore carosello deve mostrare i contenuti affiancati");
 assert.match(appSource, /card\.draggable = !saving/, "le foto del carosello devono essere trascinabili");

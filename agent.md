@@ -59,6 +59,36 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-09-23 — Formati PED automatici e conversione in carosello
+
+- Richiesta: rendere piu intelligente l'inserimento dei media nel PED: una
+  singola foto deve essere un Post, un singolo video un Reel e un contenuto gia
+  inserito deve poter ricevere altri file diventando automaticamente un
+  carosello.
+- Modifiche: il selettore riconosce ora il tipo del singolo file sia nel browser
+  sia nel backend, mantenendo separata soltanto la scelta esplicita `Storia`.
+  Negli editor dei contenuti programmati e in attesa il comando `Aggiungi
+  contenuti` compare anche per Post e Reel: selezionando uno o piu nuovi file,
+  il contenuto originale diventa la prima posizione del carosello. Conversione
+  e inserimento avvengono in un'unica transazione SQL; sono conservati copy,
+  formattazione, data, stato, ordine del feed e file originale, mentre un errore
+  lascia il contenuto precedente invariato. Il limite resta 20 media.
+- File: `lib/ped.js`, `public/app.js`, `scripts/test-ped-carousel.mjs`,
+  `supabase/schema.sql`,
+  `supabase/migrations/20260923154500_ped_smart_media_append.sql`,
+  `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run check`, `npm run test:ped-carousel`, `npm run
+  test:mobile-navigation`, `npm run test:primeng-components`, `npm run
+  test:permissions`, `npm run build`, `git diff --check`; migrazione Supabase
+  verificata in dry-run, applicata e ricontrollata come aggiornata; controllo
+  del flusso responsive desktop e smartphone e delle azioni media compatibili
+  con Chrome e Safari.
+- Pubblicazione: migrazione Supabase applicata; commit corrente pubblicato su
+  GitHub `main` e deploy Vercel di produzione verificato su
+  `https://bmg-hub.vercel.app`.
+- Note: le Storie restano volutamente singole e non mostrano `Aggiungi
+  contenuti`; nessun file originale viene spostato o cancellato da Drive.
+
 ### 2026-09-23 — Spostamento dei contenuti PED tra mesi tramite attesa
 
 - Richiesta: permettere di spostare un contenuto da un mese PED a un altro
