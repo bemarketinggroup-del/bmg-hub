@@ -486,11 +486,14 @@ supabase/                     schema e migration
   Solo il comando esplicito `Consiglio AI sul copy` effettua una chiamata API e
   restituisce un riscontro semantico sintetico; la digitazione e le barre non
   consumano budget.
-- La navigazione PED include anche la pagina dedicata `Salute clienti`, che
-  riusa gli stessi criteri di copertura, frequenza e qualità copy per tutti i
-  clienti attivi senza rimuovere il riepilogo dai singoli PED. La pagina resta
-  fissa nel viewport e non genera scroll. È un wallboard autonomo pensato anche
-  per il monitor dell'ufficio: nasconde sidebar e topbar, offre il fullscreen del
+- La navigazione PED include il gruppo espandibile `Salute clienti`, diviso in
+  `Panoramica clienti` e `Monitor ufficio`, e riusa gli stessi criteri di
+  copertura, frequenza e qualità copy per tutti i clienti attivi senza rimuovere
+  il riepilogo dai singoli PED. La Panoramica resta fissa nel viewport e mostra
+  l'elenco completo ordinato per criticità sulla sinistra; selezionando una riga,
+  sulla destra compaiono punteggio, metriche PED/copy, contenuti, task, Drive,
+  appuntamento e azioni rapide. Il Monitor ufficio resta un wallboard autonomo
+  pensato per la proiezione: nasconde sidebar e topbar, offre il fullscreen del
   browser e alterna automaticamente ogni 12 secondi i gruppi di clienti con una
   transizione, senza mostrare pagine. La rotazione può essere sospesa e ripresa;
   ricerca e filtri per priorità restano disponibili. Le fasce di salute usano

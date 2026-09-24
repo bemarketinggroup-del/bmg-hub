@@ -59,6 +59,27 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-09-24 — Salute clienti divisa in panoramica e monitor
+
+- Richiesta: aprire `Salute clienti` in due sottopagine come `Grafiche` e
+  aggiungere una vista unica con tutti i clienti e tutte le informazioni sulla
+  destra, leggibile a colpo d'occhio.
+- Modifiche: `Salute clienti` è ora un gruppo espandibile con `Panoramica
+  clienti` e `Monitor ufficio`. La nuova panoramica fissa mostra l'elenco
+  completo ordinato per criticità sulla sinistra, con colore e punteggio sempre
+  visibili; la selezione aggiorna a destra una scheda completa con copertura,
+  frequenza, copy, contenuti, task, Drive, appuntamenti, consiglio e accesso
+  diretto al PED. Ricerca, filtri, aggiornamento e contesto AI sono condivisi.
+  Il wallboard a rotazione e fullscreen resta invariato come seconda pagina.
+- File: `public/index.html`, `public/app.js`, `public/styles.css`,
+  `scripts/test-client-health.mjs`, `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run check`, `npm run test:client-health`, `npm run
+  test:mobile-navigation`, `npm run test:primeng-components`, `npm run build`,
+  `git diff --check`; controllo visivo desktop e smartphone su Chrome e Safari.
+- Pubblicazione: GitHub `main` e Vercel produzione.
+- Note: la pagina resta fissa; quando l'elenco non entra nello spazio disponibile
+  scorre soltanto il pannello sinistro, non l'intera schermata.
+
 ### 2026-09-23 — Clienti appresi automaticamente dalle modifiche PED
 
 - Richiesta: fare in modo che l'AI riconosca automaticamente i clienti seguiti

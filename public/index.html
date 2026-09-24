@@ -89,10 +89,23 @@
           <span class="icon"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></svg></span>
           <span>PED</span>
         </button>
-        <button class="p-ripple nav-item" data-view="client-health" data-module="ped" type="button">
-          <span class="icon"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8Z"/><path d="M7.5 12h2l1.2-2.4 2.2 5 1.2-2.6h2.4"/></svg></span>
-          <span>Salute clienti</span>
-        </button>
+        <div class="sidebar-nav-branch" id="clientHealthNavBranch" data-module="ped">
+          <button class="p-ripple nav-item nav-item-parent" id="clientHealthNavToggle" data-module="ped" type="button" aria-expanded="false" aria-controls="clientHealthSubnav">
+            <span class="icon"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8Z"/><path d="M7.5 12h2l1.2-2.4 2.2 5 1.2-2.6h2.4"/></svg></span>
+            <span>Salute clienti</span>
+            <span class="nav-branch-trailing">
+              <svg class="lc nav-branch-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+            </span>
+          </button>
+          <div class="sidebar-subnav" id="clientHealthSubnav" hidden>
+            <button class="p-ripple nav-item nav-subitem" data-view="client-health-overview" data-module="ped" type="button">
+              <span>Panoramica clienti</span>
+            </button>
+            <button class="p-ripple nav-item nav-subitem" data-view="client-health" data-module="ped" type="button">
+              <span>Monitor ufficio</span>
+            </button>
+          </div>
+        </div>
         <div class="sidebar-nav-branch" id="graphicsNavBranch" data-module="graphics">
           <button class="p-ripple nav-item nav-item-parent" id="graphicsNavToggle" data-module="graphics" type="button" aria-expanded="false" aria-controls="graphicsSubnav">
             <span class="icon"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h16"/><path d="m14 4 6 6L9 21H3v-6Z"/><path d="m12 6 6 6"/><path d="M15 3h6v6"/></svg></span>
@@ -526,6 +539,36 @@
             </div>
             <div class="ped-agenda-list" id="pedAgendaList" aria-live="polite"></div>
           </section>
+        </section>
+      </section>
+
+      <section class="view client-health-overview-view" id="clientHealthOverviewView" data-view-panel="client-health-overview">
+        <section class="panel client-health-overview-workspace" aria-label="Panoramica salute clienti">
+          <header class="client-health-overview-toolbar">
+            <div class="client-health-overview-intro">
+              <strong>Situazione completa</strong>
+              <span>Seleziona un cliente per leggere tutti i dati operativi.</span>
+            </div>
+            <label class="search client-health-overview-search">
+              <span><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></span>
+              <input id="clientHealthOverviewSearch" type="search" placeholder="Cerca cliente" autocomplete="off">
+            </label>
+            <select id="clientHealthOverviewFilter" aria-label="Filtra clienti per stato di salute">
+              <option value="all">Tutti gli stati</option>
+              <option value="attention">Da intervenire</option>
+              <option value="good">Buoni</option>
+              <option value="excellent">Ottimi</option>
+            </select>
+            <button class="ghost-button" id="clientHealthOverviewRefresh" type="button">
+              <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8.1 8.1 0 0 0-15.5-2M4 4v5h5"/><path d="M4 13a8.1 8.1 0 0 0 15.5 2M20 20v-5h-5"/></svg>
+              Aggiorna
+            </button>
+          </header>
+          <div class="client-health-overview-summary" id="clientHealthOverviewSummary" aria-label="Riepilogo salute clienti"></div>
+          <div class="client-health-overview-layout">
+            <aside class="client-health-overview-list" id="clientHealthOverviewList" aria-label="Elenco clienti" aria-live="polite"></aside>
+            <section class="client-health-overview-detail" id="clientHealthOverviewDetail" aria-live="polite"></section>
+          </div>
         </section>
       </section>
 

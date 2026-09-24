@@ -69,6 +69,7 @@ const VIEW_MODULES = Object.freeze({
   clients: "clients",
   ped: "ped",
   "client-health": "ped",
+  "client-health-overview": "ped",
   calendar: "calendar",
   chat: "chat",
   graphics: "graphics",
@@ -416,7 +417,8 @@ let clientHealthState = {
   pageSize: 0,
   rotationPaused: false,
   rotationTimer: null,
-  rotationEveryMs: 12000
+  rotationEveryMs: 12000,
+  selectedClientId: ""
 };
 let personalAreaState = {
   team: [],
@@ -1425,6 +1427,14 @@ function setGraphicsNavExpanded(expanded) {
   subnav.hidden = !expanded;
 }
 
+function setClientHealthNavExpanded(expanded) {
+  const toggle = document.getElementById("clientHealthNavToggle");
+  const subnav = document.getElementById("clientHealthSubnav");
+  if (!toggle || !subnav) return;
+  toggle.setAttribute("aria-expanded", String(expanded));
+  subnav.hidden = !expanded;
+}
+
 function setView(view) {
   const titles = {
     dashboard: "Home",
@@ -1436,6 +1446,7 @@ function setView(view) {
     clients: "Clienti",
     ped: "PED",
     "client-health": "Salute clienti",
+    "client-health-overview": "Panoramica clienti",
     calendar: "Calendario",
     team: "Task del team",
     smart: "Turni / Smart Working",
@@ -1450,10 +1461,14 @@ function setView(view) {
   setMobileNavOpen(false);
   document.body.classList.toggle("chat-view-active", view === "chat");
   document.body.classList.toggle("client-health-view-active", view === "client-health");
+  document.body.classList.toggle("client-health-overview-view-active", view === "client-health-overview");
   document.querySelectorAll(".nav-item").forEach((item) => item.classList.toggle("is-active", item.dataset.view === view));
   const isGraphicsView = view === "graphics" || view === "graphics-reviews";
+  const isClientHealthView = view === "client-health" || view === "client-health-overview";
   document.getElementById("graphicsNavToggle")?.classList.toggle("is-active", isGraphicsView);
   setGraphicsNavExpanded(isGraphicsView);
+  document.getElementById("clientHealthNavToggle")?.classList.toggle("is-active", isClientHealthView);
+  setClientHealthNavExpanded(isClientHealthView);
   document.querySelectorAll("[data-view-panel]").forEach((panel) => panel.classList.toggle("is-active", panel.dataset.viewPanel === view));
   document.getElementById("viewTitle").textContent = titles[view];
   renderAiAssistantContext();
@@ -1462,7 +1477,7 @@ function setView(view) {
     auditPedView();
     loadPedCalendar();
   } else auditModuleView(isGraphicsView ? "graphics" : view);
-  if (view === "client-health") {
+  if (isClientHealthView) {
     void loadClientHealth();
     if (canAccessModule("calendar")) void loadGoogleCalendar();
   }
@@ -4221,6 +4236,110 @@ function clientHealthCardMarkup(item, index = 0) {
   </article>`;
 }
 
+function clientHealthOverviewListItemMarkup(item) {
+  const overall = item.overall || pedPlanQuality(Number(item.overall_score) || 0);
+  const appointment = clientHealthAppointment(item);
+  const selected = String(item.client_id) === String(clientHealthState.selectedClientId);
+  return `<button class="client-health-overview-client is-${escapeHtml(overall.tone)}${selected ? " is-selected" : ""}" type="button" data-client-health-select="${escapeHtml(item.client_id)}" aria-pressed="${selected}">
+    <span class="client-health-overview-client-main">
+      <i aria-hidden="true"></i>
+      <span><strong>${escapeHtml(item.client_name)}</strong><small>${escapeHtml(item.recommendation || "Cliente sotto controllo.")}</small></span>
+    </span>
+    <span class="client-health-overview-client-meta">
+      <small>${escapeHtml(appointment.label)}</small>
+      <strong>${Number(item.overall_score) || 0}</strong>
+    </span>
+  </button>`;
+}
+
+function clientHealthOverviewDetailMarkup(item) {
+  if (!item) return `<div class="client-health-overview-empty"><strong>Seleziona un cliente</strong><span>La situazione completa comparirà qui.</span></div>`;
+  const overall = item.overall || pedPlanQuality(Number(item.overall_score) || 0);
+  const appointment = clientHealthAppointment(item);
+  const cadence = item.average_gap === null ? "Da costruire" : `Ogni ${String(item.average_gap).replace(".", ",")} giorni`;
+  const appointmentCommand = appointment.eventId
+    ? ` data-client-health-appointment="${escapeHtml(appointment.eventId)}" data-client-health-appointment-date="${escapeHtml(appointment.eventDate)}"`
+    : "";
+  const facts = [
+    ["Contenuti futuri", Number(item.future_items) || 0, false],
+    ["Storie future", Number(item.future_stories) || 0, false],
+    ["In attesa", Number(item.staging_items) || 0, Number(item.staging_items) > 0],
+    ["Copy da completare", Number(item.incomplete_copies) || 0, Number(item.incomplete_copies) > 0],
+    ["Task attive", item.tasks_available === false ? "—" : Number(item.active_tasks) || 0, false],
+    ["Task scadute", item.tasks_available === false ? "—" : Number(item.overdue_tasks) || 0, Number(item.overdue_tasks) > 0],
+    ["Solo PED", Number(item.ped_only_items) || 0, Number(item.ped_only_items) > 0],
+    ["Già programmate", Number(item.externally_programmed_items) || 0, false]
+  ];
+  return `<article class="client-health-overview-detail-card is-${escapeHtml(overall.tone)}">
+    <header class="client-health-overview-detail-head">
+      <div>
+        <span class="client-health-overview-kicker">Scheda cliente</span>
+        <h2>${escapeHtml(item.client_name)}</h2>
+        <p>${escapeHtml(item.recommendation || "Cliente sotto controllo.")}</p>
+      </div>
+      <div class="client-health-overview-score" style="--health-score:${Math.max(0, Math.min(100, Number(item.overall_score) || 0))}%" aria-label="Salute ${Number(item.overall_score) || 0} su 100">
+        <strong>${Number(item.overall_score) || 0}</strong><small>/100</small><span>${escapeHtml(overall.label)}</span>
+      </div>
+    </header>
+    <div class="client-health-overview-metrics">
+      <section><span>Copertura PED</span><strong>${Number(item.coverage_days) || 0} giorni</strong><i><b style="width:${Math.max(0, Math.min(100, Number(item.coverage_score) || 0))}%"></b></i><small>Ultima uscita ${escapeHtml(clientHealthDateLabel(item.last_scheduled_date))}</small></section>
+      <section><span>Frequenza</span><strong>${escapeHtml(cadence)}</strong><i><b style="width:${Math.max(0, Math.min(100, Number(item.cadence_score) || 0))}%"></b></i><small>Obiettivo: un contenuto ogni 2 giorni</small></section>
+      <section><span>Qualità copy</span><strong>${Number(item.copy_score) || 0}/100</strong><i><b style="width:${Math.max(0, Math.min(100, Number(item.copy_score) || 0))}%"></b></i><small>${Number(item.incomplete_copies) ? `${Number(item.incomplete_copies)} da completare` : "Copy futuri completi"}</small></section>
+    </div>
+    <div class="client-health-overview-facts">
+      ${facts.map(([label, value, warning]) => `<span class="${warning ? "is-warning" : ""}"><small>${escapeHtml(label)}</small><strong>${escapeHtml(value)}</strong></span>`).join("")}
+    </div>
+    <div class="client-health-overview-connections">
+      <span class="${item.drive_connected ? "is-connected" : "is-missing"}"><i aria-hidden="true"></i>${item.drive_connected ? "Drive collegato" : "Drive da collegare"}</span>
+      <button class="client-health-appointment is-${escapeHtml(appointment.state)}" type="button"${appointmentCommand}${appointment.eventId ? "" : " disabled"}>
+        <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/></svg>
+        <span>${escapeHtml(appointment.label)}</span>
+      </button>
+    </div>
+    <footer class="client-health-overview-actions">
+      <span>Aggiornato dai dati PED, task, Drive e Calendario.</span>
+      <button class="primary-button" data-client-health-open-ped="${escapeHtml(item.client_id)}" type="button">Apri il PED</button>
+    </footer>
+  </article>`;
+}
+
+function renderClientHealthOverview() {
+  const summary = document.getElementById("clientHealthOverviewSummary");
+  const list = document.getElementById("clientHealthOverviewList");
+  const detail = document.getElementById("clientHealthOverviewDetail");
+  if (!summary || !list || !detail) return;
+  const totals = clientHealthState.summary || {};
+  summary.innerHTML = `
+    <span><small>Clienti monitorati</small><strong>${Number(totals.total) || 0}</strong></span>
+    <span class="is-warning"><small>Da intervenire</small><strong>${Number(totals.attention) || 0}</strong></span>
+    <span class="is-good"><small>In salute</small><strong>${Number(totals.healthy) || 0}</strong></span>
+    <span><small>Media generale</small><strong>${Number(totals.average_score) || 0}/100</strong></span>`;
+  const search = document.getElementById("clientHealthOverviewSearch");
+  const filter = document.getElementById("clientHealthOverviewFilter");
+  if (search && search.value !== clientHealthState.query) search.value = clientHealthState.query;
+  if (filter && filter.value !== clientHealthState.filter) filter.value = clientHealthState.filter;
+  document.getElementById("clientHealthOverviewRefresh").disabled = clientHealthState.loading;
+  if (clientHealthState.loading && !clientHealthState.loaded) {
+    list.innerHTML = `<div class="client-health-overview-empty"><span class="drive-folder-spinner" aria-hidden="true"></span><strong>Analizzo i clienti…</strong></div>`;
+    detail.innerHTML = `<div class="client-health-overview-empty"><strong>Preparazione panoramica</strong><span>Raccolgo PED, copy, task e appuntamenti.</span></div>`;
+    return;
+  }
+  if (clientHealthState.error && !clientHealthState.loaded) {
+    list.innerHTML = `<div class="client-health-overview-empty is-error"><strong>${escapeHtml(clientHealthState.error)}</strong><button class="text-button" data-client-health-retry type="button">Riprova</button></div>`;
+    detail.innerHTML = "";
+    return;
+  }
+  const clients = clientHealthFilteredClients();
+  if (!clients.some((item) => String(item.client_id) === String(clientHealthState.selectedClientId))) {
+    clientHealthState.selectedClientId = String(clients[0]?.client_id || "");
+  }
+  const selected = clients.find((item) => String(item.client_id) === String(clientHealthState.selectedClientId)) || null;
+  list.innerHTML = clients.length
+    ? clients.map(clientHealthOverviewListItemMarkup).join("")
+    : `<div class="client-health-overview-empty"><strong>Nessun cliente trovato</strong><span>Modifica ricerca o filtro.</span></div>`;
+  detail.innerHTML = clientHealthOverviewDetailMarkup(selected);
+}
+
 function renderClientHealth({ restartRotation = true } = {}) {
   const grid = document.getElementById("clientHealthGrid");
   const summary = document.getElementById("clientHealthSummary");
@@ -4263,6 +4382,7 @@ function renderClientHealth({ restartRotation = true } = {}) {
   rotationToggle.querySelector("span").textContent = clientHealthState.rotationPaused ? "Riprendi" : "Pausa";
   rotationToggle.classList.toggle("is-paused", clientHealthState.rotationPaused);
   document.getElementById("clientHealthRefresh").disabled = clientHealthState.loading;
+  renderClientHealthOverview();
   if (restartRotation) restartClientHealthRotation();
 }
 
@@ -10144,11 +10264,14 @@ function aiAssistantSurfaceContext() {
   const surface = currentAiAssistantSurface();
   const client = state.clients.find((item) => String(item.id) === String(selectedClientId));
   const pedClient = state.clients.find((item) => String(item.id) === String(selectedPedClientId));
+  const healthClient = clientHealthState.clients.find((item) => String(item.client_id) === String(clientHealthState.selectedClientId));
   const teamMember = typeof selectedTeamMember === "function" ? selectedTeamMember() : null;
   return {
     surface,
     section: document.getElementById("viewTitle")?.textContent || "Home",
-    selected_client: surface === "clients" ? String(client?.name || "") : "",
+    selected_client: surface === "clients"
+      ? String(client?.name || "")
+      : surface === "client-health-overview" ? String(healthClient?.client_name || "") : "",
     ped_client: surface === "ped" ? String(pedClient?.name || "") : "",
     ped_month: surface === "ped" ? pedMonthKey() : "",
     team_member: surface === "team" ? String(teamMember?.username || teamMember?.name || teamMember?.full_name || "") : "",
@@ -10158,7 +10281,7 @@ function aiAssistantSurfaceContext() {
 
 function currentAiAssistantPreset() {
   const surface = currentAiAssistantSurface();
-  return AI_CONTEXT_PRESETS[surface] || {
+  return AI_CONTEXT_PRESETS[surface === "client-health-overview" ? "client-health" : surface] || {
     label: document.getElementById("viewTitle")?.textContent || "BMG Hub",
     title: "Come posso aiutarti qui?",
     placeholder: "Chiedi priorità, controlli o prossimi passi…",
@@ -12900,6 +13023,11 @@ function renderAll() {
 }
 
 document.getElementById("navList").addEventListener("click", (event) => {
+  const clientHealthToggle = event.target.closest("#clientHealthNavToggle");
+  if (clientHealthToggle) {
+    setClientHealthNavExpanded(clientHealthToggle.getAttribute("aria-expanded") !== "true");
+    return;
+  }
   const graphicsToggle = event.target.closest("#graphicsNavToggle");
   if (graphicsToggle) {
     setGraphicsNavExpanded(graphicsToggle.getAttribute("aria-expanded") !== "true");
@@ -12913,12 +13041,26 @@ document.getElementById("clientHealthSearch")?.addEventListener("input", (event)
   clientHealthState.page = 0;
   renderClientHealth();
 });
+document.getElementById("clientHealthOverviewSearch")?.addEventListener("input", (event) => {
+  clientHealthState.query = event.currentTarget.value || "";
+  clientHealthState.page = 0;
+  renderClientHealth();
+});
 document.getElementById("clientHealthFilter")?.addEventListener("change", (event) => {
   clientHealthState.filter = event.currentTarget.value || "all";
   clientHealthState.page = 0;
   renderClientHealth();
 });
+document.getElementById("clientHealthOverviewFilter")?.addEventListener("change", (event) => {
+  clientHealthState.filter = event.currentTarget.value || "all";
+  clientHealthState.page = 0;
+  renderClientHealth();
+});
 document.getElementById("clientHealthRefresh")?.addEventListener("click", () => {
+  void loadClientHealth({ fresh: true });
+  if (canAccessModule("calendar")) void loadGoogleCalendar({ fresh: true });
+});
+document.getElementById("clientHealthOverviewRefresh")?.addEventListener("click", () => {
   void loadClientHealth({ fresh: true });
   if (canAccessModule("calendar")) void loadGoogleCalendar({ fresh: true });
 });
@@ -12996,7 +13138,10 @@ document.getElementById("operationalBriefToast")?.addEventListener("click", (eve
   const destination = event.target.closest("[data-operational-brief-destination]");
   if (!destination) return;
   setOperationalBriefOpen(false);
-  setView(destination.dataset.operationalBriefDestination);
+  const destinationView = destination.dataset.operationalBriefDestination === "client-health"
+    ? "client-health-overview"
+    : destination.dataset.operationalBriefDestination;
+  setView(destinationView);
 });
 document.getElementById("mobileNavToggle").addEventListener("click", () => setMobileNavOpen(true));
 document.getElementById("mobileNavBackdrop").addEventListener("click", () => setMobileNavOpen(false, { restoreFocus: true }));
@@ -13004,9 +13149,16 @@ mobileNavigationMedia.addEventListener?.("change", syncMobileNavigation);
 syncMobileNavigation();
 
 document.body.addEventListener("click", (event) => {
+  const clientHealthSelection = event.target.closest("[data-client-health-select]");
   const clientHealthPed = event.target.closest("[data-client-health-open-ped]");
   const clientHealthAppointmentButton = event.target.closest("[data-client-health-appointment]");
   const clientHealthRetry = event.target.closest("[data-client-health-retry]");
+  if (clientHealthSelection) {
+    clientHealthState.selectedClientId = clientHealthSelection.dataset.clientHealthSelect;
+    renderClientHealthOverview();
+    renderAiAssistantContext();
+    return;
+  }
   if (clientHealthPed) return openClientHealthPed(clientHealthPed.dataset.clientHealthOpenPed);
   if (clientHealthAppointmentButton) return openCalendarNotification(
     clientHealthAppointmentButton.dataset.clientHealthAppointment,

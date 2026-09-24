@@ -11565,3 +11565,348 @@ body.client-health-view-active .client-health-card.is-fair .client-health-card-f
   body.client-health-view-active .client-health-card { animation: none; transition: none; }
   .client-health-grid.is-switching .client-health-card { filter: none; transform: none; }
 }
+
+/* ============================================================
+   SALUTE CLIENTI — panoramica operativa master/detail
+   ============================================================ */
+body.client-health-overview-view-active { overflow: hidden; }
+
+body.client-health-overview-view-active .app-shell {
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+}
+
+body.client-health-overview-view-active .main {
+  height: 100dvh;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+  padding-bottom: 18px;
+}
+
+.client-health-overview-view.is-active {
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+.client-health-overview-workspace {
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  gap: 12px;
+  overflow: hidden;
+  padding: 16px;
+}
+
+.client-health-overview-toolbar {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.client-health-overview-intro {
+  min-width: 180px;
+  display: grid;
+  gap: 2px;
+  margin-right: auto;
+}
+
+.client-health-overview-intro strong { color: var(--ink); font-size: 14px; }
+.client-health-overview-intro span { color: var(--muted); font-size: 11px; }
+.client-health-overview-search { width: min(300px, 25vw); min-height: 38px; }
+.client-health-overview-toolbar select { width: 165px; min-height: 38px; }
+.client-health-overview-toolbar .ghost-button { min-height: 38px; }
+
+.client-health-overview-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.client-health-overview-summary > span {
+  min-width: 0;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--surface-soft);
+  padding: 8px 12px;
+}
+
+.client-health-overview-summary small { color: var(--muted); font-size: 9px; font-weight: 750; letter-spacing: .06em; text-transform: uppercase; }
+.client-health-overview-summary strong { color: var(--ink); font-size: 19px; }
+.client-health-overview-summary .is-warning { border-color: rgba(234, 67, 53, .3); background: #fff0ee; }
+.client-health-overview-summary .is-warning strong { color: #d9332a; }
+.client-health-overview-summary .is-good { border-color: rgba(24, 184, 91, .3); background: #e9faef; }
+.client-health-overview-summary .is-good strong { color: #087a3a; }
+
+.client-health-overview-layout {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(260px, .72fr) minmax(0, 1.65fr);
+  gap: 12px;
+  overflow: hidden;
+}
+
+.client-health-overview-list,
+.client-health-overview-detail {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: var(--surface-soft);
+}
+
+.client-health-overview-list {
+  display: grid;
+  align-content: start;
+  gap: 5px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 8px;
+  scrollbar-width: thin;
+}
+
+.client-health-overview-client {
+  --overview-color: #ef3f35;
+  --overview-rgb: 239, 63, 53;
+  width: 100%;
+  min-width: 0;
+  min-height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 9px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink);
+  padding: 7px 9px;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color .14s ease, background .14s ease, transform .14s ease;
+}
+
+.client-health-overview-client.is-fair { --overview-color: #f5a800; --overview-rgb: 245, 168, 0; }
+.client-health-overview-client.is-good { --overview-color: #18b85b; --overview-rgb: 24, 184, 91; }
+.client-health-overview-client.is-excellent { --overview-color: #078fd1; --overview-rgb: 7, 143, 209; }
+.client-health-overview-client:hover { transform: translateX(2px); }
+.client-health-overview-client.is-selected { border-color: rgba(var(--overview-rgb), .5); background: rgba(var(--overview-rgb), .09); box-shadow: inset 4px 0 0 var(--overview-color); }
+
+.client-health-overview-client-main,
+.client-health-overview-client-meta {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.client-health-overview-client-main { flex: 1 1 auto; }
+.client-health-overview-client-main > i { width: 9px; height: 9px; flex: 0 0 9px; border-radius: 50%; background: var(--overview-color); box-shadow: 0 0 0 4px rgba(var(--overview-rgb), .12); }
+.client-health-overview-client-main > span { min-width: 0; display: grid; gap: 2px; }
+.client-health-overview-client-main strong,
+.client-health-overview-client-main small,
+.client-health-overview-client-meta small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.client-health-overview-client-main strong { font-size: 12px; }
+.client-health-overview-client-main small { max-width: 220px; color: var(--muted); font-size: 9px; }
+.client-health-overview-client-meta { flex: 0 0 auto; justify-content: flex-end; }
+.client-health-overview-client-meta small { max-width: 105px; color: var(--muted); font-size: 8px; }
+.client-health-overview-client-meta strong { min-width: 35px; border-radius: 8px; background: var(--overview-color); color: #fff; padding: 5px 6px; font-size: 11px; text-align: center; }
+.client-health-overview-client.is-fair .client-health-overview-client-meta strong { color: #342600; }
+
+.client-health-overview-detail {
+  background: var(--surface);
+  padding: 0;
+}
+
+.client-health-overview-detail-card {
+  --overview-color: #ef3f35;
+  --overview-rgb: 239, 63, 53;
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto auto;
+  gap: 13px;
+  overflow: hidden;
+  border-top: 8px solid var(--overview-color);
+  background: linear-gradient(150deg, rgba(var(--overview-rgb), .13), transparent 40%), var(--surface);
+  padding: clamp(14px, 1.4vw, 22px);
+}
+
+.client-health-overview-detail-card.is-fair { --overview-color: #f5a800; --overview-rgb: 245, 168, 0; }
+.client-health-overview-detail-card.is-good { --overview-color: #18b85b; --overview-rgb: 24, 184, 91; }
+.client-health-overview-detail-card.is-excellent { --overview-color: #078fd1; --overview-rgb: 7, 143, 209; }
+
+.client-health-overview-detail-head {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.client-health-overview-detail-head > div:first-child { min-width: 0; }
+.client-health-overview-kicker { color: var(--overview-color); font-family: var(--font-mono); font-size: 9px; font-weight: 750; letter-spacing: .15em; text-transform: uppercase; }
+.client-health-overview-detail-head h2 { margin: 4px 0 3px; color: var(--ink); font-size: clamp(22px, 2vw, 31px); line-height: 1; }
+.client-health-overview-detail-head p { margin: 0; color: var(--stone); font-size: 12px; font-weight: 600; }
+
+.client-health-overview-score {
+  --health-score: 0;
+  width: 88px;
+  height: 88px;
+  flex: 0 0 88px;
+  display: grid;
+  place-content: center;
+  grid-template-columns: auto auto;
+  border-radius: 50%;
+  background: radial-gradient(circle closest-side, var(--surface) 76%, transparent 77% 99%), conic-gradient(var(--overview-color) var(--health-score), rgba(var(--overview-rgb), .14) 0);
+  color: var(--ink);
+  text-align: center;
+}
+
+.client-health-overview-score strong { font-size: 25px; line-height: 1; }
+.client-health-overview-score small { align-self: end; color: var(--muted); font-size: 9px; }
+.client-health-overview-score span { grid-column: 1 / -1; margin-top: 3px; color: var(--overview-color); font-size: 9px; font-weight: 750; text-transform: uppercase; }
+
+.client-health-overview-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.client-health-overview-metrics section { min-width: 0; border: 1px solid rgba(var(--overview-rgb), .2); border-radius: 11px; background: color-mix(in srgb, var(--surface) 88%, transparent); padding: 10px; }
+.client-health-overview-metrics span,
+.client-health-overview-metrics small { display: block; overflow: hidden; color: var(--muted); font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.client-health-overview-metrics span { font-weight: 750; letter-spacing: .05em; text-transform: uppercase; }
+.client-health-overview-metrics strong { display: block; margin: 4px 0 7px; color: var(--ink); font-size: 15px; }
+.client-health-overview-metrics i { display: block; height: 6px; overflow: hidden; border-radius: 99px; background: rgba(var(--overview-rgb), .12); }
+.client-health-overview-metrics i b { display: block; height: 100%; border-radius: inherit; background: var(--overview-color); }
+.client-health-overview-metrics small { margin-top: 5px; }
+
+.client-health-overview-facts {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.client-health-overview-facts > span {
+  min-width: 0;
+  display: grid;
+  align-content: center;
+  gap: 4px;
+  border-radius: 10px;
+  background: var(--surface-soft);
+  padding: 9px 10px;
+}
+.client-health-overview-facts small { overflow: hidden; color: var(--muted); font-size: 8px; font-weight: 700; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
+.client-health-overview-facts strong { color: var(--ink); font-size: 18px; }
+.client-health-overview-facts .is-warning { background: #fff0ee; }
+.client-health-overview-facts .is-warning strong { color: #d9332a; }
+
+.client-health-overview-connections,
+.client-health-overview-actions {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.client-health-overview-connections > span {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border-radius: 9px;
+  padding: 7px 10px;
+  font-size: 10px;
+  font-weight: 700;
+}
+.client-health-overview-connections > span i { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.client-health-overview-connections > span.is-connected { background: #e7f8ee; color: #087a3a; }
+.client-health-overview-connections > span.is-missing { background: #fff0ee; color: #d9332a; }
+.client-health-overview-connections .client-health-appointment { min-width: 0; min-height: 34px; flex: 1 1 auto; font-size: 10px; }
+
+.client-health-overview-actions { justify-content: space-between; border-top: 1px solid var(--line); padding-top: 11px; }
+.client-health-overview-actions > span { color: var(--muted); font-size: 9px; }
+.client-health-overview-actions .primary-button { min-height: 34px; }
+
+.client-health-overview-empty {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 7px;
+  padding: 20px;
+  color: var(--muted);
+  text-align: center;
+}
+.client-health-overview-empty strong { color: var(--ink); }
+.client-health-overview-empty.is-error strong { color: var(--red); }
+
+:root[data-theme="dark"] .client-health-overview-summary .is-warning,
+:root[data-theme="dark"] .client-health-overview-facts .is-warning { background: rgba(239, 63, 53, .14); }
+:root[data-theme="dark"] .client-health-overview-summary .is-good { background: rgba(24, 184, 91, .14); }
+:root[data-theme="dark"] .client-health-overview-connections > span.is-connected { background: rgba(24, 184, 91, .14); color: #63dc93; }
+:root[data-theme="dark"] .client-health-overview-connections > span.is-missing { background: rgba(239, 63, 53, .14); color: #ff7a72; }
+
+@media (max-width: 980px) {
+  body.client-health-overview-view-active .main { padding: 10px 16px 12px; }
+  body.client-health-overview-view-active .topbar { margin-bottom: 10px; padding-bottom: 9px; }
+  .client-health-overview-workspace { gap: 8px; padding: 11px; }
+  .client-health-overview-intro span { display: none; }
+  .client-health-overview-search { width: min(240px, 28vw); }
+  .client-health-overview-layout { grid-template-columns: minmax(225px, .65fr) minmax(0, 1.35fr); gap: 8px; }
+  .client-health-overview-detail-card { gap: 9px; padding: 12px; }
+  .client-health-overview-facts { gap: 6px; }
+}
+
+@media (max-width: 640px) {
+  body.client-health-overview-view-active .main { padding: 8px 8px max(8px, env(safe-area-inset-bottom)); }
+  body.client-health-overview-view-active .topbar { margin-bottom: 7px; }
+  .client-health-overview-workspace { grid-template-rows: auto auto minmax(0, 1fr); gap: 7px; padding: 8px; }
+  .client-health-overview-toolbar { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; }
+  .client-health-overview-intro { display: none; }
+  .client-health-overview-search { width: 100%; min-height: 34px; }
+  .client-health-overview-toolbar select { width: 100%; min-height: 34px; }
+  .client-health-overview-toolbar .ghost-button { width: 34px; min-width: 34px; min-height: 34px; grid-column: 2; grid-row: 1; overflow: hidden; padding: 0; font-size: 0; }
+  .client-health-overview-summary { gap: 4px; }
+  .client-health-overview-summary > span { min-height: 39px; display: grid; gap: 0; padding: 5px 6px; }
+  .client-health-overview-summary small { font-size: 6.5px; }
+  .client-health-overview-summary strong { font-size: 14px; }
+  .client-health-overview-layout { grid-template-columns: 1fr; grid-template-rows: minmax(132px, .42fr) minmax(0, 1.58fr); gap: 7px; }
+  .client-health-overview-list { padding: 5px; }
+  .client-health-overview-client { min-height: 48px; padding-block: 5px; }
+  .client-health-overview-client-main small,
+  .client-health-overview-client-meta small { display: none; }
+  .client-health-overview-detail { overflow-y: auto; overscroll-behavior: contain; }
+  .client-health-overview-detail-card { height: auto; min-height: 100%; gap: 8px; overflow: visible; border-top-width: 6px; padding: 10px; }
+  .client-health-overview-detail-head h2 { font-size: 19px; }
+  .client-health-overview-detail-head p { font-size: 10px; }
+  .client-health-overview-score { width: 66px; height: 66px; flex-basis: 66px; }
+  .client-health-overview-score strong { font-size: 19px; }
+  .client-health-overview-metrics { gap: 5px; }
+  .client-health-overview-metrics section { padding: 7px; }
+  .client-health-overview-metrics span,
+  .client-health-overview-metrics small { font-size: 7px; }
+  .client-health-overview-metrics strong { margin-block: 3px 5px; font-size: 11px; }
+  .client-health-overview-facts { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
+  .client-health-overview-facts > span { padding: 6px; }
+  .client-health-overview-facts small { font-size: 6px; }
+  .client-health-overview-facts strong { font-size: 13px; }
+  .client-health-overview-connections > span { min-height: 30px; padding: 5px 7px; font-size: 8px; }
+  .client-health-overview-connections .client-health-appointment { min-height: 30px; font-size: 8px; }
+  .client-health-overview-actions > span { display: none; }
+  .client-health-overview-actions { justify-content: flex-end; padding-top: 7px; }
+}
