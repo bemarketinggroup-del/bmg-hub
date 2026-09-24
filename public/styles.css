@@ -11913,22 +11913,43 @@ body.client-health-overview-view-active .main {
 
 /* ============================================================
    MOBILE EDGE-TO-EDGE — tutte le viste operative
-   Mantiene soltanto il margine minimo e le safe area di iPhone.
+   Le pagine arrivano al bordo; resta soltanto la safe area di iPhone.
    ============================================================ */
 @media (max-width: 640px) {
   body .app-shell > .main {
-    padding-right: max(4px, env(safe-area-inset-right));
-    padding-left: max(4px, env(safe-area-inset-left));
+    padding-right: env(safe-area-inset-right);
+    padding-left: env(safe-area-inset-left);
   }
 
-  #calendarView {
+  .main > .topbar {
+    padding-right: max(8px, env(safe-area-inset-right));
+    padding-left: max(8px, env(safe-area-inset-left));
+  }
+
+  #calendarView,
+  #pedView,
+  #tasksView,
+  .view.is-active {
+    width: 100%;
+    max-width: none;
     margin-right: 0;
     margin-left: 0;
   }
 
+  .view.is-active > .panel {
+    border-right: 0;
+    border-left: 0;
+    border-radius: 0;
+  }
+
+  .ped-workspace,
+  .google-calendar-workspace,
   .smart-calendar-panel {
     width: 100%;
     margin-right: 0;
     margin-left: 0;
+    border-right: 0;
+    border-left: 0;
+    border-radius: 0;
   }
 }

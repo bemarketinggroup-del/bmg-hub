@@ -63,12 +63,15 @@ più recente alla più vecchia:
 
 - Richiesta: usare su telefono tutta la larghezza disponibile per ogni pagina
   del gestionale, eliminando l'effetto rimpicciolito causato dai bordi laterali.
-- Modifiche: il gutter orizzontale globale delle viste operative passa da 16 px
-  a 4 px sotto i 640 px, mantenendo automaticamente le safe area di iPhone.
-  Calendario e Turni / Smart Working non usano più le compensazioni negative
-  basate sul vecchio margine, così rimangono a tutta larghezza senza generare
-  overflow orizzontale. Aggiunte verifiche automatiche dedicate al contratto
-  edge-to-edge.
+- Modifiche: sotto i 640 px il gutter orizzontale globale viene rimosso da tutte
+  le viste, comprese Task, PED, Calendario, Clienti, Grafiche, Utenti e Salute
+  clienti; rimangono soltanto le eventuali safe area di iPhone. La testata con
+  menu e titolo conserva un padding interno separato. Le superfici PED,
+  Calendario e Turni / Smart Working perdono anche cornici, raggi laterali e
+  compensazioni del vecchio margine; la stessa rimozione della cornice esterna
+  viene applicata ai pannelli principali di tutte le pagine, così restano a
+  tutta larghezza senza generare overflow orizzontale. Aggiunte verifiche
+  automatiche dedicate al contratto edge-to-edge.
 - File: `public/styles.css`, `scripts/test-mobile-navigation.mjs`,
   `docs/PROJECT-HANDOFF.md`, `agent.md`.
 - Verifiche: `npm run check`, `npm run test:mobile-navigation`, `npm run

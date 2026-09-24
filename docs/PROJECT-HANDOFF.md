@@ -155,11 +155,13 @@ supabase/                     schema e migration
   riportano cliente, mese/PED, data e contenuto
   quando disponibili; anche apertura del PED, cambio cliente e cambio mese
   vengono registrati con il relativo cliente.
-- Su smartphone tutte le viste operative sfruttano quasi l'intera larghezza:
-  il contenitore principale conserva soltanto 4 px per lato, aumentati
-  automaticamente quando iOS espone una safe area. Calendario e Smart Working
-  non applicano ulteriori compensazioni laterali, evitando sia l'effetto pagina
-  rimpicciolita sia lo scroll orizzontale.
+- Su smartphone tutte le viste operative, incluse Task, PED, Calendario,
+  Clienti, Grafiche, Utenti e Salute clienti, arrivano ai bordi dello schermo.
+  Il contenitore principale conserva soltanto le eventuali safe area esposte da
+  iOS; menu e titolo mantengono un padding interno separato. Le superfici PED,
+  Calendario e Smart Working non applicano cornici o compensazioni laterali,
+  e anche i pannelli principali delle altre pagine perdono la cornice esterna,
+  evitando sia l'effetto pagina rimpicciolita sia lo scroll orizzontale.
 - La pagina Utenti non espone la creazione di nuovi account; il provisioning
   coordinato resta disponibile soltanto nel backend.
 - La directory Utenti viene sempre letta dal backend quando si apre il modulo:
