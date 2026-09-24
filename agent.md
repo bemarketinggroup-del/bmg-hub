@@ -68,17 +68,23 @@ più recente alla più vecchia:
   clienti; rimangono soltanto le eventuali safe area di iPhone. La testata con
   menu e titolo conserva un padding interno separato. Le superfici PED,
   Calendario e Turni / Smart Working perdono anche cornici, raggi laterali e
-  compensazioni del vecchio margine; la stessa rimozione della cornice esterna
-  viene applicata ai pannelli principali di tutte le pagine, così restano a
-  tutta larghezza senza generare overflow orizzontale. Aggiunte verifiche
-  automatiche dedicate al contratto edge-to-edge.
+  compensazioni del vecchio margine. Corretto inoltre l'override globale del
+  tema che, essendo dichiarato dopo le regole dei singoli moduli, reintroduceva
+  22 px di padding laterale nei workspace di Backend sito, PED, Salute clienti,
+  Chat, Calendario, Task, Utenti e Smart Working. La stessa rimozione della
+  cornice esterna viene applicata ai pannelli principali di tutte le pagine,
+  così restano a tutta larghezza senza generare overflow orizzontale. Aggiunte
+  verifiche automatiche dedicate al contratto edge-to-edge.
 - File: `public/styles.css`, `scripts/test-mobile-navigation.mjs`,
-  `docs/PROJECT-HANDOFF.md`, `agent.md`.
+  `scripts/capture-mobile-pages.mjs`, `docs/PROJECT-HANDOFF.md`, `agent.md`.
 - Verifiche: `npm run check`, `npm run test:mobile-navigation`, `npm run
   test:primeng-components`, `npm run test:ped-carousel`, `npm run
   test:google-calendar`, `npm run test:smart-working`, `npm run
-  test:client-health`, `npm run build`, `git diff --check`; controllo delle
-  regole responsive a larghezza iPhone e desktop.
+  test:client-health`, `npm run build`, `git diff --check`; rendering e
+  controllo visivo delle 16 viste reali a 390×844 px con
+  `node scripts/capture-mobile-pages.mjs /tmp/bmg-mobile-pages-final`: ogni vista
+  misura 390 px sia come viewport sia come larghezza del documento, senza
+  elementi operativi fuori schermo.
 - Pubblicazione: GitHub `main` e Vercel produzione.
 - Note: la modifica riguarda tutte le viste autenticate; i contenuti interni
   mantengono il proprio padding per restare leggibili e facilmente toccabili.

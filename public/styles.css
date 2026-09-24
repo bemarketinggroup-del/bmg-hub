@@ -11942,6 +11942,26 @@ body.client-health-overview-view-active .main {
     border-radius: 0;
   }
 
+  /*
+   * Questi pannelli sono il contenitore della pagina, non una card interna.
+   * L'override visuale `.panel` viene dichiarato piu avanti delle regole dei
+   * singoli moduli e reintroduce 22 px di padding: su iPhone apparivano come
+   * due bordi bianchi. Azzeriamo quindi il padding soltanto sui workspace
+   * strutturali; i loro controlli mantengono il proprio spazio interno.
+   */
+  #contentView > .cms-workspace,
+  #pedView > .ped-workspace,
+  #clientHealthOverviewView > .client-health-overview-workspace,
+  #clientHealthView > .client-health-workspace,
+  #chatView > .team-chat-workspace,
+  #calendarView > .google-calendar-workspace,
+  #teamView > .task-workspace,
+  #usersView > .users-workspace,
+  #smartView .smart-calendar-panel {
+    padding-right: 0;
+    padding-left: 0;
+  }
+
   .ped-workspace,
   .google-calendar-workspace,
   .smart-calendar-panel {

@@ -159,9 +159,18 @@ supabase/                     schema e migration
   Clienti, Grafiche, Utenti e Salute clienti, arrivano ai bordi dello schermo.
   Il contenitore principale conserva soltanto le eventuali safe area esposte da
   iOS; menu e titolo mantengono un padding interno separato. Le superfici PED,
-  Calendario e Smart Working non applicano cornici o compensazioni laterali,
-  e anche i pannelli principali delle altre pagine perdono la cornice esterna,
-  evitando sia l'effetto pagina rimpicciolita sia lo scroll orizzontale.
+  Calendario e Smart Working non applicano cornici o compensazioni laterali.
+  I workspace strutturali di Backend sito, PED, Salute clienti, Chat,
+  Calendario, Task e Utenti azzerano inoltre il padding laterale che il tema
+  generale dei pannelli reintroduceva dopo le regole responsive; i controlli
+  interni conservano invece il proprio spazio di leggibilita. Anche i pannelli
+  principali delle altre pagine perdono la cornice esterna, evitando sia
+  l'effetto pagina rimpicciolita sia lo scroll orizzontale.
+  Il controllo visuale ripetibile si esegue con
+  `node scripts/capture-mobile-pages.mjs <cartella-output>`: apre le 16 viste
+  reali a 390×844 px, salva uno screenshot per pagina e fallisce se la
+  larghezza del documento supera quella dello schermo o se un elemento
+  operativo esce lateralmente.
 - La pagina Utenti non espone la creazione di nuovi account; il provisioning
   coordinato resta disponibile soltanto nel backend.
 - La directory Utenti viene sempre letta dal backend quando si apre il modulo:
