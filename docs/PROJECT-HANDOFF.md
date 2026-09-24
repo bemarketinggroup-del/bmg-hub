@@ -1,6 +1,6 @@
 # BMG Hub — contesto per una nuova chat
 
-Ultimo aggiornamento: 23 settembre 2026
+Ultimo aggiornamento: 24 settembre 2026
 Repository locale: `/Users/davidedeluca/Desktop/bmg-hub`  
 Branch di produzione: `main`  
 Ultimo commit applicativo precedente all'ottimizzazione: `435d236`
@@ -155,6 +155,11 @@ supabase/                     schema e migration
   riportano cliente, mese/PED, data e contenuto
   quando disponibili; anche apertura del PED, cambio cliente e cambio mese
   vengono registrati con il relativo cliente.
+- Su smartphone tutte le viste operative sfruttano quasi l'intera larghezza:
+  il contenitore principale conserva soltanto 4 px per lato, aumentati
+  automaticamente quando iOS espone una safe area. Calendario e Smart Working
+  non applicano ulteriori compensazioni laterali, evitando sia l'effetto pagina
+  rimpicciolita sia lo scroll orizzontale.
 - La pagina Utenti non espone la creazione di nuovi account; il provisioning
   coordinato resta disponibile soltanto nel backend.
 - La directory Utenti viene sempre letta dal backend quando si apre il modulo:

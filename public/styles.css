@@ -11910,3 +11910,25 @@ body.client-health-overview-view-active .main {
   .client-health-overview-actions > span { display: none; }
   .client-health-overview-actions { justify-content: flex-end; padding-top: 7px; }
 }
+
+/* ============================================================
+   MOBILE EDGE-TO-EDGE — tutte le viste operative
+   Mantiene soltanto il margine minimo e le safe area di iPhone.
+   ============================================================ */
+@media (max-width: 640px) {
+  body .app-shell > .main {
+    padding-right: max(4px, env(safe-area-inset-right));
+    padding-left: max(4px, env(safe-area-inset-left));
+  }
+
+  #calendarView {
+    margin-right: 0;
+    margin-left: 0;
+  }
+
+  .smart-calendar-panel {
+    width: 100%;
+    margin-right: 0;
+    margin-left: 0;
+  }
+}

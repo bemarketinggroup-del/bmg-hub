@@ -1,6 +1,6 @@
 # BMG Hub — memoria operativa degli interventi
 
-Ultimo aggiornamento: 23 settembre 2026
+Ultimo aggiornamento: 24 settembre 2026
 
 ## Scopo del file
 
@@ -58,6 +58,27 @@ più recente alla più vecchia:
 ```
 
 ## Registro modifiche
+
+### 2026-09-24 — Pagine mobile estese fino ai margini
+
+- Richiesta: usare su telefono tutta la larghezza disponibile per ogni pagina
+  del gestionale, eliminando l'effetto rimpicciolito causato dai bordi laterali.
+- Modifiche: il gutter orizzontale globale delle viste operative passa da 16 px
+  a 4 px sotto i 640 px, mantenendo automaticamente le safe area di iPhone.
+  Calendario e Turni / Smart Working non usano più le compensazioni negative
+  basate sul vecchio margine, così rimangono a tutta larghezza senza generare
+  overflow orizzontale. Aggiunte verifiche automatiche dedicate al contratto
+  edge-to-edge.
+- File: `public/styles.css`, `scripts/test-mobile-navigation.mjs`,
+  `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run check`, `npm run test:mobile-navigation`, `npm run
+  test:primeng-components`, `npm run test:ped-carousel`, `npm run
+  test:google-calendar`, `npm run test:smart-working`, `npm run
+  test:client-health`, `npm run build`, `git diff --check`; controllo delle
+  regole responsive a larghezza iPhone e desktop.
+- Pubblicazione: GitHub `main` e Vercel produzione.
+- Note: la modifica riguarda tutte le viste autenticate; i contenuti interni
+  mantengono il proprio padding per restare leggibili e facilmente toccabili.
 
 ### 2026-09-24 — Salute clienti divisa in panoramica e monitor
 
