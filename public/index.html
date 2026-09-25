@@ -1294,6 +1294,44 @@
     </form>
   </dialog>
 
+  <dialog class="modal client-ai-profile-modal" id="clientAiProfileModal">
+    <form id="clientAiProfileForm">
+      <div class="modal-head">
+        <div>
+          <p class="eyebrow">Memoria cliente per l'AI</p>
+          <h2 id="clientAiProfileTitle">Profilo cliente</h2>
+          <span>Queste informazioni guidano valutazioni e consigli anche quando cambia chi gestisce il cliente.</span>
+        </div>
+        <button class="icon-button" data-client-ai-profile-close type="button" title="Chiudi" aria-label="Chiudi"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+      </div>
+      <input name="client_id" type="hidden">
+      <div class="client-ai-profile-body">
+        <div class="form-grid client-ai-profile-grid">
+          <label>Settore<input name="industry" placeholder="Es. hotellerie di lusso"></label>
+          <label>Lingua principale<input name="preferred_language" value="it" placeholder="it, en..."></label>
+          <label class="full">Chi è e cosa fa<textarea name="business_description" rows="3" placeholder="Identità, posizionamento, sedi, caratteristiche distintive..."></textarea></label>
+          <label>Pubblico<textarea name="audience" rows="3" placeholder="A chi parla il brand"></textarea></label>
+          <label>Voce del brand<textarea name="brand_voice" rows="3" placeholder="Tono, parole e stile"></textarea></label>
+          <label>Obiettivi<textarea name="objectives" rows="3" placeholder="Cosa deve ottenere la comunicazione"></textarea></label>
+          <label>Servizi e priorità<textarea name="services_focus" rows="3" placeholder="Servizi attivi, novità, focus attuale"></textarea></label>
+          <label>Da includere<textarea name="must_include" rows="3" placeholder="Informazioni e formule importanti"></textarea></label>
+          <label>Da evitare<textarea name="avoid_topics" rows="3" placeholder="Claim, toni o argomenti vietati"></textarea></label>
+        </div>
+        <aside class="client-ai-learned-panel">
+          <strong>Apprendimento operativo</strong>
+          <p id="clientAiProfileStats">Caricamento storico…</p>
+          <div id="clientAiLearnedPatterns"></div>
+          <small>L'AI usa copy pubblicati, valutazioni approvate e attività del PED. Le regole imparate restano col cliente, non con il singolo utente.</small>
+        </aside>
+      </div>
+      <p class="form-message" id="clientAiProfileMessage" role="status"></p>
+      <div class="modal-actions">
+        <button class="ghost-button" data-client-ai-profile-close type="button">Annulla</button>
+        <button class="primary-button" id="saveClientAiProfileButton" type="submit">Salva memoria cliente</button>
+      </div>
+    </form>
+  </dialog>
+
   <dialog class="modal client-connections-modal" id="clientConnectionsModal">
     <div class="client-connections-modal-shell">
       <div class="modal-head">

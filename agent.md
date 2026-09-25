@@ -59,6 +59,41 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-09-25 — Memoria cliente e qualità copy contestuale
+
+- Richiesta: impedire che copy formalmente completi ma insensati ricevano un
+  voto buono; creare per ogni cliente una memoria persistente con identità,
+  servizi, aggiornamenti e storico, utilizzabile dall'AI anche quando cambia il
+  social media manager.
+- Modifiche: il voto copy è ora 25% struttura e 75% analisi contestuale AI su
+  pertinenza, voce del brand, coerenza, efficacia e affidabilità, con limiti
+  rigidi per testi fuori tema o incoerenti. Gli editor PED avviano l'analisi
+  dopo una breve pausa, riusano la cache e mostrano `Da verificare` finché non
+  esiste un risultato semantico. La Salute clienti usa le valutazioni salvate e
+  distingue i copy ancora da analizzare. Aggiunta nella scheda cliente la
+  `Memoria AI`, salvata in Supabase, con profilo editoriale, storico, pattern
+  appresi e feedback del team; la versione del profilo invalida le analisi
+  precedenti. Tutte le chiamate usano output JSON strutturato, `store: false`,
+  reasoning basso, rate limit e tetto mensile condiviso di 30 USD.
+- File: `.env.example`, `api/ai-copy-review.js`, `api/client-ai-profile.js`,
+  `lib/client-copy-intelligence.js`, `lib/client-health.js`, `public/app.js`,
+  `public/index.html`, `public/styles.css`, `scripts/local-server.mjs`,
+  `scripts/test-client-copy-intelligence.mjs`, `package.json`,
+  `supabase/schema.sql`,
+  `supabase/migrations/20260925180000_client_ai_memory.sql`, `vercel.json`,
+  `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run check`, `npm run test:copy-intelligence`, `npm run
+  test:client-health`, `npm run build`, `git diff --check`; controllo visivo
+  desktop e smartphone della memoria cliente e della valutazione copy.
+- Pubblicazione: GitHub `main` e Vercel produzione; migration Supabase dedicata
+  pronta e idempotente. Finché la CLI Supabase non dispone di una sessione
+  amministrativa locale, gli endpoint usano automaticamente storage database
+  compatibile già disponibile, senza perdere profili o valutazioni.
+- Note: la memoria è ospitata nel database Supabase, non in un file statico
+  Vercel; in questo modo è versionata, ricercabile e condivisa in modo
+  affidabile tra gli utenti autorizzati. La CLI locale non aveva un profilo
+  Supabase autenticato: non sono state richieste né esposte credenziali.
+
 ### 2026-09-24 — Pagine mobile estese fino ai margini
 
 - Richiesta: usare su telefono tutta la larghezza disponibile per ogni pagina

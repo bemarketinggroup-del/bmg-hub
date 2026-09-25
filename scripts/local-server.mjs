@@ -20,6 +20,7 @@ const { default: handleClientsSyncClickUp } = await import("../api/clients-sync-
 const { default: handleClickUpTeam } = await import("../api/clickup-team.js");
 const { default: handleClickUpTasks } = await import("../api/clickup-tasks.js");
 const { default: handleAiAssistant } = await import("../api/ai-assistant.js");
+const { handleAiCopyReview, handleClientAiProfile } = await import("../lib/client-copy-intelligence.js");
 const { handleSiteMedia } = await import("../lib/site-media.js");
 const { default: handleMeApi } = await import("../api/me.js");
 const { default: handleUsersApi } = await import("../api/users.js");
@@ -133,6 +134,16 @@ createServer(async (request, response) => {
 
     if (url.pathname === "/api/ai/assistant") {
       await handleAiAssistant(request, response);
+      return;
+    }
+
+    if (url.pathname === "/api/ai/copy-review") {
+      await handleAiCopyReview(request, response);
+      return;
+    }
+
+    if (url.pathname === "/api/client-ai-profile") {
+      await handleClientAiProfile(request, response);
       return;
     }
 

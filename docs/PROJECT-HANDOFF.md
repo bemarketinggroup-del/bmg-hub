@@ -491,17 +491,35 @@ supabase/                     schema e migration
   ricarica quel preciso frame dal video anche dopo refresh, senza creare copie
   o immagini aggiuntive su Google Drive. Il comando resta interamente visibile
   anche nella testata smartphone.
-- Il PED mostra un controllo qualità automatico e senza consumo API. Per ogni
-  copy assegna un punteggio e una barra `Scarso / Decente / Buono / Ottimo`
-  controllando sviluppo del messaggio, apertura, struttura, chiusura/call to
-  action e almeno cinque hashtag; la valutazione si aggiorna mentre si scrive
-  durante la creazione, sui contenuti programmati e su quelli in attesa. Il riepilogo del
+- Il PED mostra un controllo qualità ibrido per cliente. La struttura
+  (sviluppo, apertura, leggibilità, chiusura/call to action e almeno cinque
+  hashtag) pesa soltanto il 25%; il restante 75% è una valutazione AI di
+  pertinenza al cliente, voce del brand, coerenza, capacità persuasiva e
+  affidabilità fattuale. Coerenza o pertinenza basse impongono un limite rigido
+  al voto, quindi un testo insensato non può risultare `Buono` solo perché è
+  lungo e contiene CTA e hashtag. Prima della verifica semantica la UI mostra
+  `Da verificare`, mai un voto positivo basato sulla sola forma. L'analisi parte
+  dopo 2,2 secondi di pausa negli editor di creazione, programmazione e attesa;
+  è salvata e riutilizzata per lo stesso testo e versione del profilo cliente.
+  Il riepilogo del
   cliente valuta inoltre la copertura futura rispetto a 30 giorni, la cadenza
   rispetto all'obiettivo di un contenuto ogni due giorni e la qualità media dei
-  copy, indicando quanti giorni mancano all'ultima uscita pianificata.
-  Solo il comando esplicito `Consiglio AI sul copy` effettua una chiamata API e
-  restituisce un riscontro semantico sintetico; la digitazione e le barre non
-  consumano budget.
+  copy, indicando quanti giorni mancano all'ultima uscita pianificata e quanti
+  copy devono ancora essere analizzati.
+- Ogni scheda cliente espone `Memoria AI`: un profilo persistente in Supabase
+  con settore, descrizione, pubblico, voce, obiettivi, servizi/novità, elementi
+  obbligatori, argomenti vietati e lingua. Il revisore usa inoltre copy storici
+  pubblicati, esempi approvati dal team e pattern appresi. Il feedback `In linea`
+  o `Non in linea` corregge l'apprendimento. La memoria resta associata al
+  cliente quando cambia il social media manager; ogni modifica del profilo
+  incrementa la versione e invalida automaticamente le vecchie valutazioni.
+  I testi sono inviati con `store: false`, output JSON strutturato e reasoning
+  basso. Cache, limiti per utente e budget mensile condiviso evitano chiamate
+  duplicate e mantengono la spesa nel tetto configurato.
+  Se la migration dedicata non è ancora presente nell'ambiente, gli endpoint
+  usano temporaneamente `site_content` di tipo `system` per il profilo e
+  `ai_task_audit_logs` per la cache delle revisioni: i dati restano server-side
+  e non pubblici, e il servizio continua a funzionare durante il rollout.
 - La navigazione PED include il gruppo espandibile `Salute clienti`, diviso in
   `Panoramica clienti` e `Monitor ufficio`, e riusa gli stessi criteri di
   copertura, frequenza e qualità copy per tutti i clienti attivi senza rimuovere
@@ -644,8 +662,9 @@ supabase/                     schema e migration
   limitato a 420 token. In questo modo il consumo automatico è al massimo due
   brevi sintesi per utente al giorno lavorativo.
 - Può ordinare priorità, individuare scadenze e sovrapposizioni e suggerire
-  prossimi passi usando dati aggiornati dell'Hub. Le funzioni deterministiche,
-  come la valutazione dei copy e della copertura PED, non consumano API.
+  prossimi passi usando dati aggiornati dell'Hub. Copertura e cadenza PED
+  restano deterministiche; la qualità semantica dei copy usa invece il revisore
+  contestuale dedicato e la relativa cache persistente.
 - Se interrogata su un cliente, l'AI può ancora usare il riepilogo degli eventi
   Calendar tramite nome e alias. Gli avvisi automatici sui prossimi
   appuntamenti e sui clienti da pianificare appartengono però al modulo
@@ -813,6 +832,7 @@ GOOGLE_CALENDAR_OAUTH_REFRESH_TOKEN
 OPENAI_API_KEY
 OPENAI_MODEL
 OPENAI_ASSISTANT_MODEL
+OPENAI_COPY_REVIEW_MODEL
 OPENAI_MONTHLY_BUDGET_USD
 OPENAI_MONTHLY_WARNING_USD
 OPENAI_MAX_COST_PER_REQUEST_USD
@@ -848,6 +868,7 @@ supabase/migrations/20260910032000_ped_staging_carousel_editor.sql
 supabase/migrations/20260923133000_ped_staging_allow_duplicate_drive_files.sql
 supabase/migrations/20260923150500_ped_move_between_calendar_and_staging.sql
 supabase/migrations/20260923154500_ped_smart_media_append.sql
+supabase/migrations/20260925180000_client_ai_memory.sql
 ```
 
 Non modificare retroattivamente migration già applicate in produzione. Creare
@@ -897,6 +918,7 @@ npm run test:session-persistence
 npm run test:primeng-components
 npm run test:maintenance-notice
 npm run test:client-health
+npm run test:copy-intelligence
 ```
 
 Alcuni test interagiscono con servizi reali: leggerli prima di eseguirli e non

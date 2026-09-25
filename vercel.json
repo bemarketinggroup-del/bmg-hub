@@ -12,6 +12,8 @@
     { "source": "/api/clickup/webhook", "destination": "/api/clickup-tasks" },
     { "source": "/api/ai/task-assist", "destination": "/api/clickup-tasks" },
     { "source": "/api/ai/assistant", "destination": "/api/ai-assistant" },
+    { "source": "/api/ai/copy-review", "destination": "/api/ai-copy-review" },
+    { "source": "/api/client-ai-profile", "destination": "/api/client-ai-profile" },
     { "source": "/ped-share", "destination": "/ped-share.html" }
   ],
   "headers": [

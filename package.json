@@ -31,7 +31,8 @@
     "test:maintenance-notice": "node scripts/test-maintenance-notice.mjs",
     "test:client-health": "node scripts/test-client-health.mjs",
     "test:client-affinity": "node scripts/test-client-affinity.mjs",
-    "test:operational-brief": "node scripts/test-operational-brief.mjs"
+    "test:operational-brief": "node scripts/test-operational-brief.mjs",
+    "test:copy-intelligence": "node scripts/test-client-copy-intelligence.mjs"
   },
   "devDependencies": {
     "esbuild": "^0.25.12"

@@ -325,6 +325,10 @@ let driveClientImportFolders = [];
 let driveClientImportSelected = new Set();
 let clientConnectionsCache = new Map();
 let activeClientConnectionsId = "";
+let clientAiProfileCache = new Map();
+let pedCopyReviewCache = new Map();
+let pedCopyReviewTimer = null;
+let pedCopyReviewSequence = 0;
 let pedUsedFileIds = new Set();
 let pedStagingFileIds = new Set();
 let selectedPedMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
@@ -2451,6 +2455,7 @@ function clientDetailMarkup(client) {
       <div class="client-detail-actions">
         ${currentProfile?.role === "admin" ? `<button class="danger-button" data-client-delete="${client.id}" type="button"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="m19 6-1 14H6L5 6"/><path d="M10 11v5M14 11v5"/></svg>Elimina</button>` : ""}
         <button class="ghost-button" data-client-edit="${client.id}" type="button"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>Modifica</button>
+        <button class="secondary-button" data-client-ai-profile="${client.id}" type="button"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a4 4 0 0 0-4 4v1a3 3 0 0 0-2 5.24V15a3 3 0 0 0 3 3h1l2 3 2-3h1a3 3 0 0 0 3-3v-1.76A3 3 0 0 0 16 8V7a4 4 0 0 0-4-4Z"/><path d="M9.5 11h.01M14.5 11h.01M10 14h4"/></svg>Memoria AI</button>
         ${drive ? "" : `<button class="primary-button" data-client-edit="${client.id}" type="button">Aggiungi Drive</button>`}
       </div>
     </div>
@@ -3965,58 +3970,158 @@ function pedCopyEvaluation(value) {
   return { score, ...quality, words: words.length, hashtags, hasCallToAction, hasStructure, hasHook, feedback };
 }
 
-function pedCopyEvaluationMarkup(value, { compact = false } = {}) {
-  const evaluation = pedCopyEvaluation(value);
-  const criteria = [
-    [evaluation.words >= 20, `${evaluation.words} parole`],
-    [evaluation.hasHook, "Apertura"],
-    [evaluation.hasStructure, "Struttura"],
-    [evaluation.hasCallToAction, "Chiusura / CTA"],
-    [evaluation.hashtags >= 5, `${evaluation.hashtags}/5 hashtag`]
+function pedCopyReviewKey(clientId, value) {
+  return `${String(clientId || "")}\u0000${String(value || "").replace(/\r\n/g, "\n").trim()}`;
+}
+
+function pedCopyReviewFor(value, clientId = selectedPedClientId) {
+  return pedCopyReviewCache.get(pedCopyReviewKey(clientId, value)) || null;
+}
+
+function pedCopyReviewQuality(score) {
+  return score >= 85
+    ? { label: "Ottimo", tone: "excellent" }
+    : score >= 65
+      ? { label: "Buono", tone: "good" }
+      : score >= 40
+        ? { label: "Decente", tone: "fair" }
+        : { label: "Scarso", tone: "poor" };
+}
+
+function pedCopyDimensionMarkup(review) {
+  const dimensions = review?.dimensions || {};
+  const labels = [
+    ["relevance", "Pertinenza"],
+    ["brand_fit", "Voce brand"],
+    ["coherence", "Coerenza"],
+    ["persuasion", "Efficacia"],
+    ["factual_consistency", "Affidabilità"]
   ];
-  return `<div class="ped-copy-score is-${evaluation.tone}${compact ? " is-compact" : ""}" title="${escapeHtml(evaluation.feedback[0] || "Copy completo e convincente")}">
-    <div class="ped-copy-score-head"><strong>${evaluation.label}</strong><span>${evaluation.score}/100</span></div>
-    <div class="ped-copy-score-bar" aria-hidden="true"><i style="width:${evaluation.score}%"></i></div>
+  return `<div class="ped-copy-dimensions">${labels.map(([key, label]) => `<span><b>${escapeHtml(label)}</b><i>${Number(dimensions[key] || 0)}/100</i></span>`).join("")}</div>`;
+}
+
+function pedCopyEvaluationMarkup(value, { compact = false } = {}) {
+  const structure = pedCopyEvaluation(value);
+  const review = pedCopyReviewFor(value);
+  const score = review ? Number(review.overall_score || 0) : Math.min(39, Math.round(structure.score * .25));
+  const quality = review ? pedCopyReviewQuality(score) : { label: value ? "Da verificare" : "Scarso", tone: value ? "pending" : "poor" };
+  const criteria = [
+    [structure.words >= 20, `${structure.words} parole`],
+    [structure.hasHook, "Apertura"],
+    [structure.hasStructure, "Struttura"],
+    [structure.hasCallToAction, "Chiusura / CTA"],
+    [structure.hashtags >= 5, `${structure.hashtags}/5 hashtag`]
+  ];
+  const improvements = Array.isArray(review?.improvements) ? review.improvements : structure.feedback;
+  const warnings = Array.isArray(review?.context_warnings) ? review.context_warnings : [];
+  return `<div class="ped-copy-score is-${quality.tone}${compact ? " is-compact" : ""}" title="${escapeHtml(review?.summary || "La forma è solo il 25%: serve la verifica AI sul cliente")}">
+    <div class="ped-copy-score-head"><strong>${quality.label}${review ? " · AI cliente" : " · AI"}</strong><span>${review ? `${score}/100` : "in attesa"}</span></div>
+    <div class="ped-copy-score-bar" aria-hidden="true"><i style="width:${review ? score : 12}%"></i></div>
     ${compact ? "" : `<div class="ped-copy-criteria">${criteria.map(([ok, label]) => `<span class="${ok ? "is-ok" : "is-missing"}">${ok ? "✓" : "·"} ${escapeHtml(label)}</span>`).join("")}</div>
-      <p>${escapeHtml(evaluation.feedback.slice(0, 3).join(" · ") || "Copy completo: apertura, sviluppo, chiusura e hashtag sono presenti.")}</p>
-      <div class="ped-copy-ai-row"><button class="text-button" data-ped-copy-ai-review type="button">Consiglio AI sul copy</button><small class="ped-copy-ai-advice" aria-live="polite"></small></div>`}
+      ${review ? pedCopyDimensionMarkup(review) : ""}
+      <p>${escapeHtml(review?.summary || (value ? "Analizzo pertinenza, voce del brand, coerenza, efficacia e affidabilità. La struttura vale solo il 25%." : "Scrivi il copy per avviare l’analisi."))}</p>
+      ${warnings.length ? `<p class="ped-copy-context-warning">${warnings.map((item) => `⚠ ${escapeHtml(item)}`).join(" · ")}</p>` : ""}
+      ${improvements?.length ? `<p>${escapeHtml(improvements.slice(0, 3).join(" · "))}</p>` : ""}
+      <div class="ped-copy-ai-row"><button class="text-button" data-ped-copy-ai-review type="button">${review ? "Rianalizza copy" : "Analizza ora"}</button><small class="ped-copy-ai-advice" aria-live="polite">${review ? `Struttura ${Number(review.structure_score || 0)}/100 · Contesto ${Number(review.semantic_score || 0)}/100` : "Analisi automatica dopo una breve pausa"}</small>${review ? `<span class="ped-copy-feedback"><button type="button" data-ped-copy-feedback="approved" data-review-id="${escapeHtml(review.id || "")}">✓ In linea</button><button type="button" data-ped-copy-feedback="rejected" data-review-id="${escapeHtml(review.id || "")}">✕ Non in linea</button></span>` : ""}</div>`}
   </div>`;
 }
 
-async function requestPedCopyAdvice(button) {
+function activePedCopyContext() {
   const stagingOpen = Boolean(document.getElementById("pedStagingEditorModal")?.open);
   const createOpen = Boolean(document.getElementById("pedCreateCaptionModal")?.open);
-  const copy = stagingOpen ? pedStagingPlainText() : createOpen ? pedCreateCaptionPlainText() : pedCaptionPlainText();
-  const feedback = button.closest(".ped-copy-score")?.querySelector(".ped-copy-ai-advice");
+  if (stagingOpen) return { copy: pedStagingPlainText(), entity_type: "staging", entity_id: editingPedStagingId, target: "pedStagingEvaluation" };
+  if (createOpen) return { copy: pedCreateCaptionPlainText(), entity_type: "draft", entity_id: "", target: "pedCreateCaptionEvaluation" };
+  return { copy: pedCaptionPlainText(), entity_type: "ped", entity_id: editingPedCaptionId, target: "pedCaptionEvaluation" };
+}
+
+function rerenderActivePedCopyEvaluation() {
+  const context = activePedCopyContext();
+  const target = document.getElementById(context.target);
+  if (target && !target.hidden) target.innerHTML = pedCopyEvaluationMarkup(context.copy);
+  renderPedHealth();
+}
+
+async function requestPedCopyAdvice(button = null, { automatic = false } = {}) {
+  const context = activePedCopyContext();
+  const copy = context.copy;
+  const clientId = String(selectedPedClientId || "");
+  const feedback = button?.closest(".ped-copy-score")?.querySelector(".ped-copy-ai-advice");
   if (!copy) {
     if (feedback) feedback.textContent = "Scrivi prima il copy.";
     return;
   }
-  button.disabled = true;
-  button.textContent = "Analizzo…";
+  if (button) {
+    button.disabled = true;
+    button.textContent = "Analizzo…";
+  }
   if (feedback) feedback.textContent = "";
-  const evaluation = pedCopyEvaluation(copy);
+  const sequence = ++pedCopyReviewSequence;
   try {
-    const response = await apiFetch("/api/ai/assistant", {
+    const response = await apiFetch("/api/ai/copy-review", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        message: `Valuta questo copy Instagram in modo molto sintetico. Dimmi una cosa che funziona e le due modifiche più importanti per renderlo più convincente, senza riscriverlo interamente. Controlla anche chiusura e hashtag. Punteggio automatico attuale: ${evaluation.score}/100.\n\nCOPY:\n${copy.slice(0, 1200)}`,
-        history: [],
-        surface: "ped",
-        surface_context: aiAssistantSurfaceContext()
+        client_id: clientId,
+        caption: copy,
+        entity_type: context.entity_type,
+        entity_id: context.entity_id
       })
     });
     const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.error || "Consiglio AI non disponibile");
-    if (feedback) feedback.textContent = data.answer || "Nessun consiglio disponibile.";
+    if (!response.ok) throw new Error(data.error || "Analisi AI non disponibile");
+    if (sequence !== pedCopyReviewSequence && automatic) return;
+    if (data.review) pedCopyReviewCache.set(pedCopyReviewKey(clientId, copy), data.review);
     aiAssistantState.budget = data.budget || aiAssistantState.budget;
     renderAiAssistantBudget();
+    if (clientId === String(selectedPedClientId || "")) {
+      rerenderActivePedCopyEvaluation();
+      renderPed();
+    }
   } catch (error) {
     if (feedback) feedback.textContent = error.message;
   } finally {
+    if (button) {
+      button.disabled = false;
+      button.textContent = pedCopyReviewFor(copy, clientId) ? "Rianalizza copy" : "Analizza ora";
+    }
+  }
+}
+
+function schedulePedCopyReview(copy) {
+  clearTimeout(pedCopyReviewTimer);
+  if (!selectedPedClientId || String(copy || "").trim().length < 8 || pedCopyReviewFor(copy)) return;
+  pedCopyReviewTimer = setTimeout(() => void requestPedCopyAdvice(null, { automatic: true }), 2200);
+}
+
+async function loadPedCopyReviews(clientId) {
+  if (!clientId) return;
+  try {
+    const response = await apiFetch(`/api/ai/copy-review?client_id=${encodeURIComponent(clientId)}`);
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) return;
+    for (const review of (data.reviews || [])) {
+      if (review.caption_snapshot) pedCopyReviewCache.set(pedCopyReviewKey(clientId, review.caption_snapshot), review);
+    }
+  } catch {}
+}
+
+async function savePedCopyFeedback(button) {
+  const reviewId = button.dataset.reviewId;
+  if (!reviewId) return;
+  button.disabled = true;
+  try {
+    const response = await apiFetch("/api/ai/copy-review", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mode: "feedback", review_id: reviewId, feedback: button.dataset.pedCopyFeedback })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "Feedback non salvato");
+    button.closest(".ped-copy-feedback")?.querySelectorAll("button").forEach((item) => item.classList.toggle("is-active", item === button));
+  } catch (error) {
+    alert(error.message || "Feedback non salvato");
+  } finally {
     button.disabled = false;
-    button.textContent = "Consiglio AI sul copy";
   }
 }
 
@@ -4055,9 +4160,14 @@ function renderPedHealth() {
   const averageGap = gaps.length ? gaps.reduce((total, gap) => total + gap, 0) / gaps.length : null;
   const coverageScore = Math.min(100, Math.round(coverageDays / 30 * 100));
   const cadenceScore = !futureItems.length ? 0 : averageGap === null ? 35 : averageGap <= 2.2 ? 100 : averageGap <= 3 ? 72 : averageGap <= 4 ? 48 : 24;
-  const copyScores = futureItems.map((item) => pedCopyEvaluation(item.caption).score);
+  const copyDetails = futureItems.map((item) => {
+    const review = pedCopyReviewFor(item.caption);
+    return { analyzed: Boolean(review), score: review ? Number(review.overall_score || 0) : Math.min(39, pedCopyEvaluation(item.caption).score) };
+  });
+  const copyScores = copyDetails.map((item) => item.score);
   const copyScore = copyScores.length ? Math.round(copyScores.reduce((total, score) => total + score, 0) / copyScores.length) : 0;
   const incompleteCopies = copyScores.filter((score) => score < 65).length;
+  const unanalyzedCopies = copyDetails.filter((item) => !item.analyzed).length;
   const overallScore = Math.round(coverageScore * .4 + cadenceScore * .35 + copyScore * .25);
   const overall = pedPlanQuality(overallScore);
   const coverage = pedPlanQuality(coverageScore);
@@ -4073,9 +4183,9 @@ function renderPedHealth() {
     <div class="ped-health-grid">
       <article class="is-${coverage.tone}"><span>Copertura</span><strong>${coverageDays} giorni</strong><div><i style="width:${coverageScore}%"></i></div><small>Ultima uscita ${dates.length ? `il ${escapeHtml(lastDateLabel)}` : "non programmata"}; obiettivo almeno 30 giorni.</small></article>
       <article class="is-${cadence.tone}"><span>Frequenza</span><strong>${averageGap === null ? "Da costruire" : `Ogni ${averageGap.toFixed(1).replace(".", ",")} giorni`}</strong><div><i style="width:${cadenceScore}%"></i></div><small>${futureItems.length} ${futureItems.length === 1 ? "contenuto" : "contenuti"} futuri; obiettivo un’uscita ogni 2 giorni.</small></article>
-      <article class="is-${copy.tone}"><span>Qualità copy</span><strong>${copy.label} · ${copyScore}/100</strong><div><i style="width:${copyScore}%"></i></div><small>${incompleteCopies ? `${incompleteCopies} ${incompleteCopies === 1 ? "copy da completare" : "copy da completare"}` : futureItems.length ? "Tutti i copy futuri sono completi" : "Aggiungi i primi copy"}.</small></article>
+      <article class="is-${copy.tone}"><span>Qualità copy AI</span><strong>${copy.label} · ${copyScore}/100</strong><div><i style="width:${copyScore}%"></i></div><small>${unanalyzedCopies ? `${unanalyzedCopies} ${unanalyzedCopies === 1 ? "copy da analizzare" : "copy da analizzare"}` : incompleteCopies ? `${incompleteCopies} ${incompleteCopies === 1 ? "copy da migliorare" : "copy da migliorare"}` : futureItems.length ? "Tutti i copy futuri sono coerenti" : "Aggiungi i primi copy"}.</small></article>
     </div>
-    <small class="ped-health-note">Valutazione immediata senza consumo API: considera durata del piano, cadenza, apertura, struttura, chiusura e almeno 5 hashtag.</small>`;
+    <small class="ped-health-note">La qualità copy usa pertinenza al cliente, voce del brand, coerenza, efficacia e affidabilità. Apertura, struttura, chiusura e hashtag pesano solo per il 25%.</small>`;
 }
 
 function clientHealthPageSize() {
@@ -4968,11 +5078,13 @@ function renderPedStagingEditorItems(item) {
 }
 
 function updatePedStagingEditorCount() {
-  const count = pedStagingPlainText().length;
+  const copy = pedStagingPlainText();
+  const count = copy.length;
   document.getElementById("pedStagingEditorCount").textContent = String(count);
   document.getElementById("pedStagingEditorSaveButton").disabled = count > 10000;
   const evaluation = document.getElementById("pedStagingEvaluation");
-  if (evaluation && !evaluation.hidden) evaluation.innerHTML = pedCopyEvaluationMarkup(pedStagingPlainText());
+  if (evaluation && !evaluation.hidden) evaluation.innerHTML = pedCopyEvaluationMarkup(copy);
+  schedulePedCopyReview(copy);
 }
 
 function syncPedStagingEditorMedia(item) {
@@ -5624,6 +5736,7 @@ async function loadPedCalendar() {
     state.pedStagingItems = Array.isArray(data.staging_items) ? data.staging_items : [];
     pedUsedFileIds = new Set((data.used_file_ids || []).map(String));
     pedStagingFileIds = new Set((data.staging_file_ids || []).map(String));
+    await loadPedCopyReviews(selectedPedClientId);
     renderPed();
   } catch (error) {
     if (pedLoadingKey !== key) return;
@@ -6606,11 +6719,13 @@ function pedCreateCaptionPlainText() {
 }
 
 function updatePedCreateCaptionCount() {
-  const count = pedCreateCaptionPlainText().length;
+  const copy = pedCreateCaptionPlainText();
+  const count = copy.length;
   document.getElementById("pedCreateCaptionCount").textContent = String(count);
   document.getElementById("pedCreateCaptionSaveButton").disabled = count > 10000;
   const evaluation = document.getElementById("pedCreateCaptionEvaluation");
-  if (evaluation && !evaluation.hidden) evaluation.innerHTML = pedCopyEvaluationMarkup(pedCreateCaptionPlainText());
+  if (evaluation && !evaluation.hidden) evaluation.innerHTML = pedCopyEvaluationMarkup(copy);
+  schedulePedCopyReview(copy);
 }
 
 function renderPedCreateCaptionSelection() {
@@ -7155,11 +7270,13 @@ function openPedCaptionModal(id) {
 }
 
 function updatePedCaptionCount() {
-  const count = pedCaptionPlainText().length;
+  const copy = pedCaptionPlainText();
+  const count = copy.length;
   document.getElementById("pedCaptionCount").textContent = String(count);
   document.getElementById("pedCaptionSaveButton").disabled = count > 10000;
   const evaluation = document.getElementById("pedCaptionEvaluation");
-  if (evaluation && !evaluation.hidden) evaluation.innerHTML = pedCopyEvaluationMarkup(pedCaptionPlainText());
+  if (evaluation && !evaluation.hidden) evaluation.innerHTML = pedCopyEvaluationMarkup(copy);
+  schedulePedCopyReview(copy);
 }
 
 async function copyPedCaption() {
@@ -10888,6 +11005,78 @@ function openClientModal(clientId = "") {
   document.getElementById("clientModal").showModal();
 }
 
+function renderClientAiProfileData(data) {
+  const form = document.getElementById("clientAiProfileForm");
+  const profile = data.profile || {};
+  const client = data.client || {};
+  form.elements.client_id.value = client.id || profile.client_id || "";
+  for (const name of ["industry", "business_description", "audience", "brand_voice", "objectives", "services_focus", "must_include", "avoid_topics", "preferred_language"]) {
+    if (form.elements[name]) form.elements[name].value = profile[name] || (name === "preferred_language" ? "it" : "");
+  }
+  document.getElementById("clientAiProfileTitle").textContent = `Memoria AI · ${client.name || "Cliente"}`;
+  const stats = data.stats || {};
+  document.getElementById("clientAiProfileStats").textContent = `${Number(stats.historical_copies || 0)} copy storici · ${Number(stats.analyzed_copies || 0)} analizzati · ${Number(stats.approved_references || 0)} approvati dal team`;
+  const patterns = Array.isArray(profile.learned_patterns) ? profile.learned_patterns : [];
+  document.getElementById("clientAiLearnedPatterns").innerHTML = patterns.length
+    ? patterns.map((item) => `<span>${escapeHtml(item)}</span>`).join("")
+    : `<em>Nessun pattern consolidato: verranno appresi dai copy coerenti e dalle conferme del team.</em>`;
+}
+
+async function openClientAiProfile(clientId) {
+  const modal = document.getElementById("clientAiProfileModal");
+  const client = state.clients.find((item) => String(item.id) === String(clientId));
+  if (!client) return;
+  const form = document.getElementById("clientAiProfileForm");
+  form.reset();
+  form.elements.client_id.value = client.id;
+  document.getElementById("clientAiProfileTitle").textContent = `Memoria AI · ${client.name}`;
+  document.getElementById("clientAiProfileMessage").textContent = "";
+  document.getElementById("clientAiProfileStats").textContent = "Caricamento storico…";
+  document.getElementById("clientAiLearnedPatterns").innerHTML = "";
+  modal.showModal();
+  try {
+    let data = clientAiProfileCache.get(String(client.id));
+    if (!data) {
+      const response = await apiFetch(`/api/client-ai-profile?client_id=${encodeURIComponent(client.id)}`);
+      data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || "Memoria cliente non disponibile");
+      clientAiProfileCache.set(String(client.id), data);
+    }
+    renderClientAiProfileData(data);
+  } catch (error) {
+    document.getElementById("clientAiProfileMessage").textContent = error.message || "Memoria cliente non disponibile";
+  }
+}
+
+async function saveClientAiProfile(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const payload = Object.fromEntries(new FormData(form).entries());
+  const button = document.getElementById("saveClientAiProfileButton");
+  const message = document.getElementById("clientAiProfileMessage");
+  button.disabled = true;
+  button.textContent = "Salvo…";
+  message.textContent = "";
+  try {
+    const response = await apiFetch("/api/client-ai-profile", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "Salvataggio non riuscito");
+    clientAiProfileCache.delete(String(payload.client_id));
+    pedCopyReviewCache = new Map([...pedCopyReviewCache].filter(([key]) => !key.startsWith(`${payload.client_id}\u0000`)));
+    message.textContent = "Memoria aggiornata. I prossimi copy saranno valutati con questo nuovo contesto.";
+    setTimeout(() => document.getElementById("clientAiProfileModal")?.open && document.getElementById("clientAiProfileModal").close(), 700);
+  } catch (error) {
+    message.textContent = error.message || "Salvataggio non riuscito";
+  } finally {
+    button.disabled = false;
+    button.textContent = "Salva memoria cliente";
+  }
+}
+
 function driveClientImportAvailableFolders() {
   const search = normalizeIdentity(document.getElementById("driveClientImportSearch")?.value || "");
   return driveClientImportFolders.filter((folder) => !search || normalizeIdentity(folder.name).includes(search));
@@ -13170,6 +13359,8 @@ document.body.addEventListener("click", (event) => {
     void requestPedCopyAdvice(pedCopyAiReview);
     return;
   }
+  const pedCopyFeedback = event.target.closest("[data-ped-copy-feedback]");
+  if (pedCopyFeedback) return savePedCopyFeedback(pedCopyFeedback);
   const usersRetry = event.target.closest("[data-users-retry]");
   if (usersRetry) {
     void loadUsersFromBackend();
@@ -13200,6 +13391,7 @@ document.body.addEventListener("click", (event) => {
   const openClient = event.target.closest("[data-client-open]");
   const editClient = event.target.closest("[data-client-edit]");
   const clientConnections = event.target.closest("[data-client-connections]");
+  const clientAiProfile = event.target.closest("[data-client-ai-profile]");
   const deleteClientButton = event.target.closest("[data-client-delete]");
   const backClient = event.target.closest("[data-client-back]");
   const openClientDriveButton = event.target.closest("[data-client-drive]");
@@ -13335,6 +13527,7 @@ document.body.addEventListener("click", (event) => {
   if (openClient) return openClientDetails(openClient.dataset.clientOpen);
   if (editClient) return openClientModal(editClient.dataset.clientEdit);
   if (clientConnections) return openClientConnectionsModal(clientConnections.dataset.clientConnections);
+  if (clientAiProfile) return openClientAiProfile(clientAiProfile.dataset.clientAiProfile);
   if (deleteClientButton) return deleteClient(deleteClientButton.dataset.clientDelete);
   if (backClient) return closeClientDetails();
   if (openClientDriveButton) return openClientDrive(openClientDriveButton.dataset.clientDrive);
@@ -14521,6 +14714,10 @@ document.getElementById("contentImageFile").addEventListener("change", (event) =
   event.target.value = "";
 });
 document.getElementById("newClientButton").addEventListener("click", () => openClientModal());
+document.getElementById("clientAiProfileForm").addEventListener("submit", saveClientAiProfile);
+document.querySelectorAll("[data-client-ai-profile-close]").forEach((button) => {
+  button.addEventListener("click", () => document.getElementById("clientAiProfileModal").close());
+});
 document.getElementById("saveClientConnectionsButton").addEventListener("click", saveClientConnections);
 document.querySelectorAll("[data-client-connections-close]").forEach((button) => {
   button.addEventListener("click", () => document.getElementById("clientConnectionsModal").close());
