@@ -499,8 +499,13 @@ supabase/                     schema e migration
   al voto, quindi un testo insensato non può risultare `Buono` solo perché è
   lungo e contiene CTA e hashtag. Prima della verifica semantica la UI mostra
   `Da verificare`, mai un voto positivo basato sulla sola forma. L'analisi parte
-  dopo 2,2 secondi di pausa negli editor di creazione, programmazione e attesa;
-  è salvata e riutilizzata per lo stesso testo e versione del profilo cliente.
+  dopo 0,9 secondi di pausa negli editor di creazione, programmazione e attesa,
+  anche quando il testo viene incollato; è salvata e riutilizzata per lo stesso
+  testo e versione del profilo cliente. Al caricamento di ogni PED parte inoltre
+  una coda silenziosa che recupera progressivamente tutti i copy già presenti
+  nel calendario e nei contenuti in attesa, evitando richieste duplicate e
+  rispettando sia il limite operativo sia il budget AI mensile. In caso di
+  limite temporaneo la coda riprende automaticamente nella stessa sessione.
   Un singolo post Instagram può concentrarsi su un dettaglio o un momento: non
   deve ripetere ogni volta descrizione, servizi e pubblico del cliente. Il
   revisore confronta prima di tutto tono, stile e messaggio con gli esempi

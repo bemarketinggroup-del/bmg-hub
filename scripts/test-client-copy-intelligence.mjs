@@ -160,8 +160,12 @@ assert.match(backend, /knowledge_candidates/, "l'analisi deve estrarre informazi
 assert.match(backend, /official_web/, "le informazioni confermate online devono conservare la fonte");
 assert.match(backend, /observed proviene da copy PED ed e solo un indizio/, "i fatti presi dai copy non devono diventare automaticamente verita");
 assert.match(backend, /COPY_REVIEW_POLICY_VERSION = 5/, "le precedenti analisi devono essere invalidate dopo l'introduzione della memoria operativa");
-assert.match(app, /schedulePedCopyReview[\s\S]*2200/, "il copy deve essere analizzato automaticamente dopo una breve pausa");
-assert.match(app, /schedulePedKnowledgeSync[\s\S]*entity_type: entityType/, "il salvataggio PED deve alimentare la memoria cliente");
+assert.match(app, /schedulePedCopyReview[\s\S]*900/, "il copy deve essere analizzato subito dopo la fine della scrittura o dell'incolla");
+assert.match(app, /existingPedCopyReviewCandidates[\s\S]*pedAllItems\(\)[\s\S]*state\.pedStagingItems/, "il recupero deve includere sia i copy gia nel PED sia quelli in attesa");
+assert.match(app, /queueExistingPedCopyReviews[\s\S]*submitPedCopyReview[\s\S]*renderPedHealth/, "i copy esistenti devono essere valutati progressivamente e aggiornare la salute cliente");
+assert.match(app, /loadPedCopyReviews\(selectedPedClientId\)[\s\S]*queueExistingPedCopyReviews\(selectedPedClientId\)/, "il recupero automatico deve partire al caricamento del PED");
+assert.match(app, /pedCopyReviewRequests\.has\(key\)/, "le richieste simultanee sullo stesso copy devono essere deduplicate");
+assert.match(app, /schedulePedKnowledgeSync[\s\S]*submitPedCopyReview\(\{ clientId, copy, entityType, entityId \}\)/, "il salvataggio PED deve alimentare la memoria cliente");
 assert.match(app, /informazioni apprese/, "la scheda memoria deve mostrare quante informazioni sono state raccolte");
 assert.match(app, /Math\.min\(39, Math\.round\(structure\.score \* \.25\)\)/, "la struttura da sola non deve mostrare Buono");
 assert.doesNotMatch(app, /function pedCopyDimensionMarkup/, "il popup non deve mostrare la griglia tecnica completa dei punteggi");

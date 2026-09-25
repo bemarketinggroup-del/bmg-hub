@@ -327,8 +327,11 @@ let clientConnectionsCache = new Map();
 let activeClientConnectionsId = "";
 let clientAiProfileCache = new Map();
 let pedCopyReviewCache = new Map();
+let pedCopyReviewRequests = new Map();
 let pedCopyReviewTimer = null;
 let pedCopyReviewSequence = 0;
+let pedCopyBackfillGeneration = 0;
+let pedCopyBackfillTimer = null;
 let pedUsedFileIds = new Set();
 let pedStagingFileIds = new Set();
 let selectedPedMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
@@ -4050,17 +4053,12 @@ async function requestPedCopyAdvice(button = null, { automatic = false } = {}) {
   if (feedback) feedback.textContent = "";
   const sequence = ++pedCopyReviewSequence;
   try {
-    const response = await apiFetch("/api/ai/copy-review", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        client_id: clientId,
-        caption: copy,
-        entity_type: context.entity_type,
-        entity_id: context.entity_id
-      })
+    const { response, data } = await submitPedCopyReview({
+      clientId,
+      copy,
+      entityType: context.entity_type,
+      entityId: context.entity_id
     });
-    const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || "Analisi AI non disponibile");
     if (sequence !== pedCopyReviewSequence && automatic) return;
     if (data.review) pedCopyReviewCache.set(pedCopyReviewKey(clientId, copy), data.review);
@@ -4080,22 +4078,33 @@ async function requestPedCopyAdvice(button = null, { automatic = false } = {}) {
   }
 }
 
+function submitPedCopyReview({ clientId, copy, entityType = "ped", entityId = "" }) {
+  const key = pedCopyReviewKey(clientId, copy);
+  if (pedCopyReviewRequests.has(key)) return pedCopyReviewRequests.get(key);
+  const request = (async () => {
+    const response = await apiFetch("/api/ai/copy-review", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        client_id: String(clientId || ""),
+        caption: String(copy || ""),
+        entity_type: entityType,
+        entity_id: String(entityId || "")
+      })
+    });
+    const data = await response.json().catch(() => ({}));
+    return { response, data };
+  })().finally(() => pedCopyReviewRequests.delete(key));
+  pedCopyReviewRequests.set(key, request);
+  return request;
+}
+
 function schedulePedKnowledgeSync({ clientId = selectedPedClientId, caption = "", entityType = "ped", entityId = "" } = {}) {
   const copy = String(caption || "").trim();
   if (!clientId || copy.length < 8 || !["ped", "staging"].includes(entityType)) return;
   window.setTimeout(async () => {
     try {
-      const response = await apiFetch("/api/ai/copy-review", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          client_id: String(clientId),
-          caption: copy,
-          entity_type: entityType,
-          entity_id: String(entityId || "")
-        })
-      });
-      const data = await response.json().catch(() => ({}));
+      const { response, data } = await submitPedCopyReview({ clientId, copy, entityType, entityId });
       if (response.ok && data.review) pedCopyReviewCache.set(pedCopyReviewKey(clientId, copy), data.review);
     } catch {}
   }, 2500);
@@ -4104,7 +4113,7 @@ function schedulePedKnowledgeSync({ clientId = selectedPedClientId, caption = ""
 function schedulePedCopyReview(copy) {
   clearTimeout(pedCopyReviewTimer);
   if (!selectedPedClientId || String(copy || "").trim().length < 8 || pedCopyReviewFor(copy)) return;
-  pedCopyReviewTimer = setTimeout(() => void requestPedCopyAdvice(null, { automatic: true }), 2200);
+  pedCopyReviewTimer = setTimeout(() => void requestPedCopyAdvice(null, { automatic: true }), 900);
 }
 
 async function loadPedCopyReviews(clientId) {
@@ -4117,6 +4126,64 @@ async function loadPedCopyReviews(clientId) {
       if (review.caption_snapshot) pedCopyReviewCache.set(pedCopyReviewKey(clientId, review.caption_snapshot), review);
     }
   } catch {}
+}
+
+function existingPedCopyReviewCandidates(clientId) {
+  const candidates = [];
+  const seen = new Set();
+  const add = (item, entityType) => {
+    const copy = String(item?.caption || "").replace(/\r\n/g, "\n").trim();
+    const key = pedCopyReviewKey(clientId, copy);
+    if (copy.length < 8 || seen.has(key) || pedCopyReviewCache.has(key)) return;
+    seen.add(key);
+    candidates.push({
+      clientId,
+      copy,
+      entityType,
+      entityId: String(item?.id || ""),
+      date: String(item?.scheduled_date || item?.updated_at || item?.created_at || "")
+    });
+  };
+  for (const item of pedAllItems()) add(item, "ped");
+  for (const item of (state.pedStagingItems || [])) add(item, "staging");
+  return candidates.sort((a, b) => {
+    if (a.entityType !== b.entityType) return a.entityType === "staging" ? -1 : 1;
+    return b.date.localeCompare(a.date);
+  });
+}
+
+function queueExistingPedCopyReviews(clientId) {
+  window.clearTimeout(pedCopyBackfillTimer);
+  const generation = ++pedCopyBackfillGeneration;
+  const expectedClientId = String(clientId || "");
+  if (!expectedClientId) return;
+  pedCopyBackfillTimer = window.setTimeout(async () => {
+    const candidates = existingPedCopyReviewCandidates(expectedClientId);
+    for (const candidate of candidates) {
+      if (generation !== pedCopyBackfillGeneration || expectedClientId !== String(selectedPedClientId || "")) return;
+      if (pedCopyReviewFor(candidate.copy, expectedClientId)) continue;
+      try {
+        const { response, data } = await submitPedCopyReview(candidate);
+        if (response.status === 429) {
+          const budgetStopped = /budget|credito|crediti|saldo/i.test(String(data.error || ""));
+          if (!budgetStopped && generation === pedCopyBackfillGeneration) {
+            pedCopyBackfillTimer = window.setTimeout(() => {
+              if (generation === pedCopyBackfillGeneration && expectedClientId === String(selectedPedClientId || "")) {
+                queueExistingPedCopyReviews(expectedClientId);
+              }
+            }, 10 * 60 * 1000 + 5000);
+          }
+          return;
+        }
+        if (!response.ok) continue;
+        if (data.review) pedCopyReviewCache.set(pedCopyReviewKey(expectedClientId, candidate.copy), data.review);
+        aiAssistantState.budget = data.budget || aiAssistantState.budget;
+        renderAiAssistantBudget();
+        renderPedHealth();
+      } catch {}
+      await new Promise((resolve) => window.setTimeout(resolve, 700));
+    }
+  }, 350);
 }
 
 async function savePedCopyFeedback(button) {
@@ -5753,6 +5820,7 @@ async function loadPedCalendar() {
     pedStagingFileIds = new Set((data.staging_file_ids || []).map(String));
     await loadPedCopyReviews(selectedPedClientId);
     renderPed();
+    queueExistingPedCopyReviews(selectedPedClientId);
   } catch (error) {
     if (pedLoadingKey !== key) return;
     state.pedItems = [];

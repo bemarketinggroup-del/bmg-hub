@@ -59,6 +59,28 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-09-25 — Analisi immediata e recupero dei copy PED esistenti
+
+- Richiesta: avviare la valutazione appena il social termina di scrivere o
+  incollare il copy e analizzare automaticamente anche i copy già presenti nel
+  PED.
+- Modifiche: ridotta a 0,9 secondi la pausa che attiva l'analisi negli editor
+  PED e contenuti in attesa; l'incolla passa dallo stesso flusso. Dopo il
+  caricamento di un cliente, una coda silenziosa raccoglie tutti i copy del PED
+  storico/futuro e dei contenuti in attesa ancora privi della valutazione
+  corrente, li analizza progressivamente, aggiorna la salute cliente e riprende
+  automaticamente dopo un eventuale limite temporaneo. Le richieste sullo
+  stesso testo sono deduplicate e il limite di budget mensile resta vincolante.
+- File: `public/app.js`, `scripts/test-client-copy-intelligence.mjs`,
+  `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run check`, `npm run test:copy-intelligence`, `npm run
+  test:ped-carousel`, `npm run test:client-health`, `npm run build`, `git diff
+  --check`.
+- Pubblicazione: GitHub `main` e Vercel produzione; alias canonico
+  `https://bmg-hub.vercel.app` verificato.
+- Note: nessun contenuto o copy esistente viene modificato; la coda salva solo
+  la relativa valutazione AI e la memoria cliente derivata.
+
 ### 2026-09-25 — Database di conoscenza progressivo per ogni cliente
 
 - Richiesta: ricordare e arricchire per ogni cliente un database con le
