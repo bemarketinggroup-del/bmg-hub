@@ -513,7 +513,14 @@ supabase/                     schema e migration
   prudente `potrebbe non essere inerente`; una contraddizione richiede una fonte
   esplicita. Le fonti usate sono cliccabili e il costo fisso della ricerca viene
   incluso nel budget AI condiviso. La policy è versionata nella cache, così le
-  vecchie valutazioni troppo severe vengono ricalcolate.
+  vecchie valutazioni troppo severe vengono ricalcolate. Dalla policy 3 la
+  ricerca accetta anche un riscontro `supported`: non pretende che il sito
+  ufficiale ripeta letteralmente il copy, ma può ricomporre elementi confermati
+  separatamente (luogo, esperienza, panorama). Se il contesto manca, le
+  dimensioni semantiche restano neutrali; solo una reale incoerenza o
+  contraddizione può portarle vicino allo zero. Un riscontro ufficiale e una
+  buona struttura impediscono quindi che l'intero copy resti `Scarso` per un
+  singolo dettaglio formulato in modo creativo.
   Il riepilogo del
   cliente valuta inoltre la copertura futura rispetto a 30 giorni, la cadenza
   rispetto all'obiettivo di un contenuto ogni due giorni e la qualità media dei

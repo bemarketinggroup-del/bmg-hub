@@ -4014,7 +4014,7 @@ function pedCopyEvaluationMarkup(value, { compact = false } = {}) {
     ${compact ? "" : `<div class="ped-copy-criteria">${criteria.map(([ok, label]) => `<span class="${ok ? "is-ok" : "is-missing"}">${ok ? "✓" : "·"} ${escapeHtml(label)}</span>`).join("")}</div>
       <p class="ped-copy-hint"><b>Spunto</b><span>${escapeHtml(hint)}</span></p>
       ${warnings.length ? `<p class="ped-copy-context-warning">⚠ ${escapeHtml(warnings[0])}</p>` : ""}
-      ${source ? `<a class="ped-copy-source" href="${escapeHtml(source.url)}" target="_blank" rel="noopener">${review?.dimensions?._fact_check_status === "confirmed" ? "Verificato online" : "Fonte consultata"}: ${escapeHtml(source.title)}</a>` : ""}
+      ${source ? `<a class="ped-copy-source" href="${escapeHtml(source.url)}" target="_blank" rel="noopener">${["confirmed", "supported"].includes(review?.dimensions?._fact_check_status) ? "Riscontro online" : "Fonte consultata"}: ${escapeHtml(source.title)}</a>` : ""}
       <div class="ped-copy-ai-row"><button class="text-button" data-ped-copy-ai-review type="button">${review ? "Rianalizza" : "Analizza ora"}</button><small class="ped-copy-ai-advice" aria-live="polite">${review ? "" : "Analisi automatica tra poco"}</small>${review ? `<span class="ped-copy-feedback"><button type="button" data-ped-copy-feedback="approved" data-review-id="${escapeHtml(review.id || "")}">✓ In linea</button><button type="button" data-ped-copy-feedback="rejected" data-review-id="${escapeHtml(review.id || "")}">✕ Non in linea</button></span>` : ""}</div>`}
   </div>`;
 }

@@ -59,6 +59,34 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-09-25 — Riscontri online sostanziali nella valutazione copy
+
+- Richiesta: correggere la valutazione che continuava a dare 20/100 al copy del
+  Bellevue Syrene, pur avendo trovato il sito ufficiale, perché non riconosceva
+  La Pergola, l'esperienza lounge e il panorama del Vesuvio come elementi
+  coerenti confermati in pagine diverse.
+- Modifiche: la verifica non richiede più una corrispondenza letterale e cerca
+  separatamente gli elementi di affermazioni composte. Aggiunto lo stato
+  `supported` per i riscontri ufficiali sostanziali; una fonte riconducibile al
+  dominio/nome del cliente trasforma un falso `not_found` in riscontro prudente.
+  In assenza di dati i punteggi restano neutrali invece di scendere verso zero;
+  coerenza misura la logica del testo e non la completezza del profilo. I copy
+  evocativi su atmosfera e panorama non richiedono normalmente fact-check,
+  mentre restano verificati prezzi, date, eventi, disponibilità, indirizzi,
+  premi, policy e nuovi servizi. La policy cache passa alla versione 3 per
+  forzare il ricalcolo del copy già analizzato.
+- File: `lib/client-copy-intelligence.js`, `public/app.js`,
+  `scripts/test-client-copy-intelligence.mjs`, `docs/PROJECT-HANDOFF.md`,
+  `agent.md`.
+- Verifiche: ricerca sulle pagine ufficiali Bellevue Syrene per La Pergola,
+  lounge/tramonto e Vesuvio; `npm run check`, `npm run
+  test:copy-intelligence`, `npm run test:ped-carousel`, `npm run build`, `git
+  diff --check`; verifica produzione del nuovo bundle e della policy API.
+- Pubblicazione: GitHub `main` e Vercel produzione; alias canonico
+  `https://bmg-hub.vercel.app` verificato.
+- Note: nessun copy o contenuto PED è stato modificato. Alla prossima apertura o
+  rianalisi, la vecchia valutazione policy 2 viene ignorata e sostituita.
+
 ### 2026-09-25 — Analisi copy mobile sintetica e verifica prudente dei fatti
 
 - Richiesta: correggere il popup copy che su telefono sovrapponeva campi e
