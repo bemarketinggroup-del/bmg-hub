@@ -1,6 +1,6 @@
 # BMG Hub — memoria operativa degli interventi
 
-Ultimo aggiornamento: 24 settembre 2026
+Ultimo aggiornamento: 25 settembre 2026
 
 ## Scopo del file
 
