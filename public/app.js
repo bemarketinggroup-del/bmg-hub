@@ -4080,6 +4080,27 @@ async function requestPedCopyAdvice(button = null, { automatic = false } = {}) {
   }
 }
 
+function schedulePedKnowledgeSync({ clientId = selectedPedClientId, caption = "", entityType = "ped", entityId = "" } = {}) {
+  const copy = String(caption || "").trim();
+  if (!clientId || copy.length < 8 || !["ped", "staging"].includes(entityType)) return;
+  window.setTimeout(async () => {
+    try {
+      const response = await apiFetch("/api/ai/copy-review", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          client_id: String(clientId),
+          caption: copy,
+          entity_type: entityType,
+          entity_id: String(entityId || "")
+        })
+      });
+      const data = await response.json().catch(() => ({}));
+      if (response.ok && data.review) pedCopyReviewCache.set(pedCopyReviewKey(clientId, copy), data.review);
+    } catch {}
+  }, 2500);
+}
+
 function schedulePedCopyReview(copy) {
   clearTimeout(pedCopyReviewTimer);
   if (!selectedPedClientId || String(copy || "").trim().length < 8 || pedCopyReviewFor(copy)) return;
@@ -5184,6 +5205,7 @@ async function savePedStagingCaption(event) {
     state.pedStagingItems = (state.pedStagingItems || []).map((entry) => (
       String(entry.id) === String(item.id) ? updatedItem : entry
     ));
+    if (!isStory && caption) schedulePedKnowledgeSync({ caption, entityType: "staging", entityId: updatedItem.id || item.id });
     renderPedStaging();
     modal.close();
   } catch (error) {
@@ -6863,6 +6885,14 @@ async function attachPedDriveFiles(fileIds, { caption = pedPickerState.caption, 
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || "Impossibile collegare il contenuto");
+    if (!appendMode && format !== "story" && caption && data.item?.id) {
+      schedulePedKnowledgeSync({
+        clientId: selectedPedClientId,
+        caption,
+        entityType: stagingMode ? "staging" : "ped",
+        entityId: data.item.id
+      });
+    }
     const pickerModal = document.getElementById("pedDrivePickerModal");
     const createCaptionModal = document.getElementById("pedCreateCaptionModal");
     if (pickerModal.open) pickerModal.close();
@@ -7327,6 +7357,7 @@ async function savePedCaption(event) {
     item.caption = saved?.caption ?? caption;
     item.caption_html = saved?.caption_html ?? null;
     item.publishing_status = saved?.publishing_status || publishingStatus;
+    if (!isStory && caption) schedulePedKnowledgeSync({ caption, entityType: "ped", entityId: item.id });
     renderPed();
     document.getElementById("pedCaptionModal").close();
   } catch (error) {
@@ -11008,7 +11039,7 @@ function renderClientAiProfileData(data) {
   }
   document.getElementById("clientAiProfileTitle").textContent = `Memoria AI · ${client.name || "Cliente"}`;
   const stats = data.stats || {};
-  document.getElementById("clientAiProfileStats").textContent = `${Number(stats.historical_copies || 0)} copy storici · ${Number(stats.analyzed_copies || 0)} analizzati · ${Number(stats.approved_references || 0)} approvati dal team`;
+  document.getElementById("clientAiProfileStats").textContent = `${Number(stats.historical_copies || 0)} copy storici · ${Number(stats.analyzed_copies || 0)} analizzati · ${Number(stats.approved_references || 0)} approvati · ${Number(stats.knowledge_items || 0)} informazioni apprese`;
   const patterns = Array.isArray(profile.learned_patterns) ? profile.learned_patterns : [];
   document.getElementById("clientAiLearnedPatterns").innerHTML = patterns.length
     ? patterns.map((item) => `<span>${escapeHtml(item)}</span>`).join("")

@@ -525,7 +525,7 @@ supabase/                     schema e migration
   dimensioni semantiche restano neutrali; solo una reale incoerenza o
   contraddizione può portarle vicino allo zero. Un riscontro ufficiale e una
   buona struttura impediscono quindi che l'intero copy resti `Scarso` per un
-  singolo dettaglio formulato in modo creativo. Dalla policy 4 tone of voice,
+  singolo dettaglio formulato in modo creativo. Dalla policy 5 tone of voice,
   lessico, lingua, promessa, formalità e stile dello storico interno hanno
   priorità sul web; una valutazione sotto soglia richiede una prova concreta di
   altro cliente, altro settore o contraddizione. Le vecchie analisi policy 3
@@ -545,6 +545,20 @@ supabase/                     schema e migration
   I testi sono inviati con `store: false`, output JSON strutturato e reasoning
   basso. Cache, limiti per utente e budget mensile condiviso evitano chiamate
   duplicate e mantengono la spesa nel tetto configurato.
+  Ogni cliente dispone inoltre di una memoria operativa strutturata, salvata in
+  un record database `site_content` di sistema con slug
+  `bmg.client-ai-knowledge.<client-id>`. Quando un copy viene realmente salvato
+  nel PED o tra i contenuti in attesa, l'analisi estrae fino a tre informazioni
+  esplicite e riutilizzabili (identità, servizio, luogo, pubblico, tono,
+  offerta o evento) e le registra come `observed`; una conferma `In linea` le
+  promuove ad `approved`, mentre un riscontro web ufficiale le salva come
+  `verified`. Ogni elemento conserva categoria, durata stabile/temporanea,
+  confidenza, occorrenze, data e fonti PED/web. Le informazioni sono deduplicate
+  e limitate a 80 per cliente; quelle solo osservate restano indizi e non
+  diventano verità automatiche. La memoria viene reinserita nelle analisi
+  successive con priorità `verified`, `approved`, `observed`, si arricchisce
+  senza una chiamata AI aggiuntiva quando l'analisi del copy è già in cache e
+  il relativo conteggio appare nella scheda `Memoria AI` del cliente.
   Se la migration dedicata non è ancora presente nell'ambiente, gli endpoint
   usano temporaneamente `site_content` di tipo `system` per il profilo e
   `ai_task_audit_logs` per la cache delle revisioni: i dati restano server-side

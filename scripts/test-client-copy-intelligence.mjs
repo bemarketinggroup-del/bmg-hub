@@ -6,6 +6,7 @@ import {
   combineCopyScores,
   copyHash,
   historyExampleCount,
+  mergeClientKnowledgeItems,
   sourceLooksOfficialForClient,
   structuralCopyEvaluation
 } from "../lib/client-copy-intelligence.js";
@@ -87,6 +88,27 @@ const explicitOtherClient = applyHistoryContextEvidence({
 }, { history: clientHistory, warnings: ["Il testo parla di un altro cliente e di un altro settore."], structureScore: 80 });
 assert.equal(explicitOtherClient.relevance, 8, "una prova concreta di altro cliente deve mantenere il giudizio negativo");
 
+const learnedAt = "2026-09-25T12:00:00.000Z";
+const knowledge = mergeClientKnowledgeItems([], [{
+  fact: "La Pergola è uno spazio del Bellevue Syrene",
+  category: "service",
+  permanence: "stable",
+  status: "observed",
+  confidence: .62,
+  sources: [{ type: "ped_copy", entity_type: "ped", entity_id: "ped-1", seen_at: learnedAt }]
+}], learnedAt);
+const verifiedKnowledge = mergeClientKnowledgeItems(knowledge, [{
+  fact: "La Pergola è uno spazio del Bellevue Syrene",
+  category: "service",
+  permanence: "stable",
+  status: "verified",
+  confidence: .95,
+  sources: [{ type: "official_web", url: "https://www.bellevue.it/ristorante-sorrento", seen_at: learnedAt }]
+}], learnedAt);
+assert.equal(verifiedKnowledge.length, 1, "la memoria deve deduplicare lo stesso fatto per cliente");
+assert.equal(verifiedKnowledge[0].status, "verified", "una fonte ufficiale deve promuovere il fatto a verificato");
+assert.equal(verifiedKnowledge[0].sources.length, 2, "la memoria deve conservare la provenienza PED e web");
+
 const caption = "Esperienza autentica sul mare. Prenota il tuo soggiorno. #mare #hotel #sorrento #vacanza #italia";
 const client = { id: "client-a", name: "Hotel", status: "attivo", drive_url: "https://drive.google.com/a" };
 const unreviewed = buildClientHealthSummaries({
@@ -133,8 +155,14 @@ assert.match(backend, /copy passati del PED segnati come programmati Meta o tele
 assert.match(backend, /copy futuri gia programmati nel PED; contenuti in attesa/, "la valutazione deve confrontare anche programmazione futura e attesa");
 assert.match(backend, /non compaia ancora online non significa che sia falso/, "le novita non ancora pubbliche non devono essere penalizzate");
 assert.match(backend, /ped_staging_items\?select=caption,created_at/, "i contenuti in attesa devono alimentare lo storico cliente");
-assert.match(backend, /COPY_REVIEW_POLICY_VERSION = 4/, "le precedenti analisi devono essere invalidate dopo il cambio di criterio");
+assert.match(backend, /bmg\.client-ai-knowledge/, "ogni cliente deve avere una memoria operativa persistente nel database");
+assert.match(backend, /knowledge_candidates/, "l'analisi deve estrarre informazioni riutilizzabili dai copy");
+assert.match(backend, /official_web/, "le informazioni confermate online devono conservare la fonte");
+assert.match(backend, /observed proviene da copy PED ed e solo un indizio/, "i fatti presi dai copy non devono diventare automaticamente verita");
+assert.match(backend, /COPY_REVIEW_POLICY_VERSION = 5/, "le precedenti analisi devono essere invalidate dopo l'introduzione della memoria operativa");
 assert.match(app, /schedulePedCopyReview[\s\S]*2200/, "il copy deve essere analizzato automaticamente dopo una breve pausa");
+assert.match(app, /schedulePedKnowledgeSync[\s\S]*entity_type: entityType/, "il salvataggio PED deve alimentare la memoria cliente");
+assert.match(app, /informazioni apprese/, "la scheda memoria deve mostrare quante informazioni sono state raccolte");
 assert.match(app, /Math\.min\(39, Math\.round\(structure\.score \* \.25\)\)/, "la struttura da sola non deve mostrare Buono");
 assert.doesNotMatch(app, /function pedCopyDimensionMarkup/, "il popup non deve mostrare la griglia tecnica completa dei punteggi");
 assert.match(app, /class="ped-copy-hint"[\s\S]*>Spunto</, "il popup deve mostrare un solo spunto sintetico");

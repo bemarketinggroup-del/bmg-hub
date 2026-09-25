@@ -59,6 +59,33 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-09-25 — Database di conoscenza progressivo per ogni cliente
+
+- Richiesta: ricordare e arricchire per ogni cliente un database con le
+  informazioni presenti nei copy messi in programmazione, nel PED e nelle
+  fonti online consultate.
+- Modifiche: aggiunta una memoria operativa per cliente in Supabase tramite
+  record `site_content` di sistema. L'AI estrae dai copy fino a tre fatti
+  espliciti e li salva solo dopo il reale inserimento nel PED o nei contenuti in
+  attesa, classificandoli come osservati; il feedback del team li promuove ad
+  approvati e i riscontri ufficiali online a verificati. Ogni informazione
+  conserva categoria, stabilità, confidenza, occorrenze e fonti, viene
+  deduplicata e rientra nelle analisi future secondo affidabilità. La scheda
+  `Memoria AI` mostra il numero di informazioni apprese. Policy cache aggiornata
+  alla versione 5.
+- File: `lib/client-copy-intelligence.js`, `public/app.js`,
+  `scripts/test-client-copy-intelligence.mjs`, `docs/PROJECT-HANDOFF.md`,
+  `agent.md`.
+- Verifiche: `npm run check`, `npm run test:copy-intelligence`, `npm run
+  test:ped-carousel`, `npm run test:client-health`, `npm run build`, `git diff
+  --check`; cattura della pagina Clienti a 390×844 senza overflow e controllo
+  della nuova policy API in produzione.
+- Pubblicazione: GitHub `main` e Vercel produzione; alias canonico
+  `https://bmg-hub.vercel.app` verificato.
+- Note: la memoria osservata dai copy è deliberatamente prudente e non viene
+  trattata come verità finché non riceve una conferma del team o una fonte
+  ufficiale. Nessun contenuto PED esistente viene modificato.
+
 ### 2026-09-25 — Storico PED prioritario e novità non penalizzate
 
 - Richiesta: valutare i copy soprattutto rispetto al cliente, al tone of voice,
