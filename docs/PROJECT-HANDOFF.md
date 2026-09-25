@@ -503,15 +503,20 @@ supabase/                     schema e migration
   è salvata e riutilizzata per lo stesso testo e versione del profilo cliente.
   Un singolo post Instagram può concentrarsi su un dettaglio o un momento: non
   deve ripetere ogni volta descrizione, servizi e pubblico del cliente. Il
-  revisore confronta prima di tutto tono, stile e messaggio con i copy storici
-  già programmati/pubblicati e con gli esempi approvati dal team. Un profilo
+  revisore confronta prima di tutto tono, stile e messaggio con gli esempi
+  approvati dal team, i copy passati del PED segnati come programmati Meta o
+  telefono (storico Instagram interno), la programmazione futura e i contenuti
+  ancora in attesa. Il copy corrente viene escluso dagli esempi, così non può
+  confermare se stesso. Un profilo
   incompleto rappresenta incertezza, non una prova di estraneità, e quindi non
   abbassa da solo pertinenza o affidabilità. Soltanto quando emerge un fatto
   concreto non verificabile nello storico o nel profilo parte una ricerca web
   mirata, con priorità al sito ufficiale del cliente: una conferma corregge il
-  voto e rimuove l'avviso; l'assenza di riscontri produce soltanto la formula
-  prudente `potrebbe non essere inerente`; una contraddizione richiede una fonte
-  esplicita. Le fonti usate sono cliccabili e il costo fisso della ricerca viene
+  voto e rimuove l'avviso; l'assenza di riscontri non riduce il punteggio,
+  perché il contenuto può annunciare una novità non ancora pubblica, e produce
+  soltanto una richiesta di verifica interna del dato specifico. Una
+  contraddizione richiede invece una fonte esplicita. Le fonti usate sono
+  cliccabili e il costo fisso della ricerca viene
   incluso nel budget AI condiviso. La policy è versionata nella cache, così le
   vecchie valutazioni troppo severe vengono ricalcolate. Dalla policy 3 la
   ricerca accetta anche un riscontro `supported`: non pretende che il sito
@@ -520,7 +525,11 @@ supabase/                     schema e migration
   dimensioni semantiche restano neutrali; solo una reale incoerenza o
   contraddizione può portarle vicino allo zero. Un riscontro ufficiale e una
   buona struttura impediscono quindi che l'intero copy resti `Scarso` per un
-  singolo dettaglio formulato in modo creativo.
+  singolo dettaglio formulato in modo creativo. Dalla policy 4 tone of voice,
+  lessico, lingua, promessa, formalità e stile dello storico interno hanno
+  priorità sul web; una valutazione sotto soglia richiede una prova concreta di
+  altro cliente, altro settore o contraddizione. Le vecchie analisi policy 3
+  vengono ignorate e ricalcolate automaticamente.
   Il riepilogo del
   cliente valuta inoltre la copertura futura rispetto a 30 giorni, la cadenza
   rispetto all'obiettivo di un contenuto ogni due giorni e la qualità media dei

@@ -1,6 +1,14 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { applyFactCheckEvidence, combineCopyScores, copyHash, sourceLooksOfficialForClient, structuralCopyEvaluation } from "../lib/client-copy-intelligence.js";
+import {
+  applyFactCheckEvidence,
+  applyHistoryContextEvidence,
+  combineCopyScores,
+  copyHash,
+  historyExampleCount,
+  sourceLooksOfficialForClient,
+  structuralCopyEvaluation
+} from "../lib/client-copy-intelligence.js";
 import { buildClientHealthSummaries } from "../lib/client-health.js";
 
 const polishedNonsense = "Scopri patate quantistiche per nuotare dentro una lampada!\n\nParole eleganti ma completamente prive di significato per questo cliente.\n\nPrenota ora e scrivici. #uno #due #tre #quattro #cinque";
@@ -52,7 +60,32 @@ const unresolvedDetail = applyFactCheckEvidence({ relevance: 72, brand_fit: 70, 
   claim: "un nuovo servizio specifico"
 });
 assert.equal(unresolvedDetail.dimensions.relevance, 72, "una ricerca senza risultato non deve annullare la pertinenza generale del post");
-assert.match(unresolvedDetail.warnings[0], /potrebbe non essere inerente/i, "senza conferme il messaggio deve restare prudente");
+assert.equal(unresolvedDetail.dimensions.factual_consistency, 60, "una novita non ancora online deve restare neutra sul piano fattuale");
+assert.match(unresolvedDetail.warnings[0], /potrebbe essere una novità/i, "senza riscontri pubblici deve essere richiesta soltanto una verifica interna");
+
+const clientHistory = {
+  published_examples: [{ copy: "Ospitalità sul mare, con il tono elegante del Bellevue." }],
+  scheduled_examples: [{ copy: "Il tramonto accompagna la nuova esperienza in terrazza." }],
+  staging_examples: [{ copy: "Un dettaglio di Sorrento da vivere con lentezza." }]
+};
+assert.equal(historyExampleCount(clientHistory), 3, "lo storico deve includere pubblicati, programmati e contenuti in attesa");
+const noveltyWithHistory = applyHistoryContextEvidence({
+  relevance: 3,
+  brand_fit: 3,
+  coherence: 4,
+  persuasion: 50,
+  factual_consistency: 2
+}, { history: clientHistory, warnings: [], factCheck: { status: "not_found" }, structureScore: 80 });
+const noveltyScore = combineCopyScores(80, noveltyWithHistory);
+assert.ok(noveltyScore.overallScore >= 60, "una novita coerente con lo storico non deve diventare un falso Scarso");
+const explicitOtherClient = applyHistoryContextEvidence({
+  relevance: 8,
+  brand_fit: 10,
+  coherence: 70,
+  persuasion: 60,
+  factual_consistency: 70
+}, { history: clientHistory, warnings: ["Il testo parla di un altro cliente e di un altro settore."], structureScore: 80 });
+assert.equal(explicitOtherClient.relevance, 8, "una prova concreta di altro cliente deve mantenere il giudizio negativo");
 
 const caption = "Esperienza autentica sul mare. Prenota il tuo soggiorno. #mare #hotel #sorrento #vacanza #italia";
 const client = { id: "client-a", name: "Hotel", status: "attivo", drive_url: "https://drive.google.com/a" };
@@ -95,8 +128,12 @@ assert.match(backend, /include:\s*\["web_search_call\.action\.sources"\]/, "la v
 assert.match(backend, /non e una prova che un luogo, servizio o dettaglio citato sia estraneo/, "un profilo incompleto non deve essere interpretato come prova negativa");
 assert.match(backend, /singolo post Instagram[\s\S]*esempi gia pubblicati o approvati/, "l'analisi deve privilegiare la coerenza con lo storico senza pretendere che ogni post descriva il cliente");
 assert.match(backend, /assenza di dati non giustifica punteggi prossimi allo zero/, "il modello deve assegnare un valore neutro quando il contesto non basta");
-assert.match(backend, /descrizioni evocative, panorami, atmosfera e formule creative normalmente no/, "il copy evocativo non deve attivare fact-check inutili");
-assert.match(backend, /COPY_REVIEW_POLICY_VERSION = 3/, "le vecchie analisi errate devono essere invalidate");
+assert.match(backend, /descrizioni evocative, panorami, atmosfera e formule creative normalmente non richiedono fact-check/, "il copy evocativo non deve attivare fact-check inutili");
+assert.match(backend, /copy passati del PED segnati come programmati Meta o telefono/, "lo storico Instagram disponibile deve avere priorita nella valutazione");
+assert.match(backend, /copy futuri gia programmati nel PED; contenuti in attesa/, "la valutazione deve confrontare anche programmazione futura e attesa");
+assert.match(backend, /non compaia ancora online non significa che sia falso/, "le novita non ancora pubbliche non devono essere penalizzate");
+assert.match(backend, /ped_staging_items\?select=caption,created_at/, "i contenuti in attesa devono alimentare lo storico cliente");
+assert.match(backend, /COPY_REVIEW_POLICY_VERSION = 4/, "le precedenti analisi devono essere invalidate dopo il cambio di criterio");
 assert.match(app, /schedulePedCopyReview[\s\S]*2200/, "il copy deve essere analizzato automaticamente dopo una breve pausa");
 assert.match(app, /Math\.min\(39, Math\.round\(structure\.score \* \.25\)\)/, "la struttura da sola non deve mostrare Buono");
 assert.doesNotMatch(app, /function pedCopyDimensionMarkup/, "il popup non deve mostrare la griglia tecnica completa dei punteggi");

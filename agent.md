@@ -59,6 +59,32 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-09-25 — Storico PED prioritario e novità non penalizzate
+
+- Richiesta: valutare i copy soprattutto rispetto al cliente, al tone of voice,
+  ai contenuti già pubblicati e a quelli programmati nel PED, senza trattare
+  come errata una novità che non è ancora presente online.
+- Modifiche: il revisore usa ora, in ordine, esempi approvati, copy passati del
+  PED segnati Meta/telefono, programmazione futura, contenuti in attesa, profilo
+  e pattern appresi; il copy corrente è escluso dal confronto. L'analisi pesa
+  coerenza di tono, lessico, lingua, promessa, formalità e stile. Una ricerca
+  senza risultati non riduce più il voto e chiede soltanto una verifica interna
+  del dato; solo una contraddizione esplicita o la prova che il testo riguarda
+  un altro cliente/settore conserva un giudizio negativo. Conservati gli spunti
+  editoriali anche quando il web conferma un fatto. Policy cache aggiornata
+  alla versione 4 per ricalcolare le valutazioni precedenti.
+- File: `lib/client-copy-intelligence.js`,
+  `scripts/test-client-copy-intelligence.mjs`, `docs/PROJECT-HANDOFF.md`,
+  `agent.md`.
+- Verifiche: `npm run check`, `npm run test:copy-intelligence`, `npm run
+  test:ped-carousel`, `npm run test:client-health`, `npm run build`, `git diff
+  --check`; controllo produzione della policy API e del nuovo bundle.
+- Pubblicazione: GitHub `main` e Vercel produzione; alias canonico
+  `https://bmg-hub.vercel.app` verificato.
+- Note: lo storico Instagram usato senza nuove API esterne è quello registrato
+  nel PED per uscite passate Meta/telefono; nessun copy o contenuto è stato
+  modificato.
+
 ### 2026-09-25 — Riscontri online sostanziali nella valutazione copy
 
 - Richiesta: correggere la valutazione che continuava a dare 20/100 al copy del
