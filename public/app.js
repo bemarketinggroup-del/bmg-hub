@@ -3988,18 +3988,6 @@ function pedCopyReviewQuality(score) {
         : { label: "Scarso", tone: "poor" };
 }
 
-function pedCopyDimensionMarkup(review) {
-  const dimensions = review?.dimensions || {};
-  const labels = [
-    ["relevance", "Pertinenza"],
-    ["brand_fit", "Voce brand"],
-    ["coherence", "Coerenza"],
-    ["persuasion", "Efficacia"],
-    ["factual_consistency", "Affidabilità"]
-  ];
-  return `<div class="ped-copy-dimensions">${labels.map(([key, label]) => `<span><b>${escapeHtml(label)}</b><i>${Number(dimensions[key] || 0)}/100</i></span>`).join("")}</div>`;
-}
-
 function pedCopyEvaluationMarkup(value, { compact = false } = {}) {
   const structure = pedCopyEvaluation(value);
   const review = pedCopyReviewFor(value);
@@ -4014,15 +4002,20 @@ function pedCopyEvaluationMarkup(value, { compact = false } = {}) {
   ];
   const improvements = Array.isArray(review?.improvements) ? review.improvements : structure.feedback;
   const warnings = Array.isArray(review?.context_warnings) ? review.context_warnings : [];
+  const hint = review
+    ? String(improvements[0] || review.summary || "Copy coerente: nessuna correzione prioritaria.")
+    : value ? "Controllo automaticamente coerenza e tono rispetto al cliente e ai copy precedenti." : "Scrivi il copy per avviare l’analisi.";
+  const source = (Array.isArray(review?.dimensions?._web_sources) ? review.dimensions._web_sources : [])
+    .map((item) => ({ title: String(item?.title || "Fonte online"), url: safeExternalUrl(item?.url) }))
+    .find((item) => item.url);
   return `<div class="ped-copy-score is-${quality.tone}${compact ? " is-compact" : ""}" title="${escapeHtml(review?.summary || "La forma è solo il 25%: serve la verifica AI sul cliente")}">
     <div class="ped-copy-score-head"><strong>${quality.label}${review ? " · AI cliente" : " · AI"}</strong><span>${review ? `${score}/100` : "in attesa"}</span></div>
     <div class="ped-copy-score-bar" aria-hidden="true"><i style="width:${review ? score : 12}%"></i></div>
     ${compact ? "" : `<div class="ped-copy-criteria">${criteria.map(([ok, label]) => `<span class="${ok ? "is-ok" : "is-missing"}">${ok ? "✓" : "·"} ${escapeHtml(label)}</span>`).join("")}</div>
-      ${review ? pedCopyDimensionMarkup(review) : ""}
-      <p>${escapeHtml(review?.summary || (value ? "Analizzo pertinenza, voce del brand, coerenza, efficacia e affidabilità. La struttura vale solo il 25%." : "Scrivi il copy per avviare l’analisi."))}</p>
-      ${warnings.length ? `<p class="ped-copy-context-warning">${warnings.map((item) => `⚠ ${escapeHtml(item)}`).join(" · ")}</p>` : ""}
-      ${improvements?.length ? `<p>${escapeHtml(improvements.slice(0, 3).join(" · "))}</p>` : ""}
-      <div class="ped-copy-ai-row"><button class="text-button" data-ped-copy-ai-review type="button">${review ? "Rianalizza copy" : "Analizza ora"}</button><small class="ped-copy-ai-advice" aria-live="polite">${review ? `Struttura ${Number(review.structure_score || 0)}/100 · Contesto ${Number(review.semantic_score || 0)}/100` : "Analisi automatica dopo una breve pausa"}</small>${review ? `<span class="ped-copy-feedback"><button type="button" data-ped-copy-feedback="approved" data-review-id="${escapeHtml(review.id || "")}">✓ In linea</button><button type="button" data-ped-copy-feedback="rejected" data-review-id="${escapeHtml(review.id || "")}">✕ Non in linea</button></span>` : ""}</div>`}
+      <p class="ped-copy-hint"><b>Spunto</b><span>${escapeHtml(hint)}</span></p>
+      ${warnings.length ? `<p class="ped-copy-context-warning">⚠ ${escapeHtml(warnings[0])}</p>` : ""}
+      ${source ? `<a class="ped-copy-source" href="${escapeHtml(source.url)}" target="_blank" rel="noopener">${review?.dimensions?._fact_check_status === "confirmed" ? "Verificato online" : "Fonte consultata"}: ${escapeHtml(source.title)}</a>` : ""}
+      <div class="ped-copy-ai-row"><button class="text-button" data-ped-copy-ai-review type="button">${review ? "Rianalizza" : "Analizza ora"}</button><small class="ped-copy-ai-advice" aria-live="polite">${review ? "" : "Analisi automatica tra poco"}</small>${review ? `<span class="ped-copy-feedback"><button type="button" data-ped-copy-feedback="approved" data-review-id="${escapeHtml(review.id || "")}">✓ In linea</button><button type="button" data-ped-copy-feedback="rejected" data-review-id="${escapeHtml(review.id || "")}">✕ Non in linea</button></span>` : ""}</div>`}
   </div>`;
 }
 

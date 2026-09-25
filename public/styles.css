@@ -3509,15 +3509,15 @@ code { font-family: var(--font-mono); font-size: 12px; }
 .ped-copy-criteria span { border: 1px solid var(--line); border-radius: 999px; padding: 4px 7px; color: var(--muted); background: var(--surface); font-size: 9px; font-weight: 700; }
 .ped-copy-criteria span.is-ok { border-color: color-mix(in srgb, #4d795f 42%, var(--line)); color: #376149; background: color-mix(in srgb, #4d795f 8%, var(--surface)); }
 .ped-copy-score > p { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.45; }
-.ped-copy-ai-row { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: 10px; border-top: 1px solid var(--line); padding-top: 9px; }
+.ped-copy-hint { display: flex; min-width: 0; gap: 5px; }
+.ped-copy-hint b { flex: 0 0 auto; color: var(--quality-color); }
+.ped-copy-hint span { min-width: 0; }
+.ped-copy-ai-row { display: flex; min-width: 0; align-items: center; gap: 8px; border-top: 1px solid var(--line); padding-top: 7px; }
 .ped-copy-ai-row .text-button { min-height: 32px; padding: 0 9px; color: var(--terracotta); font-size: 9.5px; }
-.ped-copy-ai-advice { color: var(--stone); font-size: 9.5px; line-height: 1.45; white-space: pre-line; }
-.ped-copy-dimensions { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 5px; }
-.ped-copy-dimensions span { display: grid; gap: 2px; border: 1px solid var(--line); border-radius: 8px; padding: 6px 7px; background: var(--surface); }
-.ped-copy-dimensions b { overflow: hidden; color: var(--muted); font-size: 8px; font-weight: 750; text-overflow: ellipsis; white-space: nowrap; }
-.ped-copy-dimensions i { color: var(--ink); font-family: var(--font-mono); font-size: 9px; font-style: normal; font-weight: 700; }
+.ped-copy-ai-advice { min-width: 0; flex: 1 1 auto; color: var(--stone); font-size: 9.5px; line-height: 1.35; }
+.ped-copy-source { width: fit-content; max-width: 100%; overflow: hidden; color: var(--terracotta); font-size: 9px; font-weight: 700; text-decoration: underline; text-overflow: ellipsis; white-space: nowrap; }
 .ped-copy-context-warning { color: #9d5a17 !important; }
-.ped-copy-feedback { display: inline-flex; flex-wrap: wrap; gap: 5px; }
+.ped-copy-feedback { display: inline-flex; flex: 0 0 auto; flex-wrap: nowrap; gap: 5px; }
 .ped-copy-feedback button { border: 1px solid var(--line); border-radius: 999px; padding: 5px 8px; background: var(--surface); color: var(--muted); font-size: 8.5px; font-weight: 750; }
 .ped-copy-feedback button:hover,
 .ped-copy-feedback button.is-active { border-color: var(--quality-color); color: var(--quality-color); }
@@ -3531,9 +3531,9 @@ code { font-family: var(--font-mono); font-size: 12px; }
   .ped-health-head { align-items: flex-start; flex-direction: column; gap: 8px; }
   .ped-health-overall { align-self: flex-start; }
   .ped-health-grid { grid-template-columns: 1fr; }
-  .ped-copy-criteria { gap: 4px; }
-  .ped-copy-ai-row { grid-template-columns: 1fr; }
-  .ped-copy-dimensions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ped-copy-criteria { display: none; }
+  .ped-copy-ai-row { gap: 5px; }
+  .ped-copy-ai-advice:empty { display: none; }
 }
 
 .client-ai-profile-modal { width: min(980px, calc(100vw - 28px)); max-height: calc(100dvh - 28px); overflow: hidden; }
@@ -10832,8 +10832,10 @@ body.chat-view-active #chatView {
   }
   .ped-caption-modal .ped-copy-score { gap: 5px; padding: 8px 10px; }
   .ped-caption-modal .ped-copy-criteria span { padding: 3px 6px; font-size: 8px; }
-  .ped-caption-modal .ped-copy-ai-row { grid-template-columns: auto minmax(0, 1fr); gap: 7px; padding-top: 6px; }
+  .ped-caption-modal .ped-copy-ai-row { gap: 5px; padding-top: 5px; }
   .ped-caption-modal .ped-copy-ai-row .text-button { min-height: 28px; }
+  .ped-caption-modal .ped-copy-hint { line-height: 1.35; }
+  .ped-caption-modal .ped-copy-feedback button { padding: 4px 6px; }
   .ped-caption-modal .ped-caption-actions { margin-top: 7px; padding-top: 7px; }
   .ped-create-caption-selection { gap: 8px; padding: 6px 8px; }
   .ped-create-caption-stack { height: 42px; padding-right: 8px; }
@@ -10845,8 +10847,8 @@ body.chat-view-active #chatView {
 
 @media (max-height: 720px) {
   .ped-caption-modal .ped-caption-day-items { display: none; }
-  .ped-caption-modal .ped-copy-score > p { display: none; }
   .ped-caption-modal .ped-copy-score { gap: 4px; padding-block: 7px; }
+  .ped-caption-modal .ped-copy-ai-row { display: none; }
   .ped-caption-modal .ped-caption-actions button { min-height: 38px; }
 }
 

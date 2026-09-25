@@ -59,6 +59,39 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-09-25 — Analisi copy mobile sintetica e verifica prudente dei fatti
+
+- Richiesta: correggere il popup copy che su telefono sovrapponeva campi e
+  comandi; ridurre l'analisi a uno spunto utile; evitare che dettagli reali ma
+  assenti dal profilo, come La Pergola del Bellevue Syrene, venissero dichiarati
+  non pertinenti. Considerare inoltre che un singolo post Instagram può parlare
+  di un tema specifico e va confrontato con lo storico del cliente, senza dover
+  ripetere ogni volta l'intera descrizione del brand.
+- Modifiche: rimossa dal popup la griglia dei cinque punteggi semantici e
+  sostituita con voto, barra, un solo spunto breve, eventuale avviso prudente e
+  fonte cliccabile. Su smartphone i criteri strutturali sono nascosti e sui
+  display bassi vengono rimossi soltanto i controlli secondari, mentre editor e
+  azioni restano fissi senza sovrapposizioni. Il revisore usa copy storici già
+  programmati/pubblicati ed esempi approvati come riferimento di tono; il
+  profilo incompleto non è più una prova negativa. Per un solo fatto concreto
+  dubbio viene eseguita una ricerca web economica, privilegiando il sito
+  ufficiale: `confirmed` corregge il voto, `not_found` dice soltanto che il
+  dettaglio potrebbe non essere inerente, `contradicted` richiede una reale
+  smentita. Cache aggiornata alla policy 2 e costo della ricerca incluso nel
+  budget mensile.
+- File: `lib/client-copy-intelligence.js`, `public/app.js`,
+  `public/styles.css`, `scripts/test-client-copy-intelligence.mjs`,
+  `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run check`, `npm run test:copy-intelligence`, `npm run
+  test:ped-carousel`, `git diff --check`; rendering headless Chrome a 390×844 e
+  375×667 con misurazione delle aree e controllo visivo, senza sovrapposizioni.
+- Pubblicazione: GitHub `main` e Vercel produzione; verifica finale del bundle e
+  dell'alias canonico `https://bmg-hub.vercel.app`.
+- Note: la ricerca web non parte per ogni copy ma soltanto quando l'analisi
+  individua un'affermazione concreta non risolta dal profilo o dallo storico;
+  questo limita costo e latenza. Nessun contenuto PED esistente è stato
+  modificato.
+
 ### 2026-09-25 — Memoria cliente e qualità copy contestuale
 
 - Richiesta: impedire che copy formalmente completi ma insensati ricevano un

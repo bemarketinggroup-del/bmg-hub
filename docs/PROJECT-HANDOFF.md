@@ -1,6 +1,6 @@
 # BMG Hub — contesto per una nuova chat
 
-Ultimo aggiornamento: 24 settembre 2026
+Ultimo aggiornamento: 25 settembre 2026
 Repository locale: `/Users/davidedeluca/Desktop/bmg-hub`  
 Branch di produzione: `main`  
 Ultimo commit applicativo precedente all'ottimizzazione: `435d236`
@@ -501,6 +501,19 @@ supabase/                     schema e migration
   `Da verificare`, mai un voto positivo basato sulla sola forma. L'analisi parte
   dopo 2,2 secondi di pausa negli editor di creazione, programmazione e attesa;
   è salvata e riutilizzata per lo stesso testo e versione del profilo cliente.
+  Un singolo post Instagram può concentrarsi su un dettaglio o un momento: non
+  deve ripetere ogni volta descrizione, servizi e pubblico del cliente. Il
+  revisore confronta prima di tutto tono, stile e messaggio con i copy storici
+  già programmati/pubblicati e con gli esempi approvati dal team. Un profilo
+  incompleto rappresenta incertezza, non una prova di estraneità, e quindi non
+  abbassa da solo pertinenza o affidabilità. Soltanto quando emerge un fatto
+  concreto non verificabile nello storico o nel profilo parte una ricerca web
+  mirata, con priorità al sito ufficiale del cliente: una conferma corregge il
+  voto e rimuove l'avviso; l'assenza di riscontri produce soltanto la formula
+  prudente `potrebbe non essere inerente`; una contraddizione richiede una fonte
+  esplicita. Le fonti usate sono cliccabili e il costo fisso della ricerca viene
+  incluso nel budget AI condiviso. La policy è versionata nella cache, così le
+  vecchie valutazioni troppo severe vengono ricalcolate.
   Il riepilogo del
   cliente valuta inoltre la copertura futura rispetto a 30 giorni, la cadenza
   rispetto all'obiettivo di un contenuto ogni due giorni e la qualità media dei
@@ -543,6 +556,11 @@ supabase/                     schema e migration
   selezionato, stato, comandi, valutazione e azioni di salvataggio sono sempre
   visibili. Soltanto il testo del copy ha uno scorrimento verticale interno,
   anche su smartphone; il popup e la pagina sottostante non scorrono.
+  La valutazione nell'editor è intenzionalmente sintetica: voto, barra, un solo
+  `Spunto` operativo ed eventuale fonte/avviso. I cinque punteggi tecnici non
+  occupano più il popup. Su smartphone i chip strutturali sono nascosti e, sui
+  display molto bassi, anche i controlli secondari di feedback vengono omessi;
+  stato, contenuto, editor, spunto e comandi di salvataggio non si sovrappongono.
 - L'incolla negli editor PED usa il testo del clipboard come fonte per spazi e
   a capo, invece dei paragrafi HTML generati da ChatGPT. Righe consecutive e
   righe vuote intenzionali conservano quindi la stessa distanza su Chrome e
