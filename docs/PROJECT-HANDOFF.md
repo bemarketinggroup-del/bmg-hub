@@ -596,6 +596,11 @@ supabase/                     schema e migration
   occupano più il popup. Su smartphone i chip strutturali sono nascosti e, sui
   display molto bassi, anche i controlli secondari di feedback vengono omessi;
   stato, contenuto, editor, spunto e comandi di salvataggio non si sovrappongono.
+  Il dialogo usa direttamente i margini sicuri sinistro e destro del telefono:
+  ogni sezione interna può restringersi senza imporre una larghezza minima e le
+  tre azioni finali passano su due righe, evitando tagli laterali anche su
+  Safari iPhone. Sui display bassi fonte e dettagli secondari vengono nascosti,
+  mentre voto, spunto e tutte le azioni principali restano visibili.
 - L'incolla negli editor PED usa il testo del clipboard come fonte per spazi e
   a capo, invece dei paragrafi HTML generati da ChatGPT. Righe consecutive e
   righe vuote intenzionali conservano quindi la stessa distanza su Chrome e

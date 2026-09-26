@@ -1,6 +1,6 @@
 # BMG Hub — memoria operativa degli interventi
 
-Ultimo aggiornamento: 25 settembre 2026
+Ultimo aggiornamento: 26 settembre 2026
 
 ## Scopo del file
 
@@ -58,6 +58,26 @@ più recente alla più vecchia:
 ```
 
 ## Registro modifiche
+
+### 2026-09-26 — Popup copy interamente visibile su smartphone
+
+- Richiesta: correggere il popup di modifica copy che su telefono usciva dal
+  margine destro e tagliava testo, fonte e pulsante di salvataggio.
+- Modifiche: il dialogo ora si ancora ai margini sicuri laterali del dispositivo
+  senza dipendere dalla larghezza intrinseca dei contenuti; form, valutazione e
+  sezioni interne possono restringersi correttamente. Le tre azioni finali sono
+  disposte su due righe mobili e restano tutte visibili. Spunto, avvisi e fonte
+  non possono più allargare il popup; sui telefoni bassi i dettagli secondari
+  vengono omessi per conservare voto, spunto e comandi principali a colpo
+  d'occhio.
+- File: `public/styles.css`, `scripts/test-ped-carousel.mjs`,
+  `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run check`, `npm run test:ped-carousel`, `npm run build`,
+  `git diff --check`; rendering visivo a 390×844 e 375×667 con Chrome in
+  emulazione mobile, verificando entrambi i margini e tutti i pulsanti.
+- Pubblicazione: GitHub `main` e Vercel produzione; alias canonico
+  `https://bmg-hub.vercel.app` verificato.
+- Note: nessun contenuto PED o copy è stato modificato.
 
 ### 2026-09-25 — Analisi immediata e recupero dei copy PED esistenti
 
