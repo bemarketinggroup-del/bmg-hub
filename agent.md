@@ -59,6 +59,34 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-09-26 — Coda AI globale per tutti i copy PED
+
+- Richiesta: analizzare i post prima che vengano aperti, procedendo poco alla
+  volta su tutti i PED invece di avviare l'AI soltanto entrando nel singolo
+  post.
+- Modifiche: all'accesso all'Hub parte una coda silenziosa globale che individua
+  nel backend i copy non ancora valutati di tutti i clienti. Lavora su tre
+  elementi per ciclo, in sequenza, privilegiando i post futuri più vicini, poi
+  i contenuti in attesa e infine lo storico; a coda vuota ricontrolla ogni
+  cinque minuti e riparte subito quando la scheda torna attiva. Copy duplicati,
+  clienti archiviati e valutazioni già valide vengono esclusi prima della
+  chiamata AI. Un lease condiviso nel database evita code concorrenti tra
+  dispositivi e un lease locale evita doppioni tra schede dello stesso browser;
+  rate limit e budget mensile continuano a sospendere automaticamente il lavoro.
+  Supportate anche le versioni profilo salvate nel fallback compatibile.
+- File: `lib/client-copy-intelligence.js`, `public/app.js`,
+  `scripts/test-client-copy-intelligence.mjs`, `docs/PROJECT-HANDOFF.md`,
+  `agent.md`.
+- Verifiche: `npm run check`, `npm run test:copy-intelligence`, `npm run
+  test:ped-carousel`, `npm run test:client-health`, `npm run build`, `git diff
+  --check`; test della priorità, deduplicazione, esclusione clienti archiviati,
+  cache per versione profilo e avvio automatico della coda.
+- Pubblicazione: GitHub `main` e Vercel produzione; alias canonico
+  `https://bmg-hub.vercel.app` verificato.
+- Note: la coda opera mentre almeno una sessione dell'Hub con accesso PED è
+  attiva; non modifica i copy e consuma AI soltanto per testi ancora privi di
+  una valutazione valida.
+
 ### 2026-09-26 — Analisi copy persistente finché il testo non cambia
 
 - Richiesta: evitare che l'AI rianalizzi un post ogni volta che il popup viene

@@ -508,11 +508,19 @@ supabase/                     schema e migration
   differenze invisibili introdotte dagli editor Chrome/Safari (a capo, spazi non
   separabili e caratteri a larghezza zero); soltanto una modifica reale al testo
   genera una nuova analisi. Anche un risultato terminato mentre il popup viene
-  chiuso resta in cache e nel database. Al caricamento di ogni PED parte inoltre
-  una coda silenziosa che recupera progressivamente tutti i copy già presenti
-  nel calendario e nei contenuti in attesa, evitando richieste duplicate e
-  rispettando sia il limite operativo sia il budget AI mensile. In caso di
-  limite temporaneo la coda riprende automaticamente nella stessa sessione.
+  chiuso resta in cache e nel database. All'accesso all'Hub parte inoltre una
+  coda globale silenziosa, anche se non viene aperta la pagina PED: il server
+  confronta tutti i copy del calendario e dei contenuti in attesa di tutti i
+  clienti con le valutazioni già salvate. Analizza tre testi alla volta in modo
+  sequenziale, dando priorità alle uscite future più vicine, poi ai contenuti in
+  attesa e infine allo storico. Copy duplicati, clienti archiviati e testi già
+  valutati per la versione corrente della memoria vengono esclusi prima di
+  chiamare OpenAI. Un lease condiviso tra browser/dispositivi e un secondo lease
+  locale tra schede impediscono che più sessioni lavorino contemporaneamente
+  sulla stessa coda. Quando il lavoro è esaurito il controllo passa a ogni
+  cinque minuti e riparte subito al ritorno nell'Hub; limiti temporanei e budget
+  mensile producono invece una pausa automatica. In questo modo l'analisi è in
+  genere già visibile quando si apre un post, senza doverlo aprire per avviarla.
   Un singolo post Instagram può concentrarsi su un dettaglio o un momento: non
   deve ripetere ogni volta descrizione, servizi e pubblico del cliente. Il
   revisore confronta prima di tutto tono, stile e messaggio con gli esempi

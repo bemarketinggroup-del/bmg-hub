@@ -330,8 +330,10 @@ let pedCopyReviewCache = new Map();
 let pedCopyReviewRequests = new Map();
 let pedCopyReviewTimer = null;
 let pedCopyReviewSequence = 0;
-let pedCopyBackfillGeneration = 0;
-let pedCopyBackfillTimer = null;
+let pedCopyBackgroundTimer = null;
+let pedCopyBackgroundRunning = false;
+const pedCopyBackgroundOwner = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+const PED_COPY_BACKGROUND_LEASE_KEY = "bmg.ped-copy-review-queue";
 let pedUsedFileIds = new Set();
 let pedStagingFileIds = new Set();
 let selectedPedMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
@@ -1291,6 +1293,7 @@ async function logout() {
   stopServiceHealthUpdates();
   stopMaintenanceNoticeUpdates();
   stopSmartWorkingUpdates();
+  stopPedCopyBackgroundQueue();
   setAiAssistantOpen(false);
   setOperationalBriefOpen(false);
   closeGraphicReviewToast({ clearQueue: true });
@@ -4151,62 +4154,103 @@ async function loadPedCopyReviews(clientId) {
   } catch {}
 }
 
-function existingPedCopyReviewCandidates(clientId) {
-  const candidates = [];
-  const seen = new Set();
-  const add = (item, entityType) => {
-    const copy = String(item?.caption || "").replace(/\r\n/g, "\n").trim();
-    const key = pedCopyReviewKey(clientId, copy);
-    if (copy.length < 8 || seen.has(key) || pedCopyReviewCache.has(key)) return;
-    seen.add(key);
-    candidates.push({
-      clientId,
-      copy,
-      entityType,
-      entityId: String(item?.id || ""),
-      date: String(item?.scheduled_date || item?.updated_at || item?.created_at || "")
-    });
-  };
-  for (const item of pedAllItems()) add(item, "ped");
-  for (const item of (state.pedStagingItems || [])) add(item, "staging");
-  return candidates.sort((a, b) => {
-    if (a.entityType !== b.entityType) return a.entityType === "staging" ? -1 : 1;
-    return b.date.localeCompare(a.date);
-  });
+function claimPedCopyBackgroundLease() {
+  try {
+    const now = Date.now();
+    const current = JSON.parse(localStorage.getItem(PED_COPY_BACKGROUND_LEASE_KEY) || "null");
+    if (current?.owner && current.owner !== pedCopyBackgroundOwner && Number(current.expires_at || 0) > now) return false;
+    const lease = { owner: pedCopyBackgroundOwner, expires_at: now + 2 * 60 * 1000 };
+    localStorage.setItem(PED_COPY_BACKGROUND_LEASE_KEY, JSON.stringify(lease));
+    return JSON.parse(localStorage.getItem(PED_COPY_BACKGROUND_LEASE_KEY) || "null")?.owner === pedCopyBackgroundOwner;
+  } catch {
+    return true;
+  }
 }
 
-function queueExistingPedCopyReviews(clientId) {
-  window.clearTimeout(pedCopyBackfillTimer);
-  const generation = ++pedCopyBackfillGeneration;
-  const expectedClientId = String(clientId || "");
-  if (!expectedClientId) return;
-  pedCopyBackfillTimer = window.setTimeout(async () => {
-    const candidates = existingPedCopyReviewCandidates(expectedClientId);
+function releasePedCopyBackgroundLease() {
+  try {
+    const current = JSON.parse(localStorage.getItem(PED_COPY_BACKGROUND_LEASE_KEY) || "null");
+    if (current?.owner === pedCopyBackgroundOwner) localStorage.removeItem(PED_COPY_BACKGROUND_LEASE_KEY);
+  } catch {}
+}
+
+function schedulePedCopyBackgroundQueue(delay = 2500) {
+  window.clearTimeout(pedCopyBackgroundTimer);
+  if (!currentProfile || !authSession?.access_token || !canAccessModule("ped")) return;
+  pedCopyBackgroundTimer = window.setTimeout(() => void runPedCopyBackgroundQueue(), Math.max(500, delay));
+}
+
+function startPedCopyBackgroundQueue() {
+  schedulePedCopyBackgroundQueue(2500);
+}
+
+function stopPedCopyBackgroundQueue() {
+  window.clearTimeout(pedCopyBackgroundTimer);
+  pedCopyBackgroundTimer = null;
+  releasePedCopyBackgroundLease();
+}
+
+async function runPedCopyBackgroundQueue() {
+  if (pedCopyBackgroundRunning || !currentProfile || !authSession?.access_token || !canAccessModule("ped")) return;
+  if (!claimPedCopyBackgroundLease()) {
+    schedulePedCopyBackgroundQueue(20 * 1000);
+    return;
+  }
+  pedCopyBackgroundRunning = true;
+  let nextDelay = 5 * 60 * 1000;
+  try {
+    const queueResponse = await apiFetch(`/api/ai/copy-review?mode=pending&limit=3&worker=${encodeURIComponent(pedCopyBackgroundOwner)}`);
+    const queue = await queueResponse.json().catch(() => ({}));
+    if (!queueResponse.ok) throw new Error(queue.error || "Coda analisi copy non disponibile");
+    aiAssistantState.budget = queue.budget || aiAssistantState.budget;
+    renderAiAssistantBudget();
+    if (queue.busy) {
+      nextDelay = 30 * 1000;
+      return;
+    }
+    if (queue.paused) {
+      nextDelay = 60 * 60 * 1000;
+      return;
+    }
+    const candidates = Array.isArray(queue.candidates) ? queue.candidates : [];
     for (const candidate of candidates) {
-      if (generation !== pedCopyBackfillGeneration || expectedClientId !== String(selectedPedClientId || "")) return;
-      if (pedCopyReviewFor(candidate.copy, expectedClientId)) continue;
+      claimPedCopyBackgroundLease();
+      const clientId = String(candidate.client_id || "");
+      const copy = String(candidate.caption || "");
+      if (!clientId || normalizePedCopyReviewText(copy).length < 8 || pedCopyReviewFor(copy, clientId)) continue;
       try {
-        const { response, data } = await submitPedCopyReview(candidate);
+        const { response, data } = await submitPedCopyReview({
+          clientId,
+          copy,
+          entityType: candidate.entity_type,
+          entityId: candidate.entity_id
+        });
         if (response.status === 429) {
           const budgetStopped = /budget|credito|crediti|saldo/i.test(String(data.error || ""));
-          if (!budgetStopped && generation === pedCopyBackfillGeneration) {
-            pedCopyBackfillTimer = window.setTimeout(() => {
-              if (generation === pedCopyBackfillGeneration && expectedClientId === String(selectedPedClientId || "")) {
-                queueExistingPedCopyReviews(expectedClientId);
-              }
-            }, 10 * 60 * 1000 + 5000);
-          }
+          nextDelay = budgetStopped ? 60 * 60 * 1000 : 10 * 60 * 1000 + 5000;
           return;
         }
         if (!response.ok) continue;
-        if (data.review) cachePedCopyReview(data.review, { clientId: expectedClientId, copy: candidate.copy });
+        if (data.review) cachePedCopyReview(data.review, { clientId, copy });
         aiAssistantState.budget = data.budget || aiAssistantState.budget;
         renderAiAssistantBudget();
-        renderPedHealth();
+        if (clientId === String(selectedPedClientId || "")) {
+          renderPedHealth();
+          if (document.getElementById("pedCaptionModal")?.open || document.getElementById("pedStagingEditorModal")?.open) {
+            rerenderActivePedCopyEvaluation();
+          }
+        }
       } catch {}
-      await new Promise((resolve) => window.setTimeout(resolve, 700));
+      await new Promise((resolve) => window.setTimeout(resolve, 1800));
     }
-  }, 350);
+    nextDelay = queue.has_more ? 12 * 1000 : 5 * 60 * 1000;
+  } catch {
+    nextDelay = 60 * 1000;
+  } finally {
+    pedCopyBackgroundRunning = false;
+    releasePedCopyBackgroundLease();
+    schedulePedCopyBackgroundQueue(nextDelay);
+  }
 }
 
 async function savePedCopyFeedback(button) {
@@ -5843,7 +5887,6 @@ async function loadPedCalendar() {
     pedStagingFileIds = new Set((data.staging_file_ids || []).map(String));
     await loadPedCopyReviews(selectedPedClientId);
     renderPed();
-    queueExistingPedCopyReviews(selectedPedClientId);
   } catch (error) {
     if (pedLoadingKey !== key) return;
     state.pedItems = [];
@@ -15129,6 +15172,7 @@ async function bootApp() {
     startServiceHealthUpdates();
     startMaintenanceNoticeUpdates();
     startSmartWorkingUpdates();
+    startPedCopyBackgroundQueue();
     renderHome();
     performanceMeasure("boot-critical", bootStartedAt, { activeView });
     runWhenIdle(async () => {
@@ -15156,6 +15200,7 @@ document.addEventListener("visibilitychange", () => {
     void loadOperationalBrief();
     void loadServiceHealth({ quiet: true });
     void loadMaintenanceNotice({ quiet: true });
+    schedulePedCopyBackgroundQueue(1000);
     if (document.querySelector("[data-view-panel='chat'].is-active")) void loadTeamChat({ quiet: true });
     if (canAccessModule("smart_working") && smartWorkingViewIsActive()) {
       void refreshSmartWorkingInBackground(smartMonthKey(), { refresh: true });

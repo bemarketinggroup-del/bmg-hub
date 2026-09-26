@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import {
   applyFactCheckEvidence,
   applyHistoryContextEvidence,
+  buildPendingCopyReviewCandidates,
   combineCopyScores,
   copyHash,
   historyExampleCount,
@@ -45,6 +46,37 @@ assert.equal(
   copyHash("Caffe\u0300 sul  mare\n\n\nPrenota ora\u200b"),
   "lo stesso copy visuale non deve consumare una nuova analisi"
 );
+
+const backgroundQueue = buildPendingCopyReviewCandidates({
+  clients: [
+    { id: "client-a", name: "Cliente A", status: "attivo" },
+    { id: "client-b", name: "Cliente B", status: "attivo" },
+    { id: "client-old", name: "Archiviato", status: "archiviato" }
+  ],
+  profiles: [{ client_id: "client-a", profile_version: 2 }],
+  pedItems: [
+    { id: "future-a", client_id: "client-a", scheduled_date: "2026-09-28", caption: "Copy futuro da analizzare per il cliente A." },
+    { id: "future-a-duplicate", client_id: "client-a", scheduled_date: "2026-10-02", caption: "Copy futuro da analizzare per il cliente A." },
+    { id: "future-b", client_id: "client-b", scheduled_date: "2026-09-29", caption: "Copy futuro già analizzato per il cliente B." },
+    { id: "past-a", client_id: "client-a", scheduled_date: "2026-08-10", caption: "Copy storico ancora da analizzare per il cliente A." },
+    { id: "archived", client_id: "client-old", scheduled_date: "2026-09-27", caption: "Questo cliente non deve entrare nella coda." }
+  ],
+  stagingItems: [{ id: "staging-a", client_id: "client-a", caption: "Copy in attesa da analizzare per il cliente A.", updated_at: "2026-09-26T09:00:00Z" }],
+  reviews: [{
+    client_id: "client-b",
+    copy_hash: copyHash("Copy futuro già analizzato per il cliente B."),
+    profile_version: 1,
+    dimensions: { _policy_version: 5 }
+  }],
+  today: "2026-09-26",
+  limit: 5
+});
+assert.deepEqual(
+  backgroundQueue.candidates.map((item) => item.entity_id),
+  ["future-a", "staging-a", "past-a"],
+  "la coda globale deve dare priorità ai post futuri, deduplicare i copy e ignorare clienti archiviati o già analizzati"
+);
+assert.equal(backgroundQueue.pending_total, 3, "il totale deve contare i copy unici ancora da analizzare");
 
 const confirmedDetail = applyFactCheckEvidence({ relevance: 5, brand_fit: 8, coherence: 78, persuasion: 70, factual_consistency: 3 }, {
   status: "confirmed",
@@ -172,9 +204,12 @@ assert.match(backend, /official_web/, "le informazioni confermate online devono 
 assert.match(backend, /observed proviene da copy PED ed e solo un indizio/, "i fatti presi dai copy non devono diventare automaticamente verita");
 assert.match(backend, /COPY_REVIEW_POLICY_VERSION = 5/, "le precedenti analisi devono essere invalidate dopo l'introduzione della memoria operativa");
 assert.match(app, /schedulePedCopyReview[\s\S]*900/, "il copy deve essere analizzato subito dopo la fine della scrittura o dell'incolla");
-assert.match(app, /existingPedCopyReviewCandidates[\s\S]*pedAllItems\(\)[\s\S]*state\.pedStagingItems/, "il recupero deve includere sia i copy gia nel PED sia quelli in attesa");
-assert.match(app, /queueExistingPedCopyReviews[\s\S]*submitPedCopyReview[\s\S]*renderPedHealth/, "i copy esistenti devono essere valutati progressivamente e aggiornare la salute cliente");
-assert.match(app, /loadPedCopyReviews\(selectedPedClientId\)[\s\S]*queueExistingPedCopyReviews\(selectedPedClientId\)/, "il recupero automatico deve partire al caricamento del PED");
+assert.match(backend, /mode"\) === "pending"[\s\S]*pendingCopyReviewBatch/, "l'endpoint deve esporre la coda globale dei copy non analizzati");
+assert.match(backend, /COPY_REVIEW_QUEUE_LEASE_SLUG[\s\S]*claimCopyReviewQueueLease/, "la coda deve avere un lease condiviso per evitare doppie analisi da dispositivi diversi");
+assert.match(backend, /ped_items\?select=id,client_id,caption[\s\S]*ped_staging_items\?select=id,client_id,caption/, "la coda deve includere PED e contenuti in attesa di tutti i clienti");
+assert.match(app, /startPedCopyBackgroundQueue\(\)[\s\S]*runPedCopyBackgroundQueue/, "la coda globale deve partire automaticamente con l'Hub");
+assert.match(app, /mode=pending&limit=3&worker=[\s\S]*for \(const candidate of candidates\)[\s\S]*1800/, "i copy devono essere analizzati a piccoli gruppi e in sequenza");
+assert.match(app, /PED_COPY_BACKGROUND_LEASE_KEY[\s\S]*claimPedCopyBackgroundLease/, "più schede dello stesso browser non devono eseguire la coda contemporaneamente");
 assert.match(app, /pedCopyReviewRequests\.has\(key\)/, "le richieste simultanee sullo stesso copy devono essere deduplicate");
 assert.match(app, /function normalizePedCopyReviewText[\s\S]*replace\(\/\\u00a0\/g, " "\)[\s\S]*replace\(\/\\n\{3,\}\/g, "\\n\\n"\)/, "la cache browser deve normalizzare gli spazi e gli a capo di Safari");
 assert.match(app, /if \(data\.review\) cachePedCopyReview\(data\.review, \{ clientId, copy \}\);[\s\S]*sequence !== pedCopyReviewSequence/, "un risultato completato deve essere memorizzato anche se il popup nel frattempo viene chiuso");
