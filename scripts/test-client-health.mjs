@@ -1,10 +1,13 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { buildClientHealthSummaries, pedCopyScore } from "../lib/client-health.js";
+import { buildClientHealthSummaries, pedCopyScore, weightedHealthScore } from "../lib/client-health.js";
+import { copyHash } from "../lib/client-copy-intelligence.js";
 
 const goodCopy = `Scopri una nuova esperienza da vivere insieme!\n\nUn racconto completo, curato e pensato per farti conoscere ogni dettaglio del nostro progetto.\n\nPrenota ora e scrivici per saperne di più. #uno #due #tre #quattro #cinque`;
 assert.ok(pedCopyScore(goodCopy) >= 85, "un copy completo deve ottenere una valutazione alta");
 assert.ok(pedCopyScore("Testo breve") < 40, "un copy incompleto deve essere segnalato");
+assert.equal(weightedHealthScore([{ score: 100, weight: 30 }, { score: 50, weight: 70 }]), 65, "il voto deve rispettare i pesi dichiarati");
+assert.equal(weightedHealthScore([{ score: 100, weight: 30, available: false }, { score: 50, weight: 70 }]), 50, "i parametri non disponibili devono essere esclusi e ripesati");
 
 const clients = [
   { id: "a", name: "Cliente Attivo", status: "attivo", drive_url: "https://drive.google.com/folder/a" },
@@ -26,6 +29,14 @@ const summaries = buildClientHealthSummaries({
     { clickup_task_id: "late", client_id: "b", status: "to do", due_date_ms: 1 },
     { clickup_task_id: "done", client_id: "b", status: "complete", due_date_ms: 1 }
   ],
+  copyReviews: [
+    { client_id: "a", copy_hash: copyHash(goodCopy), overall_score: 100, profile_version: 1, dimensions: { _policy_version: 4 } }
+  ],
+  profileVersions: { a: 2, b: 1 },
+  appointmentOverview: {
+    clients_with_upcoming_appointment: [{ client: "Cliente Attivo", days_until_next: 4, next_appointment: { id: "event-a", start_at: "2026-09-27T09:00:00.000Z" } }],
+    clients_without_upcoming_appointment: ["Cliente Critico"]
+  },
   today: "2026-09-23"
 });
 
@@ -37,6 +48,12 @@ assert.equal(active.future_stories, 1, "le storie devono essere contate a parte"
 assert.equal(active.average_gap, 2, "la frequenza deve essere calcolata sulle date di pubblicazione");
 assert.equal(critical.staging_items, 1, "i contenuti in attesa devono essere mostrati");
 assert.equal(critical.overdue_tasks, 1, "le task completate non devono contare tra le scadute");
+assert.equal(active.has_upcoming_appointment, true, "un appuntamento prossimo deve entrare nella salute cliente");
+assert.equal(critical.appointment_score, 20, "l'assenza di appuntamenti nei 30 giorni deve incidere sul voto");
+assert.equal(active.score_breakdown.length, 11, "la salute deve spiegare tutti gli undici parametri usati");
+assert.equal(active.analysis_score, 0, "una valutazione vecchia o di un altro profilo non deve contare");
+assert.ok(active.score_breakdown.some((item) => item.key === "publishing"), "la prontezza di pubblicazione deve incidere sul punteggio");
+assert.ok(active.score_breakdown.some((item) => item.key === "reserve"), "la riserva dei contenuti deve incidere sul punteggio");
 assert.match(critical.recommendation, /Drive/, "il Drive mancante deve avere priorità nel consiglio");
 
 const [html, app, styles, localServer, endpoint] = await Promise.all([
@@ -62,6 +79,8 @@ assert.match(app, /classList\.toggle\("client-health-view-active"/, "la pagina d
 assert.match(app, /rotationEveryMs:\s*12000[\s\S]*function rotateClientHealth/, "le schede devono ruotare automaticamente ogni 12 secondi");
 assert.match(app, /requestFullscreen[\s\S]*exitFullscreen/, "la pagina deve supportare la proiezione a schermo intero");
 assert.match(app, /clientHealthAppointment[\s\S]*clients_without_upcoming_appointment/, "la salute deve integrare gli appuntamenti del calendario");
+assert.match(app, /Copertura analisi AI[\s\S]*Prontezza pubblicazione[\s\S]*Scadenze operative/, "il dettaglio deve mostrare i nuovi parametri del punteggio");
+assert.match(app, /Il voto combina copertura, cadenza, quantità e varietà/, "il PED deve spiegare la formula estesa");
 assert.match(styles, /body\.client-health-view-active \{ overflow: hidden; \}/, "la vista non deve scorrere");
 assert.match(styles, /\.client-health-grid[\s\S]*overflow: hidden/, "la griglia non deve introdurre scroll interno");
 assert.match(styles, /client-health-view-active \.sidebar\.p-sidebar[\s\S]*display: none !important/, "il wallboard deve nascondere la navigazione ordinaria");

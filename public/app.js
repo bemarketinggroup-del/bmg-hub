@@ -4283,6 +4283,13 @@ function pedPlanQuality(score) {
         : { label: "Scarso", tone: "poor" };
 }
 
+function clientHealthWeightedScore(dimensions = []) {
+  const available = dimensions.filter((item) => item?.available !== false && Number(item?.weight) > 0);
+  const totalWeight = available.reduce((sum, item) => sum + Number(item.weight), 0);
+  if (!totalWeight) return 0;
+  return Math.max(0, Math.min(100, Math.round(available.reduce((sum, item) => sum + Math.max(0, Math.min(100, Number(item.score) || 0)) * Number(item.weight), 0) / totalWeight)));
+}
+
 function renderPedHealth() {
   const target = document.getElementById("pedHealthPanel");
   if (!target) return;
@@ -4312,11 +4319,28 @@ function renderPedHealth() {
     const review = pedCopyReviewFor(item.caption);
     return { analyzed: Boolean(review), score: review ? Number(review.overall_score || 0) : Math.min(39, pedCopyEvaluation(item.caption).score) };
   });
-  const copyScores = copyDetails.map((item) => item.score);
-  const copyScore = copyScores.length ? Math.round(copyScores.reduce((total, score) => total + score, 0) / copyScores.length) : 0;
-  const incompleteCopies = copyScores.filter((score) => score < 65).length;
+  const analyzedScores = copyDetails.filter((item) => item.analyzed).map((item) => item.score);
+  const copyScore = analyzedScores.length ? Math.round(analyzedScores.reduce((total, score) => total + score, 0) / analyzedScores.length) : futureItems.length ? 35 : 0;
+  const incompleteCopies = copyDetails.filter((item) => item.analyzed && item.score < 65).length;
   const unanalyzedCopies = copyDetails.filter((item) => !item.analyzed).length;
-  const overallScore = Math.round(coverageScore * .4 + cadenceScore * .35 + copyScore * .25);
+  const analysisScore = futureItems.length ? Math.round((futureItems.length - unanalyzedCopies) / futureItems.length * 100) : 0;
+  const volumeScore = Math.min(100, Math.round(futureItems.length / 15 * 100));
+  const formats = new Set(futureItems.map((item) => pedContentType(item.content_type)));
+  const formatMixScore = formats.size ? Math.min(100, 45 + Math.max(0, formats.size - 1) * 25) : 0;
+  const externallyProgrammed = futureItems.filter((item) => ["meta", "phone"].includes(String(item.publishing_status || "").toLowerCase())).length;
+  const publishingScore = futureItems.length ? Math.round(externallyProgrammed / futureItems.length * 100) : 0;
+  const waitingItems = (state.pedStagingItems || []).length;
+  const reserveScore = coverageDays >= 30 ? 100 : Math.min(100, Math.round((futureItems.length + waitingItems) / 15 * 100));
+  const overallScore = clientHealthWeightedScore([
+    { score: coverageScore, weight: 22 },
+    { score: cadenceScore, weight: 16 },
+    { score: volumeScore, weight: 10 },
+    { score: formatMixScore, weight: 5 },
+    { score: copyScore, weight: 22 },
+    { score: analysisScore, weight: 12 },
+    { score: publishingScore, weight: 8 },
+    { score: reserveScore, weight: 5 }
+  ]);
   const overall = pedPlanQuality(overallScore);
   const coverage = pedPlanQuality(coverageScore);
   const cadence = pedPlanQuality(cadenceScore);
@@ -4332,8 +4356,11 @@ function renderPedHealth() {
       <article class="is-${coverage.tone}"><span>Copertura</span><strong>${coverageDays} giorni</strong><div><i style="width:${coverageScore}%"></i></div><small>Ultima uscita ${dates.length ? `il ${escapeHtml(lastDateLabel)}` : "non programmata"}; obiettivo almeno 30 giorni.</small></article>
       <article class="is-${cadence.tone}"><span>Frequenza</span><strong>${averageGap === null ? "Da costruire" : `Ogni ${averageGap.toFixed(1).replace(".", ",")} giorni`}</strong><div><i style="width:${cadenceScore}%"></i></div><small>${futureItems.length} ${futureItems.length === 1 ? "contenuto" : "contenuti"} futuri; obiettivo un’uscita ogni 2 giorni.</small></article>
       <article class="is-${copy.tone}"><span>Qualità copy AI</span><strong>${copy.label} · ${copyScore}/100</strong><div><i style="width:${copyScore}%"></i></div><small>${unanalyzedCopies ? `${unanalyzedCopies} ${unanalyzedCopies === 1 ? "copy da analizzare" : "copy da analizzare"}` : incompleteCopies ? `${incompleteCopies} ${incompleteCopies === 1 ? "copy da migliorare" : "copy da migliorare"}` : futureItems.length ? "Tutti i copy futuri sono coerenti" : "Aggiungi i primi copy"}.</small></article>
+      <article class="is-${pedPlanQuality(analysisScore).tone}"><span>Analisi AI</span><strong>${analysisScore}% completata</strong><div><i style="width:${analysisScore}%"></i></div><small>${futureItems.length - unanalyzedCopies}/${futureItems.length} copy futuri già controllati.</small></article>
+      <article class="is-${pedPlanQuality(publishingScore).tone}"><span>Prontezza</span><strong>${publishingScore}% programmato</strong><div><i style="width:${publishingScore}%"></i></div><small>${externallyProgrammed}/${futureItems.length} uscite già programmate su Meta o telefono.</small></article>
+      <article class="is-${pedPlanQuality(reserveScore).tone}"><span>Riserva contenuti</span><strong>${futureItems.length + waitingItems}/15 contenuti</strong><div><i style="width:${reserveScore}%"></i></div><small>Somma uscite future e contenuti in attesa.</small></article>
     </div>
-    <small class="ped-health-note">La qualità copy usa pertinenza al cliente, voce del brand, coerenza, efficacia e affidabilità. Apertura, struttura, chiusura e hashtag pesano solo per il 25%.</small>`;
+    <small class="ped-health-note">Il voto combina copertura, cadenza, quantità e varietà, qualità AI, analisi completate, prontezza di pubblicazione e riserva. Nella Salute clienti entrano anche task, Drive e appuntamenti.</small>`;
 }
 
 function clientHealthPageSize() {
@@ -4412,6 +4439,19 @@ async function loadClientHealth({ fresh = false } = {}) {
 }
 
 function clientHealthAppointment(item) {
+  if (item?.appointment_available === true) {
+    if (item.has_upcoming_appointment && item.next_appointment) {
+      const event = item.next_appointment;
+      const canOpen = canAccessModule("calendar");
+      return {
+        state: Number(item.days_until_next_appointment) <= 7 ? "near" : "scheduled",
+        label: calendarAppointmentDateLabel(event, Number(item.days_until_next_appointment)),
+        eventId: canOpen ? event.id || "" : "",
+        eventDate: canOpen ? event.start_at || "" : ""
+      };
+    }
+    return { state: "missing", label: "Nessun appuntamento nei prossimi 30 giorni" };
+  }
   if (!canAccessModule("calendar")) return { state: "unavailable", label: "Calendario non abilitato" };
   if (googleCalendarState.loading && !googleCalendarState.appointmentOverviewLoaded) return { state: "loading", label: "Controllo appuntamento…" };
   const overview = googleCalendarState.appointmentOverview;
@@ -4479,9 +4519,9 @@ function clientHealthCardMarkup(item, index = 0) {
     </div>
     <div class="client-health-facts">
       <span><strong>${Number(item.future_items) || 0}</strong> futuri</span>
-      <span><strong>${Number(item.staging_items) || 0}</strong> in attesa</span>
+      <span class="${Number(item.unanalyzed_copies) ? "is-warning" : ""}"><strong>${Number(item.analysis_score) || 0}%</strong> copy AI</span>
+      <span class="${Number(item.ped_only_items) ? "is-warning" : ""}"><strong>${Number(item.publishing_score) || 0}%</strong> pronti</span>
       <span class="${Number(item.overdue_tasks) ? "is-warning" : ""}">${item.tasks_available === false ? "Task non abilitate" : `<strong>${Number(item.active_tasks) || 0}</strong> task${Number(item.overdue_tasks) ? ` · ${Number(item.overdue_tasks)} scad.` : ""}`}</span>
-      <span><strong>${clientHealthDateLabel(item.last_scheduled_date)}</strong> ultima uscita</span>
     </div>
     <button class="client-health-appointment is-${escapeHtml(appointment.state)}" type="button"${appointmentCommand}${appointment.eventId ? "" : " disabled"}>
       <svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/></svg>
@@ -4518,11 +4558,15 @@ function clientHealthOverviewDetailMarkup(item) {
   const appointmentCommand = appointment.eventId
     ? ` data-client-health-appointment="${escapeHtml(appointment.eventId)}" data-client-health-appointment-date="${escapeHtml(appointment.eventDate)}"`
     : "";
+  const scoreExplanation = (item.score_breakdown || [])
+    .filter((entry) => entry.available !== false)
+    .map((entry) => `${entry.label}: ${Number(entry.score) || 0}/100 · peso ${Number(entry.weight) || 0}%`)
+    .join("\n");
   const facts = [
     ["Contenuti futuri", Number(item.future_items) || 0, false],
     ["Storie future", Number(item.future_stories) || 0, false],
     ["In attesa", Number(item.staging_items) || 0, Number(item.staging_items) > 0],
-    ["Copy da completare", Number(item.incomplete_copies) || 0, Number(item.incomplete_copies) > 0],
+    ["Copy non analizzati", Number(item.unanalyzed_copies) || 0, Number(item.unanalyzed_copies) > 0],
     ["Task attive", item.tasks_available === false ? "—" : Number(item.active_tasks) || 0, false],
     ["Task scadute", item.tasks_available === false ? "—" : Number(item.overdue_tasks) || 0, Number(item.overdue_tasks) > 0],
     ["Solo PED", Number(item.ped_only_items) || 0, Number(item.ped_only_items) > 0],
@@ -4535,7 +4579,7 @@ function clientHealthOverviewDetailMarkup(item) {
         <h2>${escapeHtml(item.client_name)}</h2>
         <p>${escapeHtml(item.recommendation || "Cliente sotto controllo.")}</p>
       </div>
-      <div class="client-health-overview-score" style="--health-score:${Math.max(0, Math.min(100, Number(item.overall_score) || 0))}%" aria-label="Salute ${Number(item.overall_score) || 0} su 100">
+      <div class="client-health-overview-score" style="--health-score:${Math.max(0, Math.min(100, Number(item.overall_score) || 0))}%" aria-label="Salute ${Number(item.overall_score) || 0} su 100" title="${escapeHtml(scoreExplanation)}">
         <strong>${Number(item.overall_score) || 0}</strong><small>/100</small><span>${escapeHtml(overall.label)}</span>
       </div>
     </header>
@@ -4543,6 +4587,9 @@ function clientHealthOverviewDetailMarkup(item) {
       <section><span>Copertura PED</span><strong>${Number(item.coverage_days) || 0} giorni</strong><i><b style="width:${Math.max(0, Math.min(100, Number(item.coverage_score) || 0))}%"></b></i><small>Ultima uscita ${escapeHtml(clientHealthDateLabel(item.last_scheduled_date))}</small></section>
       <section><span>Frequenza</span><strong>${escapeHtml(cadence)}</strong><i><b style="width:${Math.max(0, Math.min(100, Number(item.cadence_score) || 0))}%"></b></i><small>Obiettivo: un contenuto ogni 2 giorni</small></section>
       <section><span>Qualità copy</span><strong>${Number(item.copy_score) || 0}/100</strong><i><b style="width:${Math.max(0, Math.min(100, Number(item.copy_score) || 0))}%"></b></i><small>${Number(item.incomplete_copies) ? `${Number(item.incomplete_copies)} da completare` : "Copy futuri completi"}</small></section>
+      <section><span>Copertura analisi AI</span><strong>${Number(item.analysis_score) || 0}%</strong><i><b style="width:${Math.max(0, Math.min(100, Number(item.analysis_score) || 0))}%"></b></i><small>${Number(item.analyzed_copies) || 0}/${Number(item.future_items) || 0} copy controllati</small></section>
+      <section><span>Prontezza pubblicazione</span><strong>${Number(item.publishing_score) || 0}%</strong><i><b style="width:${Math.max(0, Math.min(100, Number(item.publishing_score) || 0))}%"></b></i><small>${Number(item.externally_programmed_items) || 0} già su Meta o telefono</small></section>
+      <section><span>Scadenze operative</span><strong>${item.tasks_available === false ? "Non disponibile" : `${Number(item.task_score) || 0}/100`}</strong><i><b style="width:${item.tasks_available === false ? 0 : Math.max(0, Math.min(100, Number(item.task_score) || 0))}%"></b></i><small>${item.tasks_available === false ? "Permesso task non abilitato" : `${Number(item.overdue_tasks) || 0} task scadute`}</small></section>
     </div>
     <div class="client-health-overview-facts">
       ${facts.map(([label, value, warning]) => `<span class="${warning ? "is-warning" : ""}"><small>${escapeHtml(label)}</small><strong>${escapeHtml(value)}</strong></span>`).join("")}

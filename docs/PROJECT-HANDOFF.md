@@ -550,11 +550,17 @@ supabase/                     schema e migration
   priorità sul web; una valutazione sotto soglia richiede una prova concreta di
   altro cliente, altro settore o contraddizione. Le vecchie analisi policy 3
   vengono ignorate e ricalcolate automaticamente.
-  Il riepilogo del
-  cliente valuta inoltre la copertura futura rispetto a 30 giorni, la cadenza
-  rispetto all'obiettivo di un contenuto ogni due giorni e la qualità media dei
-  copy, indicando quanti giorni mancano all'ultima uscita pianificata e quanti
-  copy devono ancora essere analizzati.
+  Il riepilogo del cliente usa soltanto analisi valide per la versione corrente
+  della memoria e per la policy AI attuale. Il punteggio complessivo combina
+  undici dimensioni dichiarate: copertura futura, cadenza, quantità di
+  contenuti, varietà dei formati, qualità contestuale dei copy AI, percentuale
+  di copy già analizzati, prontezza Meta/telefono, riserva tra PED e attesa,
+  scadenze task, collegamento Drive e presenza di appuntamenti nei successivi
+  30 giorni. I parametri realmente non disponibili per permessi o servizi
+  esterni vengono esclusi e i pesi residui sono normalizzati, invece di
+  assegnare uno zero artificiale. La UI espone copertura analisi e prontezza di
+  pubblicazione separatamente, così una media copy alta non nasconde una coda
+  incompleta.
 - Ogni scheda cliente espone `Memoria AI`: un profilo persistente in Supabase
   con settore, descrizione, pubblico, voce, obiettivi, servizi/novità, elementi
   obbligatori, argomenti vietati e lingua. Il revisore usa inoltre copy storici
@@ -584,12 +590,13 @@ supabase/                     schema e migration
   `ai_task_audit_logs` per la cache delle revisioni: i dati restano server-side
   e non pubblici, e il servizio continua a funzionare durante il rollout.
 - La navigazione PED include il gruppo espandibile `Salute clienti`, diviso in
-  `Panoramica clienti` e `Monitor ufficio`, e riusa gli stessi criteri di
-  copertura, frequenza e qualità copy per tutti i clienti attivi senza rimuovere
+  `Panoramica clienti` e `Monitor ufficio`, e riusa la formula multidimensionale
+  per tutti i clienti attivi senza rimuovere
   il riepilogo dai singoli PED. La Panoramica resta fissa nel viewport e mostra
   l'elenco completo ordinato per criticità sulla sinistra; selezionando una riga,
-  sulla destra compaiono punteggio, metriche PED/copy, contenuti, task, Drive,
-  appuntamento e azioni rapide. Il Monitor ufficio resta un wallboard autonomo
+  sulla destra compaiono punteggio, copertura AI, prontezza di pubblicazione,
+  metriche PED/copy, contenuti, task, Drive, appuntamento e azioni rapide. Il
+  Monitor ufficio resta un wallboard autonomo
   pensato per la proiezione: nasconde sidebar e topbar, offre il fullscreen del
   browser e alterna automaticamente ogni 12 secondi i gruppi di clienti con una
   transizione, senza mostrare pagine. La rotazione può essere sospesa e ripresa;
