@@ -552,11 +552,12 @@ supabase/                     schema e migration
   vengono ignorate e ricalcolate automaticamente.
   Il riepilogo del cliente usa soltanto analisi valide per la versione corrente
   della memoria e per la policy AI attuale. Il punteggio complessivo combina
-  undici dimensioni dichiarate: copertura futura, cadenza, quantità di
-  contenuti, varietà dei formati, qualità contestuale dei copy AI, percentuale
-  di copy già analizzati, prontezza Meta/telefono, riserva tra PED e attesa,
-  scadenze task, collegamento Drive e presenza di appuntamenti nei successivi
-  30 giorni. I parametri realmente non disponibili per permessi o servizi
+  tredici dimensioni dichiarate: copertura futura, cadenza, quantità di
+  contenuti, varietà dei formati, qualità contestuale dei copy futuri, qualità
+  storica, percentuale dei copy futuri e dell'intero archivio già analizzati,
+  prontezza Meta/telefono, riserva tra PED e attesa, scadenze task, collegamento
+  Drive e presenza di appuntamenti nei successivi 30 giorni. I parametri
+  realmente non disponibili per permessi o servizi
   esterni vengono esclusi e i pesi residui sono normalizzati, invece di
   assegnare uno zero artificiale. La UI espone copertura analisi e prontezza di
   pubblicazione separatamente, così una media copy alta non nasconde una coda

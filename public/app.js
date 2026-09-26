@@ -4564,7 +4564,7 @@ function clientHealthOverviewDetailMarkup(item) {
     .join("\n");
   const facts = [
     ["Contenuti futuri", Number(item.future_items) || 0, false],
-    ["Storie future", Number(item.future_stories) || 0, false],
+    ["Archivio AI", `${Number(item.historical_analyzed_copies) || 0}/${Number(item.historical_total_copies) || 0}`, Number(item.historical_analysis_score) < 100],
     ["In attesa", Number(item.staging_items) || 0, Number(item.staging_items) > 0],
     ["Copy non analizzati", Number(item.unanalyzed_copies) || 0, Number(item.unanalyzed_copies) > 0],
     ["Task attive", item.tasks_available === false ? "—" : Number(item.active_tasks) || 0, false],

@@ -170,6 +170,8 @@ const reviewed = buildClientHealthSummaries({
 })[0];
 assert.equal(reviewed.copy_score, 84, "la salute deve usare il voto contestuale salvato");
 assert.equal(reviewed.unanalyzed_copies, 0, "un copy valutato non deve risultare in attesa");
+assert.equal(reviewed.historical_copy_score, 84, "la valutazione salvata deve alimentare anche la qualità storica del cliente");
+assert.equal(reviewed.historical_analysis_score, 100, "l'archivio deve indicare che il copy è già stato analizzato");
 
 const [backend, app, html, schema, migration, vercel] = await Promise.all([
   readFile(new URL("../lib/client-copy-intelligence.js", import.meta.url), "utf8"),

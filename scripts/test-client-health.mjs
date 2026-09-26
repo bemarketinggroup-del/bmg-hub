@@ -50,10 +50,12 @@ assert.equal(critical.staging_items, 1, "i contenuti in attesa devono essere mos
 assert.equal(critical.overdue_tasks, 1, "le task completate non devono contare tra le scadute");
 assert.equal(active.has_upcoming_appointment, true, "un appuntamento prossimo deve entrare nella salute cliente");
 assert.equal(critical.appointment_score, 20, "l'assenza di appuntamenti nei 30 giorni deve incidere sul voto");
-assert.equal(active.score_breakdown.length, 11, "la salute deve spiegare tutti gli undici parametri usati");
+assert.equal(active.score_breakdown.length, 13, "la salute deve spiegare tutti i tredici parametri usati");
 assert.equal(active.analysis_score, 0, "una valutazione vecchia o di un altro profilo non deve contare");
+assert.equal(active.historical_analyzed_copies, 0, "le analisi storiche obsolete non devono entrare nel voto");
 assert.ok(active.score_breakdown.some((item) => item.key === "publishing"), "la prontezza di pubblicazione deve incidere sul punteggio");
 assert.ok(active.score_breakdown.some((item) => item.key === "reserve"), "la riserva dei contenuti deve incidere sul punteggio");
+assert.ok(active.score_breakdown.some((item) => item.key === "copy_history"), "la qualità storica dei copy deve incidere sul punteggio");
 assert.match(critical.recommendation, /Drive/, "il Drive mancante deve avere priorità nel consiglio");
 
 const [html, app, styles, localServer, endpoint] = await Promise.all([

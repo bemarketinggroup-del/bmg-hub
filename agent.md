@@ -59,17 +59,18 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
-### 2026-09-26 — Salute cliente basata su undici parametri reali
+### 2026-09-26 — Salute cliente basata su tredici parametri reali
 
 - Richiesta: verificare quanti copy siano già stati controllati dall'AI,
   assicurarsi che le analisi incidano davvero sulla salute cliente e ampliare
   il voto con il maggior numero possibile di segnali operativi.
 - Modifiche: la salute usa soltanto revisioni della policy AI e della versione
   profilo correnti; distingue qualità media e percentuale di copy analizzati.
-  Il voto passa da tre a undici parametri: copertura, cadenza, quantità,
-  varietà formati, qualità AI, completamento analisi, programmazione
-  Meta/telefono, riserva contenuti, task scadute, Drive e appuntamenti entro 30
-  giorni. Le metriche non disponibili vengono escluse e i pesi ricalibrati. La
+  Il voto passa da tre a tredici parametri: copertura, cadenza, quantità,
+  varietà formati, qualità AI futura e storica, completamento analisi futura e
+  dell'archivio, programmazione Meta/telefono, riserva contenuti, task scadute,
+  Drive e appuntamenti entro 30 giorni. Le metriche non disponibili vengono
+  escluse e i pesi ricalibrati. La
   Panoramica mostra esplicitamente copertura AI, prontezza e scadenze; anche il
   riepilogo nel PED adotta la formula estesa per i dati disponibili.
 - File: `lib/client-copy-intelligence.js`, `lib/client-health.js`,
@@ -78,7 +79,7 @@ più recente alla più vecchia:
 - Verifiche: audit in sola lettura dei dati produzione; `npm run check`, `npm
   run test:client-health`, `npm run test:copy-intelligence`, `npm run
   test:google-calendar`, `npm run build`, `git diff --check`; controlli di
-  revisioni obsolete, ricalcolo pesi, appuntamenti e undici componenti.
+  revisioni obsolete, ricalcolo pesi, appuntamenti e tredici componenti.
 - Pubblicazione: GitHub `main` e Vercel produzione; alias canonico
   `https://bmg-hub.vercel.app` verificato.
 - Note: all'audit iniziale risultavano 128 copy unici analizzati su 238; per i
