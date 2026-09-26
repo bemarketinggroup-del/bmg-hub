@@ -173,8 +173,9 @@ assert.equal(reviewed.unanalyzed_copies, 0, "un copy valutato non deve risultare
 assert.equal(reviewed.historical_copy_score, 84, "la valutazione salvata deve alimentare anche la qualità storica del cliente");
 assert.equal(reviewed.historical_analysis_score, 100, "l'archivio deve indicare che il copy è già stato analizzato");
 
-const [backend, app, html, schema, migration, vercel] = await Promise.all([
+const [backend, workerApi, app, html, schema, migration, vercel] = await Promise.all([
   readFile(new URL("../lib/client-copy-intelligence.js", import.meta.url), "utf8"),
+  readFile(new URL("../api/ai-copy-review-worker.js", import.meta.url), "utf8"),
   readFile(new URL("../public/app.js", import.meta.url), "utf8"),
   readFile(new URL("../public/index.html", import.meta.url), "utf8"),
   readFile(new URL("../supabase/schema.sql", import.meta.url), "utf8"),
@@ -209,6 +210,10 @@ assert.match(app, /schedulePedCopyReview[\s\S]*900/, "il copy deve essere analiz
 assert.match(backend, /mode"\) === "pending"[\s\S]*pendingCopyReviewBatch/, "l'endpoint deve esporre la coda globale dei copy non analizzati");
 assert.match(backend, /COPY_REVIEW_QUEUE_LEASE_SLUG[\s\S]*claimCopyReviewQueueLease/, "la coda deve avere un lease condiviso per evitare doppie analisi da dispositivi diversi");
 assert.match(backend, /ped_items\?select=id,client_id,caption[\s\S]*ped_staging_items\?select=id,client_id,caption/, "la coda deve includere PED e contenuti in attesa di tutti i clienti");
+assert.match(backend, /handleAiCopyReviewWorker[\s\S]*authorizedCopyReviewCron/, "il worker autonomo deve accettare soltanto invocazioni protette dal segreto Vercel");
+assert.match(backend, /runCopyReviewWorker[\s\S]*pendingCopyReviewBatch[\s\S]*analyzeCopy/, "il worker deve consumare la stessa coda persistente in piccoli lotti");
+assert.match(backend, /reviewed_by: body\.automated === true \? null/, "le analisi programmate non devono essere attribuite a un membro del team");
+assert.match(workerApi, /handleAiCopyReviewWorker as default/, "il worker deve avere un endpoint Vercel isolato");
 assert.match(app, /startPedCopyBackgroundQueue\(\)[\s\S]*runPedCopyBackgroundQueue/, "la coda globale deve partire automaticamente con l'Hub");
 assert.match(app, /mode=pending&limit=3&worker=[\s\S]*for \(const candidate of candidates\)[\s\S]*1800/, "i copy devono essere analizzati a piccoli gruppi e in sequenza");
 assert.match(app, /PED_COPY_BACKGROUND_LEASE_KEY[\s\S]*claimPedCopyBackgroundLease/, "più schede dello stesso browser non devono eseguire la coda contemporaneamente");
@@ -233,5 +238,7 @@ for (const sql of [schema, migration]) {
 }
 assert.match(vercel, /api\/ai\/copy-review/, "Vercel deve esporre l'analisi copy");
 assert.match(vercel, /api\/client-ai-profile/, "Vercel deve esporre la memoria cliente");
+assert.match(vercel, /"path": "\/api\/ai-copy-review-worker"[\s\S]*"schedule": "\*\/5 \* \* \* \*"/, "Vercel deve eseguire la coda anche senza utenti online ogni cinque minuti");
+assert.match(vercel, /"api\/ai-copy-review-worker\.js": \{ "maxDuration": 300 \}/, "il worker deve avere tempo sufficiente per completare il piccolo lotto");
 
 console.log("Client copy intelligence tests passed");

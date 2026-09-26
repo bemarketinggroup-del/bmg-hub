@@ -4,6 +4,12 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "fluid": true,
+  "functions": {
+    "api/ai-copy-review-worker.js": { "maxDuration": 300 }
+  },
+  "crons": [
+    { "path": "/api/ai-copy-review-worker", "schedule": "*/5 * * * *" }
+  ],
   "rewrites": [
     { "source": "/api/access-logs", "destination": "/api/me" },
     { "source": "/api/clients/sync-clickup", "destination": "/api/clients-sync-clickup" },

@@ -59,6 +59,27 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-09-26 — Coda AI autonoma anche senza utenti online
+
+- Richiesta: continuare l'analisi dei copy PED indipendentemente dalla presenza
+  di utenti collegati all'Hub.
+- Modifiche: aggiunto un worker Vercel protetto da `CRON_SECRET`, eseguito ogni
+  cinque minuti anche a Hub chiuso. Il worker usa la coda globale esistente,
+  analizza al massimo tre copy per invocazione, rispetta deduplicazione, lease
+  condiviso, rate limit e budget mensile; le analisi automatiche non vengono
+  attribuite a un membro del team. Il worker nel browser resta disponibile per
+  accelerare la coda durante le sessioni senza creare doppioni.
+- File: `api/ai-copy-review-worker.js`, `lib/client-copy-intelligence.js`,
+  `vercel.json`, `scripts/test-client-copy-intelligence.mjs`,
+  `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run check`, `npm run test:copy-intelligence`, `npm run
+  test:client-health`, `npm run build`, `git diff --check`; chiamata pubblica
+  senza segreto rifiutata e invocazione protetta verificata in produzione.
+- Pubblicazione: commit, push GitHub, deploy Vercel produzione, registrazione
+  cron e verifica produzione completati.
+- Note: il worker si arresta automaticamente quando viene raggiunto il tetto
+  AI mensile configurato.
+
 ### 2026-09-26 — Storie escluse dalle statistiche PED
 
 - Richiesta: mantenere la possibilità di inserire storie Instagram nel PED,
