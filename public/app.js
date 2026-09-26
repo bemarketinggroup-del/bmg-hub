@@ -4719,12 +4719,11 @@ function renderPedInstagramPreviewAction() {
   const allItems = pedAllItems();
   const feedItems = allItems.filter((item) => pedContentType(item.content_type) !== "story");
   const feedCount = feedItems.length;
-  const storyCount = pedFutureItems().filter((item) => pedContentType(item.content_type) === "story").length;
   const pastCount = feedItems.filter(pedInstagramItemIsPast).length;
   button.disabled = !client;
   hint.textContent = !client
     ? "Seleziona un cliente per vedere l'anteprima."
-    : `${feedCount} ${feedCount === 1 ? "pubblicazione nel PED" : "pubblicazioni nel PED"}${pastCount ? ` · ${pastCount} ${pastCount === 1 ? "passata" : "passate"}` : ""}${storyCount ? ` · ${storyCount} ${storyCount === 1 ? "storia futura" : "storie future"}` : ""}`;
+    : `${feedCount} ${feedCount === 1 ? "pubblicazione nel PED" : "pubblicazioni nel PED"}${pastCount ? ` · ${pastCount} ${pastCount === 1 ? "passata" : "passate"}` : ""}`;
 }
 
 function formatPedInstagramDate(value) {
@@ -4875,7 +4874,7 @@ function renderPedInstagramPreview() {
     ? feedItems.map((item, index) => pedInstagramGridItemMarkup(item, index)).join("")
     : `<div class="ped-instagram-empty"><svg class="lc" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1"/></svg><strong>Profilo ancora vuoto</strong><span>Aggiungi post, reel o caroselli al calendario per comporre la griglia.</span></div>`;
   preparePedInstagramCoverFrames(feed);
-  summary.textContent = `${feedItems.length} ${feedItems.length === 1 ? "pubblicazione" : "pubblicazioni"} · ${pastFeedCount} ${pastFeedCount === 1 ? "passata" : "passate"} · ${storyItems.length} ${storyItems.length === 1 ? "storia futura" : "storie future"}`;
+  summary.textContent = `${feedItems.length} ${feedItems.length === 1 ? "pubblicazione" : "pubblicazioni"} · ${pastFeedCount} ${pastFeedCount === 1 ? "passata" : "passate"}`;
   const edit = document.getElementById("pedInstagramOrderEdit");
   const cancel = document.getElementById("pedInstagramOrderCancel");
   const save = document.getElementById("pedInstagramOrderSave");

@@ -59,6 +59,26 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-09-26 — Storie escluse dalle statistiche PED
+
+- Richiesta: mantenere la possibilità di inserire storie Instagram nel PED,
+  senza includerle nelle statistiche o nel punteggio della salute cliente.
+- Modifiche: i calcoli server e client considerano soltanto Post, Reel e
+  Caroselli per copertura, frequenza, quantità, varietà e voto; il campo
+  statistico delle storie è stato rimosso dall'API e i riepiloghi
+  dell'anteprima Instagram non mostrano più il numero di storie. Le storie
+  restano comunque selezionabili e visibili nell'anteprima dedicata.
+- File: `lib/client-health.js`, `public/app.js`,
+  `scripts/test-client-health.mjs`, `scripts/test-ped-carousel.mjs`,
+  `docs/PROJECT-HANDOFF.md`, `agent.md`.
+- Verifiche: `npm run check`, `npm run test:client-health`, `npm run
+  test:ped-carousel`, `npm run test:copy-intelligence`, `npm run build`, `git
+  diff --check`; controllo desktop e smartphone dei riepiloghi senza contatori
+  storia.
+- Pubblicazione: commit, push GitHub, deploy Vercel produzione e verifica
+  dell'asset pubblico completati.
+- Note: nessuna.
+
 ### 2026-09-26 — Salute cliente basata su tredici parametri reali
 
 - Richiesta: verificare quanti copy siano già stati controllati dall'AI,

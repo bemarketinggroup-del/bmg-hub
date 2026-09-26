@@ -44,7 +44,8 @@ assert.equal(summaries.length, 2, "i clienti archiviati non devono comparire");
 const active = summaries.find((item) => item.client_id === "a");
 const critical = summaries.find((item) => item.client_id === "b");
 assert.equal(active.future_items, 2, "un carosello deve contare come un contenuto, non come singoli file");
-assert.equal(active.future_stories, 1, "le storie devono essere contate a parte");
+assert.equal("future_stories" in active, false, "le storie non devono comparire nelle statistiche");
+assert.equal(active.format_mix_score, 70, "le storie non devono aumentare il punteggio della varietà formati");
 assert.equal(active.average_gap, 2, "la frequenza deve essere calcolata sulle date di pubblicazione");
 assert.equal(critical.staging_items, 1, "i contenuti in attesa devono essere mostrati");
 assert.equal(critical.overdue_tasks, 1, "le task completate non devono contare tra le scadute");
@@ -83,6 +84,7 @@ assert.match(app, /requestFullscreen[\s\S]*exitFullscreen/, "la pagina deve supp
 assert.match(app, /clientHealthAppointment[\s\S]*clients_without_upcoming_appointment/, "la salute deve integrare gli appuntamenti del calendario");
 assert.match(app, /Copertura analisi AI[\s\S]*Prontezza pubblicazione[\s\S]*Scadenze operative/, "il dettaglio deve mostrare i nuovi parametri del punteggio");
 assert.match(app, /Il voto combina copertura, cadenza, quantità e varietà/, "il PED deve spiegare la formula estesa");
+assert.doesNotMatch(app, /storia futura|storie future/, "i riepiloghi del PED non devono conteggiare le storie");
 assert.match(styles, /body\.client-health-view-active \{ overflow: hidden; \}/, "la vista non deve scorrere");
 assert.match(styles, /\.client-health-grid[\s\S]*overflow: hidden/, "la griglia non deve introdurre scroll interno");
 assert.match(styles, /client-health-view-active \.sidebar\.p-sidebar[\s\S]*display: none !important/, "il wallboard deve nascondere la navigazione ordinaria");

@@ -553,7 +553,7 @@ supabase/                     schema e migration
   Il riepilogo del cliente usa soltanto analisi valide per la versione corrente
   della memoria e per la policy AI attuale. Il punteggio complessivo combina
   tredici dimensioni dichiarate: copertura futura, cadenza, quantità di
-  contenuti, varietà dei formati, qualità contestuale dei copy futuri, qualità
+  contenuti, varietà dei formati feed, qualità contestuale dei copy futuri, qualità
   storica, percentuale dei copy futuri e dell'intero archivio già analizzati,
   prontezza Meta/telefono, riserva tra PED e attesa, scadenze task, collegamento
   Drive e presenza di appuntamenti nei successivi 30 giorni. I parametri
@@ -561,7 +561,9 @@ supabase/                     schema e migration
   esterni vengono esclusi e i pesi residui sono normalizzati, invece di
   assegnare uno zero artificiale. La UI espone copertura analisi e prontezza di
   pubblicazione separatamente, così una media copy alta non nasconde una coda
-  incompleta.
+  incompleta. Le storie restano utilizzabili nel PED e nell'anteprima, ma non
+  entrano in statistiche, copertura, cadenza, quantità, varietà o voto salute:
+  tutte queste metriche considerano esclusivamente Post, Reel e Caroselli.
 - Ogni scheda cliente espone `Memoria AI`: un profilo persistente in Supabase
   con settore, descrizione, pubblico, voce, obiettivi, servizi/novità, elementi
   obbligatori, argomenti vietati e lingua. Il revisore usa inoltre copy storici

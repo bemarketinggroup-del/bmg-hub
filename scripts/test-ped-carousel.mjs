@@ -297,6 +297,7 @@ assert.match(appSource, /function pedInstagramDefaultFeedItems\(\)/, "la griglia
 assert.match(appSource, /function pedAllItems\(\)/, "agenda e anteprima Instagram devono condividere l'intero PED");
 assert.match(appSource, /function pedInstagramDefaultFeedItems\(\) \{\s*return pedAllItems\(\)/, "la griglia Instagram deve includere contenuti passati e futuri");
 assert.match(appSource, /const storyItems = pedFutureItems\(\)/, "le storie future devono restare indipendenti dal mese aperto");
+assert.doesNotMatch(appSource, /storia futura|storie future/, "le storie possono essere gestite ma non devono apparire nelle statistiche");
 assert.match(appSource, /Anteprima completa del PED/, "l'anteprima Instagram deve dichiarare l'intervallo completo");
 assert.doesNotMatch(appSource, /Anteprima griglia \$\{monthLabel\}/, "l'anteprima Instagram non deve dipendere dal mese del calendario");
 assert.match(htmlSource, /id="pedInstagramSubtitle">Griglia completa del PED\./, "il testo iniziale del popup deve descrivere la panoramica completa");
