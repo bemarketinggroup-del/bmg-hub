@@ -7,6 +7,7 @@ import {
   copyHash,
   historyExampleCount,
   mergeClientKnowledgeItems,
+  normalizeCopyForReview,
   sourceLooksOfficialForClient,
   structuralCopyEvaluation
 } from "../lib/client-copy-intelligence.js";
@@ -34,6 +35,16 @@ const relevant = combineCopyScores(78, {
 });
 assert.ok(relevant.overallScore >= 80, "un copy pertinente e coerente deve ricevere un punteggio alto");
 assert.equal(copyHash("ciao\r\nmondo"), copyHash("ciao\nmondo"), "l'hash deve essere stabile tra browser");
+assert.equal(
+  normalizeCopyForReview("  Caffè\u00a0sul mare  \r\n\r\n\r\n\u200bPrenota ora  "),
+  "Caffè sul mare\n\nPrenota ora",
+  "la chiave del copy deve ignorare le differenze invisibili prodotte dagli editor Safari"
+);
+assert.equal(
+  copyHash("Caffè\u00a0sul mare\r\n\r\nPrenota ora"),
+  copyHash("Caffe\u0300 sul  mare\n\n\nPrenota ora\u200b"),
+  "lo stesso copy visuale non deve consumare una nuova analisi"
+);
 
 const confirmedDetail = applyFactCheckEvidence({ relevance: 5, brand_fit: 8, coherence: 78, persuasion: 70, factual_consistency: 3 }, {
   status: "confirmed",
@@ -165,6 +176,10 @@ assert.match(app, /existingPedCopyReviewCandidates[\s\S]*pedAllItems\(\)[\s\S]*s
 assert.match(app, /queueExistingPedCopyReviews[\s\S]*submitPedCopyReview[\s\S]*renderPedHealth/, "i copy esistenti devono essere valutati progressivamente e aggiornare la salute cliente");
 assert.match(app, /loadPedCopyReviews\(selectedPedClientId\)[\s\S]*queueExistingPedCopyReviews\(selectedPedClientId\)/, "il recupero automatico deve partire al caricamento del PED");
 assert.match(app, /pedCopyReviewRequests\.has\(key\)/, "le richieste simultanee sullo stesso copy devono essere deduplicate");
+assert.match(app, /function normalizePedCopyReviewText[\s\S]*replace\(\/\\u00a0\/g, " "\)[\s\S]*replace\(\/\\n\{3,\}\/g, "\\n\\n"\)/, "la cache browser deve normalizzare gli spazi e gli a capo di Safari");
+assert.match(app, /if \(data\.review\) cachePedCopyReview\(data\.review, \{ clientId, copy \}\);[\s\S]*sequence !== pedCopyReviewSequence/, "un risultato completato deve essere memorizzato anche se il popup nel frattempo viene chiuso");
+assert.match(app, /schedulePedCopyReview[\s\S]*pedCopyReviewFor\(copy\)[\s\S]*pedCopyReviewRequests\.has\(key\)/, "l'apertura del popup non deve accodare un'analisi gia salvata o in corso");
+assert.match(app, /✓ Analisi salvata/, "la UI deve chiarire che la valutazione resta persistente");
 assert.match(app, /schedulePedKnowledgeSync[\s\S]*submitPedCopyReview\(\{ clientId, copy, entityType, entityId \}\)/, "il salvataggio PED deve alimentare la memoria cliente");
 assert.match(app, /informazioni apprese/, "la scheda memoria deve mostrare quante informazioni sono state raccolte");
 assert.match(app, /Math\.min\(39, Math\.round\(structure\.score \* \.25\)\)/, "la struttura da sola non deve mostrare Buono");

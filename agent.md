@@ -59,6 +59,30 @@ più recente alla più vecchia:
 
 ## Registro modifiche
 
+### 2026-09-26 — Analisi copy persistente finché il testo non cambia
+
+- Richiesta: evitare che l'AI rianalizzi un post ogni volta che il popup viene
+  chiuso e riaperto; conservare invece la valutazione anche senza premere
+  `Salva modifiche` e aggiornarla soltanto quando cambia il copy.
+- Modifiche: introdotta una chiave canonica identica su browser e server che
+  riconosce lo stesso testo anche quando Safari modifica a capo, spazi non
+  separabili, caratteri invisibili o composizione Unicode. La valutazione viene
+  salvata nel database appena termina l'AI e registrata nella cache anche se nel
+  frattempo il popup è stato chiuso; riapertura e refresh recuperano la stessa
+  analisi. Le richieste già in corso non vengono riaccodate e l'interfaccia
+  mostra `Analisi salvata`; una nuova chiamata parte soltanto per un testo
+  realmente diverso o dopo l'aggiornamento della memoria cliente.
+- File: `lib/client-copy-intelligence.js`, `public/app.js`,
+  `scripts/test-client-copy-intelligence.mjs`, `docs/PROJECT-HANDOFF.md`,
+  `agent.md`.
+- Verifiche: `npm run check`, `npm run test:copy-intelligence`, `npm run
+  test:ped-carousel`, `npm run test:client-health`, `npm run build`, `git diff
+  --check`; casi di regressione per Chrome/Safari, Unicode, spazi invisibili,
+  righe vuote e risultato terminato dopo la chiusura del popup.
+- Pubblicazione: GitHub `main` e Vercel produzione; alias canonico
+  `https://bmg-hub.vercel.app` verificato.
+- Note: nessun copy o contenuto PED è stato modificato.
+
 ### 2026-09-26 — Popup copy interamente visibile su smartphone
 
 - Richiesta: correggere il popup di modifica copy che su telefono usciva dal

@@ -3973,8 +3973,30 @@ function pedCopyEvaluation(value) {
   return { score, ...quality, words: words.length, hashtags, hasCallToAction, hasStructure, hasHook, feedback };
 }
 
+function normalizePedCopyReviewText(value) {
+  return String(value || "")
+    .normalize("NFC")
+    .replace(/\r\n?/g, "\n")
+    .replace(/[\u2028\u2029]/g, "\n")
+    .replace(/\u00a0/g, " ")
+    .replace(/[\u200b-\u200d\u2060\ufeff]/gi, "")
+    .split("\n")
+    .map((line) => line.replace(/[\t ]+/g, " ").trim())
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim()
+    .slice(0, 10000);
+}
+
 function pedCopyReviewKey(clientId, value) {
-  return `${String(clientId || "")}\u0000${String(value || "").replace(/\r\n/g, "\n").trim()}`;
+  return `${String(clientId || "")}\u0000${normalizePedCopyReviewText(value)}`;
+}
+
+function cachePedCopyReview(review, { clientId = review?.client_id, copy = "" } = {}) {
+  if (!review || !clientId) return;
+  const snapshot = String(review.caption_snapshot || "");
+  if (snapshot) pedCopyReviewCache.set(pedCopyReviewKey(clientId, snapshot), review);
+  if (copy) pedCopyReviewCache.set(pedCopyReviewKey(clientId, copy), review);
 }
 
 function pedCopyReviewFor(value, clientId = selectedPedClientId) {
@@ -4018,7 +4040,7 @@ function pedCopyEvaluationMarkup(value, { compact = false } = {}) {
       <p class="ped-copy-hint"><b>Spunto</b><span>${escapeHtml(hint)}</span></p>
       ${warnings.length ? `<p class="ped-copy-context-warning">⚠ ${escapeHtml(warnings[0])}</p>` : ""}
       ${source ? `<a class="ped-copy-source" href="${escapeHtml(source.url)}" target="_blank" rel="noopener">${["confirmed", "supported"].includes(review?.dimensions?._fact_check_status) ? "Riscontro online" : "Fonte consultata"}: ${escapeHtml(source.title)}</a>` : ""}
-      <div class="ped-copy-ai-row"><button class="text-button" data-ped-copy-ai-review type="button">${review ? "Rianalizza" : "Analizza ora"}</button><small class="ped-copy-ai-advice" aria-live="polite">${review ? "" : "Analisi automatica tra poco"}</small>${review ? `<span class="ped-copy-feedback"><button type="button" data-ped-copy-feedback="approved" data-review-id="${escapeHtml(review.id || "")}">✓ In linea</button><button type="button" data-ped-copy-feedback="rejected" data-review-id="${escapeHtml(review.id || "")}">✕ Non in linea</button></span>` : ""}</div>`}
+      <div class="ped-copy-ai-row">${review ? `<small class="ped-copy-ai-saved">✓ Analisi salvata</small>` : `<button class="text-button" data-ped-copy-ai-review type="button">Analizza ora</button><small class="ped-copy-ai-advice" aria-live="polite">Analisi automatica tra poco</small>`}${review ? `<span class="ped-copy-feedback"><button type="button" data-ped-copy-feedback="approved" data-review-id="${escapeHtml(review.id || "")}">✓ In linea</button><button type="button" data-ped-copy-feedback="rejected" data-review-id="${escapeHtml(review.id || "")}">✕ Non in linea</button></span>` : ""}</div>`}
   </div>`;
 }
 
@@ -4060,8 +4082,8 @@ async function requestPedCopyAdvice(button = null, { automatic = false } = {}) {
       entityId: context.entity_id
     });
     if (!response.ok) throw new Error(data.error || "Analisi AI non disponibile");
+    if (data.review) cachePedCopyReview(data.review, { clientId, copy });
     if (sequence !== pedCopyReviewSequence && automatic) return;
-    if (data.review) pedCopyReviewCache.set(pedCopyReviewKey(clientId, copy), data.review);
     aiAssistantState.budget = data.budget || aiAssistantState.budget;
     renderAiAssistantBudget();
     if (clientId === String(selectedPedClientId || "")) {
@@ -4105,14 +4127,15 @@ function schedulePedKnowledgeSync({ clientId = selectedPedClientId, caption = ""
   window.setTimeout(async () => {
     try {
       const { response, data } = await submitPedCopyReview({ clientId, copy, entityType, entityId });
-      if (response.ok && data.review) pedCopyReviewCache.set(pedCopyReviewKey(clientId, copy), data.review);
+      if (response.ok && data.review) cachePedCopyReview(data.review, { clientId, copy });
     } catch {}
   }, 2500);
 }
 
 function schedulePedCopyReview(copy) {
   clearTimeout(pedCopyReviewTimer);
-  if (!selectedPedClientId || String(copy || "").trim().length < 8 || pedCopyReviewFor(copy)) return;
+  const key = pedCopyReviewKey(selectedPedClientId, copy);
+  if (!selectedPedClientId || normalizePedCopyReviewText(copy).length < 8 || pedCopyReviewFor(copy) || pedCopyReviewRequests.has(key)) return;
   pedCopyReviewTimer = setTimeout(() => void requestPedCopyAdvice(null, { automatic: true }), 900);
 }
 
@@ -4123,7 +4146,7 @@ async function loadPedCopyReviews(clientId) {
     const data = await response.json().catch(() => ({}));
     if (!response.ok) return;
     for (const review of (data.reviews || [])) {
-      if (review.caption_snapshot) pedCopyReviewCache.set(pedCopyReviewKey(clientId, review.caption_snapshot), review);
+      cachePedCopyReview(review, { clientId });
     }
   } catch {}
 }
@@ -4176,7 +4199,7 @@ function queueExistingPedCopyReviews(clientId) {
           return;
         }
         if (!response.ok) continue;
-        if (data.review) pedCopyReviewCache.set(pedCopyReviewKey(expectedClientId, candidate.copy), data.review);
+        if (data.review) cachePedCopyReview(data.review, { clientId: expectedClientId, copy: candidate.copy });
         aiAssistantState.budget = data.budget || aiAssistantState.budget;
         renderAiAssistantBudget();
         renderPedHealth();

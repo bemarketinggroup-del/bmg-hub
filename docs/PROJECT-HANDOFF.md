@@ -501,7 +501,14 @@ supabase/                     schema e migration
   `Da verificare`, mai un voto positivo basato sulla sola forma. L'analisi parte
   dopo 0,9 secondi di pausa negli editor di creazione, programmazione e attesa,
   anche quando il testo viene incollato; è salvata e riutilizzata per lo stesso
-  testo e versione del profilo cliente. Al caricamento di ogni PED parte inoltre
+  testo e versione del profilo cliente. Il salvataggio della valutazione avviene
+  appena termina la risposta AI ed è indipendente dal comando `Salva modifiche`
+  del post: chiudendo e riaprendo il popup, o ricaricando la pagina, lo stesso
+  copy mostra immediatamente l'analisi già registrata. La chiave ignora le
+  differenze invisibili introdotte dagli editor Chrome/Safari (a capo, spazi non
+  separabili e caratteri a larghezza zero); soltanto una modifica reale al testo
+  genera una nuova analisi. Anche un risultato terminato mentre il popup viene
+  chiuso resta in cache e nel database. Al caricamento di ogni PED parte inoltre
   una coda silenziosa che recupera progressivamente tutti i copy già presenti
   nel calendario e nei contenuti in attesa, evitando richieste duplicate e
   rispettando sia il limite operativo sia il budget AI mensile. In caso di
